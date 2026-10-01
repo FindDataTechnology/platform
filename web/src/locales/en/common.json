@@ -1,0 +1,1014 @@
+{
+  "common": {
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close"
+  },
+  "nav": {
+    "chat": "Chat",
+    "knowledge": "Knowledge",
+    "resources": "Resources",
+    "agents": "Agents",
+    "bots": "Bots",
+    "trace": "Trace",
+    "openMenu": "Open navigation menu",
+    "tasks": "Tasks"
+  },
+  "trace": {
+    "title": "Trace",
+    "description": "Per-turn runtime trace: every LLM request, tool call, and event in order.",
+    "errorsOnly": "Errors only",
+    "loading": "Loading…",
+    "empty": "No traces captured yet. Traces start recording with the next chat turn.",
+    "back": "Back to traces",
+    "errorBadge": "error",
+    "prev": "Previous",
+    "next": "Next",
+    "toolCalls": "tool calls",
+    "retries": "retries",
+    "textChars": "chars",
+    "col": {
+      "time": "Time",
+      "model": "Model",
+      "duration": "Duration",
+      "events": "Events",
+      "session": "Session"
+    }
+  },
+  "agentsPage": {
+    "title": "Agents & Apps",
+    "agents": "Agents",
+    "apps": "Apps",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "loadFailed": "Failed to load catalog: {{error}}"
+  },
+  "sidebar": {
+    "brand": "{{brand}}",
+    "chats": "Chats",
+    "new": "+ New",
+    "noChats": "No chats yet. Click \"+ New\".",
+    "untitled": "Untitled",
+    "language": "Language",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
+    "workspaces": "Workspaces",
+    "searchChats": "Search chats…",
+    "ungrouped": "Ungrouped",
+    "showMore": "Show {{count}} more",
+    "showLess": "Show less",
+    "newWorkspace": "New workspace",
+    "closeSearch": "Close search",
+    "unread": "New activity"
+  },
+  "modelsPage": {
+    "title": "Models",
+    "defaultLabel": "Default",
+    "addProvider": "Add provider",
+    "editProvider": "Edit provider",
+    "addHint": "Add an OpenAI-compatible LLM provider.",
+    "editHint": "Leave the API key blank to keep the current key.",
+    "fieldName": "Name",
+    "fieldBaseUrl": "Base URL",
+    "fieldApiKey": "API key",
+    "keyPlaceholder": "API key (leave blank to keep current)",
+    "keyMasked": "The API key is stored encrypted on the server and never shown.",
+    "apiKeyRequired": "API key is required",
+    "keyPresent": "API key configured",
+    "keyMissing": "No API key",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "deleteProvider": "Delete",
+    "confirmDeleteTitle": "Delete provider?",
+    "confirmDelete": "Delete \"{{name}}\"? This cannot be undone.",
+    "testConnection": "Test connection",
+    "setDefault": "Set as default",
+    "default": "Default",
+    "builtIn": "Built-in",
+    "empty": "No providers configured. Click \"Add provider\" to get started.",
+    "settingsUpdated": "Settings updated.",
+    "restartFailed": "Could not apply settings: {{message}}",
+    "anotherEditInProgress": "Another settings edit is in progress. Try again.",
+    "lastTest": {
+      "never": "Not tested",
+      "ok": "OK",
+      "failed": "Failed"
+    },
+    "fieldEfforts": "Thinking levels (optional)",
+    "effortsHint": "Comma-separated levels this provider accepts, e.g. low, medium, high. Leave blank for the provider default.",
+    "thinkingLevel": "Thinking level",
+    "thinkingDefault": "Default",
+    "syncModels": "Sync models",
+    "syncSummary": "+{{added}} added · {{serving}} serving · {{flagged}} flagged",
+    "discoveryStatus": {
+      "serving": "serving",
+      "unauthorized": "unauthorized",
+      "upstream_down": "upstream down",
+      "rate_limited": "rate limited",
+      "not_chat": "not a chat model",
+      "error": "error"
+    },
+    "editModels": "Edit models",
+    "addModel": "Add",
+    "addModelPlaceholder": "Model id, e.g. deepseek-v4.1-flash",
+    "maxTokensLabel": "Max output tokens for {{id}}",
+    "maxTokensLabelShort": "Max tokens",
+    "removeModel": "Remove {{id}}",
+    "saveModels": "Save models",
+    "duplicateModelId": "Model ids must be unique and non-empty.",
+    "otherDiscovered": "Other discovered models (not on the roster)",
+    "prefillHint": "defaults: {{context}} ctx / {{maxTokens}} out",
+    "contextWindowLabel": "Context window (max input tokens) for {{id}}",
+    "contextWindowLabelShort": "Context",
+    "overrideActive": "Overridden",
+    "overrideBaseUrlPlaceholder": "Base URL override (blank = none)",
+    "overrideSave": "Save URL",
+    "overrideClear": "Clear override",
+    "modelFallbackToast": "Default model {{from}} is dark; switched to {{to}}"
+  },
+  "status": {
+    "connected": "Connected",
+    "connecting": "Connecting…",
+    "disconnected": "Disconnected"
+  },
+  "composer": {
+    "placeholder": "Ask {{assistant}} anything… (type / for commands, Enter to send, Shift+Enter for newline)",
+    "placeholderDisabled": "Connecting…",
+    "send": "Send",
+    "dropHint": "Release to attach the document",
+    "uploadFailed": "Upload failed: {{message}}",
+    "attach": "Attach a file",
+    "removeAttachment": "Remove attachment",
+    "attachments": "{{count}} attached",
+    "slashPicker": {
+      "sectionCommands": "Commands",
+      "sectionSkills": "Skills",
+      "noMatches": "No commands match"
+    },
+    "cmd": {
+      "model": "switch or show the active model",
+      "new": "start a new chat session",
+      "clear": "clear the chat view",
+      "help": "Open the help center"
+    },
+    "stop": "Stop",
+    "uploading": "Uploading…",
+    "cancelUpload": "Cancel upload",
+    "strip": {
+      "workspace": "Workspace",
+      "workspaceUnset": "No folder",
+      "workspaceRecents": "Recent folders",
+      "workspacePlaceholder": "Absolute path to a folder…",
+      "workspaceBrowse": "Browse folders…",
+      "workspaceAbsolute": "Enter an absolute path.",
+      "workspaceConfirm": "Switch the workspace to {{path}}?\n\nThis restarts the agent. Earlier messages in this chat may refer to files that no longer resolve.",
+      "commands": "Commands",
+      "model": "Model",
+      "modelUnset": "No model",
+      "effort": "Thinking",
+      "effortDefault": "Default",
+      "agent": "Agent",
+      "agentUnset": "Default",
+      "agentFocused": "Focused · {{pack}} · {{skills}} skills · {{mcp}} MCP",
+      "agentFocusedCustom": "Focused · self-built · {{skills}} skills · {{mcp}} MCP",
+      "permission": "Permissions",
+      "permissionUnset": "Default",
+      "permissionCustom": "Custom",
+      "permissionReadonly": {
+        "label": "Read only",
+        "desc": "The agent can read the workspace but not change it."
+      },
+      "permissionWrite": {
+        "label": "Workspace write",
+        "desc": "The agent can make changes inside the workspace."
+      },
+      "permissionFull": {
+        "label": "Full access",
+        "desc": "The agent can change anything, with no approval gates.",
+        "confirmTitle": "Enable full access?",
+        "confirmBody": "Full access removes the sandbox and the approval prompts: the agent can read and write anything you can, including outside the workspace.",
+        "acknowledge": "I understand the risk",
+        "confirm": "Enable full access"
+      },
+      "add": "Add file or command",
+      "more": "More"
+    }
+  },
+  "chat": {
+    "empty": "Send a message to start chatting.",
+    "loadingSession": "Loading conversation…",
+    "loadEarlier": "Load earlier messages ({{count}} more)",
+    "plan": {
+      "title": "Progress",
+      "ariaLabel": "Agent plan",
+      "statusPending": "{{count}} pending",
+      "statusInProgress": "{{count}} in progress",
+      "statusCompleted": "{{count}} completed",
+      "expand": "Expand plan",
+      "collapse": "Collapse plan",
+      "updated": "Updated the plan ({{done}}/{{total}})"
+    },
+    "welcome": {
+      "greeting": "How can I help today?",
+      "suggestedPrompts": "Suggested prompts",
+      "recentChats": "Recent chats",
+      "viewAll": "View all",
+      "modelFooter": "Model: {{model}}",
+      "agentFooter": "Agent: {{agent}}",
+      "prompts": {
+        "docs": {
+          "title": "Search your documents",
+          "text": "Summarize the key points of the most recent documents in my library"
+        },
+        "skills": {
+          "title": "Discover skills",
+          "text": "List the skills currently available and what each one does"
+        },
+        "tools": {
+          "title": "Verify a question",
+          "text": "Research a technical question for me and cite your sources"
+        },
+        "write": {
+          "title": "Draft & organize",
+          "text": "Turn these bullet points into a concise weekly report:\n- point one\n- point two"
+        }
+      },
+      "viewLess": "Show less"
+    },
+    "preset": {
+      "label": "Agent mode",
+      "unset": "Select a mode",
+      "userBadge": "Custom",
+      "brokenBadge": "Unavailable",
+      "names": {
+        "standard": "Standard mode",
+        "code": "PTC mode",
+        "minimal": "Minimal mode",
+        "cordis": "Creative mode"
+      },
+      "descriptions": {
+        "standard": "The full coding agent: file editing, shell, file and web search, skills, plans, goals, subagents, and workflows.",
+        "code": "Everything in Standard, with tools exposed through the Code Mode SDK so the model composes multi-step operations in a single TypeScript program.",
+        "minimal": "A two-tool coding agent with just a persistent bash and a str_replace_editor.",
+        "cordis": "For authoring custom agent presets: everything in Standard plus runtime checks, plugin experimentation, and preset authoring guidance."
+      }
+    },
+    "header": {
+      "editTitle": "Rename session",
+      "titlePlaceholder": "Session title",
+      "rename": "Save new title",
+      "sessionActions": "Session actions"
+    },
+    "titleTooLong": "Title must be 200 characters or fewer",
+    "connectionLost": "Connection lost — reconnecting…",
+    "ariaStreaming": "Generating answer…",
+    "ariaDone": "Answer complete",
+    "retry": "Retry",
+    "outlineLabel": "Conversation outline",
+    "outlineCollapse": "Collapse outline",
+    "outlineJump": "Jump to this question"
+  },
+  "turn": {
+    "assistantName": "{{assistant}}",
+    "thinkingStreaming": "Thinking…",
+    "thinking": "Thinking",
+    "activityThinking": "Thinking…",
+    "activityRunning": "Working on step {{step}}…",
+    "activityDoneTimed": "Thought for {{seconds}}s · took {{count}} steps",
+    "activityThought": "Thought for {{seconds}}s",
+    "activityDone": "Took {{count}} steps",
+    "activityErrored": "Ran into a problem · {{count}} steps taken",
+    "statusRunning": "running…",
+    "statusError": "error",
+    "statusDone": "done",
+    "input": "Input",
+    "partial": "Partial",
+    "output": "Output",
+    "outputError": "Error",
+    "interrupted": "Interrupted",
+    "copy": "Copy",
+    "copied": "Copied",
+    "regenerate": "Regenerate",
+    "editResend": "Edit and resend"
+  },
+  "markdown": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Copy failed"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "loadFailed": "Failed to load status: {{error}}",
+    "retry": "retry",
+    "none": "none",
+    "servers": "Servers",
+    "activeModel": "Active Model",
+    "provider": "Provider: {{name}}",
+    "uptime": "Uptime: {{sec}}s",
+    "documents": "Documents",
+    "knowledge": "Knowledge",
+    "collections": "Collections: {{count}}",
+    "mcpTools": "MCP Tools",
+    "state": {
+      "healthy": "healthy",
+      "unhealthy": "unhealthy",
+      "starting": "starting",
+      "disabled": "disabled"
+    }
+  },
+  "systemStatus": {
+    "title": "System Status",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "loadFailed": "Failed to load status: {{error}}",
+    "retry": "retry",
+    "none": "none",
+    "health": "Health",
+    "activeConfig": "Active Configuration",
+    "resources": "Resources",
+    "activeAgent": "Active Agent",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "documents": "Documents",
+    "collections": "Collections: {{count}}",
+    "mcpTools": "MCP Tools",
+    "provider": "Provider: {{name}}",
+    "uptime": "Uptime: {{sec}}s",
+    "manage": "Manage",
+    "state": {
+      "healthy": "healthy",
+      "unhealthy": "unhealthy",
+      "starting": "starting",
+      "disabled": "disabled"
+    }
+  },
+  "sessionMenu": {
+    "delete": "Delete",
+    "confirmTitle": "Delete this chat?",
+    "confirmBody": "This cannot be undone.",
+    "cannotDeleteActive": "Switch to another session first",
+    "deleteFailed": "Failed to delete: {{error}}",
+    "clear": "Clear",
+    "cannotClearInactive": "Switch to this chat first"
+  },
+  "documents": {
+    "title": "Documents",
+    "loading": "Loading…",
+    "disabledMessage": "Documents are unavailable (document collection is disabled or the database is unreachable).",
+    "remove": "Remove",
+    "status": {
+      "ready": "ready",
+      "indexing": "indexing",
+      "queued": "queued",
+      "error": "error"
+    },
+    "list": {
+      "count": "Documents ({{count}})",
+      "refresh": "Refresh",
+      "empty": "No documents yet. Add one above."
+    },
+    "content": {
+      "title": "Content"
+    },
+    "ingest": {
+      "uploadFile": "Upload file",
+      "working": "Working…",
+      "textPlaceholder": "Paste plain text or notes…",
+      "addNote": "Add note",
+      "addUrl": "Add URL"
+    },
+    "collection": {
+      "title": "Collections",
+      "namePlaceholder": "Collection name…",
+      "create": "Create",
+      "empty": "No collections yet.",
+      "docsCount": "{{count}} docs",
+      "delete": "Delete",
+      "noDocuments": "No documents.",
+      "addDocPlaceholder": "Add document…",
+      "add": "Add file or command",
+      "confirmDelete": "Delete this collection?"
+    },
+    "startConversation": "Start conversation…",
+    "stuckWarning": "Taking too long — ingest may have stalled"
+  },
+  "embedded": {
+    "iframeTitle": "embedded service",
+    "blockedMessage": "The embedded UI could not be loaded in a frame.",
+    "openInNewTab": "Open in new tab",
+    "notConfigured": "{{name}} is not configured."
+  },
+  "extensions": {
+    "title": "Extensions",
+    "description": "Manage MCP and skills to extend your agent",
+    "tabs": {
+      "installed": "Enabled",
+      "market": "Store"
+    },
+    "status": {
+      "disabled": "Disabled",
+      "auto": "auto"
+    },
+    "fields": {
+      "enabled": "Enabled"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "Add or edit an MCP server the agent runtime can call.",
+      "addButton": "Add MCP",
+      "empty": "No MCP configured. Add one to extend your agent.",
+      "addTitle": "Add MCP",
+      "editTitle": "Edit MCP",
+      "confirmDelete": "Remove \"{{name}}\"?",
+      "fields": {
+        "name": "Name",
+        "type": "Type",
+        "command": "Command",
+        "args": "Args (space-separated)",
+        "env": "Env vars (JSON)",
+        "url": "URL",
+        "headers": "Headers (JSON)"
+      },
+      "applying": "Applying…",
+      "runtimeBusy": "Runtime busy — applies when the current turn ends",
+      "errors": {
+        "nameRequired": "Name is required",
+        "commandRequired": "Command is required for stdio",
+        "urlRequired": "URL is required for HTTP",
+        "envInvalid": "Environment variables must be valid JSON",
+        "headersInvalid": "Headers must be valid JSON"
+      }
+    },
+    "skills": {
+      "title": "Skills",
+      "subtitle": "Create or edit a skill that adds a reusable agent behavior.",
+      "addButton": "Create Skill",
+      "empty": "No custom skills yet. Create one to add reusable agent behaviors.",
+      "addTitle": "Create Skill",
+      "editTitle": "Edit Skill",
+      "confirmDelete": "Remove \"{{name}}\"?",
+      "custom": "Custom",
+      "builtIn": "Built-in",
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "content": "Content (Markdown)"
+      },
+      "errors": {
+        "nameRequired": "Name is required",
+        "contentRequired": "Content is required"
+      }
+    },
+    "market": {
+      "mcpTitle": "MCP",
+      "skillsTitle": "Skills",
+      "empty": "Nothing available in the store yet.",
+      "install": "Install",
+      "installSuccess": "Installed {{name}}",
+      "installFailed": "Failed to install {{name}}: {{error}}",
+      "readyToUse": "Ready to use",
+      "needsConfig": "Needs config"
+    },
+    "registry": {
+      "title": "MCP market account",
+      "state": {
+        "connected": "Connected",
+        "disconnected": "Not connected",
+        "stale": "Re-connect needed",
+        "expired": "Expired"
+      },
+      "connect": "Connect",
+      "reconnect": "Re-connect",
+      "connecting": "Connecting…",
+      "pasteToggle": "Paste token",
+      "pasteHint": "Mint a token in the market's own UI (Get JWT Token) and paste it here — it is stored exactly like a minted one.",
+      "tokenLabel": "Market token",
+      "tokenPlaceholder": "eyJ…",
+      "expires": "Expires {{date}}",
+      "disconnect": "Disconnect",
+      "unconfigured": "No MCP market is configured on this deployment — paste a token instead.",
+      "staleHint": "The market rejected the stored token. Re-connect to restore registry servers."
+    }
+  },
+  "help": {
+    "title": "Help",
+    "subtitle": "Commands, skills, and keyboard shortcuts",
+    "commands": "Commands",
+    "skills": "Skills ({{count}})",
+    "emptySkills": "No skills loaded.",
+    "shortcuts": {
+      "title": "Shortcuts",
+      "send": "Send message",
+      "newline": "New line",
+      "picker": "Open the command picker",
+      "dismiss": "Close picker / cancel edit",
+      "thinking": "Collapse/expand all thinking blocks",
+      "sessionMenu": "Session context menu (on a session row)"
+    },
+    "concepts": {
+      "title": "How it works",
+      "attachments": "Attachments upload to your knowledge library first; the message references them as @doc: — answers ground in document content, not just model memory.",
+      "knowledge": "The Knowledge page manages your document collection; files attached in chat land in the same collection.",
+      "sessions": "Sessions are stored in the local database; switch from the sidebar list, bookmark via URL (/chat/<id>).",
+      "tools": "Tool blocks show the agent's actual calls: blue = running, green = done, red = failed; click to expand input and output."
+    }
+  },
+  "botsPage": {
+    "title": "Bots",
+    "subtitle": "Connect the assistant to WeCom, Feishu, Telegram, and WeChat Official Account chats.",
+    "addBot": "Add bot",
+    "editBot": "Edit bot",
+    "empty": "No bots configured yet.",
+    "formHint": "Credentials are stored on the server and never sent back to the browser.",
+    "type": "Platform",
+    "name": "Name",
+    "enabled": "Enabled",
+    "keepStored": "Configured — leave blank to keep",
+    "copy": "Copy",
+    "webhookCopied": "Webhook URL copied",
+    "copyFailed": "Could not copy the webhook URL",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirmDeleteTitle": "Delete bot?",
+    "confirmDelete": "This permanently removes \"{{name}}\" and its credentials.",
+    "gridHint": "Click a platform to add a bot of that type.",
+    "configuredTitle": "Configured bots",
+    "saved": "Saved",
+    "qr": {
+      "title": "User entry (QR)",
+      "resolving": "Resolving…",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "manualPrompt": "No entry link yet — paste the URL users should open, then save.",
+      "manualPlaceholder": "https://…",
+      "saveLink": "Save link",
+      "resolveFailed": "Could not resolve a QR:",
+      "disabledNote": "Bot is disabled — the QR still previews its entry.",
+      "hint": {
+        "telegram": "Open this link in Telegram and press Start.",
+        "wechatOa": "Scan with WeChat to follow and open the official account.",
+        "manual": "Scan the code to open the bot's user entry."
+      }
+    },
+    "types": {
+      "telegram": "Telegram",
+      "feishu": "Feishu / Lark",
+      "wecom": "WeCom",
+      "wechat-oa": "WeChat Official Account"
+    }
+  },
+  "assistant": {
+    "name": "{{brand}} Assistant",
+    "brand": "Platform"
+  },
+  "login": {
+    "title": "Sign in",
+    "description": "This deployment uses your organization’s single sign-on. Sign in to continue to {{company}}.",
+    "action": "Sign in with SSO",
+    "logout": "Sign out",
+    "loadFailed": "Unable to load authentication state: {{error}}",
+    "stateError": "The sign-in session expired or did not match. Try signing in again.",
+    "callbackError": "Sign-in failed. Try again."
+  },
+  "bindings": {
+    "myModel": "My model",
+    "saveAsMyModel": "Save as my model",
+    "saved": "Saved as your model",
+    "pending": "Saved — it will apply when the assistant is idle",
+    "globalSource": "Using the global default",
+    "personalMcp": "Only for me",
+    "apply": "Apply now",
+    "applyFailed": "Could not apply your profile: {{error}}",
+    "signIn": "Sign in to keep your own model and MCP preferences.",
+    "lockedMcp": "Required by your administrator",
+    "continueAnonymous": "Continue without signing in"
+  },
+  "settings": {
+    "title": "Settings",
+    "sections": {
+      "general": "General",
+      "account": "Account",
+      "models": "Models",
+      "mcp": "MCP Servers",
+      "skills": "Skills",
+      "wechat-app": "WeChat App",
+      "branding": "Deployment branding",
+      "status": "System Status",
+      "packs": "Packs",
+      "presets": "Custom presets"
+    },
+    "general": {
+      "theme": "Theme",
+      "themeHint": "Follow your system, or pick one.",
+      "themeOption": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+      }
+    },
+    "account": {
+      "title": "Account",
+      "email": "Signed-in email",
+      "openHint": "This instance is open and does not require an account.",
+      "optionalSsoHint": "Sign in with your organization’s SSO to keep your own model and MCP preferences on this shared runtime.",
+      "signedOutHint": "Sign in through your organization’s SSO to use this instance."
+    },
+    "wechat-app": {
+      "title": "WeChat mini program",
+      "scanHint": "In the mini program, tap 扫码绑定 on the login page and scan this code with your phone.",
+      "typeHint": "No camera, or the scan will not take? Type the 6 digits on that same mini-program page — it is the same code.",
+      "validity": "Single use, valid for 5 minutes.",
+      "expiresIn": "Expires in {{time}}",
+      "expired": "This code has expired.",
+      "refresh": "Refresh",
+      "retry": "Retry",
+      "loading": "Fetching…",
+      "signedOut": "Sign in to pair this account with your WeChat.",
+      "signIn": "Sign in",
+      "openInstance": "This instance is open and has no accounts, so there is nothing to pair with the mini program.",
+      "unavailable": "This server is older than the version that mints bind codes; update it to pair the mini program.",
+      "error": "Could not fetch a bind code."
+    },
+    "branding": {
+      "title": "Deployment branding",
+      "hint": "What this deployment calls itself on the login page and the browser tab. Empty fields fall back to environment variables or the built-in defaults.",
+      "companyName": "Company name",
+      "assistantName": "Assistant name",
+      "brandIconUrl": "Brand icon URL",
+      "brandIconUrlHint": "Shown on the login card and as the tab favicon. Must be an http(s):// URL.",
+      "loginFooterText": "Login footer text",
+      "loginFooterTextHint": "One line shown under the login card. Leave empty for no footer.",
+      "saved": "Saved — refresh to see the new branding everywhere.",
+      "saveFailed": "Could not save: {{error}}"
+    }
+  },
+  "preview": {
+    "title": "File preview",
+    "close": "Close preview",
+    "download": "Download",
+    "loading": "Loading…",
+    "openLocal": "Preview a local file",
+    "openInDrawer": "Preview",
+    "noRenderer": "No preview available for this file type.",
+    "downloadName": "Download {{name}}"
+  },
+  "share": {
+    "banner": "Shared session — read-only, shared by its owner",
+    "loading": "Loading shared session…",
+    "unavailable": "This shared session is no longer available.",
+    "menuItem": "Share",
+    "copied": "Link copied to clipboard",
+    "failed": "Share failed: {{error}}",
+    "manage": "Shared links…",
+    "dialogTitle": "Shared links",
+    "dialogHint": "Anyone with a link can view the session. Revoke to cut access.",
+    "none": "No active shared links.",
+    "revoke": "Revoke"
+  },
+  "tasks": {
+    "title": "Tasks",
+    "empty": "No tasks yet — create a scheduled task to run on a plan.",
+    "status": {
+      "scheduled": "Scheduled",
+      "running": "Running",
+      "paused": "Paused",
+      "completed": "Completed",
+      "expired": "Expired",
+      "error": "Error",
+      "queued": "Queued",
+      "failed": "Failed",
+      "interrupted": "Interrupted",
+      "manual": "Delegated",
+      "done": "Done"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "runNow": "Run now",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this scheduled task?",
+      "output": "Output",
+      "rerun": "Re-run"
+    },
+    "fields": {
+      "agent": "Agent",
+      "nextRun": "Next run",
+      "lastRun": "Last run",
+      "never": "never ran",
+      "missedRuns": "missed {{count}} run(s)",
+      "missedTotal": "{{count}} missed",
+      "lastOk": "ok",
+      "lastFailed": "failed"
+    },
+    "schedule": {
+      "daily": "daily at {{time}}",
+      "weekdays": "weekdays at {{time}}",
+      "weeklyOn": "weekly on {{days}} at {{time}}",
+      "everyNMinutes": "every {{n}} minutes",
+      "everyMinute": "every minute",
+      "custom": "cron “{{expr}}”",
+      "once": "once at {{when}}"
+    },
+    "form": {
+      "title": "New task",
+      "close": "Close",
+      "submit": "Create task",
+      "mode": {
+        "recurring": "Recurring",
+        "once": "One-shot"
+      },
+      "freq": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "custom": "Custom cron"
+      },
+      "cronPlaceholder": "Cron expression, e.g. */15 * * * *",
+      "namePlaceholder": "Name (optional) — becomes the session title",
+      "promptPlaceholder": "What should the agent do on this schedule?",
+      "tz": "Timezone",
+      "errors": {
+        "prompt": "A prompt is required",
+        "weekday": "Pick at least one weekday",
+        "cron": "Enter a cron expression",
+        "when": "Pick a date and time"
+      }
+    },
+    "tool": {
+      "title": "Scheduled task",
+      "created": "Task created from chat",
+      "notFound": "Job state unavailable — open the Tasks page."
+    },
+    "trigger": {
+      "schedule": "Scheduled",
+      "manual": "Delegated"
+    },
+    "card": {
+      "title": "Task delegated",
+      "tokens": "{{count}} tokens"
+    },
+    "summary": {
+      "label": "Task summary"
+    }
+  },
+  "resources": {
+    "binding": {
+      "asOf": "as of {{age}}",
+      "ageNow": "just now",
+      "ageMinutes": "{{count}} min ago",
+      "ageHours": "{{count}} h ago",
+      "ageDays": "{{count}} d ago",
+      "stale": "Data may be stale",
+      "notRefreshable": "Refresh not enabled here",
+      "refreshing": "Refreshing…",
+      "refresh": "Refresh",
+      "refreshed": "Updated · {{added}} new, {{revised}} changed",
+      "refreshUnchanged": "Already up to date",
+      "refreshFailed": "Refresh failed",
+      "unbind": "Unbind",
+      "unbindConfirm": "Unbind this chart from its data source? The chart keeps its current data as a static snapshot.",
+      "series": "Series {{index}}",
+      "periodLabel": "Periods",
+      "period": {
+        "6m": "Last 6 months",
+        "1y": "Last year",
+        "all": "All"
+      },
+      "periodCount": "{{count}} periods stored",
+      "periodShown": "{{count}} shown",
+      "bindAction": "Bind a data source",
+      "pickTitle": "Choose the call this chart came from",
+      "cancel": "Cancel",
+      "pickEmpty": "This turn ran no bindable data call.",
+      "pickPoints": "{{count}} points",
+      "attach": "Bind",
+      "timeline": "History",
+      "timelineTitle": "Refresh history",
+      "timelineEmpty": "No refreshes recorded yet.",
+      "window": {
+        "24h": "24 hours",
+        "7d": "7 days",
+        "30d": "30 days",
+        "all": "All time"
+      },
+      "backToCurrent": "Back to current",
+      "viewingAsOf": "Viewing the chart as of {{moment}}",
+      "viewAsOf": "View as of this refresh",
+      "historical": "Historical view",
+      "trigger": {
+        "manual": "Manual",
+        "scheduled": "Scheduled",
+        "onOpen": "On open"
+      },
+      "outcome": {
+        "ok": "Updated",
+        "unchanged": "Unchanged",
+        "skipped_fresh": "Skipped (fresh)",
+        "error": "Failed"
+      },
+      "count": {
+        "added": "{{count}} added",
+        "revised": "{{count}} revised",
+        "resourced": "{{count}} from a new source",
+        "unchanged": "{{count}} unchanged",
+        "missing": "{{count}} missing",
+        "anomalies": "{{count}} conflicts"
+      },
+      "reason": {
+        "credential": "sign-in needed",
+        "unreachable": "source unreachable",
+        "tool_error": "source returned an error",
+        "unit_mismatch": "unit changed",
+        "map_violation": "response shape changed",
+        "allowlist": "not enabled for refresh",
+        "fresh": "still fresh"
+      }
+    },
+    "title": "Resources",
+    "search": "Search resources",
+    "count": "{{count}} items",
+    "loading": "Loading resources…",
+    "loadMore": "Load more",
+    "error": "Could not load the library: {{message}}",
+    "empty": "Charts you generate appear here automatically. Files you save from the chat land here too.",
+    "emptyFiltered": "No resources match this filter.",
+    "chartUnrenderable": "This chart could not be rendered.",
+    "kind": {
+      "chart": "Chart",
+      "file": "File"
+    },
+    "filter": {
+      "all": "All",
+      "chart": "Charts",
+      "file": "Files"
+    },
+    "actions": {
+      "save": "Save to resources",
+      "rename": "Rename",
+      "renameSave": "Save",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this resource? This cannot be undone.",
+      "download": "Download",
+      "jump": "Open conversation"
+    },
+    "save": {
+      "saved": "Saved to resources",
+      "exists": "Already in resources",
+      "failed": "Could not save: {{message}}",
+      "errors": {
+        "invalid_path": "That file is outside the workspace.",
+        "file_not_found": "The file no longer exists in the workspace.",
+        "file_too_large": "The file is too large to save.",
+        "db_unavailable": "The library is unavailable right now.",
+        "store_failed": "Saving failed. Please try again."
+      }
+    }
+  },
+  "packs": {
+    "tabs": {
+      "market": "Pack Market",
+      "mine": "My Packs",
+      "drafts": "My Creations"
+    },
+    "market": {
+      "searchPlaceholder": "Search packs…",
+      "search": "Search",
+      "empty": "No packs in the market yet."
+    },
+    "detail": {
+      "notFound": "Pack not found or unlisted",
+      "skills": "Skills",
+      "mcp": "MCP Servers",
+      "agents": "Agents",
+      "requiresGroup": "requires group {{group}}",
+      "subscribe": "Subscribe & Install",
+      "gotoMine": "View my packs",
+      "deployTitle": "Deploy as service",
+      "deployBtn": "Deploy",
+      "deployOnline": "online",
+      "deployEffective": "Deployment submitted — effective within ~{{minutes}} min (runner polling)."
+    },
+    "report": {
+      "title": "Install result for “{{name}}”",
+      "hint": "Per-part outcomes below; skipped or unavailable parts carry their reason.",
+      "skill": "Skill",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "status": {
+        "installed": "Installed",
+        "reused": "Reused",
+        "replaced": "Updated",
+        "skipped": "Skipped",
+        "unavailable": "Unavailable"
+      }
+    },
+    "mine": {
+      "empty": "No packs subscribed yet. Browse the market.",
+      "updateAvailable": "update to v{{version}}",
+      "upgrade": "Upgrade",
+      "uninstall": "Unsubscribe"
+    },
+    "uninstall": {
+      "title": "Unsubscribe “{{name}}”",
+      "willRemove": "This removes the following skills and agents:",
+      "mcpKept": "MCP server configurations are kept (shared utilities): {{servers}}",
+      "modifiedWarning": "These skills were modified after install; unsubscribing loses the changes: {{skills}}",
+      "confirm": "Unsubscribe"
+    },
+    "drafts": {
+      "title": "My Creations",
+      "create": "New Pack",
+      "empty": "No drafts yet.",
+      "defaultName": "Untitled Pack",
+      "published": "Published",
+      "draft": "Draft",
+      "partCounts": "{{skills}} skills · {{mcp}} MCP · {{agents}} agents"
+    },
+    "editor": {
+      "title": "Edit Pack",
+      "save": "Save Draft",
+      "publish": "Publish",
+      "publishOk": "Published v{{version}}.",
+      "name": "Name",
+      "description": "Description",
+      "tags": "Tags (comma-separated)",
+      "tagsPlaceholder": "legal, contracts",
+      "skills": "Skills",
+      "addSkill": "Add Skill",
+      "skillName": "Skill name (e.g. legal-contract-workflow)",
+      "skillDescription": "Skill description",
+      "skillContent": "SKILL.md body",
+      "remove": "Remove",
+      "mcp": "MCP References",
+      "mcpHint": "Pick registry servers from the market catalog only; packs cannot carry endpoints.",
+      "mcpEmpty": "No registry servers in the market catalog.",
+      "agents": "Agents",
+      "addAgent": "Add Agent",
+      "agentHint": "Agents are local personas — no endpoints, models, or credentials.",
+      "agentId": "Agent id (e.g. pack-reviewer)",
+      "agentName": "Agent name",
+      "agentPersona": "Persona text",
+      "personaCost": "Persona {{chars}} chars ≈ {{tokens}} tokens/turn (~3 chars/token estimate; billed on every turn)",
+      "resourceSet": "Resource set (optional)",
+      "resourceHint": "Leave unchecked to use the whole pack's resources; checked, only the selected subset loads (none selected = baseline only). Only this pack's own skills and MCP references are offered.",
+      "limitSkills": "Limit skills",
+      "limitMcp": "Limit MCP servers",
+      "resourceEmptySkills": "The draft declares no skills yet — add some above first.",
+      "resourceEmptyMcp": "The draft picks no MCP references yet — pick some above first.",
+      "agentServing": "Deploy as an Agent Service (A2A)",
+      "agentServingHint": "After publishing, deploy in one click from the pack page; the service answers over A2A through the registry gateway."
+    }
+  },
+  "overlay": {
+    "title": "Resource adjustments",
+    "adjust": "Adjust resources",
+    "desc": "Adjust this role's MCP servers and skills. Changes are stored as a preference diff and apply to the next session; entries invalidated by upgrades are ignored automatically.",
+    "mcp": "MCP servers",
+    "skills": "Role skills",
+    "baseline": "Baseline skills (available in every mode)",
+    "noneAddable": "(nothing to add)",
+    "remove": "Remove",
+    "restore": "Restore",
+    "add": "Add",
+    "apply": "Apply",
+    "applying": "Applying…",
+    "appliedNote": "Saved — applies to the next session.",
+    "streamBusy": "The agent is responding; wait for the turn to finish before adjusting.",
+    "loadError": "Failed to load",
+    "deploymentNote": "Adjustments are shared by every client of this deployment."
+  },
+  "customPresets": {
+    "title": "Custom presets",
+    "desc": "Compose a conversational role from this cell's own skills and MCP servers — it runs focused and stays local to this cell; there is no publish.",
+    "create": "New preset",
+    "empty": "No custom presets yet.",
+    "name": "Name",
+    "persona": "Persona",
+    "personaPlaceholder": "Who is this role, and how should it answer? Name its domain, its tone, and what it must never invent…",
+    "tags": "Tags",
+    "tagsPlaceholder": "comma-separated",
+    "skills": "Skill references",
+    "skillHint": "Picked from locally-available skills (yours or any installed pack's). Unavailable references are skipped at runtime and take effect again automatically once available.",
+    "mcp": "MCP server references",
+    "mcpHint": "Picked from the enabled servers; a reference never re-enables a server you disabled.",
+    "noSkills": "No skills available in this cell.",
+    "noMcp": "No enabled MCP servers.",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this preset? If it is currently selected, the runtime switches back to the built-in agent.",
+    "streamBusy": "The agent is responding — try again in a moment.",
+    "refs": "{{skills}} skills · {{mcp}} MCP",
+    "unavailable": "unavailable",
+    "shadowed": "overridden",
+    "shadowedHint": "An operators-file or cloud entry holds the same id; the role currently composes under the overriding entry's persona."
+  }
+}

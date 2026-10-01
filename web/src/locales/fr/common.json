@@ -1,0 +1,1014 @@
+{
+  "common": {
+    "loading": "Chargement…",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "add": "Ajouter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "close": "Fermer"
+  },
+  "nav": {
+    "chat": "Discussion",
+    "knowledge": "Connaissance",
+    "resources": "Ressources",
+    "agents": "Agents",
+    "bots": "Bots",
+    "trace": "Traçage",
+    "openMenu": "Ouvrir le menu de navigation",
+    "tasks": "Tâches"
+  },
+  "trace": {
+    "title": "Traçage",
+    "description": "Trace par tour : chaque requête LLM, appel d'outil et événement dans l'ordre.",
+    "errorsOnly": "Erreurs uniquement",
+    "loading": "Chargement…",
+    "empty": "Aucune trace pour l'instant. L'enregistrement commence au prochain tour de chat.",
+    "back": "Retour aux traces",
+    "errorBadge": "erreur",
+    "prev": "Précédent",
+    "next": "Suivant",
+    "toolCalls": "appels d'outils",
+    "retries": "tentatives",
+    "textChars": "caractères",
+    "col": {
+      "time": "Heure",
+      "model": "Modèle",
+      "duration": "Durée",
+      "events": "Événements",
+      "session": "Session"
+    }
+  },
+  "agentsPage": {
+    "title": "Agents et applications",
+    "agents": "Agents",
+    "apps": "Applications",
+    "connect": "Connecter",
+    "connecting": "Connexion…",
+    "loadFailed": "Échec du chargement du catalogue : {{error}}"
+  },
+  "sidebar": {
+    "brand": "{{brand}}",
+    "chats": "Discussions",
+    "new": "+ Nouveau",
+    "noChats": "Aucune discussion. Cliquez sur « + Nouveau ».",
+    "untitled": "Sans titre",
+    "language": "Langue",
+    "collapse": "Replier la barre latérale",
+    "expand": "Déplier la barre latérale",
+    "workspaces": "Espaces de travail",
+    "searchChats": "Rechercher des conversations…",
+    "ungrouped": "Non groupées",
+    "showMore": "Afficher {{count}} de plus",
+    "showLess": "Afficher moins",
+    "newWorkspace": "Nouvel espace",
+    "closeSearch": "Fermer la recherche",
+    "unread": "Nouveautés"
+  },
+  "modelsPage": {
+    "title": "Modèles",
+    "defaultLabel": "Par défaut",
+    "addProvider": "Ajouter un fournisseur",
+    "editProvider": "Modifier le fournisseur",
+    "addHint": "Ajoutez un fournisseur LLM compatible OpenAI.",
+    "editHint": "Laissez la clé API vide pour conserver la clé actuelle.",
+    "fieldName": "Nom",
+    "fieldBaseUrl": "URL de base",
+    "fieldApiKey": "Clé API",
+    "keyPlaceholder": "Clé API (laisser vide pour conserver l'actuelle)",
+    "keyMasked": "La clé API est stockée chiffrée sur le serveur et n'est jamais affichée.",
+    "apiKeyRequired": "La clé API est requise",
+    "keyPresent": "Clé API configurée",
+    "keyMissing": "Aucune clé API",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "deleteProvider": "Supprimer",
+    "confirmDeleteTitle": "Supprimer le fournisseur ?",
+    "confirmDelete": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "testConnection": "Tester la connexion",
+    "setDefault": "Définir par défaut",
+    "default": "Par défaut",
+    "builtIn": "Intégré",
+    "empty": "Aucun fournisseur configuré. Cliquez sur « Ajouter un fournisseur ».",
+    "settingsUpdated": "Paramètres mis à jour.",
+    "restartFailed": "Impossible d'appliquer les paramètres : {{message}}",
+    "anotherEditInProgress": "Une autre modification des paramètres est en cours. Réessayez.",
+    "lastTest": {
+      "never": "Non testé",
+      "ok": "OK",
+      "failed": "Échec"
+    },
+    "fieldEfforts": "Niveaux de réflexion (facultatif)",
+    "effortsHint": "Niveaux acceptés par ce fournisseur, séparés par des virgules (par ex. low, medium, high). Laissez vide pour la valeur par défaut.",
+    "thinkingLevel": "Niveau de réflexion",
+    "thinkingDefault": "Par défaut",
+    "syncModels": "Synchroniser les modèles",
+    "syncSummary": "+{{added}} ajoutés · {{serving}} actifs · {{flagged}} signalés",
+    "discoveryStatus": {
+      "serving": "en service",
+      "unauthorized": "non autorisé",
+      "upstream_down": "amont indisponible",
+      "rate_limited": "limité",
+      "not_chat": "hors chat",
+      "error": "erreur"
+    },
+    "editModels": "Modifier les modèles",
+    "addModel": "Ajouter",
+    "addModelPlaceholder": "Id du modèle, ex. deepseek-v4.1-flash",
+    "maxTokensLabel": "Tokens maximaux de sortie pour {{id}}",
+    "maxTokensLabelShort": "Tokens max",
+    "removeModel": "Retirer {{id}}",
+    "saveModels": "Enregistrer les modèles",
+    "duplicateModelId": "Les ids de modèle doivent être uniques et non vides.",
+    "otherDiscovered": "Autres modèles détectés (hors liste)",
+    "prefillHint": "par défaut : {{context}} ctx / {{maxTokens}} sortie",
+    "contextWindowLabel": "Fenêtre de contexte (tokens d'entrée max) pour {{id}}",
+    "contextWindowLabelShort": "Contexte",
+    "overrideActive": "Surchargé",
+    "overrideBaseUrlPlaceholder": "Surcharge d'URL de base (vide = aucune)",
+    "overrideSave": "Enregistrer l'URL",
+    "overrideClear": "Effacer la surcharge",
+    "modelFallbackToast": "Le modèle par défaut {{from}} est éteint ; basculé sur {{to}}"
+  },
+  "status": {
+    "connected": "Connecté",
+    "connecting": "Connexion…",
+    "disconnected": "Déconnecté"
+  },
+  "composer": {
+    "placeholder": "Demandez n'importe quoi à l'{{assistant}}… (tapez / pour les commandes, Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
+    "placeholderDisabled": "Connexion…",
+    "send": "Envoyer",
+    "dropHint": "Relâchez pour joindre le document",
+    "uploadFailed": "Échec de l'envoi : {{message}}",
+    "attach": "Joindre un fichier",
+    "removeAttachment": "Retirer la pièce jointe",
+    "attachments": "{{count}} pièce(s) jointe(s)",
+    "slashPicker": {
+      "sectionCommands": "Commandes",
+      "sectionSkills": "Compétences",
+      "noMatches": "Aucune commande correspondante"
+    },
+    "cmd": {
+      "model": "changer ou afficher le modèle actif",
+      "new": "démarrer une nouvelle session de discussion",
+      "clear": "effacer la vue de discussion",
+      "help": "Ouvrir le centre d’aide"
+    },
+    "stop": "Arrêter",
+    "uploading": "Envoi en cours…",
+    "cancelUpload": "Annuler l’envoi",
+    "strip": {
+      "workspace": "Dossier",
+      "workspaceUnset": "Aucun dossier",
+      "workspaceRecents": "Dossiers récents",
+      "workspacePlaceholder": "Chemin absolu vers un dossier…",
+      "workspaceBrowse": "Parcourir les dossiers…",
+      "workspaceAbsolute": "Saisissez un chemin absolu.",
+      "workspaceConfirm": "Basculer le dossier de travail vers {{path}} ?\n\nCela redémarre l'agent. Les messages précédents de cette conversation peuvent référencer des fichiers introuvables.",
+      "commands": "Commandes",
+      "model": "Modèle",
+      "modelUnset": "Aucun modèle",
+      "effort": "Réflexion",
+      "effortDefault": "Par défaut",
+      "agent": "Agent",
+      "agentUnset": "Par défaut",
+      "agentFocused": "Focalisé · {{pack}} · {{skills}} compétences · {{mcp}} MCP",
+      "agentFocusedCustom": "Focalisé · perso · {{skills}} compétences · {{mcp}} MCP",
+      "permission": "Permissions",
+      "permissionUnset": "Par défaut",
+      "permissionCustom": "Personnalisé",
+      "permissionReadonly": {
+        "label": "Lecture seule",
+        "desc": "L'agent peut lire l'espace de travail sans le modifier."
+      },
+      "permissionWrite": {
+        "label": "Écriture espace de travail",
+        "desc": "L'agent peut modifier des fichiers dans l'espace de travail."
+      },
+      "permissionFull": {
+        "label": "Accès complet",
+        "desc": "L'agent peut tout modifier, sans validation.",
+        "confirmTitle": "Activer l’accès complet ?",
+        "confirmBody": "L’accès complet supprime le bac à sable et les confirmations d’approbation : l’agent peut lire et écrire tout ce que vous pouvez, y compris hors de l’espace de travail.",
+        "acknowledge": "Je comprends le risque",
+        "confirm": "Activer l’accès complet"
+      },
+      "add": "Ajouter un fichier ou une commande",
+      "more": "Plus"
+    }
+  },
+  "chat": {
+    "empty": "Envoyez un message pour commencer à discuter.",
+    "loadingSession": "Chargement de la conversation…",
+    "loadEarlier": "Charger les messages précédents ({{count}} restants)",
+    "plan": {
+      "title": "Progression",
+      "ariaLabel": "Plan de l’agent",
+      "statusPending": "{{count}} à faire",
+      "statusInProgress": "{{count}} en cours",
+      "statusCompleted": "{{count}} terminées",
+      "expand": "Développer le plan",
+      "collapse": "Réduire le plan",
+      "updated": "Plan mis à jour ({{done}}/{{total}})"
+    },
+    "welcome": {
+      "greeting": "Comment puis-je vous aider aujourd'hui ?",
+      "suggestedPrompts": "Suggestions",
+      "recentChats": "Discussions récentes",
+      "viewAll": "Tout voir",
+      "modelFooter": "Modèle : {{model}}",
+      "agentFooter": "Agent : {{agent}}",
+      "prompts": {
+        "docs": {
+          "title": "Interrogez vos documents",
+          "text": "Résume les points clés des documents les plus récents de ma bibliothèque"
+        },
+        "skills": {
+          "title": "Découvrez les compétences",
+          "text": "Liste les compétences disponibles et à quoi sert chacune"
+        },
+        "tools": {
+          "title": "Vérifiez une question",
+          "text": "Recherche une question technique et cite les sources"
+        },
+        "write": {
+          "title": "Rédigez et organisez",
+          "text": "Transforme ces points en un rapport hebdomadaire concis :\n- point un\n- point deux"
+        }
+      },
+      "viewLess": "Réduire"
+    },
+    "preset": {
+      "label": "Mode de l'agent",
+      "unset": "Choisir un mode",
+      "userBadge": "Personnalisé",
+      "brokenBadge": "Indisponible",
+      "names": {
+        "standard": "Mode standard",
+        "code": "Mode PTC",
+        "minimal": "Mode minimal",
+        "cordis": "Mode créatif"
+      },
+      "descriptions": {
+        "standard": "L'agent de codage complet : édition de fichiers, shell, recherche de fichiers et web, skills, plans, objectifs, sous-agents et workflows.",
+        "code": "Tout le mode standard, avec les outils exposés via le SDK Code Mode afin que le modèle compose des opérations multi-étapes dans un seul programme TypeScript.",
+        "minimal": "Un agent de codage à deux outils : bash persistant et str_replace_editor.",
+        "cordis": "Pour créer des presets d'agent personnalisés : tout le mode standard, plus des contrôles à l'exécution, l'expérimentation de plugins et des conseils de création de presets."
+      }
+    },
+    "header": {
+      "editTitle": "Renommer la session",
+      "titlePlaceholder": "Titre de la session",
+      "rename": "Enregistrer le nouveau titre",
+      "sessionActions": "Actions de session"
+    },
+    "titleTooLong": "Le titre doit comporter 200 caractères ou moins",
+    "connectionLost": "Connexion perdue — reconnexion en cours…",
+    "ariaStreaming": "Génération de la réponse…",
+    "ariaDone": "Réponse terminée",
+    "retry": "Réessayer",
+    "outlineLabel": "Plan de la conversation",
+    "outlineCollapse": "Réduire le plan",
+    "outlineJump": "Aller à cette question"
+  },
+  "turn": {
+    "assistantName": "{{assistant}}",
+    "thinkingStreaming": "Réflexion…",
+    "thinking": "Réflexion",
+    "activityThinking": "Réflexion…",
+    "activityRunning": "Étape {{step}} en cours…",
+    "activityDoneTimed": "A réfléchi pendant {{seconds}} s · {{count}} étapes",
+    "activityThought": "A réfléchi pendant {{seconds}} s",
+    "activityDone": "A fait {{count}} étapes",
+    "activityErrored": "Un problème est survenu · {{count}} étapes effectuées",
+    "statusRunning": "en cours…",
+    "statusError": "erreur",
+    "statusDone": "terminé",
+    "input": "Entrée",
+    "partial": "Partiel",
+    "output": "Sortie",
+    "outputError": "Erreur",
+    "interrupted": "Interrompu",
+    "copy": "Copier",
+    "copied": "Copié",
+    "regenerate": "Régénérer",
+    "editResend": "Modifier et renvoyer"
+  },
+  "markdown": {
+    "copy": "Copier",
+    "copied": "Copié",
+    "copyFailed": "Échec de la copie"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "loadFailed": "Échec du chargement de l'état : {{error}}",
+    "retry": "réessayer",
+    "none": "aucun",
+    "servers": "Serveurs",
+    "activeModel": "Modèle actif",
+    "provider": "Fournisseur : {{name}}",
+    "uptime": "Disponibilité : {{sec}}s",
+    "documents": "Documents",
+    "knowledge": "Knowledge",
+    "collections": "Collections : {{count}}",
+    "mcpTools": "Outils MCP",
+    "state": {
+      "healthy": "sain",
+      "unhealthy": "défaillant",
+      "starting": "démarrage",
+      "disabled": "désactivé"
+    }
+  },
+  "systemStatus": {
+    "title": "État du système",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "loadFailed": "Échec du chargement de l'état : {{error}}",
+    "retry": "réessayer",
+    "none": "aucun",
+    "health": "Santé",
+    "activeConfig": "Configuration active",
+    "resources": "Ressources",
+    "activeAgent": "Agent actif",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "documents": "Documents",
+    "collections": "Collections : {{count}}",
+    "mcpTools": "Outils MCP",
+    "provider": "Fournisseur : {{name}}",
+    "uptime": "Disponibilité : {{sec}}s",
+    "manage": "Gérer",
+    "state": {
+      "healthy": "sain",
+      "unhealthy": "défaillant",
+      "starting": "démarrage",
+      "disabled": "désactivé"
+    }
+  },
+  "sessionMenu": {
+    "delete": "Supprimer",
+    "confirmTitle": "Supprimer cette discussion ?",
+    "confirmBody": "Cette action est irréversible.",
+    "cannotDeleteActive": "Basculez d'abord vers une autre session",
+    "deleteFailed": "Échec de la suppression : {{error}}",
+    "clear": "Effacer",
+    "cannotClearInactive": "Basculez d'abord sur cette discussion"
+  },
+  "documents": {
+    "title": "Documents",
+    "loading": "Chargement…",
+    "disabledMessage": "Les documents sont indisponibles (la collection de documents est désactivée ou la base de données est inaccessible).",
+    "remove": "Retirer",
+    "status": {
+      "ready": "prêt",
+      "indexing": "indexation",
+      "queued": "en file d'attente",
+      "error": "erreur"
+    },
+    "list": {
+      "count": "Documents ({{count}})",
+      "refresh": "Actualiser",
+      "empty": "Aucun document. Ajoutez-en un ci-dessus."
+    },
+    "content": {
+      "title": "Contenu"
+    },
+    "ingest": {
+      "uploadFile": "Envoyer un fichier",
+      "working": "Traitement…",
+      "textPlaceholder": "Collez du texte brut ou des notes…",
+      "addNote": "Ajouter une note",
+      "addUrl": "Ajouter une URL"
+    },
+    "collection": {
+      "title": "Collections",
+      "namePlaceholder": "Nom de la collection…",
+      "create": "Créer",
+      "empty": "Aucune collection.",
+      "docsCount": "{{count}} docs",
+      "delete": "Supprimer",
+      "noDocuments": "Aucun document.",
+      "addDocPlaceholder": "Ajouter un document…",
+      "add": "Ajouter un fichier ou une commande",
+      "confirmDelete": "Supprimer cette collection ?"
+    },
+    "startConversation": "Démarrer la conversation…",
+    "stuckWarning": "Trop longtemps — l’ingestion s’est peut-être bloquée"
+  },
+  "embedded": {
+    "iframeTitle": "service intégré",
+    "blockedMessage": "L'interface intégrée n'a pas pu être chargée dans un cadre.",
+    "openInNewTab": "Ouvrir dans un nouvel onglet",
+    "notConfigured": "{{name}} n'est pas configuré."
+  },
+  "extensions": {
+    "title": "Extensions",
+    "description": "Gérez MCP et les compétences pour étendre votre agent",
+    "tabs": {
+      "installed": "Activées",
+      "market": "Boutique"
+    },
+    "status": {
+      "disabled": "Désactivé",
+      "auto": "auto"
+    },
+    "fields": {
+      "enabled": "Activé"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "Ajoutez ou modifiez un serveur MCP que le runtime de l'agent peut appeler.",
+      "addButton": "Ajouter MCP",
+      "empty": "Aucun MCP configuré. Ajoutez-en un pour étendre votre agent.",
+      "addTitle": "Ajouter MCP",
+      "editTitle": "Modifier MCP",
+      "confirmDelete": "Supprimer « {{name}} » ?",
+      "fields": {
+        "name": "Nom",
+        "type": "Type",
+        "command": "Commande",
+        "args": "Arguments (séparés par des espaces)",
+        "env": "Variables d'environnement (JSON)",
+        "url": "URL",
+        "headers": "En-têtes (JSON)"
+      },
+      "applying": "Application…",
+      "runtimeBusy": "Runtime occupé — application à la fin du tour en cours",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "commandRequired": "La commande est requise pour stdio",
+        "urlRequired": "L'URL est requise pour HTTP",
+        "envInvalid": "Les variables d'environnement doivent être un JSON valide",
+        "headersInvalid": "Les en-têtes doivent être un JSON valide"
+      }
+    },
+    "skills": {
+      "title": "Compétences",
+      "subtitle": "Créez ou modifiez une compétence qui ajoute un comportement réutilisable de l'agent.",
+      "addButton": "Créer une compétence",
+      "empty": "Aucune compétence personnalisée. Créez-en une pour ajouter des comportements d'agent réutilisables.",
+      "addTitle": "Créer une compétence",
+      "editTitle": "Modifier la compétence",
+      "confirmDelete": "Supprimer « {{name}} » ?",
+      "custom": "Personnalisée",
+      "builtIn": "Intégrée",
+      "fields": {
+        "name": "Nom",
+        "description": "Description",
+        "content": "Contenu (Markdown)"
+      },
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "contentRequired": "Le contenu est requis"
+      }
+    },
+    "market": {
+      "mcpTitle": "MCP",
+      "skillsTitle": "Compétences",
+      "empty": "Rien de disponible dans la boutique pour le moment.",
+      "install": "Installer",
+      "installSuccess": "{{name}} installé",
+      "installFailed": "Échec de l'installation de {{name}} : {{error}}",
+      "readyToUse": "Prêt à l'emploi",
+      "needsConfig": "Configuration requise"
+    },
+    "registry": {
+      "title": "Compte du marché MCP",
+      "state": {
+        "connected": "Connecté",
+        "disconnected": "Non connecté",
+        "stale": "Reconnexion requise",
+        "expired": "Expiré"
+      },
+      "connect": "Connecter",
+      "reconnect": "Reconnecter",
+      "connecting": "Connexion…",
+      "pasteToggle": "Coller un jeton",
+      "pasteHint": "Générez un jeton dans l'interface du marché (Get JWT Token) puis collez-le ici : il est stocké exactement comme un jeton émis automatiquement.",
+      "tokenLabel": "Jeton du marché",
+      "tokenPlaceholder": "eyJ…",
+      "expires": "Expire le {{date}}",
+      "disconnect": "Déconnecter",
+      "unconfigured": "Aucun marché MCP n'est configuré sur ce déploiement — collez un jeton.",
+      "staleHint": "Le marché a rejeté le jeton enregistré. Reconnectez-vous pour restaurer les serveurs du registre."
+    }
+  },
+  "help": {
+    "title": "Aide",
+    "subtitle": "Commandes, compétences et raccourcis clavier",
+    "commands": "Commandes",
+    "skills": "Compétences ({{count}})",
+    "emptySkills": "Aucune compétence chargée.",
+    "shortcuts": {
+      "title": "Raccourcis",
+      "send": "Envoyer le message",
+      "newline": "Nouvelle ligne",
+      "picker": "Ouvrir le sélecteur de commandes",
+      "dismiss": "Fermer le sélecteur / annuler",
+      "thinking": "Replier/déplier tous les blocs de réflexion",
+      "sessionMenu": "Menu contextuel de session (sur une ligne)"
+    },
+    "concepts": {
+      "title": "Comment ça marche",
+      "attachments": "Les pièces jointes sont d’abord envoyées à votre bibliothèque ; le message les référence en @doc: — les réponses s’appuient sur le contenu du document.",
+      "knowledge": "La page Connaissances gère votre collection ; les fichiers joints dans le chat arrivent dans la même collection.",
+      "sessions": "Les sessions sont stockées dans la base locale ; changez via la liste latérale, marquez l’URL (/chat/<id>).",
+      "tools": "Les blocs d’outil montrent les appels réels : bleu = en cours, vert = terminé, rouge = échec ; cliquez pour déplier."
+    }
+  },
+  "botsPage": {
+    "title": "Bots",
+    "subtitle": "Connectez l'assistant aux conversations WeCom, Feishu, Telegram et WeChat Official Account.",
+    "addBot": "Ajouter un bot",
+    "editBot": "Modifier le bot",
+    "empty": "Aucun bot configuré pour l'instant.",
+    "formHint": "Les identifiants sont stockés sur le serveur et ne sont jamais renvoyés au navigateur.",
+    "type": "Plateforme",
+    "name": "Nom",
+    "enabled": "Activé",
+    "keepStored": "Configuré — laisser vide pour conserver",
+    "copy": "Copier",
+    "webhookCopied": "URL du webhook copiée",
+    "copyFailed": "Impossible de copier l'URL du webhook",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "confirmDeleteTitle": "Supprimer le bot ?",
+    "confirmDelete": "Cela supprime définitivement « {{name}} » et ses identifiants.",
+    "gridHint": "Cliquez sur une plateforme pour ajouter un bot de ce type.",
+    "configuredTitle": "Bots configurés",
+    "saved": "Enregistré",
+    "qr": {
+      "title": "Accès utilisateur (QR)",
+      "resolving": "Résolution…",
+      "copyLink": "Copier le lien",
+      "linkCopied": "Lien copié",
+      "manualPrompt": "Pas encore de lien d'entrée — collez l'URL que les utilisateurs doivent ouvrir, puis enregistrez.",
+      "manualPlaceholder": "https://…",
+      "saveLink": "Enregistrer le lien",
+      "resolveFailed": "Impossible de générer le QR :",
+      "disabledNote": "Le bot est désactivé — le QR affiche encore son entrée.",
+      "hint": {
+        "telegram": "Ouvrez ce lien dans Telegram et appuyez sur Start.",
+        "wechatOa": "Scannez avec WeChat pour suivre et ouvrir le compte officiel.",
+        "manual": "Scannez le code pour ouvrir l'accès du bot."
+      }
+    },
+    "types": {
+      "telegram": "Telegram",
+      "feishu": "Feishu / Lark",
+      "wecom": "WeCom",
+      "wechat-oa": "Compte officiel WeChat"
+    }
+  },
+  "assistant": {
+    "name": "Assistant {{brand}}",
+    "brand": "Platform"
+  },
+  "login": {
+    "title": "Connexion",
+    "description": "Ce déploiement utilise le connexion unique de votre organisation. Connectez-vous pour accéder à {{company}}.",
+    "action": "Se connecter avec le SSO",
+    "logout": "Déconnexion",
+    "loadFailed": "Impossible de charger l’état d’authentification : {{error}}",
+    "stateError": "La session de connexion a expiré ou ne correspond pas. Réessayez.",
+    "callbackError": "Échec de la connexion. Réessayez."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "sections": {
+      "general": "Général",
+      "account": "Compte",
+      "models": "Modèles",
+      "mcp": "Serveurs MCP",
+      "skills": "Compétences",
+      "wechat-app": "Mini-programme WeChat",
+      "branding": "Image de marque du déploiement",
+      "status": "État du système",
+      "packs": "Packs",
+      "presets": "Préréglages perso"
+    },
+    "general": {
+      "theme": "Thème",
+      "themeHint": "Suivre le système ou en choisir un.",
+      "themeOption": {
+        "light": "Clair",
+        "dark": "Sombre",
+        "system": "Système"
+      }
+    },
+    "account": {
+      "title": "Compte",
+      "email": "E-mail connecté",
+      "openHint": "Cette instance est ouverte et ne nécessite pas de compte.",
+      "signedOutHint": "Connectez-vous via le SSO de votre organisation pour utiliser cette instance.",
+      "optionalSsoHint": "Connectez-vous avec le SSO de votre organisation pour conserver votre modèle et vos préférences MCP sur ce runtime partagé."
+    },
+    "wechat-app": {
+      "title": "Mini-programme WeChat",
+      "scanHint": "Dans le mini-programme, appuyez sur 扫码绑定 depuis la page de connexion, puis scannez ce code.",
+      "typeHint": "Pas d'appareil photo, ou le scan ne fonctionne pas ? Saisissez les 6 chiffres sur cette même page du mini-programme : c'est le même code.",
+      "validity": "Usage unique, valable 5 minutes.",
+      "expiresIn": "Expire dans {{time}}",
+      "expired": "Ce code a expiré.",
+      "refresh": "Actualiser",
+      "retry": "Réessayer",
+      "loading": "Récupération…",
+      "signedOut": "Connectez-vous pour associer ce compte à votre WeChat.",
+      "signIn": "Se connecter",
+      "openInstance": "Cette instance est ouverte et sans compte : il n'y a rien à associer au mini-programme.",
+      "unavailable": "Ce serveur est antérieur à la version qui génère les codes de liaison ; mettez-le à jour pour associer le mini-programme.",
+      "error": "Impossible d'obtenir un code de liaison."
+    },
+    "branding": {
+      "title": "Image de marque du déploiement",
+      "hint": "Comment ce déploiement se présente sur la page de connexion et dans l'onglet du navigateur. Les champs vides reviennent aux variables d'environnement ou aux valeurs intégrées.",
+      "companyName": "Nom de l'entreprise",
+      "assistantName": "Nom de l'assistant",
+      "brandIconUrl": "URL de l'icône de marque",
+      "brandIconUrlHint": "Affichée sur la carte de connexion et comme icône d'onglet. Doit être une URL http(s)://.",
+      "loginFooterText": "Texte du pied de page de connexion",
+      "loginFooterTextHint": "Une ligne sous la carte de connexion. Vide = aucun pied de page.",
+      "saved": "Enregistré — actualisez pour voir la nouvelle marque partout.",
+      "saveFailed": "Échec de l'enregistrement : {{error}}"
+    }
+  },
+  "bindings": {
+    "myModel": "Mon modèle",
+    "saveAsMyModel": "Enregistrer comme mon modèle",
+    "saved": "Enregistré comme votre modèle",
+    "pending": "Enregistré — sera appliqué lorsque l’assistant sera inactif",
+    "globalSource": "Valeur globale utilisée",
+    "personalMcp": "Pour moi uniquement",
+    "apply": "Appliquer maintenant",
+    "applyFailed": "Impossible d’appliquer votre profil : {{error}}",
+    "signIn": "Connectez-vous pour conserver votre modèle et vos préférences MCP.",
+    "lockedMcp": "Verrouillé par votre administrateur",
+    "continueAnonymous": "Continuer sans se connecter"
+  },
+  "preview": {
+    "title": "Aperçu du fichier",
+    "close": "Fermer l’aperçu",
+    "download": "Télécharger",
+    "loading": "Chargement…",
+    "openLocal": "Aperçu d’un fichier local",
+    "openInDrawer": "Aperçu",
+    "noRenderer": "Aucun aperçu disponible pour ce type de fichier.",
+    "downloadName": "Télécharger {{name}}"
+  },
+  "share": {
+    "banner": "Session partagée — lecture seule, partagée par son propriétaire",
+    "loading": "Chargement de la session partagée…",
+    "unavailable": "Cette session partagée n'est plus disponible.",
+    "menuItem": "Partager",
+    "copied": "Lien copié dans le presse-papiers",
+    "failed": "Échec du partage : {{error}}",
+    "manage": "Liens partagés…",
+    "dialogTitle": "Liens partagés",
+    "dialogHint": "Toute personne disposant du lien peut voir la session. Révoquez pour couper l'accès.",
+    "none": "Aucun lien partagé actif.",
+    "revoke": "Révoquer"
+  },
+  "tasks": {
+    "title": "Tâches",
+    "empty": "Aucune tâche pour l'instant — créez une tâche planifiée qui s'exécutera selon le plan.",
+    "status": {
+      "scheduled": "Planifiée",
+      "running": "En cours",
+      "paused": "En pause",
+      "completed": "Terminée",
+      "expired": "Expirée",
+      "error": "Erreur",
+      "queued": "En attente",
+      "failed": "Échec",
+      "interrupted": "Interrompue",
+      "manual": "Déléguée",
+      "done": "Terminée"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "runNow": "Exécuter",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer cette tâche planifiée ?",
+      "output": "Résultat",
+      "rerun": "Relancer"
+    },
+    "fields": {
+      "agent": "Agent",
+      "nextRun": "Prochaine exécution",
+      "lastRun": "Dernière exécution",
+      "never": "jamais exécutée",
+      "missedRuns": "manquée {{count}} fois",
+      "missedTotal": "{{count}} manquées",
+      "lastOk": "réussie",
+      "lastFailed": "échouée"
+    },
+    "schedule": {
+      "daily": "chaque jour à {{time}}",
+      "weekdays": "jours ouvrés à {{time}}",
+      "weeklyOn": "chaque {{days}} à {{time}}",
+      "everyNMinutes": "toutes les {{n}} minutes",
+      "everyMinute": "chaque minute",
+      "custom": "cron « {{expr}} »",
+      "once": "une fois, {{when}}"
+    },
+    "form": {
+      "title": "Nouvelle tâche",
+      "close": "Fermer",
+      "submit": "Créer la tâche",
+      "mode": {
+        "recurring": "Récurrente",
+        "once": "Unique"
+      },
+      "freq": {
+        "daily": "Quotidienne",
+        "weekly": "Hebdomadaire",
+        "custom": "Cron personnalisé"
+      },
+      "cronPlaceholder": "Expression cron, ex. */15 * * * *",
+      "namePlaceholder": "Nom (facultatif) — deviendra le titre de la session",
+      "promptPlaceholder": "Que doit faire l'agent à cet horaire ?",
+      "tz": "Fuseau horaire",
+      "errors": {
+        "prompt": "Un message est requis",
+        "weekday": "Choisissez au moins un jour",
+        "cron": "Saisissez une expression cron",
+        "when": "Choisissez date et heure"
+      }
+    },
+    "tool": {
+      "title": "Tâche planifiée",
+      "created": "Tâche créée depuis le chat",
+      "notFound": "État de la tâche indisponible — ouvrez la page Tâches."
+    },
+    "trigger": {
+      "schedule": "Planifiée",
+      "manual": "Déléguée"
+    },
+    "card": {
+      "title": "Tâche déléguée",
+      "tokens": "{{count}} tokens"
+    },
+    "summary": {
+      "label": "Résumé des tâches"
+    }
+  },
+  "resources": {
+    "binding": {
+      "asOf": "arrêté à {{age}}",
+      "ageNow": "à l'instant",
+      "ageMinutes": "il y a {{count}} min",
+      "ageHours": "il y a {{count}} h",
+      "ageDays": "il y a {{count}} j",
+      "stale": "Les données peuvent être obsolètes",
+      "notRefreshable": "Actualisation non activée ici",
+      "refreshing": "Actualisation…",
+      "refresh": "Actualiser",
+      "refreshed": "Mis à jour · {{added}} ajoutés, {{revised}} modifiés",
+      "refreshUnchanged": "Déjà à jour",
+      "refreshFailed": "Échec de l'actualisation",
+      "unbind": "Délier",
+      "unbindConfirm": "Délier ce graphique de sa source de données ? Le graphique conserve les données actuelles comme instantané statique.",
+      "series": "Série {{index}}",
+      "periodLabel": "Périodes",
+      "period": {
+        "6m": "6 derniers mois",
+        "1y": "Dernière année",
+        "all": "Tout"
+      },
+      "periodCount": "{{count}} périodes stockées",
+      "periodShown": "{{count}} affichés",
+      "bindAction": "Lier une source de données",
+      "pickTitle": "Choisissez l'appel à l'origine de ce graphique",
+      "cancel": "Annuler",
+      "pickEmpty": "Ce tour n'a exécuté aucun appel de données liable.",
+      "pickPoints": "{{count}} points",
+      "attach": "Lier",
+      "timeline": "Historique",
+      "timelineTitle": "Historique des actualisations",
+      "timelineEmpty": "Aucune actualisation enregistrée.",
+      "window": {
+        "24h": "24 heures",
+        "7d": "7 jours",
+        "30d": "30 jours",
+        "all": "Tout l'historique"
+      },
+      "backToCurrent": "Revenir à l'actuel",
+      "viewingAsOf": "Affichage du graphique arrêté à {{moment}}",
+      "viewAsOf": "Voir à ce moment",
+      "historical": "Vue historique",
+      "trigger": {
+        "manual": "Manuelle",
+        "scheduled": "Planifiée",
+        "onOpen": "À l'ouverture"
+      },
+      "outcome": {
+        "ok": "Mis à jour",
+        "unchanged": "Inchangé",
+        "skipped_fresh": "Ignorée (données fraîches)",
+        "error": "Échec"
+      },
+      "count": {
+        "added": "{{count}} ajoutés",
+        "revised": "{{count}} révisés",
+        "resourced": "{{count}} d'une autre source",
+        "unchanged": "{{count}} inchangés",
+        "missing": "{{count}} manquants",
+        "anomalies": "{{count}} conflits"
+      },
+      "reason": {
+        "credential": "connexion requise",
+        "unreachable": "source injoignable",
+        "tool_error": "la source a renvoyé une erreur",
+        "unit_mismatch": "l'unité a changé",
+        "map_violation": "la forme de la réponse a changé",
+        "allowlist": "non activé pour l'actualisation",
+        "fresh": "encore frais"
+      }
+    },
+    "title": "Ressources",
+    "search": "Rechercher des ressources",
+    "count": "{{count}} éléments",
+    "loading": "Chargement des ressources…",
+    "loadMore": "Charger plus",
+    "error": "Impossible de charger la bibliothèque : {{message}}",
+    "empty": "Les graphiques que vous générez apparaissent ici automatiquement. Les fichiers enregistrés depuis la conversation aussi.",
+    "emptyFiltered": "Aucune ressource ne correspond à ce filtre.",
+    "chartUnrenderable": "Ce graphique n'a pas pu être affiché.",
+    "kind": {
+      "chart": "Graphique",
+      "file": "Fichier"
+    },
+    "filter": {
+      "all": "Tout",
+      "chart": "Graphiques",
+      "file": "Fichiers"
+    },
+    "actions": {
+      "save": "Enregistrer dans les ressources",
+      "rename": "Renommer",
+      "renameSave": "Enregistrer",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer cette ressource ? Action irréversible.",
+      "download": "Télécharger",
+      "jump": "Ouvrir la conversation"
+    },
+    "save": {
+      "saved": "Enregistré dans les ressources",
+      "exists": "Déjà dans les ressources",
+      "failed": "Échec de l'enregistrement : {{message}}",
+      "errors": {
+        "invalid_path": "Ce fichier est en dehors de l'espace de travail.",
+        "file_not_found": "Le fichier n'existe plus dans l'espace de travail.",
+        "file_too_large": "Le fichier est trop volumineux pour être enregistré.",
+        "db_unavailable": "La bibliothèque est indisponible pour le moment.",
+        "store_failed": "Échec de l'enregistrement. Réessayez."
+      }
+    }
+  },
+  "packs": {
+    "tabs": {
+      "market": "Marché des packs",
+      "mine": "Mes packs",
+      "drafts": "Mes créations"
+    },
+    "market": {
+      "searchPlaceholder": "Rechercher des packs…",
+      "search": "Rechercher",
+      "empty": "Aucun pack sur le marché pour l'instant."
+    },
+    "detail": {
+      "notFound": "Pack introuvable ou retiré",
+      "skills": "Compétences",
+      "mcp": "Serveurs MCP",
+      "agents": "Agents",
+      "requiresGroup": "nécessite le groupe {{group}}",
+      "subscribe": "S'abonner et installer",
+      "gotoMine": "Voir mes packs",
+      "deployTitle": "Déployer en tant que service",
+      "deployBtn": "Déployer",
+      "deployOnline": "en ligne",
+      "deployEffective": "Déploiement envoyé — effectif sous ~{{minutes}} min (scrutation du runner)."
+    },
+    "report": {
+      "title": "Résultat d'installation de « {{name}} »",
+      "hint": "Résultats par élément ; les éléments ignorés ou indisponibles indiquent la raison.",
+      "skill": "Compétence",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "status": {
+        "installed": "Installé",
+        "reused": "Réutilisé",
+        "replaced": "Mis à jour",
+        "skipped": "Ignoré",
+        "unavailable": "Indisponible"
+      }
+    },
+    "mine": {
+      "empty": "Aucun abonnement pour l'instant. Parcourez le marché.",
+      "updateAvailable": "mise à jour vers v{{version}}",
+      "upgrade": "Mettre à jour",
+      "uninstall": "Se désabonner"
+    },
+    "uninstall": {
+      "title": "Se désabonner de « {{name}} »",
+      "willRemove": "Cela supprimera les compétences et agents suivants :",
+      "mcpKept": "Les configurations MCP sont conservées (utilitaires partagés) : {{servers}}",
+      "modifiedWarning": "Ces compétences ont été modifiées après l'installation ; les changements seront perdus : {{skills}}",
+      "confirm": "Se désabonner"
+    },
+    "drafts": {
+      "title": "Mes créations",
+      "create": "Nouveau pack",
+      "empty": "Aucun brouillon pour l'instant.",
+      "defaultName": "Pack sans titre",
+      "published": "Publié",
+      "draft": "Brouillon",
+      "partCounts": "{{skills}} compétences · {{mcp}} MCP · {{agents}} agents"
+    },
+    "editor": {
+      "title": "Modifier le pack",
+      "save": "Enregistrer le brouillon",
+      "publish": "Publier",
+      "publishOk": "Publié en v{{version}}.",
+      "name": "Nom",
+      "description": "Description",
+      "tags": "Étiquettes (séparées par des virgules)",
+      "tagsPlaceholder": "juridique, contrats",
+      "skills": "Compétences",
+      "addSkill": "Ajouter une compétence",
+      "skillName": "Nom de la compétence (ex. legal-contract-workflow)",
+      "skillDescription": "Description de la compétence",
+      "skillContent": "Corps du SKILL.md",
+      "remove": "Retirer",
+      "mcp": "Références MCP",
+      "mcpHint": "Choisissez uniquement des serveurs du registre du catalogue ; les packs ne transportent pas d'endpoints.",
+      "mcpEmpty": "Aucun serveur du registre dans le catalogue.",
+      "agents": "Agents",
+      "addAgent": "Ajouter un agent",
+      "agentHint": "Les agents sont des personas locaux — sans endpoint, modèle ni identifiants.",
+      "agentId": "Id de l'agent (ex. pack-reviewer)",
+      "agentName": "Nom de l'agent",
+      "agentPersona": "Texte de la persona",
+      "personaCost": "Persona {{chars}} caractères ≈ {{tokens}} tokens/tour (~3 caractères/token, estimation ; facturé à chaque tour)",
+      "resourceSet": "Ressources (facultatif)",
+      "resourceHint": "Non coché = toutes les ressources du pack ; coché, seul le sous-ensemble sélectionné est chargé (aucun = référence seule). Seules les compétences et références MCP du pack sont proposées.",
+      "limitSkills": "Limiter les compétences",
+      "limitMcp": "Limiter les serveurs MCP",
+      "resourceEmptySkills": "Le brouillon ne déclare pas encore de compétences — ajoutez-en ci-dessus.",
+      "resourceEmptyMcp": "Le brouillon ne choisit pas encore de références MCP — choisissez-en ci-dessus.",
+      "agentServing": "Déployer en tant que service d'agent (A2A)",
+      "agentServingHint": "Après publication, déployez en un clic depuis la page du pack ; le service répond en A2A via la passerelle."
+    }
+  },
+  "overlay": {
+    "title": "Ajustement des ressources",
+    "adjust": "Ajuster les ressources",
+    "desc": "Ajustez les serveurs MCP et les compétences de ce rôle. Les modifications sont enregistrées comme un diff de préférence et s'appliquent à la prochaine session ; les entrées invalidées par une mise à niveau sont ignorées automatiquement.",
+    "mcp": "Serveurs MCP",
+    "skills": "Compétences du rôle",
+    "baseline": "Compétences de base (disponibles dans tous les modes)",
+    "noneAddable": "(rien à ajouter)",
+    "remove": "Retirer",
+    "restore": "Restaurer",
+    "add": "Ajouter",
+    "apply": "Appliquer",
+    "applying": "Application…",
+    "appliedNote": "Enregistré — prend effet à la prochaine session.",
+    "streamBusy": "L'agent répond ; attendez la fin du tour avant d'ajuster.",
+    "loadError": "Échec du chargement",
+    "deploymentNote": "Les ajustements sont communs à tous les clients de ce déploiement."
+  },
+  "customPresets": {
+    "title": "Préréglages perso",
+    "desc": "Composez un rôle conversationnel à partir des compétences et serveurs MCP de cette cellule — il tourne en mode focalisé, reste local à cette cellule et ne se publie pas.",
+    "create": "Nouveau préréglage",
+    "empty": "Aucun préréglage perso pour l'instant.",
+    "name": "Nom",
+    "persona": "Persona",
+    "personaPlaceholder": "Qui est ce rôle et comment doit-il répondre ? Précisez son domaine, son ton et ce qu'il ne doit jamais inventer…",
+    "tags": "Étiquettes",
+    "tagsPlaceholder": "séparées par des virgules",
+    "skills": "Références de compétences",
+    "skillHint": "Choisies parmi les compétences disponibles localement (les vôtres ou celles d'un pack installé). Les références indisponibles sont ignorées et redeviennent actives automatiquement.",
+    "mcp": "Références de serveurs MCP",
+    "mcpHint": "Choisies parmi les serveurs activés ; une référence ne réactive jamais un serveur que vous avez désactivé.",
+    "noSkills": "Aucune compétence disponible dans cette cellule.",
+    "noMcp": "Aucun serveur MCP activé.",
+    "save": "Enregistrer",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer ce préréglage ? S'il est sélectionné, le runtime reviendra à l'agent intégré.",
+    "streamBusy": "L'agent répond — réessayez dans un instant.",
+    "refs": "{{skills}} compétences · {{mcp}} MCP",
+    "unavailable": "indisponible",
+    "shadowed": "surchargé",
+    "shadowedHint": "Le fichier opérateur ou le cloud définit le même id ; le rôle se compose actuellement sous l'entrée qui le surcharge."
+  }
+}

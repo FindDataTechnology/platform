@@ -1,0 +1,16 @@
+# gitleaks config — extends the full default ruleset, then allowlists
+# secret-SHAPED strings that are not secrets.
+# IMPORTANT: a config without [extend] useDefault replaces the default rules
+# with nothing (every scan goes silently green). Keep the extend block.
+# scripts/make-public-snapshot.mjs passes this config explicitly.
+title = "platform gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Non-secrets: e2e fixtures and kubectl placeholder docs"
+  paths = [
+    '''e2e/branding\.spec\.js''',
+    '''k8s/deployment\.yaml''',
+  ]

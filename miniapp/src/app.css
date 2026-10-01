@@ -1,0 +1,2581 @@
+/* Global styles for the mini-program client. Plain CSS on purpose:
+   weapp-tailwindcss would add a build-layer dependency for a two-page client. */
+
+page {
+  height: 100%;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 28px;
+  line-height: 1.55;
+}
+
+/* ── chat page ─────────────────────────────────────────────────────────── */
+
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  /* Anchors the outline rail (add-chat-outline), which floats over the
+     transcript's right edge above the composer. */
+  position: relative;
+}
+
+/* Inline 产出 viewer over the REST fetch — the scroll-view gets NO horizontal
+   padding (Scroller Padding Rule); the turns pad themselves. */
+.sessions-detail {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 0 0;
+  box-sizing: border-box;
+}
+
+.sessions-detail .turn {
+  padding: 0 24px;
+}
+
+/* ── shared page header (navigationStyle:"custom" subpages) ────────────── */
+
+.page-header {
+  width: 100%;
+  flex-shrink: 0;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  /* Right padding (capsule reserve) and top padding (status bar) arrive as
+     inline real-px styles from PageHeader. */
+}
+
+.page-header-row {
+  display: flex;
+  align-items: center;
+}
+
+.page-header-back {
+  font-size: 44px;
+  line-height: 1;
+  color: #111827;
+  /* 88rpx hit bar. */
+  padding: 22px 28px 22px 8px;
+}
+
+.page-header-spacer {
+  width: 80px;
+}
+
+.page-header-title {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 30px;
+  font-weight: 600;
+  color: #111827;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ── demo quota end card (add-mp-demo-quota-end) ────────────────────────── */
+/* Block-card pattern at the transcript foot: white card, hairline, 12rpx;
+   one Pocket Blue primary action. */
+
+.quota-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.quota-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.quota-card-title {
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.quota-card-close {
+  font-size: 28px;
+  color: #6b7280;
+  padding: 20px 0 20px 24px;
+}
+
+.quota-card-body {
+  font-size: 24px;
+  line-height: 1.6;
+  color: #4b5563;
+}
+
+.quota-card-action {
+  align-self: flex-start;
+  font-size: 28px;
+  font-weight: 600;
+  color: #2563eb;
+  padding: 22px 8px;
+}
+
+/* ── history drawer (the ☰ sheet on chat) ──────────────────────────────── */
+/* Sheet mechanics mirror the selection panel (mask fade + 0.25s slide-up +
+   delayed visibility on close); taller cap (85vh) so all four groups can be
+   on screen at once. Horizontal padding lives on CHILDREN of the scroll
+   (Scroller Padding Rule) — .hisd-groups carries it. */
+
+.hisd-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 900;
+  visibility: hidden;
+  transition: visibility 0s linear 0.25s;
+}
+
+.hisd-root-open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.hisd-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(17, 24, 39, 0.45);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.hisd-root-open .hisd-mask {
+  opacity: 1;
+}
+
+.hisd-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  background: #f3f4f6;
+  border-radius: 24px 24px 0 0;
+  transform: translateY(100%);
+  transition: transform 0.25s;
+}
+
+.hisd-root-open .hisd-panel {
+  transform: translateY(0);
+}
+
+.hisd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 8px 28px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 24px 24px 0 0;
+}
+
+.hisd-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.hisd-close {
+  font-size: 30px;
+  color: #6b7280;
+  padding: 26px 28px;
+}
+
+.hisd-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0 0 calc(env(safe-area-inset-bottom) + 24px);
+  box-sizing: border-box;
+}
+
+.hisd-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 0 24px;
+}
+
+.hisd-state {
+  display: flex;
+  justify-content: center;
+  padding: 60px 24px;
+  color: #6b7280;
+  font-size: 26px;
+}
+
+.hisd-state-error {
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #b91c1c;
+}
+
+.hisd-retry {
+  color: #2563eb;
+  font-size: 26px;
+  padding: 26px 32px;
+}
+
+/* 加载更多 — full-width row under the visible sessions, hit bar height. */
+.hisd-more {
+  display: block;
+  text-align: center;
+  color: #2563eb;
+  font-size: 26px;
+  padding: 26px 24px;
+}
+
+/* ── chat header (three zones) ─────────────────────────────────────────── */
+
+/* The committed top bar (navigationStyle:"custom"): the status bar pads
+   above (inline, real px), the capsule lane is reserved on the right, and
+   the three-zone row fills the nav height. Banners render below the bar. */
+.chat-topbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.chat-topbar .chat-header {
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: none;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.hd-side {
+  display: flex;
+  align-items: center;
+  min-width: 88px;
+}
+
+.hd-side-right {
+  justify-content: flex-end;
+}
+
+.hd-btn {
+  font-size: 40px;
+  line-height: 1;
+  color: #111827;
+  /* 88rpx hit bar (adapt): 40 glyph + 48 padding = 44px thumb target. */
+  padding: 24px 16px;
+}
+
+.hd-chip {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 440px;
+  margin: 0 auto;
+  /* Header chip is a tap target too — 26rpx padding brings it to the bar. */
+  padding: 26px 24px;
+  border-radius: 999px;
+  background: #f3f4f6;
+}
+
+.hd-chip-disabled {
+  opacity: 0.5;
+}
+
+.hd-chip-text {
+  font-size: 26px;
+  color: #374151;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  max-width: 380px;
+}
+
+.hd-chip-caret {
+  font-size: 20px;
+  color: #9ca3af;
+}
+
+.picker-link {
+  margin-left: auto;
+  color: #2563eb;
+  font-size: 26px;
+  padding: 26px 16px;
+}
+
+/* ── selection panel (half-screen sheet) ───────────────────────────────── */
+
+.sel-root {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 1000;
+  visibility: hidden;
+  transition: visibility 0s linear 0.25s;
+}
+
+.sel-root-open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.sel-mask {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(17, 24, 39, 0.45);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.sel-root-open .sel-mask {
+  opacity: 1;
+}
+
+.sel-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 75vh;
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  transform: translateY(100%);
+  transition: transform 0.25s;
+}
+
+.sel-root-open .sel-panel {
+  transform: translateY(0);
+}
+
+.sel-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px 8px;
+}
+
+.sel-panel-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.sel-panel-close {
+  font-size: 30px;
+  color: #6b7280;
+  padding: 24px 16px;
+}
+
+.sel-scroll {
+  flex: 1;
+  min-height: 0;
+  padding: 0 12px calc(env(safe-area-inset-bottom) + 24px);
+  box-sizing: border-box;
+}
+
+.sel-section {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 0;
+}
+
+.sel-section-title {
+  font-size: 24px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.sel-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  border-radius: 16px;
+}
+
+.sel-option-active {
+  background: #eff6ff;
+}
+
+.sel-option-disabled {
+  opacity: 0.5;
+}
+
+.sel-option-label {
+  flex: 1;
+  font-size: 28px;
+  color: #111827;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sel-option-active .sel-option-label {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.sel-check {
+  font-size: 28px;
+  color: #2563eb;
+}
+
+.msg-list {
+  flex: 1;
+  overflow: hidden;
+  padding: 16px 0;
+}
+
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  padding: 8vh 40px 0;
+}
+
+/* Showcase header (openspec: redesign-mp-home) — positioning line. */
+.welcome-brand {
+  font-size: 36px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.welcome-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  width: 100%;
+}
+
+.welcome-card {
+  width: calc(50% - 10px);
+  box-sizing: border-box;
+  padding: 20px 22px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+}
+
+.welcome-card-title {
+  display: block;
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.welcome-card-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  font-size: 24px;
+  color: #6b7280;
+  word-break: break-word;
+}
+
+.welcome-history {
+  font-size: 26px;
+  color: #2563eb;
+  padding: 26px 8px;
+}
+
+.turn-wrap {
+  padding: 0 24px;
+}
+
+.msg-bottom {
+  height: 24px;
+}
+
+/* ── turns ─────────────────────────────────────────────────────────────── */
+
+.turn {
+  margin-bottom: 20px;
+}
+
+.turn-user {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.turn-user-text {
+  max-width: 560px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: #2563eb;
+  color: #fff;
+  word-break: break-word;
+}
+
+.turn-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.turn-cursor {
+  color: #2563eb;
+}
+
+.turn-interrupted {
+  font-size: 22px;
+  color: #9ca3af;
+}
+
+/* Interrupted-answer recovery (critique re-run P2): the full transcript is
+   one switch_session away — surface it next to the marker. */
+.turn-interrupted-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.turn-reload {
+  font-size: 24px;
+  color: #2563eb;
+  padding: 24px 8px;
+}
+
+.turn-actions {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin-top: 4px;
+}
+
+.turn-action {
+  font-size: 24px;
+  color: #6b7280;
+  padding: 26px 16px;
+}
+
+.blk {
+  border-radius: 12px;
+}
+
+.blk-text-plain {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.blk-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.blk-icon {
+  font-size: 26px;
+}
+
+.blk-title {
+  flex: 1;
+  font-size: 25px;
+  color: #374151;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.blk-state {
+  font-size: 22px;
+}
+
+.blk-state-running {
+  color: #2563eb;
+}
+
+.blk-state-done {
+  color: #059669;
+}
+
+.blk-state-error {
+  color: #dc2626;
+}
+
+.blk-toggle {
+  font-size: 22px;
+  color: #6b7280;
+}
+
+.blk-pre {
+  display: block;
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 12px;
+  font-family: monospace;
+  font-size: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.blk-thinking-text {
+  background: #f9fafb;
+  color: #4b5563;
+}
+
+.blk-error {
+  padding: 14px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+}
+
+.blk-error-text {
+  color: #b91c1c;
+  font-size: 25px;
+}
+
+/* ── activity group (the master collapse) ──────────────────────────────── */
+
+.blk-group {
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.blk-group-error {
+  border-color: #fecaca;
+}
+
+/* The group owns the border; the header row inside stays bare. */
+.blk-group .blk-head {
+  border: none;
+  background: transparent;
+}
+
+.grp-title {
+  flex: 1;
+  font-size: 25px;
+  color: #6b7280;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.grp-title-live {
+  color: #2563eb;
+}
+
+.grp-title-error {
+  color: #dc2626;
+}
+
+.grp-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+/* ── markdown ──────────────────────────────────────────────────────────── */
+
+.md {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.md-h {
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.md-h1 {
+  font-size: 38px;
+}
+
+.md-h2 {
+  font-size: 34px;
+}
+
+.md-h3 {
+  font-size: 30px;
+}
+
+.md-h4 {
+  font-size: 28px;
+}
+
+.md-p {
+  word-break: break-word;
+}
+
+.md-strong {
+  font-weight: 700;
+}
+
+.md-em {
+  font-style: italic;
+}
+
+.md-link {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.md-code-inline {
+  padding: 2px 8px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 24px;
+}
+
+.md-code-block {
+  padding: 14px 16px;
+  background: #111827;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.md-code-lang {
+  display: block;
+  font-size: 20px;
+  color: #9ca3af;
+  margin-bottom: 6px;
+}
+
+.md-code-text {
+  color: #e5e7eb;
+  font-family: monospace;
+  font-size: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.md-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.md-li {
+  display: flex;
+  gap: 10px;
+}
+
+.md-li-marker {
+  color: #6b7280;
+  min-width: 30px;
+}
+
+.md-li-text {
+  flex: 1;
+}
+
+.md-quote {
+  padding: 10px 16px;
+  border-left: 6px solid #9ca3af;
+  background: #f9fafb;
+  color: #4b5563;
+}
+
+.md-table {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.md-tr {
+  display: flex;
+}
+
+.md-tr-header {
+  background: #f9fafb;
+}
+
+.md-td {
+  flex: 1;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 24px;
+  word-break: break-word;
+}
+
+.md-th-text {
+  font-weight: 600;
+}
+
+.md-hr {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 8px 0;
+}
+
+.md-chart {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.md-chart-canvas {
+  width: 100%;
+  height: 220px;
+}
+
+/* ── composer (one card) ───────────────────────────────────────────────── */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px 10px 16px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  font-size: 22px;
+}
+
+.chip-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.chip-name {
+  max-width: 320px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chip-x {
+  color: #6b7280;
+  /* The removable chip's ✕ extends its hit box with padding pulled back by
+     negative margins — the glyph stays put, the thumb target roughly doubles
+     (~79rpx ≈ 40px). WeChat compact-inline norm; destructive controls carry
+     the full 88rpx bar instead. */
+  padding: 24px 14px;
+  margin: -14px -6px -14px -4px;
+}
+
+.composer {
+  padding: 12px 20px calc(env(safe-area-inset-bottom) + 20px);
+  background: transparent;
+}
+
+.composer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 24px;
+}
+
+.composer-input {
+  width: 100%;
+  min-height: 56px;
+  max-height: 240px;
+  box-sizing: border-box;
+  padding: 0;
+  background: transparent;
+  font-size: 28px;
+}
+
+.composer-actions {
+  display: flex;
+  align-items: center;
+}
+
+.composer-attach {
+  font-size: 40px;
+  padding: 16px 10px 16px 0;
+}
+
+.composer-send,
+.composer-stop {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+}
+
+.composer-send-glyph {
+  font-size: 36px;
+  line-height: 1;
+  color: #fff;
+}
+
+.composer-stop {
+  background: #dc2626;
+}
+
+.composer-stop-glyph {
+  font-size: 24px;
+  line-height: 1;
+  color: #fff;
+}
+
+.composer-send-disabled {
+  opacity: 0.3;
+}
+
+/* ── sessions page ─────────────────────────────────────────────────────── */
+
+.sessions-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sessions-list {
+  padding: 12px 0 0;
+}
+
+.session-item {
+  /* Roomier on the right: the ↗ glyph needs optical clearance (user report:
+     the right edge read as unpadded). */
+  padding: 22px 32px 22px 24px;
+  background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.session-title {
+  display: block;
+  font-size: 28px;
+  color: #111827;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.session-when {
+  font-size: 22px;
+  color: #9ca3af;
+}
+
+.sessions-empty,
+.sessions-loading,
+.sessions-error {
+  display: flex;
+  justify-content: center;
+  padding: 60px 24px;
+  color: #6b7280;
+}
+
+.sessions-error {
+  color: #b91c1c;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+/* Retry on the error view (harden): a dead list must be re-enterable. */
+.sessions-retry {
+  color: #2563eb;
+  font-size: 26px;
+  padding: 26px 32px;
+}
+
+/* ── login page ────────────────────────────────────────────────────────── */
+
+.login-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 48px 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.login-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.login-title {
+  font-size: 44px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.login-sub {
+  font-size: 24px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-label {
+  font-size: 24px;
+  color: #374151;
+}
+
+.login-input {
+  padding: 24px 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 28px;
+}
+
+.login-placeholder {
+  color: #9ca3af;
+}
+
+.login-error {
+  font-size: 24px;
+  color: #dc2626;
+}
+
+.login-submit {
+  margin-top: 16px;
+  padding: 22px 0;
+  border-radius: 12px;
+  background: #2563eb;
+  display: flex;
+  justify-content: center;
+}
+
+.login-submit-disabled {
+  opacity: 0.5;
+}
+
+/* Manual 6-digit entry is the FALLBACK to the scan button above it
+   (openspec: add-mp-scan-bind): visible and equal in function, quiet in
+   weight, so the page still has exactly one primary action. */
+.login-submit-ghost {
+  margin-top: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.login-submit-text-ghost {
+  color: #374151;
+}
+
+/* Scan-to-bind — the page's primary action. */
+.login-scan {
+  padding: 26px 0;
+  border-radius: 12px;
+  background: #2563eb;
+  display: flex;
+  justify-content: center;
+}
+
+.login-scan-text {
+  color: #fff;
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.login-scan-hint {
+  margin-top: -8px;
+  font-size: 22px;
+  line-height: 1.6;
+  color: #9ca3af;
+  word-break: break-all;
+}
+
+.login-or {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.login-or::before,
+.login-or::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.login-or-text {
+  font-size: 22px;
+  color: #9ca3af;
+}
+
+/* The way into the illustrated walkthrough, for anyone the copy above does not
+   reach (openspec: mp-bind-guide). */
+.login-guide {
+  display: block;
+  margin-top: 8px;
+  padding: 22px 0;
+  text-align: center;
+  font-size: 24px;
+  color: #9ca3af;
+}
+
+.login-submit-text {
+  color: #fff;
+  font-size: 30px;
+}
+
+.login-unbind {
+  margin-top: 24px;
+  padding: 28px 0;
+  text-align: center;
+  font-size: 24px;
+  color: #6b7280;
+  text-decoration: underline;
+}
+
+/* Server-address toggle — own voice, NOT the unbind style it borrowed
+   (critique re-run P2: two adjacent underlined gray lines meant two
+   different things). */
+.login-server-toggle {
+  margin-top: 24px;
+  padding: 24px 0;
+  text-align: center;
+  font-size: 24px;
+  color: #9ca3af;
+}
+
+/* The "browse first, sign in later" exit — WeChat's forced-login rule means
+   the login page must never be a dead end (openspec: mp-demo-mode). */
+.login-skip {
+  display: block;
+  margin-top: 8px;
+  padding: 26px 0;
+  text-align: center;
+  font-size: 26px;
+  color: #2563eb;
+}
+
+.login-code-input {
+  text-align: center;
+  font-size: 44px;
+  letter-spacing: 16px;
+  font-weight: 600;
+}
+
+/* ── bind guide (openspec: mp-bind-guide) ──────────────────────────────── */
+/* Four steps, each with a schematic drawn in plain boxes: a browser window, a
+   login form, the settings list with the WeChat App row lit, and a phone with
+   a scan frame. No images, no network, nothing to ship alongside the bundle. */
+
+.guide-page {
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.guide-body {
+  padding: 24px 32px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.guide-lede {
+  font-size: 26px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+.guide-step {
+  display: flex;
+  gap: 20px;
+}
+
+.guide-step-index {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-step-index-text {
+  color: #fff;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.guide-step-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.guide-step-text {
+  font-size: 28px;
+  color: #111827;
+  line-height: 1.5;
+}
+
+/* schematic: a browser window */
+.guide-browser {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px;
+}
+
+.guide-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.guide-browser-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+
+.guide-browser-addr {
+  flex: 1;
+  margin-left: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.guide-browser-addr-text {
+  font-size: 20px;
+  color: #6b7280;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* schematic: the login form */
+.guide-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 0 4px;
+}
+
+.guide-form-field {
+  height: 40px;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.guide-form-btn {
+  height: 40px;
+  width: 45%;
+  border-radius: 8px;
+  background: #2563eb;
+}
+
+/* schematic: the settings list */
+.guide-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.guide-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+}
+
+.guide-settings-row-active {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.guide-settings-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #d1d5db;
+}
+
+.guide-settings-line {
+  flex: 1;
+  height: 14px;
+  border-radius: 7px;
+  background: #e5e7eb;
+}
+
+.guide-settings-active-text {
+  font-size: 22px;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+/* schematic: a phone with the scan frame */
+.guide-phone {
+  width: 220px;
+  border: 2px solid #d1d5db;
+  border-radius: 24px;
+  background: #fff;
+  padding: 14px;
+}
+
+.guide-phone-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 0;
+  border-radius: 16px;
+  background: #f9fafb;
+}
+
+.guide-scan-frame {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-scan-qr {
+  width: 84px;
+  height: 84px;
+  background: #111827;
+  border-radius: 4px;
+}
+
+.guide-scan-corner {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 4px solid #2563eb;
+}
+
+.guide-scan-tl {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+  border-top-left-radius: 8px;
+}
+
+.guide-scan-tr {
+  top: -2px;
+  right: -2px;
+  border-left: none;
+  border-bottom: none;
+  border-top-right-radius: 8px;
+}
+
+.guide-scan-bl {
+  bottom: -2px;
+  left: -2px;
+  border-right: none;
+  border-top: none;
+  border-bottom-left-radius: 8px;
+}
+
+.guide-scan-br {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+  border-bottom-right-radius: 8px;
+}
+
+.guide-scan-btn {
+  width: 96px;
+  height: 30px;
+  border-radius: 15px;
+  background: #2563eb;
+}
+
+/* the copyable site address */
+.guide-url {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+}
+
+.guide-url-text {
+  flex: 1;
+  font-size: 24px;
+  color: #111827;
+  word-break: break-all;
+}
+
+.guide-url-copy {
+  flex-shrink: 0;
+  font-size: 24px;
+  color: #2563eb;
+}
+
+.guide-url-done {
+  margin-top: -12px;
+  font-size: 22px;
+  color: #059669;
+}
+
+.guide-error {
+  font-size: 24px;
+  color: #dc2626;
+  line-height: 1.5;
+}
+
+.guide-scan-action {
+  margin-top: 8px;
+  padding: 26px 0;
+  border-radius: 12px;
+  background: #2563eb;
+  display: flex;
+  justify-content: center;
+}
+
+.guide-scan-action-disabled {
+  opacity: 0.5;
+}
+
+.guide-scan-action-text {
+  color: #fff;
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.guide-footnote {
+  font-size: 22px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+/* ── sessions page server-address row ──────────────────────────────────── */
+
+.sessions-server {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px calc(env(safe-area-inset-bottom) + 12px);
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+}
+
+.server-label {
+  font-size: 24px;
+  color: #6b7280;
+}
+
+.server-input {
+  flex: 1;
+  padding: 20px 16px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  font-size: 24px;
+}
+
+/* ── conversation outline rail (add-chat-outline) ───────────────────────── */
+/* Collapsed: a small tab hugging the right edge. Expanded: a card listing
+   every user turn (first line, CSS-ellipsized). Mirrors the web rail; the
+   tap-for-everything translation of hover (see OutlineRail.tsx). */
+
+.outline-rail {
+  position: absolute;
+  right: 0;
+  top: 30%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.outline-edge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 88px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-right: none;
+  border-radius: 16px 0 0 16px;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.outline-edge-glyph {
+  font-size: 22px;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.outline-card {
+  display: flex;
+  flex-direction: column;
+  width: 60vw;
+  max-width: 320px;
+  max-height: 52vh;
+  margin-right: 8px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.outline-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px 8px;
+}
+
+.outline-card-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.outline-collapse {
+  font-size: 24px;
+  color: #6b7280;
+  padding: 24px 12px;
+}
+
+.outline-card-list {
+  flex: 1;
+  min-height: 0;
+  max-height: 46vh;
+}
+
+.outline-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 16px;
+}
+
+.outline-entry-idx {
+  flex-shrink: 0;
+  font-size: 20px;
+  color: #9ca3af;
+  line-height: 32px;
+}
+
+.outline-entry-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 24px;
+  color: #374151;
+  line-height: 32px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Jump flash on the target turn wrap (same contract as the web rail's
+   outline-jump-flash): a primary-tinted wash fading out over ~1.2s. */
+@keyframes turn-flash-kf {
+  from {
+    background-color: rgba(37, 99, 235, 0.14);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.turn-flash {
+  animation: turn-flash-kf 1.2s ease-out 1;
+  border-radius: 12px;
+}
+
+/* ── session share (add-session-share) ──────────────────────────────────── */
+/* Header share entry rides the existing .hd-btn; the rest is the read-only
+   shared-session page and the sessions-page share manager. */
+
+.share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.share-row:last-child {
+  border-bottom: none;
+}
+
+.share-row-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 24px;
+  color: #374151;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-row-revoke {
+  flex-shrink: 0;
+  font-size: 24px;
+  color: #dc2626;
+  /* Destructive: full 88rpx hit bar (critique re-run P1). */
+  padding: 28px 0 28px 24px;
+}
+
+/* Read-only shared-session page (recipient side, reached via forward card). */
+.share-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  box-sizing: border-box;
+  background: #f9fafb;
+}
+
+.share-banner {
+  padding: 16px 24px;
+  background: #eff6ff;
+}
+
+.share-banner-text {
+  font-size: 22px;
+  color: #1d4ed8;
+}
+
+.share-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #6b7280;
+}
+
+.share-unavailable {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #6b7280;
+}
+
+/* Dead-token page (harden): stack the explanation, then hand the outsider
+   the demo funnel — the one page non-users see must not dead-end. */
+.share-unavailable-sub {
+  margin-top: 8px;
+  font-size: 24px;
+  color: #9ca3af;
+}
+
+.share-demo-link {
+  margin-top: 48px;
+  font-size: 28px;
+  font-weight: 600;
+  color: #2563eb;
+  padding: 24px 0;
+}
+
+/* Horizontal padding lives on the CHILDREN, not the scroll-view: WeChat's
+   scroll-view drops side paddings (the chat page pads .turn-wrap for the
+   same reason), which is why the turns hugged the screen edges. */
+.share-body {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 0 0;
+}
+
+.share-body .turn {
+  padding: 0 24px;
+}
+
+.share-title {
+  display: block;
+  font-size: 30px;
+  font-weight: 600;
+  color: #111827;
+  padding: 8px 24px 16px;
+}
+
+/* ── 定时任务页 + 对话内任务卡片(scheduled-tasks-ui / agent-scheduling-tools)── */
+
+.cron-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f3f4f6;
+}
+
+.cron-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 32px 8px;
+}
+
+.cron-count {
+  font-size: 26px;
+  color: #6b7280;
+}
+
+.cron-list {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px;
+}
+
+.cron-form {
+  margin: 8px 24px 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cron-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.cron-seg {
+  padding: 24px 24px;
+  border-radius: 999px;
+  font-size: 26px;
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.cron-seg-on {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+  font-weight: 600;
+}
+
+.cron-day {
+  /* 88rpx hit height; width capped at 82rpx so seven pills + gaps fit the
+     662rpx form interior without wrapping the last day. */
+  width: 82px;
+  height: 88px;
+  line-height: 88px;
+  text-align: center;
+  border-radius: 12px;
+  font-size: 24px;
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.cron-day-on {
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.12);
+  font-weight: 600;
+}
+
+.cron-input {
+  padding: 20px 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 26px;
+  background: #fff;
+}
+
+.cron-picker {
+  color: #111827;
+}
+
+.cron-textarea {
+  min-height: 140px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  font-size: 26px;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cron-tz-row {
+  justify-content: flex-start;
+}
+
+.cron-tz-label {
+  font-size: 24px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.cron-tz-input {
+  flex: 1;
+}
+
+.cron-error {
+  font-size: 24px;
+  color: #dc2626;
+}
+
+.cron-submit {
+  align-self: flex-start;
+  /* Primary submit carries the full 88rpx hit bar (critique re-run P1). */
+  padding: 24px 32px;
+  border-radius: 12px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 28px;
+}
+
+.cron-submit-disabled {
+  opacity: 0.5;
+}
+
+.cron-card {
+  margin-bottom: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cron-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cron-chip {
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-size: 22px;
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.cron-chip-paused,
+.cron-chip-completed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.cron-chip-running {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.cron-chip-expired {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+}
+
+.cron-chip-error {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+/* 执行生命周期 chip(任务引擎):排队沿用主色,失败红,中断琥珀。 */
+.cron-chip-queued {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.cron-chip-failed {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.cron-chip-interrupted {
+  background: rgba(217, 119, 6, 0.14);
+  color: #b45309;
+}
+
+.cron-card-trigger {
+  padding: 2px 12px;
+  border-radius: 999px;
+  font-size: 20px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.cron-card-error {
+  display: block;
+  margin-top: 8px;
+  font-size: 22px;
+  color: #dc2626;
+}
+
+.cron-card-schedule {
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.cron-card-prompt {
+  font-size: 24px;
+  color: #374151;
+}
+
+.cron-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.cron-card-meta-item {
+  font-size: 22px;
+  color: #6b7280;
+}
+
+.cron-card-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.cron-card-btn {
+  padding: 26px 20px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  font-size: 24px;
+  color: #374151;
+}
+
+.cron-card-danger {
+  color: #dc2626;
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+/* 会话列表未读红点 + 会话页定时任务入口(scheduled-task-notifications) */
+.session-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.session-unread-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #2563eb;
+  flex-shrink: 0;
+}
+
+.hd-unread-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2563eb;
+  margin-left: 4px;
+}
+
+/* 对话内任务卡片(agent-scheduling-tools) */
+.blk-cron-card {
+  border: 1px solid rgba(37, 99, 235, 0.35);
+  border-left: 6px solid #2563eb;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.blk-cron-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.blk-cron-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.blk-cron-schedule {
+  font-size: 24px;
+  color: #4b5563;
+}
+
+.blk-cron-prompt {
+  font-size: 24px;
+  color: #374151;
+}
+
+.blk-cron-status {
+  font-size: 22px;
+  color: #6b7280;
+  margin-right: auto;
+}
+
+.blk-cron-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.blk-cron-btn {
+  font-size: 24px;
+  color: #2563eb;
+}
+
+.blk-cron-danger {
+  color: #dc2626;
+}
+
+/* ── home showcase (openspec: redesign-mp-home) ─────────────────────────── */
+
+/* Unbound CTA lives inside the welcome: demo first, sign-in secondary. */
+.welcome-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.cta-primary {
+  width: 100%;
+  padding: 22px 0;
+  border-radius: 48px;
+  background: #1d4ed8;
+  text-align: center;
+}
+
+.cta-primary-text {
+  color: #fff;
+  font-size: 30px;
+  font-weight: 600;
+}
+
+.cta-secondary {
+  font-size: 24px;
+  color: #6b7280;
+  padding: 26px 16px;
+}
+
+.showcase-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  width: 100%;
+}
+
+.showcase-card {
+  width: 48%;
+  box-sizing: border-box;
+  min-height: 140px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.showcase-card-general {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.showcase-card-name {
+  font-size: 28px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.showcase-card-desc {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 22px;
+  color: #6b7280;
+}
+
+.recent-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 12px;
+}
+
+.recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 26px 8px;
+}
+
+.recent-title {
+  flex: 1;
+  font-size: 26px;
+  color: #111827;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.recent-time {
+  font-size: 22px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+/* One quiet status area: slim connection line + one-line demo notice. While
+   disconnected it also names the server in use (tap to change) and, when the
+   transport reported one, the failure reason — the only surface a real device
+   has for either. */
+.conn-block {
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.conn-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 0 4px;
+}
+
+.conn-line-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.conn-line-text {
+  font-size: 22px;
+  color: #6b7280;
+}
+
+.conn-server {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 24px 12px;
+}
+
+.conn-server-text {
+  font-size: 20px;
+  color: #9ca3af;
+  max-width: 78%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conn-server-edit {
+  font-size: 20px;
+  color: #2563eb;
+}
+
+.conn-note {
+  display: block;
+  font-size: 19px;
+  line-height: 1.5;
+  color: #b45309;
+  padding: 0 24px 14px;
+  word-break: break-all;
+}
+
+.demo-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  background: #f0fdf4;
+}
+
+.demo-line-text {
+  font-size: 22px;
+  color: #15803d;
+}
+
+.demo-line-link {
+  font-size: 22px;
+  font-weight: 600;
+  color: #15803d;
+  /* Both notice links are tap targets on the line — padded to the bar, and the
+     row wraps on a narrow phone rather than shrinking either one. */
+  padding: 30px 16px;
+  flex-shrink: 0;
+}
+
+/* 退出演示 — the plain way out, deliberately quieter than the bind CTA beside
+   it (openspec: add-mp-scan-bind): leaving the sandbox is a valid answer, it
+   just is not the one that unlocks the product. */
+.demo-line-exit {
+  font-weight: 400;
+  color: #6b7280;
+  padding-left: 0;
+}
+
+/* ── history groups + row share (revise-mp-history-ux) ─────────────────── */
+
+.session-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.session-share-icon {
+  padding: 24px 16px 24px 24px;
+  font-size: 28px;
+  color: #6b7280;
+}
+
+.grp-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px;
+}
+
+.grp-sec {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.grp-sec-hd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 26px 24px;
+}
+
+.grp-sec-title {
+  flex: 1;
+  font-size: 26px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.grp-sec-count {
+  min-width: 36px;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 22px;
+  text-align: center;
+}
+
+.grp-sec-caret {
+  font-size: 22px;
+  color: #9ca3af;
+}
+
+.grp-sec-body {
+  padding: 0 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* The history group's rows pad themselves — the body stays full-bleed so
+   separators and tap targets run edge-to-edge inside the group card. */
+.grp-sec-body-bleed {
+  padding: 0 0 8px;
+}
+
+.grp-sec-empty {
+  font-size: 24px;
+  color: #9ca3af;
+}
+
+.grp-sec-link {
+  padding: 26px 0;
+  font-size: 26px;
+  color: #2563eb;
+}
+
+
+/* ── 资源库页(resource library,add-resource-library) ─────────────────── */
+
+.res-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: #f3f4f6;
+}
+
+.res-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 32px 8px;
+}
+
+.res-seg {
+  padding: 8px 24px;
+  border-radius: 999px;
+  font-size: 26px;
+  background: #fff;
+  color: #6b7280;
+}
+
+.res-seg-on {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.res-count {
+  margin-left: auto;
+  font-size: 24px;
+  color: #6b7280;
+}
+
+.res-list {
+  flex: 1;
+  min-height: 0;
+  padding: 8px 24px 0;
+  box-sizing: border-box;
+}
+
+.res-empty {
+  margin: 48px 24px;
+  padding: 32px 24px;
+  border-radius: 16px;
+  background: #fff;
+  font-size: 26px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.res-card {
+  margin-bottom: 16px;
+  padding: 20px;
+  border-radius: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.res-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.res-card-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 30px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.res-card-kind {
+  padding: 4px 16px;
+  border-radius: 999px;
+  font-size: 22px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.res-chart {
+  margin: 0;
+}
+
+.res-canvas-fallback {
+  padding: 32px 0;
+  text-align: center;
+  font-size: 24px;
+  color: #9ca3af;
+}
+
+.res-card-meta,
+.res-card-prov {
+  font-size: 24px;
+  color: #6b7280;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.res-card-prov {
+  color: #9ca3af;
+}
+
+.res-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  padding-top: 4px;
+}
+
+.res-action {
+  font-size: 26px;
+  color: #2563eb;
+}
+
+.res-action-danger {
+  color: #dc2626;
+}
+
+/* 绑定图表的数据源行(add-chart-data-binding 5.1):来源行、刷新、过期徽标、
+   数据区间。旧 cell 不发 bindings 字段时整块不渲染,所以这里没有“空状态”。 */
+.res-bind {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.res-bind-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.res-bind-source {
+  font-size: 24px;
+  color: #6b7280;
+}
+
+.res-bind-stale {
+  font-size: 22px;
+  color: #b45309;
+  background: #fef3c7;
+  border-radius: 999px;
+  padding: 2px 14px;
+}
+
+.res-bind-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 22px;
+}
+
+.res-bind-count {
+  font-size: 22px;
+  color: #9ca3af;
+  margin-left: auto;
+}
+
+.res-bind-notice {
+  font-size: 24px;
+  color: #6b7280;
+}
+
+/* 聊天里指向工作区文件的链接渲染成文件 chip(add-resource-library 8.2)。 */
+.file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 18px;
+  margin: 0 6px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+  font-size: 26px;
+}
+
+.file-chip-saved {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+}
+
+/* 委派任务卡片复用 blk-cron-card 形态(组件内同名类)。汇总注回 turn 的
+   任务署名样式(spec: agent-delegation-tools)——左对齐、描边,非用户气泡。 */
+.turn-task-summary {
+  align-self: stretch;
+  margin: 16px 0;
+  padding: 16px 20px;
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.turn-task-summary-label {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 8px;
+}
+
+.turn-task-summary-text {
+  display: block;
+  font-size: 26px;
+  color: #374151;
+  white-space: pre-wrap;
+}

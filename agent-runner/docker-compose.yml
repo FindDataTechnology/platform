@@ -1,0 +1,33 @@
+# Agent-runner — multi-tenant host for deployed Agent Services (ADR-0004).
+#
+# Deliberately NOT its own image: the platform image already carries the repo
+# source, node_modules (dsh-sdk-client, express, js-yaml), and the /opt/dsh
+# install with the pinned dsh runtime — the runner is the same image with a
+# different entrypoint. Deploy next to the registry on a host with
+# memory headroom; see docs/adr/0004 for the runner design.
+#
+#   REGISTRY_IMAGE  image reference (default: the locally built platform image)
+#   docker compose up -d
+
+services:
+  agent-runner:
+    image: ${REGISTRY_IMAGE:-platform:latest}
+    command: node agent-runner/index.js
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8790:8790" # reach the registry gateway over a private network, not the public internet
+    env_file:
+      - ./agent-runner.env
+    environment:
+      AGENT_RUNNER_PORT: "8790"
+    volumes:
+      - agent-runner-home:/app/runner-home
+    mem_limit: ${AGENT_RUNNER_MEM_LIMIT:-1500m}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8790/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  agent-runner-home:

@@ -1,0 +1,1014 @@
+{
+  "common": {
+    "loading": "読み込み中…",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "saving": "保存中…",
+    "add": "追加",
+    "edit": "編集",
+    "delete": "削除",
+    "close": "閉じる"
+  },
+  "nav": {
+    "chat": "チャット",
+    "knowledge": "ナレッジ",
+    "resources": "リソース",
+    "agents": "エージェント",
+    "bots": "ボット",
+    "trace": "トレース",
+    "openMenu": "ナビゲーションメニューを開く",
+    "tasks": "タスク"
+  },
+  "trace": {
+    "title": "トレース",
+    "description": "ターンごとのトレース：LLM リクエスト、ツール呼び出し、すべてのイベントを順に表示。",
+    "errorsOnly": "エラーのみ",
+    "loading": "読み込み中…",
+    "empty": "トレースはまだありません。次のチャットから記録されます。",
+    "back": "トレース一覧へ戻る",
+    "errorBadge": "エラー",
+    "prev": "前へ",
+    "next": "次へ",
+    "toolCalls": "ツール呼び出し",
+    "retries": "リトライ",
+    "textChars": "文字",
+    "col": {
+      "time": "時刻",
+      "model": "モデル",
+      "duration": "所要時間",
+      "events": "イベント数",
+      "session": "セッション"
+    }
+  },
+  "agentsPage": {
+    "title": "エージェントとアプリ",
+    "agents": "エージェント",
+    "apps": "アプリ",
+    "connect": "接続",
+    "connecting": "接続中…",
+    "loadFailed": "カタログの読み込みに失敗しました: {{error}}"
+  },
+  "sidebar": {
+    "brand": "{{brand}}",
+    "chats": "チャット",
+    "new": "+ 新規",
+    "noChats": "チャットはまだありません。「+ 新規」をクリックしてください。",
+    "untitled": "無題",
+    "language": "言語",
+    "collapse": "サイドバーを折りたたむ",
+    "expand": "サイドバーを展開",
+    "workspaces": "ワークスペース",
+    "searchChats": "チャットを検索…",
+    "ungrouped": "未分類",
+    "showMore": "さらに {{count}} 件表示",
+    "showLess": "折りたたむ",
+    "newWorkspace": "新しいワークスペース",
+    "closeSearch": "検索を閉じる",
+    "unread": "新着あり"
+  },
+  "modelsPage": {
+    "title": "モデル",
+    "defaultLabel": "デフォルト",
+    "addProvider": "プロバイダーを追加",
+    "editProvider": "プロバイダーを編集",
+    "addHint": "OpenAI互換のLLMプロバイダーを追加します。",
+    "editHint": "APIキーは空欄のままにすると現在のキーを維持します。",
+    "fieldName": "名前",
+    "fieldBaseUrl": "ベースURL",
+    "fieldApiKey": "APIキー",
+    "keyPlaceholder": "APIキー（空欄で現在のキーを維持）",
+    "keyMasked": "APIキーはサーバーに暗号化して保存され、表示されません。",
+    "apiKeyRequired": "APIキーは必須です",
+    "keyPresent": "APIキーが設定されています",
+    "keyMissing": "APIキーがありません",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "saving": "保存中…",
+    "deleteProvider": "削除",
+    "confirmDeleteTitle": "プロバイダーを削除しますか？",
+    "confirmDelete": "「{{name}}」を削除しますか？この操作は取り消せません。",
+    "testConnection": "接続テスト",
+    "setDefault": "デフォルトに設定",
+    "default": "デフォルト",
+    "builtIn": "組み込み",
+    "empty": "プロバイダーが設定されていません。「プロバイダーを追加」をクリックしてください。",
+    "settingsUpdated": "設定を更新しました。",
+    "restartFailed": "設定を適用できませんでした：{{message}}",
+    "anotherEditInProgress": "別の設定の編集中です。もう一度お試しください。",
+    "lastTest": {
+      "never": "未テスト",
+      "ok": "OK",
+      "failed": "失敗"
+    },
+    "fieldEfforts": "思考レベル（任意）",
+    "effortsHint": "このプロバイダーが受け付けるレベルをカンマ区切りで指定します（例: low, medium, high）。空欄の場合はプロバイダーの既定値を使用します。",
+    "thinkingLevel": "思考レベル",
+    "thinkingDefault": "既定",
+    "syncModels": "モデルを同期",
+    "syncSummary": "追加 {{added}} · 稼働中 {{serving}} · 要注意 {{flagged}}",
+    "discoveryStatus": {
+      "serving": "稼働中",
+      "unauthorized": "未承認",
+      "upstream_down": "上流ダウン",
+      "rate_limited": "レート制限",
+      "not_chat": "非チャットモデル",
+      "error": "エラー"
+    },
+    "editModels": "モデル一覧を編集",
+    "addModel": "追加",
+    "addModelPlaceholder": "モデル id（例: deepseek-v4.1-flash）",
+    "maxTokensLabel": "{{id}} の最大出力トークン",
+    "maxTokensLabelShort": "最大トークン",
+    "removeModel": "{{id}} を削除",
+    "saveModels": "モデル一覧を保存",
+    "duplicateModelId": "モデル id は一意かつ空でない必要があります。",
+    "otherDiscovered": "検出された他のモデル（ロースター外）",
+    "prefillHint": "既定値：コンテキスト {{context}} / 出力 {{maxTokens}}",
+    "contextWindowLabel": "{{id}} のコンテキストウィンドウ（最大入力トークン）",
+    "contextWindowLabelShort": "コンテキスト",
+    "overrideActive": "オーバーライド中",
+    "overrideBaseUrlPlaceholder": "ベース URL オーバーライド（空欄で無効）",
+    "overrideSave": "URL を保存",
+    "overrideClear": "オーバーライドを解除",
+    "modelFallbackToast": "既定モデル {{from}} が応答しないため {{to}} に切替えました"
+  },
+  "status": {
+    "connected": "接続済み",
+    "connecting": "接続中…",
+    "disconnected": "切断済み"
+  },
+  "composer": {
+    "placeholder": "{{assistant}}に何でも質問…（/ でコマンド、Enter で送信、Shift+Enter で改行）",
+    "placeholderDisabled": "接続中…",
+    "send": "送信",
+    "dropHint": "ドロップしてドキュメントを添付",
+    "uploadFailed": "アップロード失敗: {{message}}",
+    "attach": "ファイルを添付",
+    "removeAttachment": "添付を削除",
+    "attachments": "{{count}} 件添付中",
+    "slashPicker": {
+      "sectionCommands": "コマンド",
+      "sectionSkills": "スキル",
+      "noMatches": "一致するコマンドがありません"
+    },
+    "cmd": {
+      "model": "アクティブなモデルを切り替えまたは表示",
+      "new": "新しいチャットセッションを開始",
+      "clear": "チャットビューを消去",
+      "help": "ヘルプセンターを開く"
+    },
+    "stop": "停止",
+    "uploading": "アップロード中…",
+    "cancelUpload": "アップロードをキャンセル",
+    "strip": {
+      "workspace": "作業フォルダ",
+      "workspaceUnset": "未選択",
+      "workspaceRecents": "最近使ったフォルダ",
+      "workspacePlaceholder": "フォルダの絶対パスを入力…",
+      "workspaceBrowse": "フォルダを選択…",
+      "workspaceAbsolute": "絶対パスを入力してください。",
+      "workspaceConfirm": "作業フォルダを {{path}} に切り替えますか？\n\nエージェントが再起動します。このチャットの以前のメッセージが参照するファイルが解決できなくなる場合があります。",
+      "commands": "コマンド",
+      "model": "モデル",
+      "modelUnset": "未選択",
+      "effort": "思考の深さ",
+      "effortDefault": "デフォルト",
+      "agent": "エージェント",
+      "agentUnset": "デフォルト",
+      "agentFocused": "フォーカス · {{pack}} · {{skills}} スキル · {{mcp}} MCP",
+      "agentFocusedCustom": "フォーカス · 自作 · {{skills}} スキル · {{mcp}} MCP",
+      "permission": "権限",
+      "permissionUnset": "デフォルト",
+      "permissionCustom": "カスタム",
+      "permissionReadonly": {
+        "label": "読み取り専用",
+        "desc": "エージェントはワークスペースの閲覧のみ行えます。"
+      },
+      "permissionWrite": {
+        "label": "ワークスペース書き込み",
+        "desc": "エージェントはワークスペース内で変更を行えます。"
+      },
+      "permissionFull": {
+        "label": "フルアクセス",
+        "desc": "承認なしにあらゆる変更が可能になります。",
+        "confirmTitle": "フルアクセスを有効にしますか？",
+        "confirmBody": "フルアクセスはサンドボックスと承認確認を無効にします。エージェントはあなたがアクセスできる場所（ワークスペース外を含む）を読み書きできます。",
+        "acknowledge": "リスクを理解しました",
+        "confirm": "フルアクセスを有効にする"
+      },
+      "add": "ファイルまたはコマンドを追加",
+      "more": "その他"
+    }
+  },
+  "chat": {
+    "empty": "メッセージを送信してチャットを開始してください。",
+    "loadingSession": "会話を読み込み中…",
+    "loadEarlier": "過去のメッセージを読み込む（残り{{count}}件）",
+    "plan": {
+      "title": "進捗",
+      "ariaLabel": "エージェントの計画",
+      "statusPending": "未着手 {{count}} 件",
+      "statusInProgress": "進行中 {{count}} 件",
+      "statusCompleted": "完了 {{count}} 件",
+      "expand": "計画を展開",
+      "collapse": "計画を折りたたむ",
+      "updated": "計画を更新しました（{{done}}/{{total}}）"
+    },
+    "welcome": {
+      "greeting": "今日はどんなお手伝いできますか？",
+      "suggestedPrompts": "おすすめのプロンプト",
+      "recentChats": "最近のチャット",
+      "viewAll": "すべて表示",
+      "modelFooter": "モデル：{{model}}",
+      "agentFooter": "エージェント：{{agent}}",
+      "prompts": {
+        "docs": {
+          "title": "文書を検索",
+          "text": "ドキュメントライブラリの最新ドキュメントの要点をまとめて"
+        },
+        "skills": {
+          "title": "スキルを見つける",
+          "text": "現在利用できるスキルと、それぞれの用途を列挙して"
+        },
+        "tools": {
+          "title": "質問を検証",
+          "text": "技術的な質問を調査し、情報源を示して"
+        },
+        "write": {
+          "title": "整理して執筆",
+          "text": "次の要点を簡潔な週報にまとめて：\n・要点1\n・要点2"
+        }
+      },
+      "viewLess": "折りたたむ"
+    },
+    "preset": {
+      "label": "エージェントモード",
+      "unset": "モードを選択",
+      "userBadge": "カスタム",
+      "brokenBadge": "利用不可",
+      "names": {
+        "standard": "標準モード",
+        "code": "PTC モード",
+        "minimal": "最小モード",
+        "cordis": "創造モード"
+      },
+      "descriptions": {
+        "standard": "フル機能のコーディングエージェント。ファイル編集、シェル、ファイル・ウェブ検索、スキル、プラン、ゴール、サブエージェント、ワークフローに対応。",
+        "code": "標準モードの全能力に加え、Code Mode SDK 経由でツールを公開し、モデルが 1 つの TypeScript プログラムで複数ステップの操作を組み合わせられる。",
+        "minimal": "永続 bash と str_replace_editor の 2 つのツールだけを持つコーディングエージェント。",
+        "cordis": "カスタムエージェントプリセット作成用。標準モードの全能力に加え、ランタイムチェック、プラグイン実験、プリセット作成ガイダンスを提供。"
+      }
+    },
+    "header": {
+      "editTitle": "セッション名を変更",
+      "titlePlaceholder": "セッション名",
+      "rename": "新しい名前を保存",
+      "sessionActions": "セッション操作"
+    },
+    "titleTooLong": "タイトルは 200 文字以下にしてください",
+    "connectionLost": "接続が切断されました。自動的に再接続しています…",
+    "ariaStreaming": "回答を生成中…",
+    "ariaDone": "回答が完了しました",
+    "retry": "再試行",
+    "outlineLabel": "会話アウトライン",
+    "outlineCollapse": "アウトラインを折りたたむ",
+    "outlineJump": "この質問へ移動"
+  },
+  "turn": {
+    "assistantName": "{{assistant}}",
+    "thinkingStreaming": "考え中…",
+    "thinking": "思考",
+    "activityThinking": "思考中…",
+    "activityRunning": "ステップ {{step}} を実行中…",
+    "activityDoneTimed": "{{seconds}} 秒思考 · {{count}} ステップ実行",
+    "activityThought": "{{seconds}} 秒思考",
+    "activityDone": "{{count}} ステップ実行",
+    "activityErrored": "問題が発生しました · {{count}} ステップ実行済み",
+    "statusRunning": "実行中…",
+    "statusError": "エラー",
+    "statusDone": "完了",
+    "input": "入力",
+    "partial": "部分",
+    "output": "出力",
+    "outputError": "エラー",
+    "interrupted": "中断されました",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "regenerate": "再生成",
+    "editResend": "編集して再送"
+  },
+  "markdown": {
+    "copy": "コピー",
+    "copied": "コピー済み",
+    "copyFailed": "コピー失敗"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "refresh": "更新",
+    "refreshing": "更新中…",
+    "loadFailed": "ステータスの読み込みに失敗しました: {{error}}",
+    "retry": "再試行",
+    "none": "なし",
+    "servers": "サーバー",
+    "activeModel": "アクティブモデル",
+    "provider": "プロバイダー: {{name}}",
+    "uptime": "稼働時間: {{sec}}秒",
+    "documents": "ドキュメント",
+    "knowledge": "Knowledge",
+    "collections": "コレクション: {{count}}",
+    "mcpTools": "MCP ツール",
+    "state": {
+      "healthy": "正常",
+      "unhealthy": "異常",
+      "starting": "起動中",
+      "disabled": "無効"
+    }
+  },
+  "systemStatus": {
+    "title": "システム状態",
+    "refresh": "更新",
+    "refreshing": "更新中…",
+    "loadFailed": "ステータスの読み込みに失敗しました: {{error}}",
+    "retry": "再試行",
+    "none": "なし",
+    "health": "ヘルス",
+    "activeConfig": "現在の設定",
+    "resources": "リソース",
+    "activeAgent": "現在のエージェント",
+    "enabled": "有効",
+    "disabled": "無効",
+    "documents": "ドキュメント",
+    "collections": "コレクション: {{count}}",
+    "mcpTools": "MCP ツール",
+    "provider": "プロバイダー: {{name}}",
+    "uptime": "稼働時間: {{sec}}秒",
+    "manage": "管理",
+    "state": {
+      "healthy": "正常",
+      "unhealthy": "異常",
+      "starting": "起動中",
+      "disabled": "無効"
+    }
+  },
+  "sessionMenu": {
+    "delete": "削除",
+    "confirmTitle": "このチャットを削除しますか？",
+    "confirmBody": "この操作は取り消せません。",
+    "cannotDeleteActive": "まず別のセッションに切り替えてください",
+    "deleteFailed": "削除に失敗しました: {{error}}",
+    "clear": "クリア",
+    "cannotClearInactive": "先にこのチャットに切り替えてください"
+  },
+  "documents": {
+    "title": "ドキュメント",
+    "loading": "読み込み中…",
+    "disabledMessage": "ドキュメントは利用できません（ドキュメントコレクションが無効か、データベースに接続できません）。",
+    "remove": "削除",
+    "status": {
+      "ready": "準備完了",
+      "indexing": "インデックス中",
+      "queued": "待機中",
+      "error": "エラー"
+    },
+    "list": {
+      "count": "ドキュメント ({{count}})",
+      "refresh": "更新",
+      "empty": "ドキュメントはまだありません。上で追加してください。"
+    },
+    "content": {
+      "title": "内容"
+    },
+    "ingest": {
+      "uploadFile": "ファイルをアップロード",
+      "working": "処理中…",
+      "textPlaceholder": "プレーンテキストやメモを貼り付け…",
+      "addNote": "メモを追加",
+      "addUrl": "URL を追加"
+    },
+    "collection": {
+      "title": "コレクション",
+      "namePlaceholder": "コレクション名…",
+      "create": "作成",
+      "empty": "コレクションはまだありません。",
+      "docsCount": "{{count}} 件",
+      "delete": "削除",
+      "noDocuments": "ドキュメントはありません。",
+      "addDocPlaceholder": "ドキュメントを追加…",
+      "add": "ファイルまたはコマンドを追加",
+      "confirmDelete": "このコレクションを削除しますか？"
+    },
+    "startConversation": "会話を開始…",
+    "stuckWarning": "処理に時間がかかっています — 中断した可能性"
+  },
+  "embedded": {
+    "iframeTitle": "埋め込みサービス",
+    "blockedMessage": "埋め込み UI をフレーム内で読み込めませんでした。",
+    "openInNewTab": "新しいタブで開く",
+    "notConfigured": "{{name}} は設定されていません。"
+  },
+  "extensions": {
+    "title": "拡張機能",
+    "description": "MCPとスキルを管理して、エージェントを拡張します",
+    "tabs": {
+      "installed": "有効",
+      "market": "ストア"
+    },
+    "status": {
+      "disabled": "無効",
+      "auto": "自動"
+    },
+    "fields": {
+      "enabled": "有効"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "エージェントランタイムが呼び出す MCP サーバーを追加・編集します。",
+      "addButton": "MCPを追加",
+      "empty": "MCPが設定されていません。追加してエージェントを拡張します。",
+      "addTitle": "MCPを追加",
+      "editTitle": "MCPを編集",
+      "confirmDelete": "「{{name}}」を削除しますか？",
+      "fields": {
+        "name": "名前",
+        "type": "タイプ",
+        "command": "コマンド",
+        "args": "引数（スペース区切り）",
+        "env": "環境変数（JSON）",
+        "url": "URL",
+        "headers": "ヘッダー（JSON）"
+      },
+      "applying": "適用中…",
+      "runtimeBusy": "ランタイムがビジー中。現在のターン終了後に自動適用されます",
+      "errors": {
+        "nameRequired": "名前は必須です",
+        "commandRequired": "stdioにはコマンドが必要です",
+        "urlRequired": "HTTPにはURLが必要です",
+        "envInvalid": "環境変数は有効なJSONである必要があります",
+        "headersInvalid": "ヘッダーは有効なJSONである必要があります"
+      }
+    },
+    "skills": {
+      "title": "スキル",
+      "subtitle": "再利用可能なエージェントの振る舞いを追加するスキルを作成・編集します。",
+      "addButton": "スキルを作成",
+      "empty": "カスタムスキルがありません。作成して再利用可能なエージェントの動作を追加します。",
+      "addTitle": "スキルを作成",
+      "editTitle": "スキルを編集",
+      "confirmDelete": "「{{name}}」を削除しますか？",
+      "custom": "カスタム",
+      "builtIn": "組み込み",
+      "fields": {
+        "name": "名前",
+        "description": "説明",
+        "content": "内容（Markdown）"
+      },
+      "errors": {
+        "nameRequired": "名前は必須です",
+        "contentRequired": "内容は必須です"
+      }
+    },
+    "market": {
+      "mcpTitle": "MCP",
+      "skillsTitle": "スキル",
+      "empty": "ストアにはまだアイテムがありません。",
+      "install": "インストール",
+      "installSuccess": "{{name}}をインストールしました",
+      "installFailed": "{{name}}のインストールに失敗しました: {{error}}",
+      "readyToUse": "すぐに使える",
+      "needsConfig": "設定が必要"
+    },
+    "registry": {
+      "title": "MCP マーケットのアカウント",
+      "state": {
+        "connected": "接続済み",
+        "disconnected": "未接続",
+        "stale": "再接続が必要",
+        "expired": "期限切れ"
+      },
+      "connect": "接続",
+      "reconnect": "再接続",
+      "connecting": "接続中…",
+      "pasteToggle": "トークンを貼り付け",
+      "pasteHint": "マーケット画面の「Get JWT Token」で発行したトークンを貼り付けてください。自動発行のトークンと同じ扱いで保存されます。",
+      "tokenLabel": "マーケットトークン",
+      "tokenPlaceholder": "eyJ…",
+      "expires": "{{date}} に期限切れ",
+      "disconnect": "切断",
+      "unconfigured": "このデプロイには MCP マーケットが設定されていません。トークンを貼り付けてください。",
+      "staleHint": "保存済みトークンがマーケットに拒否されました。再接続するとレジストリのサーバーが復帰します。"
+    }
+  },
+  "help": {
+    "title": "ヘルプ",
+    "subtitle": "コマンド・スキル・ショートカットの一覧",
+    "commands": "コマンド",
+    "skills": "スキル（{{count}}）",
+    "emptySkills": "読み込まれたスキルはありません。",
+    "shortcuts": {
+      "title": "ショートカット",
+      "send": "メッセージを送信",
+      "newline": "改行",
+      "picker": "コマンドピッカーを開く",
+      "dismiss": "ピッカーを閉じる / 編集をキャンセル",
+      "thinking": "思考ブロックの一括開閉",
+      "sessionMenu": "セッションの右クリックメニュー（セッション行上で）"
+    },
+    "concepts": {
+      "title": "仕組み",
+      "attachments": "添付はまずナレッジライブラリにアップロードされ、メッセージは @doc: で参照します。回答は文書内容に基づきます。",
+      "knowledge": "「ナレッジ」ページで文書コレクションを管理します。チャットで添付したファイルも同じコレクションに入ります。",
+      "sessions": "セッションはローカル DB に保存されます。サイドバーで切り替え、URL（/chat/<id>）をブックマークできます。",
+      "tools": "ツールブロックは実際の呼び出しを表示します。青=実行中、緑=完了、赤=失敗。クリックで入出力を展開。"
+    }
+  },
+  "botsPage": {
+    "title": "ボット",
+    "subtitle": "アシスタントを WeCom・Feishu・Telegram・WeChat 公式アカウントのチャットに接続します。",
+    "addBot": "ボットを追加",
+    "editBot": "ボットを編集",
+    "empty": "ボットはまだ設定されていません。",
+    "formHint": "認証情報はサーバーにのみ保存され、ブラウザーには返されません。",
+    "type": "プラットフォーム",
+    "name": "名前",
+    "enabled": "有効",
+    "keepStored": "設定済み — 空欄のままで維持",
+    "copy": "コピー",
+    "webhookCopied": "Webhook URL をコピーしました",
+    "copyFailed": "Webhook URL をコピーできませんでした",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "confirmDeleteTitle": "ボットを削除しますか？",
+    "confirmDelete": "「{{name}}」とその認証情報を完全に削除します。",
+    "gridHint": "プラットフォームをクリックすると、その種類のボットを追加できます。",
+    "configuredTitle": "設定済みのボット",
+    "saved": "保存しました",
+    "qr": {
+      "title": "ユーザー入口（QR）",
+      "resolving": "解決中…",
+      "copyLink": "リンクをコピー",
+      "linkCopied": "リンクをコピーしました",
+      "manualPrompt": "入口リンクが未設定です。ユーザーに開いてほしいURLを貼り付けて保存してください。",
+      "manualPlaceholder": "https://…",
+      "saveLink": "リンクを保存",
+      "resolveFailed": "QRを解決できませんでした：",
+      "disabledNote": "ボットは無効です。QRは入口のプレビューとして表示されます。",
+      "hint": {
+        "telegram": "Telegramでこのリンクを開き、Startを押してください。",
+        "wechatOa": "WeChatでスキャンして公式アカウントをフォローしてください。",
+        "manual": "コードをスキャンしてボットの入口を開いてください。"
+      }
+    },
+    "types": {
+      "telegram": "Telegram",
+      "feishu": "Feishu / Lark",
+      "wecom": "WeCom",
+      "wechat-oa": "WeChat 公式アカウント"
+    }
+  },
+  "assistant": {
+    "name": "{{brand}} アシスタント",
+    "brand": "Platform"
+  },
+  "login": {
+    "title": "ログイン",
+    "description": "このデプロイでは組織のシングルサインオンを使用します。{{company}} を利用するにはログインしてください。",
+    "action": "SSO でログイン",
+    "logout": "ログアウト",
+    "loadFailed": "認証状態を読み込めません: {{error}}",
+    "stateError": "ログインセッションが期限切れか一致しません。もう一度ログインしてください。",
+    "callbackError": "ログインに失敗しました。もう一度お試しください。"
+  },
+  "settings": {
+    "title": "設定",
+    "sections": {
+      "general": "一般",
+      "account": "アカウント",
+      "models": "モデル",
+      "mcp": "MCP サーバー",
+      "skills": "スキル",
+      "wechat-app": "WeChat ミニプログラム",
+      "branding": "デプロイのブランド設定",
+      "status": "システム状態",
+      "packs": "パック",
+      "presets": "カスタムプリセット"
+    },
+    "general": {
+      "theme": "テーマ",
+      "themeHint": "システムに従うか、選択してください。",
+      "themeOption": {
+        "light": "ライト",
+        "dark": "ダーク",
+        "system": "システム"
+      }
+    },
+    "account": {
+      "title": "アカウント",
+      "email": "ログイン中のメール",
+      "openHint": "このインスタンスは公開されており、アカウントは不要です。",
+      "signedOutHint": "このインスタンスを利用するには組織の SSO でログインしてください。",
+      "optionalSsoHint": "組織の SSO でサインインすると、この共有ランタイムで自分のモデルと MCP の設定を保持できます。"
+    },
+    "wechat-app": {
+      "title": "WeChat ミニプログラム",
+      "scanHint": "ミニプログラムのログイン画面で「扫码绑定」をタップし、このコードをスマートフォンでスキャンしてください。",
+      "typeHint": "カメラがない、またはスキャンできない場合は、同じログイン画面で 6 桁の数字を直接入力できます。",
+      "validity": "一回限り・5 分間有効。",
+      "expiresIn": "残り {{time}}",
+      "expired": "コードの有効期限が切れました。",
+      "refresh": "更新",
+      "retry": "再試行",
+      "loading": "取得中…",
+      "signedOut": "サインインすると、このアカウントと WeChat を紐づけられます。",
+      "signIn": "サインイン",
+      "openInstance": "このインスタンスは公開されておりアカウントがないため、ミニプログラムと紐づける対象がありません。",
+      "unavailable": "このサーバーはバインドコードの発行に対応していません。更新すると紐づけできます。",
+      "error": "バインドコードを取得できませんでした。"
+    },
+    "branding": {
+      "title": "デプロイのブランド設定",
+      "hint": "このデプロイがログインページとブラウザーのタブでどう名乗るかを設定します。空の項目は環境変数または内蔵の既定値にフォールバックします。",
+      "companyName": "会社名",
+      "assistantName": "アシスタント名",
+      "brandIconUrl": "ブランドアイコンの URL",
+      "brandIconUrlHint": "ログインカードとタブのアイコンに表示されます。http(s):// の URL である必要があります。",
+      "loginFooterText": "ログインページのフッター文言",
+      "loginFooterTextHint": "ログインカードの下に 1 行表示されます。空なら表示されません。",
+      "saved": "保存しました。更新すると新しいブランドが全体に反映されます。",
+      "saveFailed": "保存できませんでした: {{error}}"
+    }
+  },
+  "bindings": {
+    "myModel": "自分のモデル",
+    "saveAsMyModel": "自分のモデルとして保存",
+    "saved": "あなたのモデルとして保存しました",
+    "pending": "保存済み — アシスタントがアイドルになると適用されます",
+    "globalSource": "グローバル既定を使用中",
+    "personalMcp": "自分のみ",
+    "apply": "今すぐ適用",
+    "applyFailed": "プロファイルを適用できませんでした: {{error}}",
+    "signIn": "サインインすると、自分のモデルと MCP の設定を保持できます。",
+    "lockedMcp": "管理者によりロックされています",
+    "continueAnonymous": "サインインせずに続ける"
+  },
+  "preview": {
+    "title": "ファイルプレビュー",
+    "close": "プレビューを閉じる",
+    "download": "ダウンロード",
+    "loading": "読み込み中…",
+    "openLocal": "ローカルファイルをプレビュー",
+    "openInDrawer": "プレビュー",
+    "noRenderer": "このファイル形式のプレビューはありません。",
+    "downloadName": "{{name}} をダウンロード"
+  },
+  "share": {
+    "banner": "共有セッション — 所有者が共有した閲覧専用ビュー",
+    "loading": "共有セッションを読み込み中…",
+    "unavailable": "この共有セッションは利用できなくなりました。",
+    "menuItem": "共有",
+    "copied": "リンクをクリップボードにコピーしました",
+    "failed": "共有に失敗しました: {{error}}",
+    "manage": "共有リンク…",
+    "dialogTitle": "共有リンク",
+    "dialogHint": "リンクを知っている人は誰でもセッションを閲覧できます。取り消すとアクセスできなくなります。",
+    "none": "有効な共有リンクはありません。",
+    "revoke": "取り消す"
+  },
+  "tasks": {
+    "title": "タスク",
+    "empty": "タスクはまだありません。予定タスクを作成すると計画に従って実行されます。",
+    "status": {
+      "scheduled": "予約済み",
+      "running": "実行中",
+      "paused": "一時停止",
+      "completed": "完了",
+      "expired": "期限切れ",
+      "error": "エラー",
+      "queued": "待機中",
+      "failed": "失敗",
+      "interrupted": "中断",
+      "manual": "委任",
+      "done": "完了"
+    },
+    "actions": {
+      "pause": "一時停止",
+      "resume": "再開",
+      "runNow": "今すぐ実行",
+      "delete": "削除",
+      "deleteConfirm": "この定期タスクを削除しますか?",
+      "output": "出力",
+      "rerun": "再実行"
+    },
+    "fields": {
+      "agent": "エージェント",
+      "nextRun": "次回実行",
+      "lastRun": "前回実行",
+      "never": "未実行",
+      "missedRuns": "{{count}} 回スキップ",
+      "missedTotal": "合計 {{count}} 回スキップ",
+      "lastOk": "成功",
+      "lastFailed": "失敗"
+    },
+    "schedule": {
+      "daily": "毎日 {{time}}",
+      "weekdays": "平日 {{time}}",
+      "weeklyOn": "毎週 {{days}} {{time}}",
+      "everyNMinutes": "{{n}} 分ごと",
+      "everyMinute": "毎分",
+      "custom": "cron「{{expr}}」",
+      "once": "{{when}} に 1 回"
+    },
+    "form": {
+      "title": "新規タスク",
+      "close": "閉じる",
+      "submit": "作成",
+      "mode": {
+        "recurring": "繰り返し",
+        "once": "単発"
+      },
+      "freq": {
+        "daily": "毎日",
+        "weekly": "毎週",
+        "custom": "カスタム cron"
+      },
+      "cronPlaceholder": "cron 式(例: */15 * * * *)",
+      "namePlaceholder": "名前(任意)— セッションのタイトルになります",
+      "promptPlaceholder": "このスケジュールでエージェントに何をさせますか?",
+      "tz": "タイムゾーン",
+      "errors": {
+        "prompt": "プロンプトを入力してください",
+        "weekday": "曜日を 1 つ以上選んでください",
+        "cron": "cron 式を入力してください",
+        "when": "日時を選択してください"
+      }
+    },
+    "tool": {
+      "title": "定期タスク",
+      "created": "チャットから作成されたタスク",
+      "notFound": "タスク状態を取得できません。タスクページを開いてください。"
+    },
+    "trigger": {
+      "schedule": "定期",
+      "manual": "委任"
+    },
+    "card": {
+      "title": "タスクを委任",
+      "tokens": "{{count}} tokens"
+    },
+    "summary": {
+      "label": "タスク要約"
+    }
+  },
+  "resources": {
+    "binding": {
+      "asOf": "{{age}}時点",
+      "ageNow": "たった今",
+      "ageMinutes": "{{count}} 分前",
+      "ageHours": "{{count}} 時間前",
+      "ageDays": "{{count}} 日前",
+      "stale": "データが古い可能性があります",
+      "notRefreshable": "この環境では更新できません",
+      "refreshing": "更新中…",
+      "refresh": "更新",
+      "refreshed": "更新しました · 新規 {{added}}、変更 {{revised}}",
+      "refreshUnchanged": "最新の状態です",
+      "refreshFailed": "更新に失敗しました",
+      "unbind": "バインド解除",
+      "unbindConfirm": "このグラフとデータソースのバインドを解除しますか？グラフは現在のデータを静的なスナップショットとして保持します。",
+      "series": "系列 {{index}}",
+      "periodLabel": "期間",
+      "period": {
+        "6m": "直近6か月",
+        "1y": "直近1年",
+        "all": "すべて"
+      },
+      "periodCount": "{{count}} 期間を保存",
+      "periodShown": "{{count}} 件表示",
+      "bindAction": "データソースをバインド",
+      "pickTitle": "このグラフの元になった呼び出しを選択",
+      "cancel": "キャンセル",
+      "pickEmpty": "このターンにはバインド可能なデータ呼び出しがありません。",
+      "pickPoints": "{{count}} 点",
+      "attach": "バインド",
+      "timeline": "履歴",
+      "timelineTitle": "更新履歴",
+      "timelineEmpty": "更新の記録はまだありません。",
+      "window": {
+        "24h": "24時間",
+        "7d": "7日",
+        "30d": "30日",
+        "all": "全期間"
+      },
+      "backToCurrent": "現在に戻る",
+      "viewingAsOf": "{{moment}} 時点のグラフを表示中",
+      "viewAsOf": "この時点を表示",
+      "historical": "履歴表示",
+      "trigger": {
+        "manual": "手動",
+        "scheduled": "定期",
+        "onOpen": "開いたとき"
+      },
+      "outcome": {
+        "ok": "更新",
+        "unchanged": "変更なし",
+        "skipped_fresh": "スキップ（最新）",
+        "error": "失敗"
+      },
+      "count": {
+        "added": "{{count}} 追加",
+        "revised": "{{count}} 修正",
+        "resourced": "{{count}} 別ソース",
+        "unchanged": "{{count}} 変更なし",
+        "missing": "{{count}} 欠落",
+        "anomalies": "{{count}} 競合"
+      },
+      "reason": {
+        "credential": "再ログインが必要",
+        "unreachable": "データソースに到達できません",
+        "tool_error": "データソースがエラーを返しました",
+        "unit_mismatch": "単位が変わりました",
+        "map_violation": "レスポンス形状が変わりました",
+        "allowlist": "更新が許可されていません",
+        "fresh": "まだ最新です"
+      }
+    },
+    "title": "リソース",
+    "search": "リソースを検索",
+    "count": "{{count}} 件",
+    "loading": "リソースを読み込み中…",
+    "loadMore": "さらに読み込む",
+    "error": "ライブラリを読み込めませんでした：{{message}}",
+    "empty": "生成したグラフはここに自動で保存されます。会話から保存したファイルもここに集まります。",
+    "emptyFiltered": "この条件に一致するリソースはありません。",
+    "chartUnrenderable": "このグラフを描画できませんでした。",
+    "kind": {
+      "chart": "グラフ",
+      "file": "ファイル"
+    },
+    "filter": {
+      "all": "すべて",
+      "chart": "グラフ",
+      "file": "ファイル"
+    },
+    "actions": {
+      "save": "リソースに保存",
+      "rename": "名前を変更",
+      "renameSave": "保存",
+      "delete": "削除",
+      "deleteConfirm": "このリソースを削除しますか？元に戻せません。",
+      "download": "ダウンロード",
+      "jump": "会話を開く"
+    },
+    "save": {
+      "saved": "リソースに保存しました",
+      "exists": "すでにリソースにあります",
+      "failed": "保存できませんでした：{{message}}",
+      "errors": {
+        "invalid_path": "そのファイルはワークスペースの外にあります。",
+        "file_not_found": "ファイルはワークスペースに存在しません。",
+        "file_too_large": "ファイルが大きすぎて保存できません。",
+        "db_unavailable": "ライブラリは現在利用できません。",
+        "store_failed": "保存に失敗しました。もう一度お試しください。"
+      }
+    }
+  },
+  "packs": {
+    "tabs": {
+      "market": "パック市場",
+      "mine": "マイパック",
+      "drafts": "マイ作成"
+    },
+    "market": {
+      "searchPlaceholder": "パックを検索…",
+      "search": "検索",
+      "empty": "市場にパックがまだありません。"
+    },
+    "detail": {
+      "notFound": "パックが見つからないか公開終了しました",
+      "skills": "スキル",
+      "mcp": "MCP サーバー",
+      "agents": "エージェント",
+      "requiresGroup": "グループ {{group}} が必要",
+      "subscribe": "購読してインストール",
+      "gotoMine": "マイパックを見る",
+      "deployTitle": "サービスとしてデプロイ",
+      "deployBtn": "デプロイ",
+      "deployOnline": "オンライン",
+      "deployEffective": "デプロイを送信しました。約 {{minutes}} 分で有効になります（runner のポーリング）。"
+    },
+    "report": {
+      "title": "「{{name}}」のインストール結果",
+      "hint": "パーツごとの結果。スキップ・不可の項目には理由が付きます。",
+      "skill": "スキル",
+      "mcp": "MCP",
+      "agent": "エージェント",
+      "status": {
+        "installed": "インストール済み",
+        "reused": "既存を再利用",
+        "replaced": "更新",
+        "skipped": "スキップ",
+        "unavailable": "利用不可"
+      }
+    },
+    "mine": {
+      "empty": "まだ購読していません。市場をのぞいてみましょう。",
+      "updateAvailable": "v{{version}} に更新可能",
+      "upgrade": "更新",
+      "uninstall": "購読解除"
+    },
+    "uninstall": {
+      "title": "「{{name}}」を購読解除",
+      "willRemove": "次のスキルとエージェントが削除されます：",
+      "mcpKept": "MCP サーバー設定は保持されます（共有ユーティリティ）：{{servers}}",
+      "modifiedWarning": "これらのスキルはインストール後に編集済み。解除すると変更が失われます：{{skills}}",
+      "confirm": "購読解除"
+    },
+    "drafts": {
+      "title": "マイ作成",
+      "create": "新規パック",
+      "empty": "下書きはまだありません。",
+      "defaultName": "無題パック",
+      "published": "公開済み",
+      "draft": "下書き",
+      "partCounts": "スキル {{skills}} · MCP {{mcp}} · エージェント {{agents}}"
+    },
+    "editor": {
+      "title": "パックを編集",
+      "save": "下書きを保存",
+      "publish": "公開",
+      "publishOk": "v{{version}} を公開しました。",
+      "name": "名前",
+      "description": "説明",
+      "tags": "タグ（カンマ区切り）",
+      "tagsPlaceholder": "法律, 契約",
+      "skills": "スキル",
+      "addSkill": "スキルを追加",
+      "skillName": "スキル名（例: legal-contract-workflow）",
+      "skillDescription": "スキルの説明",
+      "skillContent": "SKILL.md 本文",
+      "remove": "削除",
+      "mcp": "MCP 参照",
+      "mcpHint": "カタログの registry サーバーからのみ選択できます。パックはエンドポイントを持ちません。",
+      "mcpEmpty": "カタログに registry サーバーがありません。",
+      "agents": "エージェント",
+      "addAgent": "エージェントを追加",
+      "agentHint": "エージェントはローカルのペルソナです。エンドポイント・モデル・資格情報は含みません。",
+      "agentId": "エージェント id（例: pack-reviewer）",
+      "agentName": "エージェント名",
+      "agentPersona": "ペルソナ文",
+      "personaCost": "ペルソナ {{chars}} 文字 ≈ {{tokens}} tokens/ターン（約3文字/token の概算。毎ターン計上されます）",
+      "resourceSet": "リソースセット（任意）",
+      "resourceHint": "チェックなし = パック全体のリソースを使用。チェックすると選択したサブセットのみ（全選択解除 = 基線のみ）。本パックのスキルと MCP 参照のみ選択できます。",
+      "limitSkills": "スキルを限定",
+      "limitMcp": "MCP サーバーを限定",
+      "resourceEmptySkills": "ドラフトにスキルがまだありません。先に上で追加してください。",
+      "resourceEmptyMcp": "ドラフトで MCP 参照が未選択です。先に上で選択してください。",
+      "agentServing": "エージェントサービスとしてデプロイ（A2A）",
+      "agentServingHint": "公開後、パックページからワンクリックでデプロイ。レジストリゲートウェイ経由で A2A に応答します。"
+    }
+  },
+  "overlay": {
+    "title": "リソース調整",
+    "adjust": "リソースを調整",
+    "desc": "このロールの MCP サーバーとスキルを調整します。変更はプリファレンス差分として保存され、次のセッションから有効になります。アップグレードで無効になった項目は自動的に無視されます。",
+    "mcp": "MCP サーバー",
+    "skills": "ロールのスキル",
+    "baseline": "ベースラインスキル（全モードで利用可）",
+    "noneAddable": "（追加できる項目はありません）",
+    "remove": "削除",
+    "restore": "復元",
+    "add": "追加",
+    "apply": "適用",
+    "applying": "適用中…",
+    "appliedNote": "保存しました。次のセッションから有効になります。",
+    "streamBusy": "エージェントが応答中です。ターン終了後に調整してください。",
+    "loadError": "読み込みに失敗しました",
+    "deploymentNote": "調整はこのデプロイの全クライアントで共通です。"
+  },
+  "customPresets": {
+    "title": "カスタムプリセット",
+    "desc": "このセルのスキルと MCP サーバーから会話ロールを組み立てます。フォーカスモードで動作し、このセル内でのみ有効です。公開はできません。",
+    "create": "新規プリセット",
+    "empty": "カスタムプリセットはまだありません。",
+    "name": "名前",
+    "persona": "ペルソナ",
+    "personaPlaceholder": "このロールは誰で、どう答えるべきか？領域・口調・絶対に捏造してはならない内容を明記…",
+    "tags": "タグ",
+    "tagsPlaceholder": "カンマ区切り",
+    "skills": "スキル参照",
+    "skillHint": "ローカルで利用可能なスキル（自作または導入済みパック）から選択します。利用できない参照は実行時にスキップされ、復旧すると自動的に有効になります。",
+    "mcp": "MCP サーバー参照",
+    "mcpHint": "有効なサーバーから選択します。参照が無効化されたサーバーを再有効化することはありません。",
+    "noSkills": "利用可能なスキルがありません。",
+    "noMcp": "有効な MCP サーバーがありません。",
+    "save": "保存",
+    "edit": "編集",
+    "delete": "削除",
+    "deleteConfirm": "このプリセットを削除しますか？選択中の場合、ランタイムは内蔵エージェントへ戻ります。",
+    "streamBusy": "エージェントが応答中です。しばらくお待ちください。",
+    "refs": "{{skills}} スキル · {{mcp}} MCP",
+    "unavailable": "現在利用不可",
+    "shadowed": "上書き済み",
+    "shadowedHint": "同じ ID が agents.json またはクラウド設定により上書きされており、現在上書き側のロールで動作しています。"
+  }
+}
