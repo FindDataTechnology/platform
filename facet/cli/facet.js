@@ -16,11 +16,16 @@
 //                                [--project <dir>] [--base <facet-url>]
 //                                [--registry <registry-url>]
 
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const VERSION = "0.1.0";
+// Version lives in package.json only — a hardcoded copy shipped 0.1.0 for
+// three releases (caught by `npx @finddatatechnology/facet@0.1.2 --version`).
+const VERSION = JSON.parse(
+  await readFile(path.join(path.dirname(fileURLToPath(import.meta.url)), "package.json"), "utf8"),
+).version;
 const DEFAULT_BASE = process.env.FACET_BASE || "https://facet.finddatatech.cloud";
 const DEFAULT_REGISTRY = process.env.FACET_REGISTRY || "https://mcp.finddatatech.cloud";
 
