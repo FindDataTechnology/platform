@@ -1,6 +1,6 @@
 {
   "name": "@finddatatechnology/facet",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "谦面 Facet CLI — install packs (skills) from the facet marketplace into editor targets (Claude Code, Cursor).",
   "type": "module",
   "bin": {
