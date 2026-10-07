@@ -26,6 +26,7 @@ let mainWindow = null;
 let stopping = false;
 
 const gotLock = app.requestSingleInstanceLock();
+console.log("[electron] main loaded, lock=", gotLock, "packaged=", app.isPackaged);
 if (!gotLock) {
   app.quit();
 } else {
@@ -86,6 +87,15 @@ async function boot() {
   });
   // Merge boosted settings into the resolved env
   const agentEnv = { ...baseEnv, ...boostedSettings };
+  // The packaged logto defaults assume settings.json provisioning (README:
+  // desktop public client). On a fresh install without a LOGTO_ENDPOINT the
+  // logto backend refuses to start (discovery must be reachable) — fall back
+  // to open access so the app boots and can be configured, instead of a
+  // crash-looping backend behind an error window.
+  if (String(agentEnv.AUTH_MODE || "").toLowerCase() === "logto" && !agentEnv.LOGTO_ENDPOINT) {
+    console.warn("[electron] AUTH_MODE=logto without LOGTO_ENDPOINT — falling back to open access");
+    delete agentEnv.AUTH_MODE;
+  }
   const serverPort = agentEnv.DESKTOP_SERVER_PORT ? Number(agentEnv.DESKTOP_SERVER_PORT) : null;
 
   supervisor = new Supervisor({
@@ -98,6 +108,7 @@ async function boot() {
   setSupervisor(supervisor);
   registerStatusIpc(supervisor);
   registerPreferencesIpc(supervisor);
+  console.log("[electron] boot: supervisor constructed, starting…");
 
   // Folder picker for the chat working directory (main window).
   ipcMain.handle("workdir:pick", async () => {

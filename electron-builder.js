@@ -49,6 +49,19 @@ const config = {
     "*.js",
     // the builder config itself is a build-time input, not app code
     "!electron-builder.js",
+    // runtime subdirs server.js imports (2026-10-07 desktop smoke: a missing
+    // lib/ made every packaged app die on ERR_MODULE_NOT_FOUND at boot)
+    "lib/**",
+    "server/**",
+    "gateway/**",
+    // dsh profile scaffold + bridge plugin, materialized at runtime
+    "dsh-profile-template/**",
+    // root runtime data files (bundled market catalog, llm defaults, replay
+    // allowlist…). mcp.json/.env stay excluded below as before.
+    "*.json",
+    "!package-lock.json",
+    "!agents.json",
+    "!dev-settings.json",
     "platform.bundle.json",
     "electron/**",
     "supervisor/**",
