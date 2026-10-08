@@ -1,0 +1,130 @@
+{
+  "mcpServers": [
+    {
+      "name": "fetch",
+      "displayName": "Fetch",
+      "description": "Fetch content from any URL — no configuration needed",
+      "category": "Productivity",
+      "icon": "globe",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-fetch"]
+      },
+      "installInstructions": "No additional configuration needed"
+    },
+    {
+      "name": "time",
+      "displayName": "Time",
+      "description": "Get current time and timezone information — no configuration needed",
+      "category": "Productivity",
+      "icon": "clock",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-time"]
+      },
+      "installInstructions": "No additional configuration needed"
+    },
+    {
+      "name": "everything",
+      "displayName": "Everything (Demo)",
+      "description": "Demo MCP server for testing — no configuration needed",
+      "category": "Development",
+      "icon": "box",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-everything"]
+      },
+      "installInstructions": "No additional configuration needed. This is a demo/test server."
+    },
+    {
+      "name": "sequential-thinking",
+      "displayName": "Sequential Thinking",
+      "description": "Break down complex problems into step-by-step thinking processes",
+      "category": "Productivity",
+      "icon": "list",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+      },
+      "installInstructions": "No additional configuration needed"
+    },
+    {
+      "name": "memory",
+      "displayName": "Memory",
+      "description": "Persistent memory system for storing and retrieving information across conversations",
+      "category": "Productivity",
+      "icon": "brain",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-memory"]
+      },
+      "installInstructions": "No additional configuration needed"
+    },
+    {
+      "name": "puppeteer",
+      "displayName": "Puppeteer",
+      "description": "Browser automation - navigate, screenshot, and interact with web pages",
+      "category": "Browser",
+      "icon": "globe",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      },
+      "installInstructions": "No additional configuration needed. Puppeteer will download Chromium automatically."
+    },
+    {
+      "name": "filesystem",
+      "displayName": "Filesystem",
+      "description": "Read, write, and manage files and directories on your local system",
+      "category": "Productivity",
+      "icon": "folder",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]
+      },
+      "installInstructions": "Replace '/path/to/allowed/directory' with the directory you want to grant access to"
+    },
+    {
+      "name": "sqlite",
+      "displayName": "SQLite",
+      "description": "Query and manage SQLite databases",
+      "category": "Database",
+      "icon": "database",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-sqlite", "--db-path", "/path/to/database.db"]
+      },
+      "installInstructions": "Replace '/path/to/database.db' with the path to your SQLite database file"
+    },
+    {
+      "name": "github",
+      "displayName": "GitHub",
+      "description": "Interact with GitHub repositories, issues, pull requests, and more",
+      "category": "Development",
+      "icon": "github",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
+        }
+      },
+      "installInstructions": "Create a GitHub personal access token at https://github.com/settings/tokens and replace 'your_token_here'"
+    },
+    {
+      "name": "postgres",
+      "displayName": "PostgreSQL",
+      "description": "Query and manage PostgreSQL databases",
+      "category": "Database",
+      "icon": "database",
+      "configTemplate": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-postgres"],
+        "env": {
+          "POSTGRES_CONNECTION_STRING": "your_connection_string_here"
+        }
+      },
+      "installInstructions": "Replace the connection string with your PostgreSQL database credentials"
+    }
+  ]
+}
