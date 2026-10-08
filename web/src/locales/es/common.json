@@ -1,0 +1,1191 @@
+{
+  "common": {
+    "loading": "Cargando…",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "add": "Agregar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "close": "Cerrar"
+  },
+  "nav": {
+    "chat": "Chat",
+    "knowledge": "Conocimiento",
+    "resources": "Recursos",
+    "agents": "Agentes",
+    "bots": "Bots",
+    "trace": "Traza",
+    "openMenu": "Abrir menú de navegación",
+    "tasks": "Tareas"
+  },
+  "trace": {
+    "title": "Traza",
+    "description": "Traza por turno: cada petición LLM, llamada a herramienta y evento en orden.",
+    "errorsOnly": "Solo errores",
+    "loading": "Cargando…",
+    "empty": "Aún no hay trazas. Se registran a partir del siguiente turno de chat.",
+    "back": "Volver a las trazas",
+    "errorBadge": "error",
+    "prev": "Anterior",
+    "next": "Siguiente",
+    "toolCalls": "llamadas a herramientas",
+    "retries": "reintentos",
+    "textChars": "caracteres",
+    "col": {
+      "time": "Hora",
+      "model": "Modelo",
+      "duration": "Duración",
+      "events": "Eventos",
+      "session": "Sesión"
+    }
+  },
+  "agentsPage": {
+    "title": "Agentes y aplicaciones",
+    "agents": "Agentes",
+    "apps": "Aplicaciones",
+    "connect": "Conectar",
+    "connecting": "Conectando…",
+    "loadFailed": "Error al cargar el catálogo: {{error}}"
+  },
+  "sidebar": {
+    "brand": "{{brand}}",
+    "chats": "Chats",
+    "new": "+ Nuevo",
+    "noChats": "Aún no hay chats. Haz clic en \"+ Nuevo\".",
+    "untitled": "Sin título",
+    "language": "Idioma",
+    "collapse": "Contraer barra lateral",
+    "expand": "Expandir barra lateral",
+    "workspaces": "Espacios de trabajo",
+    "searchChats": "Buscar chats…",
+    "ungrouped": "Sin agrupar",
+    "showMore": "Mostrar {{count}} más",
+    "showLess": "Mostrar menos",
+    "newWorkspace": "Nuevo espacio",
+    "closeSearch": "Cerrar búsqueda",
+    "unread": "Novedades"
+  },
+  "modelsPage": {
+    "title": "Modelos",
+    "defaultLabel": "Predeterminado",
+    "addProvider": "Añadir proveedor",
+    "editProvider": "Editar proveedor",
+    "addHint": "Añade un proveedor LLM compatible con OpenAI.",
+    "editHint": "Deja la clave API en blanco para mantener la actual.",
+    "fieldName": "Nombre",
+    "fieldBaseUrl": "URL base",
+    "fieldApiKey": "Clave API",
+    "keyPlaceholder": "Clave API (dejar en blanco para mantener la actual)",
+    "keyMasked": "La clave API se almacena cifrada en el servidor y nunca se muestra.",
+    "apiKeyRequired": "Se requiere la clave API",
+    "keyPresent": "Clave API configurada",
+    "keyMissing": "Sin clave API",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "deleteProvider": "Eliminar",
+    "confirmDeleteTitle": "¿Eliminar proveedor?",
+    "confirmDelete": "¿Eliminar «{{name}}»? Esta acción no se puede deshacer.",
+    "testConnection": "Probar conexión",
+    "setDefault": "Establecer como predeterminado",
+    "default": "Predeterminado",
+    "builtIn": "Incorporado",
+    "empty": "No hay proveedores configurados. Haz clic en «Añadir proveedor».",
+    "settingsUpdated": "Ajustes actualizados.",
+    "restartFailed": "No se pudieron aplicar los ajustes: {{message}}",
+    "anotherEditInProgress": "Hay otra edición de ajustes en curso. Inténtalo de nuevo.",
+    "lastTest": {
+      "never": "Sin probar",
+      "ok": "OK",
+      "failed": "Error"
+    },
+    "fieldEfforts": "Niveles de razonamiento (opcional)",
+    "effortsHint": "Niveles admitidos por este proveedor, separados por comas (p. ej. low, medium, high). Déjalo vacío para el valor predeterminado.",
+    "thinkingLevel": "Nivel de razonamiento",
+    "thinkingDefault": "Predeterminado",
+    "syncModels": "Sincronizar modelos",
+    "syncSummary": "+{{added}} añadidos · {{serving}} activos · {{flagged}} marcados",
+    "discoveryStatus": {
+      "serving": "en servicio",
+      "unauthorized": "no autorizado",
+      "upstream_down": "proveedor caído",
+      "rate_limited": "limitado",
+      "not_chat": "no es de chat",
+      "error": "error"
+    },
+    "editModels": "Editar modelos",
+    "addModel": "Añadir",
+    "addModelPlaceholder": "Id del modelo, p. ej. deepseek-v4.1-flash",
+    "maxTokensLabel": "Tokens máximos de salida para {{id}}",
+    "maxTokensLabelShort": "Tokens máx.",
+    "removeModel": "Quitar {{id}}",
+    "saveModels": "Guardar modelos",
+    "duplicateModelId": "Los ids de modelo deben ser únicos y no vacíos.",
+    "otherDiscovered": "Otros modelos detectados (fuera de la lista)",
+    "prefillHint": "predeterminados: {{context}} ctx / {{maxTokens}} salida",
+    "contextWindowLabel": "Ventana de contexto (tokens máx. de entrada) para {{id}}",
+    "contextWindowLabelShort": "Contexto",
+    "overrideActive": "Anulado",
+    "overrideBaseUrlPlaceholder": "Anular base URL (vacío = ninguna)",
+    "overrideSave": "Guardar URL",
+    "overrideClear": "Quitar anulación",
+    "modelFallbackToast": "El modelo por defecto {{from}} no responde; cambiado a {{to}}"
+  },
+  "status": {
+    "connected": "Conectado",
+    "connecting": "Conectando…",
+    "disconnected": "Desconectado"
+  },
+  "composer": {
+    "placeholder": "Pregúntale al {{assistant}} lo que sea… (escribe / para comandos, Enter para enviar, Shift+Enter para salto de línea)",
+    "placeholderDisabled": "Conectando…",
+    "send": "Enviar",
+    "dropHint": "Suelta para adjuntar el documento",
+    "uploadFailed": "Error al subir: {{message}}",
+    "attach": "Adjuntar un archivo",
+    "removeAttachment": "Quitar adjunto",
+    "attachments": "{{count}} adjuntos",
+    "slashPicker": {
+      "sectionCommands": "Comandos",
+      "sectionSkills": "Habilidades",
+      "noMatches": "Ningún comando coincide"
+    },
+    "cmd": {
+      "model": "cambiar o mostrar el modelo activo",
+      "new": "iniciar una nueva sesión de chat",
+      "clear": "borrar la vista del chat",
+      "help": "Abrir el centro de ayuda"
+    },
+    "stop": "Detener",
+    "uploading": "Subiendo…",
+    "cancelUpload": "Cancelar subida",
+    "strip": {
+      "workspace": "Carpeta",
+      "workspaceUnset": "Sin carpeta",
+      "workspaceRecents": "Carpetas recientes",
+      "workspacePlaceholder": "Ruta absoluta a una carpeta…",
+      "workspaceBrowse": "Examinar carpetas…",
+      "workspaceAbsolute": "Introduce una ruta absoluta.",
+      "workspaceConfirm": "¿Cambiar la carpeta de trabajo a {{path}}?\n\nEsto reinicia el agente. Los mensajes anteriores de este chat pueden referirse a archivos que ya no existen.",
+      "commands": "Comandos",
+      "model": "Modelo",
+      "modelUnset": "Sin modelo",
+      "effort": "Razonamiento",
+      "effortDefault": "Predeterminado",
+      "agent": "Agente",
+      "agentUnset": "Predeterminado",
+      "agentFocused": "Enfocado · {{pack}} · {{skills}} habilidades · {{mcp}} MCP",
+      "agentFocusedCustom": "Enfocado · propio · {{skills}} habilidades · {{mcp}} MCP",
+      "permission": "Permisos",
+      "permissionUnset": "Predeterminado",
+      "permissionCustom": "Personalizado",
+      "permissionReadonly": {
+        "label": "Solo lectura",
+        "desc": "El agente puede leer el espacio de trabajo pero no modificarlo."
+      },
+      "permissionWrite": {
+        "label": "Escritura del espacio",
+        "desc": "El agente puede hacer cambios dentro del espacio de trabajo."
+      },
+      "permissionFull": {
+        "label": "Acceso total",
+        "desc": "El agente puede cambiar cualquier cosa, sin aprobaciones.",
+        "confirmTitle": "¿Habilitar acceso total?",
+        "confirmBody": "El acceso total elimina el sandbox y las confirmaciones de aprobación: el agente puede leer y escribir todo lo que tú puedes, incluso fuera del espacio de trabajo.",
+        "acknowledge": "Entiendo el riesgo",
+        "confirm": "Habilitar acceso total"
+      },
+      "add": "Añadir archivo o comando",
+      "more": "Más"
+    }
+  },
+  "chat": {
+    "empty": "Envía un mensaje para empezar a chatear.",
+    "loadingSession": "Cargando conversación…",
+    "loadEarlier": "Cargar mensajes anteriores (quedan {{count}})",
+    "plan": {
+      "title": "Progreso",
+      "ariaLabel": "Plan del agente",
+      "statusPending": "{{count}} pendientes",
+      "statusInProgress": "{{count}} en curso",
+      "statusCompleted": "{{count}} completadas",
+      "expand": "Expandir plan",
+      "collapse": "Contraer plan",
+      "updated": "Plan actualizado ({{done}}/{{total}})"
+    },
+    "welcome": {
+      "greeting": "¿En qué puedo ayudarte hoy?",
+      "suggestedPrompts": "Sugerencias",
+      "recentChats": "Chats recientes",
+      "viewAll": "Ver todo",
+      "modelFooter": "Modelo: {{model}}",
+      "agentFooter": "Agente: {{agent}}",
+      "prompts": {
+        "docs": {
+          "title": "Busca en tus documentos",
+          "text": "Resume los puntos clave de los documentos más recientes de mi biblioteca"
+        },
+        "skills": {
+          "title": "Descubre habilidades",
+          "text": "Lista las habilidades disponibles y para qué sirve cada una"
+        },
+        "tools": {
+          "title": "Verifica una duda",
+          "text": "Investiga una pregunta técnica y cita las fuentes"
+        },
+        "write": {
+          "title": "Redacta y organiza",
+          "text": "Convierte estos puntos en un informe semanal conciso:\n- punto uno\n- punto dos"
+        }
+      },
+      "viewLess": "Mostrar menos"
+    },
+    "preset": {
+      "label": "Modo del agente",
+      "unset": "Elige un modo",
+      "userBadge": "Personalizado",
+      "brokenBadge": "No disponible",
+      "names": {
+        "standard": "Modo estándar",
+        "code": "Modo PTC",
+        "minimal": "Modo mínimo",
+        "cordis": "Modo creativo"
+      },
+      "descriptions": {
+        "standard": "El agente de codificación completo: edición de archivos, shell, búsqueda de archivos y web, skills, planes, objetivos, subagentes y flujos de trabajo.",
+        "code": "Todo lo del modo estándar, con las herramientas expuestas mediante el SDK de Code Mode para que el modelo componga operaciones multipaso en un solo programa TypeScript.",
+        "minimal": "Un agente de codificación de dos herramientas: bash persistente y str_replace_editor.",
+        "cordis": "Para crear presets de agente personalizados: todo lo del modo estándar más comprobaciones en tiempo de ejecución, experimentación de plugins y guía de autoría de presets."
+      }
+    },
+    "header": {
+      "editTitle": "Renombrar sesión",
+      "titlePlaceholder": "Título de la sesión",
+      "rename": "Guardar nuevo título",
+      "sessionActions": "Acciones de sesión"
+    },
+    "titleTooLong": "El título debe tener 200 caracteres o menos",
+    "connectionLost": "Conexión perdida — reconectando…",
+    "ariaStreaming": "Generando respuesta…",
+    "ariaDone": "Respuesta completa",
+    "retry": "Reintentar",
+    "outlineLabel": "Esquema de la conversación",
+    "outlineCollapse": "Contraer esquema",
+    "outlineJump": "Saltar a esta pregunta",
+    "chart": {
+      "inLibrary": "En la biblioteca"
+    },
+    "artifactStrip": {
+      "title": "Archivos de este turno",
+      "saved": "En la biblioteca"
+    }
+  },
+  "turn": {
+    "assistantName": "{{assistant}}",
+    "thinkingStreaming": "Pensando…",
+    "thinking": "Pensando",
+    "activityThinking": "Pensando…",
+    "activityRunning": "Trabajando en el paso {{step}}…",
+    "activityDoneTimed": "Pensó durante {{seconds}} s · hizo {{count}} pasos",
+    "activityThought": "Pensó durante {{seconds}} s",
+    "activityDone": "Hizo {{count}} pasos",
+    "activityErrored": "Se produjo un problema · {{count}} pasos realizados",
+    "statusRunning": "ejecutando…",
+    "statusError": "error",
+    "statusDone": "listo",
+    "input": "Entrada",
+    "partial": "Parcial",
+    "output": "Salida",
+    "outputError": "Error",
+    "interrupted": "Interrumpido",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "regenerate": "Regenerar",
+    "editResend": "Editar y reenviar",
+    "retryWaiting": "Gateway limitado, reintentando ({{retry}}/{{budget}})…",
+    "retryWaitingNoBudget": "Gateway limitado, reintentando ({{retry}})…",
+    "retryStarted": "Reintentando…",
+    "connectionLost": "Conexión perdida, reanudando…",
+    "resumedLag": "Reconectado; el contenido puede retrasarse"
+  },
+  "markdown": {
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "copyFailed": "Error al copiar"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "refresh": "Actualizar",
+    "refreshing": "Actualizando…",
+    "loadFailed": "Error al cargar el estado: {{error}}",
+    "retry": "reintentar",
+    "none": "ninguno",
+    "servers": "Servidores",
+    "activeModel": "Modelo activo",
+    "provider": "Proveedor: {{name}}",
+    "uptime": "Tiempo activo: {{sec}}s",
+    "documents": "Documentos",
+    "knowledge": "Knowledge",
+    "collections": "Colecciones: {{count}}",
+    "mcpTools": "Herramientas MCP",
+    "state": {
+      "healthy": "saludable",
+      "unhealthy": "en fallo",
+      "starting": "iniciando",
+      "disabled": "deshabilitado"
+    }
+  },
+  "systemStatus": {
+    "title": "Estado del sistema",
+    "refresh": "Actualizar",
+    "refreshing": "Actualizando…",
+    "loadFailed": "Error al cargar el estado: {{error}}",
+    "retry": "reintentar",
+    "none": "ninguno",
+    "health": "Salud",
+    "activeConfig": "Configuración activa",
+    "resources": "Recursos",
+    "activeAgent": "Agente activo",
+    "enabled": "Habilitado",
+    "disabled": "Deshabilitado",
+    "documents": "Documentos",
+    "collections": "Colecciones: {{count}}",
+    "mcpTools": "Herramientas MCP",
+    "provider": "Proveedor: {{name}}",
+    "uptime": "Tiempo activo: {{sec}}s",
+    "manage": "Administrar",
+    "state": {
+      "healthy": "saludable",
+      "unhealthy": "en fallo",
+      "starting": "iniciando",
+      "disabled": "deshabilitado"
+    }
+  },
+  "sessionMenu": {
+    "delete": "Eliminar",
+    "confirmTitle": "¿Eliminar este chat?",
+    "confirmBody": "Esta acción no se puede deshacer.",
+    "cannotDeleteActive": "Cambia a otra sesión primero",
+    "deleteFailed": "Error al eliminar: {{error}}",
+    "clear": "Vaciar",
+    "cannotClearInactive": "Cambia primero a este chat"
+  },
+  "documents": {
+    "title": "Documentos",
+    "loading": "Cargando…",
+    "disabledMessage": "Los documentos no están disponibles (la colección de documentos está deshabilitada o la base de datos es inaccesible).",
+    "remove": "Quitar",
+    "status": {
+      "ready": "listo",
+      "indexing": "indexando",
+      "queued": "en cola",
+      "error": "error"
+    },
+    "list": {
+      "count": "Documentos ({{count}})",
+      "refresh": "Actualizar",
+      "empty": "Aún no hay documentos. Añade uno arriba."
+    },
+    "content": {
+      "title": "Contenido"
+    },
+    "ingest": {
+      "uploadFile": "Subir archivo",
+      "working": "Trabajando…",
+      "textPlaceholder": "Pega texto plano o notas…",
+      "addNote": "Añadir nota",
+      "addUrl": "Añadir URL"
+    },
+    "collection": {
+      "title": "Colecciones",
+      "namePlaceholder": "Nombre de la colección…",
+      "create": "Crear",
+      "empty": "Aún no hay colecciones.",
+      "docsCount": "{{count}} docs",
+      "delete": "Eliminar",
+      "noDocuments": "No hay documentos.",
+      "addDocPlaceholder": "Añadir documento…",
+      "add": "Añadir archivo o comando",
+      "confirmDelete": "¿Eliminar esta colección?"
+    },
+    "startConversation": "Iniciar conversación…",
+    "stuckWarning": "Tarda demasiado — la ingesta pudo detenerse"
+  },
+  "embedded": {
+    "iframeTitle": "servicio integrado",
+    "blockedMessage": "La interfaz integrada no pudo cargarse en un marco.",
+    "openInNewTab": "Abrir en una pestaña nueva",
+    "notConfigured": "{{name}} no está configurado."
+  },
+  "extensions": {
+    "title": "Extensiones",
+    "description": "Gestiona MCP y habilidades para extender tu agente",
+    "tabs": {
+      "installed": "Habilitadas",
+      "market": "Tienda"
+    },
+    "status": {
+      "disabled": "Deshabilitado",
+      "auto": "auto"
+    },
+    "fields": {
+      "enabled": "Habilitado"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "Añade o edita un servidor MCP al que el runtime del agente puede llamar.",
+      "addButton": "Agregar MCP",
+      "empty": "No hay MCP configurado. Agrega uno para extender tu agente.",
+      "addTitle": "Agregar MCP",
+      "editTitle": "Editar MCP",
+      "confirmDelete": "¿Eliminar \"{{name}}\"?",
+      "fields": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "command": "Comando",
+        "args": "Argumentos (separados por espacios)",
+        "env": "Variables de entorno (JSON)",
+        "url": "URL",
+        "headers": "Encabezados (JSON)"
+      },
+      "applying": "Aplicando…",
+      "runtimeBusy": "Runtime ocupado: se aplicará al terminar el turno actual",
+      "errors": {
+        "nameRequired": "El nombre es requerido",
+        "commandRequired": "El comando es requerido para stdio",
+        "urlRequired": "La URL es requerida para HTTP",
+        "envInvalid": "Las variables de entorno deben ser JSON válido",
+        "headersInvalid": "Los encabezados deben ser JSON válido"
+      }
+    },
+    "skills": {
+      "title": "Habilidades",
+      "subtitle": "Crea o edita una habilidad que añade un comportamiento reutilizable del agente.",
+      "addButton": "Crear habilidad",
+      "empty": "No hay habilidades personalizadas. Crea una para agregar comportamientos de agente reutilizables.",
+      "addTitle": "Crear habilidad",
+      "editTitle": "Editar habilidad",
+      "confirmDelete": "¿Eliminar \"{{name}}\"?",
+      "custom": "Personalizada",
+      "builtIn": "Integrada",
+      "fields": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "content": "Contenido (Markdown)"
+      },
+      "errors": {
+        "nameRequired": "El nombre es requerido",
+        "contentRequired": "El contenido es requerido"
+      }
+    },
+    "market": {
+      "mcpTitle": "MCP",
+      "skillsTitle": "Habilidades",
+      "empty": "Nada disponible en la tienda todavía.",
+      "install": "Instalar",
+      "installSuccess": "{{name}} instalado",
+      "installFailed": "Error al instalar {{name}}: {{error}}",
+      "readyToUse": "Listo para usar",
+      "needsConfig": "Requiere configuración"
+    },
+    "registry": {
+      "title": "Cuenta del mercado MCP",
+      "state": {
+        "connected": "Conectado",
+        "disconnected": "Sin conectar",
+        "stale": "Requiere reconexión",
+        "expired": "Caducado"
+      },
+      "connect": "Conectar",
+      "reconnect": "Reconectar",
+      "connecting": "Conectando…",
+      "pasteToggle": "Pegar token",
+      "pasteHint": "Genera un token en la interfaz del mercado (Get JWT Token) y pégalo aquí: se almacena igual que uno emitido automáticamente.",
+      "tokenLabel": "Token del mercado",
+      "tokenPlaceholder": "eyJ…",
+      "expires": "Caduca el {{date}}",
+      "disconnect": "Desconectar",
+      "unconfigured": "Esta instalación no tiene mercado MCP configurado: pega un token.",
+      "staleHint": "El mercado rechazó el token guardado. Reconecta para restaurar los servidores del registro."
+    }
+  },
+  "help": {
+    "title": "Ayuda",
+    "subtitle": "Comandos, habilidades y atajos de teclado",
+    "commands": "Comandos",
+    "skills": "Habilidades ({{count}})",
+    "emptySkills": "No hay habilidades cargadas.",
+    "shortcuts": {
+      "title": "Atajos",
+      "send": "Enviar mensaje",
+      "newline": "Nueva línea",
+      "picker": "Abrir el selector de comandos",
+      "dismiss": "Cerrar selector / cancelar edición",
+      "thinking": "Plegar/desplegar bloques de razonamiento",
+      "sessionMenu": "Menú contextual de sesión (sobre una fila)"
+    },
+    "concepts": {
+      "title": "Cómo funciona",
+      "attachments": "Los adjuntos se suben primero a tu biblioteca; el mensaje los referencia como @doc: — las respuestas se basan en el contenido del documento.",
+      "knowledge": "La página Conocimiento gestiona tu colección de documentos; los archivos adjuntos en el chat van a la misma colección.",
+      "sessions": "Las sesiones se guardan en la base de datos local; cambia desde la lista lateral o marca la URL (/chat/<id>).",
+      "tools": "Los bloques de herramienta muestran las llamadas reales: azul = en curso, verde = hecho, rojo = fallido; clic para expandir."
+    }
+  },
+  "botsPage": {
+    "title": "Bots",
+    "subtitle": "Conecta el asistente a chats de WeCom, Feishu, Telegram y WeChat Official Account.",
+    "addBot": "Añadir bot",
+    "editBot": "Editar bot",
+    "empty": "Aún no hay bots configurados.",
+    "formHint": "Las credenciales se guardan en el servidor y nunca se devuelven al navegador.",
+    "type": "Plataforma",
+    "name": "Nombre",
+    "enabled": "Activado",
+    "keepStored": "Configurado: déjalo vacío para conservarlo",
+    "copy": "Copiar",
+    "webhookCopied": "URL del webhook copiada",
+    "copyFailed": "No se pudo copiar la URL del webhook",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "confirmDeleteTitle": "¿Eliminar el bot?",
+    "confirmDelete": "Se eliminará permanentemente «{{name}}» y sus credenciales.",
+    "gridHint": "Haz clic en una plataforma para añadir un bot de ese tipo.",
+    "configuredTitle": "Bots configurados",
+    "saved": "Guardado",
+    "qr": {
+      "title": "Acceso de usuario (QR)",
+      "resolving": "Resolviendo…",
+      "copyLink": "Copiar enlace",
+      "linkCopied": "Enlace copiado",
+      "manualPrompt": "Aún no hay enlace de entrada: pega la URL que deben abrir los usuarios y guarda.",
+      "manualPlaceholder": "https://…",
+      "saveLink": "Guardar enlace",
+      "resolveFailed": "No se pudo generar el QR:",
+      "disabledNote": "El bot está desactivado; el QR aún muestra su entrada.",
+      "hint": {
+        "telegram": "Abre este enlace en Telegram y pulsa Start.",
+        "wechatOa": "Escanea con WeChat para seguir y abrir la cuenta oficial.",
+        "manual": "Escanea el código para abrir el acceso del bot."
+      }
+    },
+    "types": {
+      "telegram": "Telegram",
+      "feishu": "Feishu / Lark",
+      "wecom": "WeCom",
+      "wechat-oa": "Cuenta Oficial de WeChat"
+    }
+  },
+  "assistant": {
+    "name": "Asistente de {{brand}}",
+    "brand": "Platform"
+  },
+  "login": {
+    "title": "Iniciar sesión",
+    "description": "Este despliegue usa el inicio de sesión único de tu organización. Inicia sesión para continuar en {{company}}.",
+    "action": "Iniciar sesión con SSO",
+    "logout": "Cerrar sesión",
+    "loadFailed": "No se pudo cargar el estado de autenticación: {{error}}",
+    "stateError": "La sesión de inicio de sesión caducó o no coincide. Inténtalo de nuevo.",
+    "callbackError": "Error al iniciar sesión. Inténtalo de nuevo."
+  },
+  "settings": {
+    "title": "Ajustes",
+    "sections": {
+      "general": "General",
+      "account": "Cuenta",
+      "models": "Modelos",
+      "mcp": "Servidores MCP",
+      "skills": "Habilidades",
+      "wechat-app": "Mini programa de WeChat",
+      "branding": "Marca del despliegue",
+      "status": "Estado del sistema",
+      "packs": "Paquetes",
+      "presets": "Preajustes propios"
+    },
+    "general": {
+      "theme": "Tema",
+      "themeHint": "Sigue tu sistema o elige uno.",
+      "themeOption": {
+        "light": "Claro",
+        "dark": "Oscuro",
+        "system": "Sistema"
+      }
+    },
+    "account": {
+      "title": "Cuenta",
+      "email": "Correo de la sesión",
+      "openHint": "Esta instancia es abierta y no requiere una cuenta.",
+      "signedOutHint": "Inicia sesión mediante el SSO de tu organización para usar esta instancia.",
+      "optionalSsoHint": "Inicia sesión con el SSO de tu organización para conservar tu modelo y tus preferencias de MCP en este entorno compartido."
+    },
+    "wechat-app": {
+      "title": "Mini programa de WeChat",
+      "scanHint": "En el mini programa, toca 扫码绑定 en la página de inicio de sesión y escanea este código.",
+      "typeHint": "¿Sin cámara o el escaneo no funciona? Escribe los 6 dígitos en esa misma página del mini programa: es el mismo código.",
+      "validity": "Un solo uso, válido 5 minutos.",
+      "expiresIn": "Caduca en {{time}}",
+      "expired": "Este código ha caducado.",
+      "refresh": "Actualizar",
+      "retry": "Reintentar",
+      "loading": "Obteniendo…",
+      "signedOut": "Inicia sesión para asociar esta cuenta con tu WeChat.",
+      "signIn": "Iniciar sesión",
+      "openInstance": "Esta instancia es abierta y no tiene cuentas, así que no hay nada que asociar al mini programa.",
+      "unavailable": "Este servidor es anterior a la versión que genera códigos de vinculación; actualízalo para vincular el mini programa.",
+      "error": "No se pudo obtener un código de vinculación."
+    },
+    "branding": {
+      "title": "Marca del despliegue",
+      "hint": "Cómo se presenta este despliegue en la página de inicio de sesión y en la pestaña del navegador. Los campos vacíos vuelven a las variables de entorno o a los valores integrados.",
+      "companyName": "Nombre de la empresa",
+      "assistantName": "Nombre del asistente",
+      "brandIconUrl": "URL del icono de marca",
+      "brandIconUrlHint": "Se muestra en la tarjeta de inicio de sesión y como icono de la pestaña. Debe ser una URL http(s)://.",
+      "loginFooterText": "Texto del pie de inicio de sesión",
+      "loginFooterTextHint": "Una línea bajo la tarjeta de inicio de sesión. Vacío = sin pie.",
+      "loginHero": "Hero de la página de inicio de sesión",
+      "loginHeroHint": "Panel de marketing opcional junto a la tarjeta de inicio de sesión. Sin configurar se mantiene la tarjeta neutra (el valor por defecto). Resolución: idioma actual, si no inglés, si no nada.",
+      "loginHeroLocale": "Idioma",
+      "loginHeroTitle": "Titular",
+      "loginHeroSubtitle": "Subtítulo",
+      "loginHeroImageUrl": "URL de imagen (opcional)",
+      "loginHeroPoints": "Puntos",
+      "loginHeroPointsHint": "Uno por línea, hasta 4.",
+      "loginHeroLinks": "Enlaces",
+      "loginHeroLinksHint": "Una \u201cetiqueta | https://url\u201d por línea, hasta 4.",
+      "loginHeroLineError": "Línea {{line}} no válida: usa \u201cetiqueta | https://url\u201d.",
+      "saved": "Guardado: actualiza para ver la nueva marca en todas partes.",
+      "saveFailed": "No se pudo guardar: {{error}}"
+    }
+  },
+  "bindings": {
+    "myModel": "Mi modelo",
+    "saveAsMyModel": "Guardar como mi modelo",
+    "saved": "Guardado como tu modelo",
+    "pending": "Guardado: se aplicará cuando el asistente esté inactivo",
+    "globalSource": "Usando el valor global",
+    "personalMcp": "Solo para mí",
+    "apply": "Aplicar ahora",
+    "applyFailed": "No se pudo aplicar tu perfil: {{error}}",
+    "signIn": "Inicia sesión para conservar tu modelo y tus preferencias de MCP.",
+    "lockedMcp": "Bloqueado por tu administrador",
+    "continueAnonymous": "Continuar sin iniciar sesión"
+  },
+  "preview": {
+    "title": "Vista previa de archivo",
+    "close": "Cerrar vista previa",
+    "download": "Descargar",
+    "loading": "Cargando…",
+    "openLocal": "Previsualizar un archivo local",
+    "openInDrawer": "Previsualizar",
+    "noRenderer": "No hay vista previa para este tipo de archivo.",
+    "downloadName": "Descargar {{name}}"
+  },
+  "share": {
+    "banner": "Sesión compartida — solo lectura, compartida por su propietario",
+    "loading": "Cargando sesión compartida…",
+    "unavailable": "Esta sesión compartida ya no está disponible.",
+    "menuItem": "Compartir",
+    "copied": "Enlace copiado al portapapeles",
+    "failed": "Error al compartir: {{error}}",
+    "manage": "Enlaces compartidos…",
+    "dialogTitle": "Enlaces compartidos",
+    "dialogHint": "Cualquiera con el enlace puede ver la sesión. Revoca para cortar el acceso.",
+    "none": "No hay enlaces compartidos activos.",
+    "revoke": "Revocar"
+  },
+  "tasks": {
+    "title": "Tareas",
+    "empty": "Aún no hay tareas: crea una tarea programada y se ejecutará según el plan.",
+    "status": {
+      "scheduled": "Programada",
+      "running": "Ejecutando",
+      "paused": "En pausa",
+      "completed": "Completada",
+      "expired": "Caducada",
+      "error": "Error",
+      "queued": "En cola",
+      "failed": "Fallido",
+      "interrupted": "Interrumpido",
+      "manual": "Delegada",
+      "done": "Hecha"
+    },
+    "actions": {
+      "pause": "Pausar",
+      "resume": "Reanudar",
+      "runNow": "Ejecutar ahora",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar esta tarea programada?",
+      "output": "Resultado",
+      "rerun": "Reintentar"
+    },
+    "fields": {
+      "agent": "Agente",
+      "nextRun": "Próxima ejecución",
+      "lastRun": "Última ejecución",
+      "never": "nunca ejecutada",
+      "missedRuns": "omitida {{count}} vez/veces",
+      "missedTotal": "{{count}} omitidas",
+      "lastOk": "correcto",
+      "lastFailed": "fallido"
+    },
+    "schedule": {
+      "daily": "cada día a las {{time}}",
+      "weekdays": "días laborables a las {{time}}",
+      "weeklyOn": "cada {{days}} a las {{time}}",
+      "everyNMinutes": "cada {{n}} minutos",
+      "everyMinute": "cada minuto",
+      "custom": "cron “{{expr}}”",
+      "once": "una vez, {{when}}"
+    },
+    "form": {
+      "title": "Nueva tarea",
+      "close": "Cerrar",
+      "submit": "Crear tarea",
+      "mode": {
+        "recurring": "Periódica",
+        "once": "Única"
+      },
+      "freq": {
+        "daily": "Diaria",
+        "weekly": "Semanal",
+        "custom": "Cron personalizado"
+      },
+      "cronPlaceholder": "Expresión cron, p. ej. */15 * * * *",
+      "namePlaceholder": "Nombre (opcional) — será el título de la sesión",
+      "promptPlaceholder": "¿Qué debe hacer el agente en este horario?",
+      "tz": "Zona horaria",
+      "errors": {
+        "prompt": "Se necesita un mensaje",
+        "weekday": "Elige al menos un día",
+        "cron": "Escribe una expresión cron",
+        "when": "Elige fecha y hora"
+      }
+    },
+    "tool": {
+      "title": "Tarea programada",
+      "created": "Tarea creada desde el chat",
+      "notFound": "Estado de la tarea no disponible: abre la página de Tareas."
+    },
+    "trigger": {
+      "schedule": "Programada",
+      "manual": "Delegada"
+    },
+    "card": {
+      "title": "Tarea delegada",
+      "tokens": "{{count}} tokens",
+      "remote": "Mercado"
+    },
+    "summary": {
+      "label": "Resumen de tareas"
+    }
+  },
+  "resources": {
+    "binding": {
+      "asOf": "hasta {{age}}",
+      "ageNow": "ahora mismo",
+      "ageMinutes": "hace {{count}} min",
+      "ageHours": "hace {{count}} h",
+      "ageDays": "hace {{count}} d",
+      "stale": "Los datos pueden estar desactualizados",
+      "notRefreshable": "Actualización no habilitada aquí",
+      "refreshing": "Actualizando…",
+      "refresh": "Actualizar",
+      "refreshed": "Actualizado · {{added}} nuevos, {{revised}} modificados",
+      "refreshUnchanged": "Ya está al día",
+      "refreshFailed": "Falló la actualización",
+      "unbind": "Desvincular",
+      "unbindConfirm": "¿Desvincular este gráfico de su fuente de datos? El gráfico conservará los datos actuales como instantánea estática.",
+      "series": "Serie {{index}}",
+      "periodLabel": "Periodos",
+      "period": {
+        "6m": "Últimos 6 meses",
+        "1y": "Último año",
+        "all": "Todo"
+      },
+      "periodCount": "{{count}} periodos guardados",
+      "periodShown": "{{count}} mostrados",
+      "bindAction": "Vincular una fuente de datos",
+      "pickTitle": "Elige la llamada que produjo este gráfico",
+      "cancel": "Cancelar",
+      "pickEmpty": "Este turno no ejecutó ninguna llamada de datos vinculable.",
+      "pickPoints": "{{count}} puntos",
+      "attach": "Vincular",
+      "timeline": "Historial",
+      "timelineTitle": "Historial de actualizaciones",
+      "timelineEmpty": "Aún no hay actualizaciones registradas.",
+      "window": {
+        "24h": "24 horas",
+        "7d": "7 días",
+        "30d": "30 días",
+        "all": "Todo el tiempo"
+      },
+      "backToCurrent": "Volver al actual",
+      "viewingAsOf": "Viendo el gráfico hasta {{moment}}",
+      "viewAsOf": "Ver en ese momento",
+      "historical": "Vista histórica",
+      "trigger": {
+        "manual": "Manual",
+        "scheduled": "Programada",
+        "onOpen": "Al abrir"
+      },
+      "outcome": {
+        "ok": "Actualizado",
+        "unchanged": "Sin cambios",
+        "skipped_fresh": "Omitida (datos frescos)",
+        "error": "Falló"
+      },
+      "count": {
+        "added": "{{count}} añadidos",
+        "revised": "{{count}} revisados",
+        "resourced": "{{count}} de otra fuente",
+        "unchanged": "{{count}} sin cambios",
+        "missing": "{{count}} ausentes",
+        "anomalies": "{{count}} conflictos"
+      },
+      "reason": {
+        "credential": "sesión necesaria",
+        "unreachable": "fuente inaccesible",
+        "tool_error": "la fuente devolvió un error",
+        "unit_mismatch": "la unidad cambió",
+        "map_violation": "la forma de la respuesta cambió",
+        "allowlist": "no habilitado para actualizar",
+        "fresh": "todavía fresco"
+      }
+    },
+    "title": "Recursos",
+    "search": "Buscar recursos",
+    "count": "{{count}} elementos",
+    "loading": "Cargando recursos…",
+    "loadMore": "Cargar más",
+    "error": "No se pudo cargar la biblioteca: {{message}}",
+    "empty": "Los gráficos que generas aparecen aquí automáticamente. Los archivos que guardas desde el chat también.",
+    "emptyFiltered": "Ningún recurso coincide con este filtro.",
+    "chartUnrenderable": "No se pudo representar este gráfico.",
+    "kind": {
+      "chart": "Gráfico",
+      "file": "Archivo"
+    },
+    "filter": {
+      "all": "Todos",
+      "chart": "Gráficos",
+      "file": "Archivos"
+    },
+    "actions": {
+      "save": "Guardar en recursos",
+      "rename": "Renombrar",
+      "renameSave": "Guardar",
+      "delete": "Eliminar",
+      "deleteConfirm": "¿Eliminar este recurso? No se puede deshacer.",
+      "download": "Descargar",
+      "jump": "Abrir conversación"
+    },
+    "save": {
+      "saved": "Guardado en recursos",
+      "exists": "Ya está en recursos",
+      "failed": "No se pudo guardar: {{message}}",
+      "errors": {
+        "invalid_path": "Ese archivo está fuera del espacio de trabajo.",
+        "file_not_found": "El archivo ya no existe en el espacio de trabajo.",
+        "file_too_large": "El archivo es demasiado grande para guardarlo.",
+        "db_unavailable": "La biblioteca no está disponible ahora mismo.",
+        "store_failed": "No se pudo guardar. Inténtalo de nuevo."
+      }
+    }
+  },
+  "facetShell": {
+    "tabs": {
+      "intro": "Introducción",
+      "packs": "Packs",
+      "mcp": "Servicios MCP"
+    },
+    "langLabel": "Idioma",
+    "packsFootnote": "Navegación anónima; inicia sesión para publicar y suscribirte. Uso de la CLI:"
+  },
+  "facetIntro": {
+    "title": "Mil facetas — el mercado de packs y herramientas para editores de IA",
+    "subtitle": "Los packs reúnen habilidades, referencias MCP y personas de agentes — explora, suscríbete, publica e instala en Claude Code / Cursor con una sola línea",
+    "factRow": "Navegación anónima; inicia sesión para publicar y suscribirte (la misma identidad que Platform)",
+    "ctaPacks": "Explorar packs",
+    "ctaMcp": "Ver servicios MCP",
+    "card": {
+      "contents": {
+        "title": "Qué contiene un pack",
+        "body": "Habilidades, referencias MCP y personas de agentes, además de versión, etiquetas y autor. La vista de detalle muestra el texto completo de cada habilidad y el historial de versiones."
+      },
+      "install": {
+        "title": "Suscribirse e instalar son dos actos",
+        "body": "La suscripción queda registrada en el mercado —el mismo mercado y la misma identidad que la Store integrada en Platform—. Instalar pone el contenido en tu superficie de trabajo; hay tres caminos."
+      },
+      "version": {
+        "title": "Instantáneas de versión",
+        "body": "La instalación toma una versión concreta; volver a ejecutar install toma una instantánea nueva. La CLI no escribe configuración MCP ni guarda credenciales: las credenciales se conectan dentro de Platform."
+      }
+    },
+    "pathTitle": "Cómo funciona",
+    "path": {
+      "line1": "creador --publicar--> mercado Facet --suscribirse--> Platform · instalación en un clic en el entorno de conversación",
+      "line1Note": "(credenciales MCP ya conectadas en Platform)",
+      "line2": "mercado Facet --instalación por CLI--> directorios de habilidades de Claude Code / Cursor",
+      "line2Note": "(instantánea de habilidades en disco; referencias MCP impresas)"
+    },
+    "quickTitle": "Inicio rápido",
+    "quickArg": "<id del pack o una URL que contenga el id>",
+    "quickNote": "Se instala en Claude Code por defecto; --target cursor y --project <dir> son opcionales.",
+    "quickHelpPrefix": "Más usos:",
+    "lineLink": "Sitio oficial de FindData — línea Facet →"
+  },
+  "facetFooter": {
+    "tagline": "El mercado de packs y herramientas para editores de IA",
+    "contactLabel": "Contacto",
+    "linesLabel": "Líneas de producto FindData",
+    "lines": {
+      "base": "Base",
+      "lex": "Lex",
+      "wire": "Wire",
+      "facet": "Facet",
+      "constellation": "Constellation"
+    },
+    "current": "Sitio actual",
+    "entriesLabel": "Accesos",
+    "entries": {
+      "packs": "Mercado de packs",
+      "mcp": "Catálogo de servicios MCP",
+      "line": "Página de la línea Facet"
+    },
+    "mission": "FindData construye infraestructura de procesamiento de texto y datos para la era de la IA, impulsando la igualdad de acceso a la información y, en última instancia, la equidad social.",
+    "copyright": "© 2026 FindData · Facet"
+  },
+  "packs": {
+    "tabs": {
+      "market": "Mercado de paquetes",
+      "mine": "Mis paquetes",
+      "drafts": "Mis creaciones"
+    },
+    "market": {
+      "searchPlaceholder": "Buscar paquetes…",
+      "search": "Buscar",
+      "empty": "Aún no hay paquetes en el mercado."
+    },
+    "detail": {
+      "notFound": "Paquete no encontrado o retirado",
+      "skills": "Habilidades",
+      "mcp": "Servidores MCP",
+      "agents": "Agentes",
+      "requiresGroup": "requiere el grupo {{group}}",
+      "subscribe": "Suscribir e instalar",
+      "gotoMine": "Ver mis paquetes",
+      "deployTitle": "Desplegar como servicio",
+      "deployBtn": "Desplegar",
+      "deployOnline": "en línea",
+      "deployEffective": "Despliegue enviado: surte efecto en ~{{minutes}} min (sondeo del runner).",
+      "gotoConfig": "Configurar",
+      "rhythmOverride": "Anular ritmo (opcional, @{{id}})",
+      "paused": "Pausado",
+      "pauseBtn": "Pausar",
+      "resumeBtn": "Reanudar",
+      "private": "Privado",
+      "balance": "Saldo: {{balance}}",
+      "balanceUnknown": "Saldo desconocido (se establece al primer despliegue)",
+      "balanceLow": "Saldo bajo — los despliegues se rechazarán; contacta al operador para recargar.",
+      "noAccountHintNew": "Aún no tienes cuenta de facturación — un clic en «Conectar sub2api» inicia sesión (SSO Logto) y crea tu cuenta automáticamente; crea una clave en el panel y pégala abajo.",
+      "noAccountHintExisting": "¿Ya eras usuario de la pasarela? El SSO vincula tu cuenta existente — el panel pedirá una sola vez tu contraseña original.",
+      "connectPanel": "Conectar sub2api",
+      "keyPasteLabel": "Clave de medición para @{{id}} — créala en el panel y pégala aquí",
+      "keyPastePlaceholder": "sk-…",
+      "keyBoundBadge": "clave vinculada",
+      "keyRequired": "Este paquete sirve agentes — cada uno necesita una clave de medición creada en tu panel de facturación (inicio Logto), pegada arriba.",
+      "keyInvalid": {
+        "shape": "Eso no parece una clave de sub2api (debe empezar por sk-).",
+        "unknown-agent": "Se pegó una clave para un rol que no es agente de servicio de este paquete.",
+        "duplicate": "Una clave no puede servir a dos agentes del mismo paquete — crea una por agente en el panel.",
+        "liveness": "El panel de facturación rechazó esa clave (eliminada, deshabilitada o sin cuota) — créala de nuevo en el panel.",
+        "ownership": "Esa clave pertenece a otra cuenta de sub2api — pega una clave creada en tu propia cuenta."
+      },
+      "downloadSkill": "Descargar SKILL.md",
+      "manifestJson": "Manifiesto JSON"
+    },
+    "report": {
+      "title": "Resultado de instalación de «{{name}}»",
+      "hint": "Resultados por elemento; los omitidos o no disponibles incluyen el motivo.",
+      "skill": "Habilidad",
+      "mcp": "MCP",
+      "agent": "Agente",
+      "status": {
+        "installed": "Instalado",
+        "reused": "Reutilizado",
+        "replaced": "Actualizado",
+        "skipped": "Omitido",
+        "unavailable": "No disponible"
+      }
+    },
+    "mine": {
+      "empty": "Aún no hay suscripciones. Explora el mercado.",
+      "updateAvailable": "actualizar a v{{version}}",
+      "upgrade": "Actualizar",
+      "uninstall": "Cancelar suscripción"
+    },
+    "uninstall": {
+      "title": "Cancelar suscripción de «{{name}}»",
+      "willRemove": "Se eliminarán las siguientes habilidades y agentes:",
+      "mcpKept": "Las configuraciones MCP se conservan (utilidades compartidas): {{servers}}",
+      "modifiedWarning": "Estas habilidades se modificaron tras la instalación; se perderán los cambios: {{skills}}",
+      "confirm": "Cancelar suscripción"
+    },
+    "drafts": {
+      "title": "Mis creaciones",
+      "create": "Nuevo paquete",
+      "empty": "Aún no hay borradores.",
+      "defaultName": "Paquete sin título",
+      "published": "Publicado",
+      "draft": "Borrador",
+      "partCounts": "{{skills}} habilidades · {{mcp}} MCP · {{agents}} agentes"
+    },
+    "editor": {
+      "title": "Editar paquete",
+      "save": "Guardar borrador",
+      "publish": "Publicar",
+      "publishOk": "Publicado v{{version}}.",
+      "name": "Nombre",
+      "description": "Descripción",
+      "tags": "Etiquetas (separadas por comas)",
+      "tagsPlaceholder": "legal, contratos",
+      "skills": "Habilidades",
+      "addSkill": "Añadir habilidad",
+      "skillName": "Nombre de la habilidad (p. ej. legal-contract-workflow)",
+      "skillDescription": "Descripción de la habilidad",
+      "skillContent": "Cuerpo del SKILL.md",
+      "remove": "Quitar",
+      "mcp": "Referencias MCP",
+      "mcpHint": "Elige solo servidores del registro del catálogo; los paquetes no llevan endpoints.",
+      "mcpEmpty": "No hay servidores del registro en el catálogo.",
+      "agents": "Agentes",
+      "addAgent": "Añadir agente",
+      "agentHint": "Los agentes son personas locales: sin endpoints, modelos ni credenciales.",
+      "agentId": "Id del agente (p. ej. pack-reviewer)",
+      "agentName": "Nombre del agente",
+      "agentPersona": "Texto de la persona",
+      "personaCost": "Persona {{chars}} caracteres ≈ {{tokens}} tokens/turno (~3 caracteres/token, estimación; se cobra en cada turno)",
+      "resourceSet": "Conjunto de recursos (opcional)",
+      "resourceHint": "Sin marcar = usa todos los recursos del pack; marcado, solo carga el subconjunto elegido (ninguno = solo línea base). Solo se ofrecen las habilidades y referencias MCP del propio pack.",
+      "limitSkills": "Limitar habilidades",
+      "limitMcp": "Limitar servidores MCP",
+      "resourceEmptySkills": "El borrador aún no declara habilidades — añade alguna arriba.",
+      "resourceEmptyMcp": "El borrador aún no elige referencias MCP — elige alguna arriba.",
+      "agentServing": "Desplegar como servicio de agente (A2A)",
+      "agentServingHint": "Tras publicar, despliega en un clic desde la página del pack; el servicio responde por A2A a través del gateway.",
+      "visibility": "Visibilidad",
+      "visibilityPublic": "Público (listado)",
+      "visibilityPrivate": "Privado (solo propietario)"
+    },
+    "bridge": {
+      "title": "Traído del preset: {{skills}} habilidades, {{servers}} servidores. No migrado:",
+      "reason": {
+        "pack": "pertenece al paquete {{pack}}, no es tu contenido",
+        "unavailable": "no disponible actualmente",
+        "operator": "servidor de nivel de despliegue, sin contraparte en el mercado",
+        "local": "servidor configurado localmente, sin contraparte en el mercado"
+      },
+      "replaceHint": "Sustituye o completa los elementos antes de publicar."
+    },
+    "rhythm": {
+      "title": "Ritmo de trabajo (concesión de autonomía)",
+      "add": "Añadir entrada",
+      "remove": "Quitar",
+      "every": "Intervalo",
+      "daily": "Diario",
+      "doPlaceholder": "Qué hacer al dispararse (opcional)",
+      "invalid": "Inválido: every exige Nm/Nh (≥5m), daily exige HH:MM",
+      "hint": "Declarar ritmo concede autonomía; sin ritmo solo responde."
+    }
+  },
+  "overlay": {
+    "title": "Ajuste de recursos",
+    "adjust": "Ajustar recursos",
+    "desc": "Ajusta los servidores MCP y las habilidades de este rol. Los cambios se guardan como un diff de preferencias y se aplican en la próxima sesión; las entradas invalidadas por actualizaciones se ignoran automáticamente.",
+    "mcp": "Servidores MCP",
+    "skills": "Habilidades del rol",
+    "baseline": "Habilidades base (disponibles en todos los modos)",
+    "noneAddable": "(nada que añadir)",
+    "remove": "Quitar",
+    "restore": "Restaurar",
+    "add": "Añadir",
+    "apply": "Aplicar",
+    "applying": "Aplicando…",
+    "appliedNote": "Guardado: surte efecto en la próxima sesión.",
+    "streamBusy": "El agente está respondiendo; espera a que termine el turno antes de ajustar.",
+    "loadError": "Error al cargar",
+    "deploymentNote": "Los ajustes son compartidos por todos los clientes de este despliegue."
+  },
+  "customPresets": {
+    "title": "Preajustes propios",
+    "desc": "Compón un rol conversacional con las habilidades y servidores MCP de esta celda: se ejecuta en modo enfocado y solo existe aquí; no se publica.",
+    "create": "Nuevo preajuste",
+    "empty": "Aún no hay preajustes propios.",
+    "name": "Nombre",
+    "persona": "Persona",
+    "personaPlaceholder": "¿Quién es este rol y cómo debe responder? Indica su dominio, su tono y lo que jamás debe inventar…",
+    "tags": "Etiquetas",
+    "tagsPlaceholder": "separadas por comas",
+    "skills": "Referencias de habilidades",
+    "skillHint": "Se eligen entre las habilidades disponibles localmente (tuyas o de cualquier pack instalado). Las referencias no disponibles se omiten y vuelven a surtir efecto automáticamente.",
+    "mcp": "Referencias de servidores MCP",
+    "mcpHint": "Se eligen entre los servidores habilitados; una referencia nunca reactiva un servidor que hayas deshabilitado.",
+    "noSkills": "No hay habilidades disponibles en esta celda.",
+    "noMcp": "No hay servidores MCP habilitados.",
+    "save": "Guardar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "deleteConfirm": "¿Eliminar este preajuste? Si está seleccionado, el runtime volverá al agente integrado.",
+    "streamBusy": "El agente está respondiendo; inténtalo de nuevo en un momento.",
+    "refs": "{{skills}} habilidades · {{mcp}} MCP",
+    "unavailable": "no disponible",
+    "shadowed": "sobrescrito",
+    "shadowedHint": "El archivo del operador o la nube define el mismo id; el rol se compone ahora con la entrada que lo sobrescribe.",
+    "toPackDraft": "Convertir en borrador de paquete",
+    "bridgeDenied": "La conversión requiere permisos de gestión del despliegue (admin o propietario del cell); también puedes crear el borrador a mano"
+  },
+  "presetPublish": {
+    "action": "Publicar y desplegar",
+    "title": "Publicar y desplegar — {{name}}",
+    "compose": "Componiendo el borrador del pack…",
+    "confirmHint": "Revisa el pack compuesto antes de publicar. El nombre y la descripción son editables; las skills, las referencias MCP y el agente se incluyen tal como se convirtieron.",
+    "name": "Nombre del pack",
+    "description": "Descripción",
+    "parts": "{{skills}} skill(s) · {{mcp}} MCP · {{agents}} agente(s)",
+    "reportTitle": "No se transfirió — completa o sustituye en el editor de borradores tras publicar si hace falta:",
+    "publish": "Publicar",
+    "step": {
+      "compose": "Componer borrador",
+      "publish": "Publicar",
+      "deploy": "Desplegar"
+    },
+    "stepFailed": "{{step}} falló: {{message}}",
+    "publishDenied": "la publicación fue rechazada — se requiere membresía de creador (403)",
+    "publishedBadge": "Publicado",
+    "published": "Publicado v{{version}} — visible en el mercado.",
+    "noServing": "Este pack no tiene un agente con contrato de servicio — nada que desplegar.",
+    "deployTitle": "Desplegar como Agent Service",
+    "deployHint": "El agente tiene contrato de servicio — despliega para hacerlo invocable por A2A.",
+    "deploy": "Desplegar ahora",
+    "viewMarket": "Ver en el mercado",
+    "done": "Listo"
+  },
+  "question": {
+    "title": "Se necesita tu respuesta",
+    "waitingHint": "la conversación continúa al responder",
+    "customPlaceholder": "o escribe una respuesta personalizada…",
+    "cancel": "Cancelar pregunta",
+    "submit": "Enviar respuesta",
+    "answered": "Pregunta respondida",
+    "cancelled": "Pregunta cancelada",
+    "customAnswer": "Respuesta personalizada"
+  },
+  "auth": {
+    "login": "Iniciar sesión",
+    "logout": "Cerrar sesión"
+  }
+}

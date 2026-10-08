@@ -1,0 +1,147 @@
+# Windows install smoke — the beta-promotion evidence for add-desktop-release 4.2.
+#
+#   workflow_dispatch with a release tag → downloads the PUBLISHED .exe from
+#   that GitHub Release on a real windows-latest machine, installs it silently
+#   (NSIS /S, per-user), then verifies the packaged backend boots:
+#
+#     Phase A (app launch): start the installed app; the Electron shell must
+#       stay alive and spawn the bundled node.exe backend under the install
+#       dir. (The in-app /api/ready probe is flaky on a headless runner — the
+#       dsh init phase answers 503 by design and the windowless shell can
+#       tear down — so the PASS/FAIL signal here is the bundled backend
+#       PROCESS, which is exactly what v1.3.0 got wrong.)
+#     Phase B (backend probe, the hard evidence): run the packaged server.js
+#       DIRECTLY with the packaged node.exe — no Electron involved — and wait
+#       for GET /api/ready 200 on the desktop port. Same surface as the mac
+#       install smoke (tasks 1.2). stderr streams into the CI log, so a crash
+#       names its own cause (v1.3.0's ERR_MODULE_NOT_FOUND showed here).
+#
+# A green run is the smoke record that lets release-sync drop --beta=windows.
+
+name: win-install-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to smoke (e.g. v1.3.1)"
+        required: true
+        default: "v1.3.1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the published installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.tag }}" --repo ${{ github.repository }} --pattern "*.exe" --clobber
+          Get-ChildItem *.exe | Format-Table Name, Length
+
+      - name: Silent install (NSIS /S, per-user)
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem *.exe | Select-Object -First 1).FullName
+          Write-Host "Installing $exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "/S" -PassThru -Wait
+          Write-Host "installer exit code: $($p.ExitCode)"
+          Start-Sleep -Seconds 3
+          $installed = Get-ChildItem "$env:LOCALAPPDATA\Programs\platform" -Filter "Platform*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installed) { throw "installed Platform*.exe not found under $env:LOCALAPPDATA\Programs\platform" }
+          Write-Host "Installed at: $($installed.FullName)"
+          "APP_DIR=$(Split-Path $installed.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # ── Phase A: the app shell launches and spawns the bundled backend ─────
+      - name: Launch app, wait for bundled backend process
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "$env:APP_DIR\Platform.exe"
+          $deadline = (Get-Date).AddMinutes(3)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            $nodes = Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$env:APP_DIR*" }
+            if ($nodes) {
+              Write-Host "bundled backend node.exe running: pid $($nodes.Id -join ',') ($($nodes.Path))"
+              $ok = $true; break
+            }
+          }
+          if (-not $ok) {
+            Write-Host "--- Platform processes ---"
+            Get-Process Platform -ErrorAction SilentlyContinue | Format-Table Name, Id, Path | Out-String | Write-Host
+            throw "app did not spawn the bundled node.exe backend within 3 minutes"
+          }
+
+      # ── Phase B: the packaged backend boots and serves, no Electron involved ──
+      # This is the real "does the installed app work" evidence: the same
+      # server.js + bundled node.exe the app runs, with its own data dir so the
+      # probe does not race the Phase A instance.
+      - name: Probe packaged server.js directly (Phase B)
+        shell: pwsh
+        run: |
+          # PORT + HOST, NOT DESKTOP_SERVER_PORT: a directly-run server.js reads
+          # process.env.PORT (the supervisor injects DESKTOP_SERVER_PORT→PORT
+          # only for app-spawned children). v1.3.2/v1.3.3 smoke rounds: the
+          # server listened on 3000 while this probe knocked on 47611 for the
+          # full 6-minute deadline — a guaranteed-false-negative harness bug.
+          # HOST=127.0.0.1 pins the bind address (the default "localhost" can
+          # resolve to ::1 on Windows runners while the probe hits 127.0.0.1).
+          $env:PORT = "47611"
+          $env:HOST = "127.0.0.1"
+          $env:PLATFORM_DATA_DIR = "$env:RUNNER_TEMP\smoke-data"
+          New-Item -ItemType Directory -Force -Path $env:PLATFORM_DATA_DIR | Out-Null
+          $node = "$env:APP_DIR\resources\node\node.exe"
+          if (-not (Test-Path $node)) { throw "bundled node.exe missing at $node" }
+          # asar:false layout: electron-builder places app code under
+          # resources/app/ (verified on the mac bundle: Resources/app/server.js).
+          $appRoot = "$env:APP_DIR\resources\app"
+          if (-not (Test-Path "$appRoot\server.js")) { throw "server.js not found at $appRoot (unexpected package layout)" }
+          $nodeDir = "$appRoot\resources\node"
+          if (-not (Test-Path $nodeDir)) {
+            New-Item -ItemType Directory -Force -Path "$appRoot\resources" | Out-Null
+            Copy-Item "$env:APP_DIR\resources\node" $nodeDir -Recurse -Force
+          }
+          Write-Host "probing: $node server.js (app root $appRoot, data dir $env:PLATFORM_DATA_DIR)"
+          $p = Start-Process -FilePath $node -ArgumentList "server.js" -WorkingDirectory $appRoot `
+                 -RedirectStandardOutput "$env:RUNNER_TEMP\server-out.log" `
+                 -RedirectStandardError "$env:RUNNER_TEMP\server-err.log" -PassThru
+          $deadline = (Get-Date).AddMinutes(6)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            if ($p.HasExited) {
+              Write-Host "--- server exited code $($p.ExitCode); stdout tail ---"
+              Get-Content "$env:RUNNER_TEMP\server-out.log" -Tail 30 | Write-Host
+              Write-Host "--- stderr tail ---"
+              Get-Content "$env:RUNNER_TEMP\server-err.log" -Tail 30 | Write-Host
+              throw "packaged server.js exited during boot (code $($p.ExitCode))"
+            }
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:47611/api/ready" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "/api/ready -> 200 after $((($deadline - (Get-Date)).TotalMinutes))"; $ok = $true; break }
+              Write-Host "/api/ready -> $($r.StatusCode) (still booting)"
+            } catch { Write-Host "waiting: $($_.Exception.Message)" }
+          }
+          Write-Host "--- server stdout tail ---"
+          Get-Content "$env:RUNNER_TEMP\server-out.log" -Tail 25 | Write-Host
+          if (-not $ok) {
+            Write-Host "--- server stderr tail ---"
+            Get-Content "$env:RUNNER_TEMP\server-err.log" -Tail 40 | Write-Host
+            throw "packaged server.js did not reach /api/ready 200 within 6 minutes"
+          }
+          Write-Host "::notice::Phase B PASS — packaged backend serves /api/ready 200"
+
+      - name: Stop processes
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process node -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -like "$env:APP_DIR*" } | Stop-Process -Force
+          Write-Host "smoke cleanup done"

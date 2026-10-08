@@ -1,0 +1,13 @@
+# Office 执行层（add-doc-studio 切片①）— 运行时镜像钉版依赖
+#
+# 瘦身定案（2026-10-08）：markitdown 出局——其核心硬依赖 magika→onnxruntime（80MB）、
+# xlsx 转换硬依赖 pandas+numpy（105MB），而 docx 转换本身走 mammoth、xlsx 走 openpyxl、
+# pptx 走 python-pptx，对 v1 三格式零质量加成（实测 site-packages 258MB vs 58MB）。
+# 文档摄取 = mammoth(docx→HTML) + openpyxl/python-pptx 直读；转换广度（PDF 等）归 v2
+# fd-office-mcp 共享容器，不进 cell 镜像。
+# 升级须走 docker build 冒烟（import + 三格式写读回环），不得只改版本号。
+
+python-docx==1.2.0
+openpyxl==3.1.5
+python-pptx==1.0.2
+mammoth==1.13.0
