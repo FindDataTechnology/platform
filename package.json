@@ -48,7 +48,14 @@
     "qrcode": "^1.5.4",
     "undici": "latest",
     "ws": "^8.18.0",
-    "zustand": "^5.0.15"
+    "zustand": "^5.0.15",
+    "@llamaindex/core": "0.6.23",
+    "@llamaindex/env": "0.1.31",
+    "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-llm": "0.0.1-rc.5",
+    "@deepseek-ai/dsh-sdk-protocol": "0.0.1-rc.1",
+    "@deepseek-ai/dsh-session": "0.0.1-rc.5",
+    "@deepseek-ai/dsh-invariants": "0.0.1-rc.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.11",

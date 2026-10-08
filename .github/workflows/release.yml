@@ -166,6 +166,9 @@ jobs:
             dist/*.exe
 
       - name: Publish installers to MinIO (public download page)
+        # Legacy optional mirror: never configured (empty secrets 410/failed
+        # every run). Skip unless the endpoint secret exists.
+        if: ${{ secrets.MINIO_ENDPOINT != '' }}
         env:
           MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}

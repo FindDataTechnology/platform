@@ -14,7 +14,7 @@ const release = {
   assets: [
     { name: "Platform-1.3.0-arm64.dmg", browser_download_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform-1.3.0-arm64.dmg" },
     { name: "Platform-1.3.0-x64.dmg", browser_download_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform-1.3.0-x64.dmg" },
-    { name: "Platform Setup 1.3.0.exe", browser_download_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform%20Setup%201.3.0.exe" },
+    { name: "Platform.Setup.1.3.0.exe", browser_download_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform.Setup.1.3.0.exe" },
   ],
 };
 
@@ -30,24 +30,36 @@ test("asset mapping: macos links the arm64 dmg + the Release page; windows links
   });
   assert.deepEqual(entry.platforms.windows, {
     beta: false,
-    filename: "Platform Setup 1.3.0.exe",
+    filename: "Platform.Setup.1.3.0.exe",
     official_url: null,
-    github_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform%20Setup%201.3.0.exe",
+    github_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform.Setup.1.3.0.exe",
   });
   assert.deepEqual(entry._syncOnlyAssets, ["Platform-1.3.0-x64.dmg"]);
+});
+
+test("asset mapping: space-form exe name is accepted too", () => {
+  const spaced = {
+    ...release,
+    assets: [
+      ...release.assets.filter((a) => !a.name.includes("exe")),
+      { name: "Platform Setup 1.3.0.exe", browser_download_url: "https://github.com/FindDataTechnology/platform/releases/download/v1.3.0/Platform%20Setup%201.3.0.exe" },
+    ],
+  };
+  const entry = mapAssetsToEntry(spaced, {});
+  assert.equal(entry.platforms.windows.filename, "Platform Setup 1.3.0.exe");
 });
 
 test("asset mapping: --dl-live fills official urls from the dl base; beta flags land per platform", () => {
   const entry = mapAssetsToEntry(release, { dlLive: true, dlBase: "https://dl.finddatatech.cloud", beta: new Set(["windows"]) });
   assert.equal(entry.platforms.macos.official_url, "https://dl.finddatatech.cloud/platform/1.3.0/Platform-1.3.0-arm64.dmg");
-  assert.equal(entry.platforms.windows.official_url, "https://dl.finddatatech.cloud/platform/1.3.0/Platform%20Setup%201.3.0.exe");
+  assert.equal(entry.platforms.windows.official_url, "https://dl.finddatatech.cloud/platform/1.3.0/Platform.Setup.1.3.0.exe");
   assert.equal(entry.platforms.macos.beta, false);
   assert.equal(entry.platforms.windows.beta, true);
 });
 
 test("asset mapping: missing assets fail naming them; non-semver tags refuse", () => {
   const partial = { ...release, assets: release.assets.filter((a) => !a.name.includes("exe")) };
-  assert.throws(() => mapAssetsToEntry(partial, {}), /missing assets: Platform Setup 1\.3\.0\.exe/);
+  assert.throws(() => mapAssetsToEntry(partial, {}), /missing assets: Platform Setup 1\.3\.0\.exe \(or Platform\.Setup\.1\.3\.0\.exe\)/);
   // The x64 dmg is dl-host-only (_syncOnlyAssets): its absence is not a failure.
   const noDmg = { ...release, assets: release.assets.filter((a) => !a.name.includes("dmg")) };
   assert.throws(() => mapAssetsToEntry(noDmg, {}), /missing assets: Platform-1\.3\.0-arm64\.dmg/);
