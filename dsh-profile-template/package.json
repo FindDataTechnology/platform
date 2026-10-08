@@ -1,0 +1,13 @@
+{
+  "name": "dsh-profile-platform",
+  "private": true,
+  "type": "module",
+  "dependencies": {},
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base"
+      ]
+    }
+  }
+}

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platform</title>
+    <!--
+      Applies an explicit theme before first paint. Must stay inline and stay
+      here: a deferred module would run after the first frame, which is exactly
+      the flash this prevents. No stored value = no attribute = the stylesheet's
+      `color-scheme: light dark` follows the OS, so the system case needs no JS
+      and cannot flash.
+    -->
+    <script>
+      try {
+        var t = localStorage.getItem("platform-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) {
+        /* private mode / storage disabled — fall through to the OS preference */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
