@@ -167,8 +167,9 @@ jobs:
 
       - name: Publish installers to MinIO (public download page)
         # Legacy optional mirror: never configured (empty secrets 410/failed
-        # every run). Skip unless the endpoint secret exists.
-        if: ${{ secrets.MINIO_ENDPOINT != '' }}
+        # every run). Skipped inside the shell — a secrets-context `if` on a
+        # step is not evaluated on tag pushes and made the whole workflow fail
+        # to parse (0s "workflow file issue").
         env:
           MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -176,6 +177,10 @@ jobs:
           MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
         run: |
           set -euo pipefail
+          if [ -z "$MINIO_ENDPOINT" ]; then
+            echo "MinIO mirror not configured — skipping"
+            exit 0
+          fi
           # mc (MinIO client) - single static binary.
           curl -fsSL -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc
           chmod +x /usr/local/bin/mc
