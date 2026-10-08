@@ -15,10 +15,11 @@
 //   npx @finddatatechnology/facet install <packRef> [--target …] [--project <dir>]
 //   npx @finddatatechnology/facet connect [--key wgk-…] [--clear] [--show]
 
+import { realpathSync } from "node:fs";
 import { chmod, mkdir, readFile, rm, writeFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 // Version lives in package.json only — a hardcoded copy shipped 0.1.0 for
 // three releases (caught by `npx @finddatatechnology/facet@0.1.2 --version`).
@@ -537,7 +538,19 @@ async function prefs(opts) {
 
 export { parseArgs, extractPackId, targetDir };
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+// Both sides go through realpath: npm/npx run the bin through a symlink in
+// node_modules/.bin, so argv[1] is the link while import.meta.url is already
+// the real file — comparing them raw made the whole CLI exit silently (0.2.0).
+const realOrSelf = (p) => {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+};
+const isMain =
+  process.argv[1] &&
+  realOrSelf(fileURLToPath(import.meta.url)) === realOrSelf(path.resolve(process.argv[1]));
 if (isMain) {
   try {
     const opts = parseArgs(process.argv.slice(2));

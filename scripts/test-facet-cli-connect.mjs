@@ -2,7 +2,7 @@
 // 运行：node --test scripts/test-facet-cli-connect.mjs
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, stat, readFile } from "node:fs/promises";
+import { mkdtemp, rm, stat, readFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import http from "node:http";
@@ -117,6 +117,26 @@ test("CLI 冒烟：--version 与 connect --show（无键）", async () => {
       execFile(process.execPath, [CLI, "connect", "--show"], (e, out) => (e ? rej(e) : res(out))));
     assert.match(show, /未存调用键/);
   });
+});
+
+// npm/npx install the bin as a symlink in node_modules/.bin, so the entry
+// runs with argv[1] = the link and import.meta.url = the real file. The
+// original main-guard compared those raw and the CLI exited silently with no
+// output at all (0.2.0 regression) — this test pins the symlinked path.
+test("CLI 冒烟：经符号链接调用（npx 形态）仍输出", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "facet-symlink-"));
+  const link = path.join(dir, "facet");
+  await symlink(CLI, link);
+  try {
+    const version = await new Promise((res, rej) =>
+      execFile(process.execPath, [link, "--version"], (e, out) => (e ? rej(e) : res(out.trim()))));
+    assert.match(version, /^\d+\.\d+\.\d+/);
+    const help = await new Promise((res, rej) =>
+      execFile(process.execPath, [link, "--help"], (e, out) => (e ? rej(e) : res(out))));
+    assert.match(help, /用法：/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 // ── device flow（2.4）：谱系侧未暴露 → null 回落；暴露 → RFC 8628 走通 ──
