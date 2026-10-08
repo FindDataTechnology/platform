@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@/*": ["../../web/src/*"]
+    }
+  },
+  "include": ["src", "../../web/src/components/packs", "../../web/src/components/ui", "../../web/src/lib/packs-api.ts", "../../web/src/locales"]
+}

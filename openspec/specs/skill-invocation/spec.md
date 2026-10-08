@@ -1,0 +1,98 @@
+# skill-invocation Specification
+
+## Purpose
+TBD - created by archiving change add-mcp-skills-model-select. Update Purpose after archive.
+## Requirements
+### Requirement: Server loads skills from configured paths
+
+The server SHALL configure the dsh runtime (via the profile/bundle) with a skill plugin / skill-paths entry pointing at a local skills directory so that skills are loaded into the agent's system prompt and slash-command table at startup, replacing the pi `additionalSkillPaths` resource-loader mechanism. The server SHALL also load custom skill definitions from the SQLite database (if present) and register them alongside file-based skills.
+
+#### Scenario: skills are loaded at startup
+
+- **WHEN** the skills directory contains one or more `SKILL.md` files
+- **THEN** the dsh runtime SHALL discover and load those skills via its skill plugin
+- **AND** the loaded skills SHALL be available to the agent session
+
+#### Scenario: no skills directory
+
+- **WHEN** the configured skills directory is empty or absent
+- **THEN** the server SHALL start normally with no skills loaded
+
+#### Scenario: database custom skills are loaded
+
+- **WHEN** the SQLite database contains custom skill definitions
+- **THEN** the server SHALL load those skills and register them alongside file-based skills
+- **AND** database skills SHALL be available to the agent session
+
+### Requirement: Database custom skills hot-reload at runtime
+The server SHALL reflect runtime mutations to database custom skills (create/update/delete via the management API) by writing, rewriting, or deleting the corresponding `SKILL.md` file in the `dsh-skill-filesystem`-watched materialization directory. The `dsh-skill-filesystem` Chokidar watcher SHALL pick up the change live so the agent sees the updated skill **without a dsh process restart**, matching file-skill semantics.
+
+#### Scenario: database skill created at runtime
+- **WHEN** a new custom skill is created via the management API
+- **THEN** the server SHALL write a new `SKILL.md` to the watched materialization directory
+- **AND** the new skill SHALL become available to the agent session without a process restart
+
+#### Scenario: database skill edited at runtime
+- **WHEN** an existing custom skill is updated via the management API
+- **THEN** the server SHALL rewrite the corresponding `SKILL.md` (atomic temp+rename)
+- **AND** the agent session SHALL see the updated skill content without a process restart
+
+#### Scenario: database skill deleted at runtime
+- **WHEN** a custom skill is deleted via the management API
+- **THEN** the server SHALL remove the corresponding `SKILL.md` from the materialization directory
+- **AND** the skill SHALL no longer be available to the agent session without a process restart
+
+#### Scenario: materialization directory is rebuilt from the database on startup
+- **WHEN** the server starts and the materialization directory is absent or stale
+- **THEN** the server SHALL rebuild it idempotently from the SQLite custom-skills table
+- **AND** the materialization directory SHALL be a gitignored runtime artifact under `PLATFORM_DATA_DIR`
+
+### Requirement: Server lists available skills to the client
+
+The server SHALL respond to a `list_skills` WebSocket message with the set of currently loaded skills, each including its name, description, source (file or database), and enabled status. The skill list SHALL be sourced from the dsh runtime's reported skills over the JSON-RPC bridge.
+
+#### Scenario: client requests the skill list
+
+- **WHEN** a WebSocket client sends `{ "type": "list_skills" }`
+- **THEN** the server SHALL reply with `{ "type": "skills", "skills": [ { "name": "...", "description": "...", "source": "file|database", "enabled": true|false }, ... ] }`
+
+### Requirement: User can invoke skills via slash-command syntax
+
+The server SHALL accept prompts whose first token begins with `/skill:` as skill invocations, forwarding them to the dsh runtime for expansion, and SHALL broadcast a `skill_use` event to all clients before forwarding. Only enabled skills SHALL be invokable; attempts to invoke disabled skills SHALL return an error.
+
+#### Scenario: user invokes a skill
+
+- **WHEN** a client sends `{ "type": "prompt", "text": "/skill:graphify some input" }`
+- **THEN** the server SHALL broadcast `{ "type": "skill_use", "name": "graphify", "args": "some input" }` to all clients
+- **AND** SHALL forward the text to the dsh runtime for expansion
+
+#### Scenario: skill expansion falls back to manual lookup
+
+- **WHEN** the dsh runtime does not expand a `/skill:` token
+- **THEN** the server SHALL look up the skill content from the loaded skills and prepend it to the prompt before forwarding
+
+#### Scenario: user invokes a disabled skill
+
+- **WHEN** a client sends a prompt invoking a skill that is currently disabled
+- **THEN** the server SHALL return an error to the client and SHALL NOT forward the prompt to the dsh runtime
+
+### Requirement: Skill invocations render as collapsible blocks
+The chat UI SHALL render each `skill_use` event as a collapsible block showing the skill name in its header and the invocation arguments in its body, in place of echoing the raw `/skill:...` text as a user message.
+
+#### Scenario: skill invocation displayed
+- **WHEN** the server sends a `skill_use` event for skill `graphify`
+- **THEN** the UI SHALL render a collapsible block with header `Skill: graphify`
+- **AND** the body SHALL show the invocation arguments
+- **AND** the raw `/skill:graphify ...` text SHALL NOT be rendered as a normal user message
+
+### Requirement: Chat input provides slash-command autocomplete
+The chat UI SHALL present a slash-command autocomplete popup (specified by the `chat-commands` capability) that includes the available `/skill:<name>` commands alongside the meta-commands (`/model`, `/new`, `/clear`, `/help`), filtered by the text typed after `/`. Skill commands in the popup SHALL be sourced from the `skills` list and SHALL only include enabled skills. The user SHALL be able to navigate the list with arrow keys and insert the selected command with Enter; Escape SHALL close the popup without inserting. Inserting a command SHALL NOT auto-send; the user may append arguments and send normally.
+
+#### Scenario: skills appear in the unified command list
+- **WHEN** the user types `/` at the start of the chat input
+- **THEN** the popup SHALL list the available `/skill:` commands (only enabled skills) alongside the meta-commands
+
+#### Scenario: filtering skills by typed text
+- **WHEN** the user types `/gra` in the chat input
+- **THEN** the popup SHALL list only the commands (including enabled skills) whose names match `gra`
+

@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to keys.json (gitignored). serpapi: pool rotated on failure, quota-exhausted keys cool down 12h. glm: reserved for the fallback path — not wired yet, add keys when the GLM search integration lands. tokens: Bearer tokens the platform deployments use (issue one per customer/deployment so a leak costs one token's daily cap, not the pool).",
+  "serpapi": [
+    "YOUR_SERPAPI_KEY_1",
+    "YOUR_SERPAPI_KEY_2"
+  ],
+  "glm": [],
+  "tokens": [
+    "GENERATE_WITH_openssl_rand_hex_24"
+  ]
+}
