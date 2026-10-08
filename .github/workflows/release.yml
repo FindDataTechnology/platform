@@ -1,0 +1,211 @@
+# ── Release: build .dmg (mac arm64 + x64) + .exe (win x64) on tag / dispatch ───
+#
+# Triggers:
+#   - push tag v*        -> build both, attach installers to a GitHub Release
+#   - workflow_dispatch  -> build both, upload as workflow artifacts (no release)
+#
+# `build-node.js` auto-matches the bundled standalone Node to the Node running
+# the build (process.version), so the native-addon ABI parity holds on whichever
+# Node `setup-node` provides. The bundled Node is the only build artifact and is
+# cross-platform.
+#
+# Signing is gated on secrets: when CSC_LINK / WIN_CSC_LINK (+ notarization
+# secrets) are present the installers are signed/notarized; when absent the
+# build still succeeds unsigned (CI smoke). See openspec change
+# `ci-build-installers`.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write # softprops/action-gh-release creates/edits the Release
+
+jobs:
+  build:
+    name: build (${{ matrix.artifact }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest # Apple Silicon (arm64)
+            arch: arm64
+            artifact: dmg-arm64
+          - os: macos-latest # arm64 host, x64 target via Rosetta
+            arch: x64
+            artifact: dmg-x64
+          - os: windows-latest # x64
+            arch: x64
+            artifact: exe
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # x64 mac build runs on the arm64 runner via Rosetta: install it so the
+      # x64 Node + x64 python-build-standalone binaries can execute.
+      - name: Install Rosetta
+        if: runner.os == 'macOS' && matrix.arch == 'x64'
+        run: softwareupdate --install-rosetta --agree-to-license || true
+
+      # Node 25 (not an LTS) MUST match the version package-lock.json was
+      # generated under (npm 11). Node 22's npm 10 misreads the npm-11 lock
+      # ("Missing: zod@... from lock file"). architecture: x64 on the x64 mac
+      # job installs x64 Node (runs via Rosetta) so npm ci compiles
+      # better-sqlite3 for the x64 ABI; build-node.js then bundles the matching
+      # x64 Node (process.arch == x64). Bump with the dev Node if you regen lock.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          architecture: ${{ matrix.arch }}
+          cache: 'npm'
+
+      # Cache the bundled Node. predist is idempotent and skips when present,
+      # so a cache hit turns the download into a no-op. Keyed by OS + arch +
+      # package.json + the build scripts.
+      - name: Cache resources/
+        uses: actions/cache@v4
+        with:
+          path: resources
+          key: resources-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('package.json', 'scripts/build-*.js', 'scripts/verify-bundle.js') }}
+          # Same-arch only: do NOT fall back across arches (an arm64 cache
+          # restored into the x64 job would skip the rebuild and ship arm64
+          # binaries in an x64 dmg).
+          restore-keys: |
+            resources-${{ matrix.os }}-${{ matrix.arch }}-
+
+      # postinstall installs web/ deps + builds web/dist AND builds the bundled
+      # resources (when not cached). predist then ensures the bundled Node is
+      # built and verifies all resources. No skip flags - idempotency handles it.
+      #
+      # --legacy-peer-deps: the pinned rc.2 dsh runtime components declare
+      # mutually-conflicting peer ranges (dsh-brand wants invariants rc.2 while
+      # the rc.5 chain wants rc.1) that strict npm refuses but resolve fine —
+      # the lockfile is the truth here, npm ci just needs to stop re-litigating
+      # peers (v1.3.5 release run: three matrices ERESOLVE at this step).
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build bundled resources + verify
+        run: npm run predist
+
+      - name: Build web + package installers
+        shell: bash
+        env:
+          # Build branding (deployment-branding): fork-settable repo variables
+          # (Settings → Secrets and variables → Actions → Variables) so a fork
+          # brands its installers without editing the workflow. Unset = the
+          # defaults (name "Platform", vendored build/icon.png).
+          PRODUCT_NAME: ${{ vars.PRODUCT_NAME }}
+          ICON_URL: ${{ vars.ICON_URL }}
+          COMPANY_NAME: ${{ vars.COMPANY_NAME }}
+          # macOS signing + notarization (gated - empty/absent = unsigned;
+          # electron-builder's built-in `mac.notarize` skips when APPLE_* env
+          # is absent, so unsigned CI smoke builds still succeed)
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows signing (gated - empty/absent = unsigned)
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          # A missing GitHub secret becomes an empty-string env var, which
+          # electron-builder treats as "set" and tries to sign with an empty
+          # cert path (fails: "<project> not a file"). Unset empties so it
+          # skips signing -> unsigned build when no cert is configured.
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; do
+            [ -z "${!v}" ] && unset "$v"
+          done
+          # `npm run dist` runs electron-builder via `node .../cli.js` directly
+          # (not the bare bin command): the npm bin shim in a `&&` chain
+          # silently no-ops on the Windows runner (see package.json `dist`).
+          # Echo the resolved branding so a dispatch dry run logs what it used.
+          echo "PRODUCT_NAME='${PRODUCT_NAME:-Platform}' COMPANY_NAME='${COMPANY_NAME:-<unset>}'"
+          [ -n "$ICON_URL" ] && echo "ICON_URL=$ICON_URL" || echo "ICON_URL=<unset> (vendored icon)"
+          npm run dist -- --${{ matrix.arch }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-${{ matrix.artifact }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/latest*.yml
+          if-no-files-found: error
+
+  release:
+    name: publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download mac arm64 installer
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-dmg-arm64
+          path: dist
+      - name: Download mac x64 installer
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-dmg-x64
+          path: dist
+      - name: Download windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-exe
+          path: dist
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.dmg
+            dist/*.exe
+
+      - name: Publish installers to MinIO (public download page)
+        # Legacy optional mirror: never configured (empty secrets 410/failed
+        # every run). Skipped inside the shell — a secrets-context `if` on a
+        # step is not evaluated on tag pushes and made the whole workflow fail
+        # to parse (0s "workflow file issue").
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MINIO_ENDPOINT" ]; then
+            echo "MinIO mirror not configured — skipping"
+            exit 0
+          fi
+          # mc (MinIO client) - single static binary.
+          curl -fsSL -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x /usr/local/bin/mc
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+          # Upload this release's installers (overwrites same-name objects;
+          # different versions accumulate so all releases stay downloadable).
+          mc cp dist/*.dmg minio/"$MINIO_BUCKET"/
+          mc cp dist/*.exe minio/"$MINIO_BUCKET"/
+          # Regenerate a cumulative index.html listing every installer in the
+          # bucket so the public "download page" shows all versions. Parse
+          # `mc ls --json` (not the human format) so filenames with spaces
+          # (e.g. "Platform Setup 1.0.0.exe") survive intact, and URL-encode the
+          # hrefs. node is on the runner from setup-node; the script uses only
+          # double-quoted strings + backtick template literals so it is safe
+          # inside a bash single-quoted argument.
+          mc ls --json minio/"$MINIO_BUCKET"/ > /tmp/listing.json
+          node -e 'const fs=require("fs");const items=fs.readFileSync("/tmp/listing.json","utf8").split("\n").filter(Boolean).map(l=>JSON.parse(l)).filter(i=>i.type==="file"&&/\.(dmg|exe)$/.test(i.key)).sort((a,b)=>a.key>b.key?-1:a.key<b.key?1:0);const rows=items.map(i=>`<li><a href="${encodeURIComponent(i.key)}">${i.key}</a> <span class="sz">(${Math.floor(i.size/1048576)} MiB)</span></li>`).join("");const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Platform Releases</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#222}h1{border-bottom:1px solid #ddd;padding-bottom:.5rem}ul{list-style:none;padding:0}li{margin:.6rem 0}.sz{color:#888;font-size:.85rem}a{font-weight:600}</style></head><body><h1>Platform Releases</h1><ul>${rows}</ul></body></html>`;fs.writeFileSync("dist/index.html",html);console.log("index.html:",items.length,"installers")'
+          mc cp dist/index.html minio/"$MINIO_BUCKET"/
+          PAGE_URL="$MINIO_ENDPOINT/$MINIO_BUCKET/index.html"
+          echo "::notice::Public download page: $PAGE_URL"
+          echo "Public download page: $PAGE_URL"
+          mc ls minio/"$MINIO_BUCKET"/

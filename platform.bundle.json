@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "websearch": {
+      "command": "node",
+      "args": ["server/websearch-mcp.js"],
+      "_comment": "envRefs name (never hold) the relay env pair — dsh's subprocess scrub strips TOKEN-shaped names from MCP children, so the pair is forwarded explicitly at patch-write time. Both unset ⇒ web_search degrades to an explicit not-configured error.",
+      "envRefs": ["SEARCH_RELAY_URL", "SEARCH_RELAY_TOKEN"]
+    }
+  },
+  "skills": [
+    "computer-file-system",
+    "computer-process",
+    "computer-shell",
+    "example-skill"
+  ],
+  "permissions": {}
+}
