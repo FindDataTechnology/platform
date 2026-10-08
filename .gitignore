@@ -1,0 +1,121 @@
+node_modules/
+.DS_Store
+mcp.json
+agents.json
+registry-groups.json
+knowledge-store/
+data/
+# Env files: the live .env holds Logto/registry/LLM credentials; variants
+# (.bak, .local, dated backups…) are operator copies of the same secrets.
+# Keep the committed .env.example template.
+.env
+.env.*
+!.env.example
+*.env.bak*
+*.bak
+*.bak-*
+
+# React frontend workspace
+web/node_modules/
+web/dist/
+
+# Shared core: `packages/core/node_modules` is a symlink onto web/node_modules
+# (see scripts/postinstall-web.js) so the shared source resolves zustand/react
+# to exactly one instance. A symlink is not a directory to git, so the bare
+# `node_modules/` rule above does not cover it — ignore it explicitly or git
+# would track a dangling link.
+packages/core/node_modules
+
+# WeChat mini-program client (Taro)
+miniapp/node_modules/
+miniapp/dist/
+
+# Electron build artifacts
+dist/
+# build/ contents are gitignored except the vendored default icon
+# (deployment-branding); the ICON_URL download stays ignored (build-local,
+# fork-specific). 'build/*' + negation, not 'build/': a directory rule
+# excludes everything beneath it unconditionally.
+build/*
+!build/icon.png
+resources/node/
+resources/openconnector/
+# Keep original tarballs out of the repo
+resources/node/*.tar.gz
+
+# Local runtime stores
+chat-history-store/
+documents-store/
+sessions-store/
+cron-store/
+/uploads/
+knowledge-store.archive/
+test-results/
+# DB custom-skill materialization dir (runtime artifact; rebuilt from the DB)
+custom-skills/
+# Hosted-gateway per-user cell roots (CELL_DATA_ROOT default; one dir per user)
+cell-data/
+
+# Headless local-services launcher dev state (generated creds, written under
+# PLATFORM_DATA_DIR / CWD by bootstrap/first-run.js).
+dev-settings.json
+openconnector.db
+# Runtime LLM provider/default stores (contain upstream API keys in plaintext)
+llm-providers.json
+llm-default.json
+# dsh-credentials-local credential store (upstream API keys, 0600)
+.credentials.yaml
+
+# Local Playwright CLI console logs (scratch)
+.playwright-cli/
+web/.playwright-cli/
+
+# SSH / remote-infra scratch (docker-compose for the tokenvault IDP deployment;
+# references env-held secrets but is private infra, not part of this app)
+.remote-dc.yml
+.remote-dc-current.yml
+.tmp-testpw-hash
+sso-test.mjs
+connect-app/
+.zcode/
+.mcp.json
+
+# Local AI tooling copies (per-machine; not part of the app)
+.claude/skills/
+# Claude/ZCode worktree scratch dirs — a committed gitlink here breaks
+# actions/checkout's submodule cleanup ("No url found for submodule path").
+.claude/worktrees/
+
+# Impeccable live-mode session journals (local iteration state)
+.impeccable/live/
+
+# Scratch temp files
+.tmp-*
+*.local.log
+.e2e-store-*/
+
+# Runtime-generated auth material. `resolveSessionSecret()` writes
+# ./auth/session-secret whenever PLATFORM_DATA_DIR is unset (dev runs), so this
+# dir appears in the working tree after any local `npm start`. Anchored to the
+# repo root on purpose: a bare `auth/` also matched openspec/specs/auth/ and
+# every openspec change's specs/auth/ delta, silently untracking them.
+/auth/
+# Deployment scratch (image build contexts / live-pod patches)
+.platform-*.tar.gz
+
+# websearch relay (services/search-relay) — operator-side, never commit
+services/search-relay/keys.json
+
+# Editor swap files and agent-collaboration working notes — not software, never pushed
+*.swp
+docs/agents/
+CLAUDE.md
+
+# codegraph local index (tool data, not source)
+.codegraph/
+
+# Open-source snapshot build output (scripts/make-public-snapshot.mjs)
+dist-opensource/
+
+# npm pack artifacts (facet CLI)
+*.tgz

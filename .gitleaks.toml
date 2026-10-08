@@ -1,0 +1,22 @@
+# gitleaks config — extends the full default ruleset, then allowlists
+# secret-SHAPED strings that are not secrets.
+# IMPORTANT: a config without [extend] useDefault replaces the default rules
+# with nothing (every scan goes silently green). Keep the extend block.
+# scripts/make-public-snapshot.mjs passes this config explicitly.
+title = "platform gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Non-secrets: e2e fixtures, kubectl placeholder docs, docker rollback tags"
+  paths = [
+    '''e2e/branding\.spec\.js''',
+    '''k8s/deployment\.yaml''',
+  ]
+  # Docker rollback tag in the registry-fork patch README — tag-shaped, not a
+  # credential (its entropy trips the generic-api-key rule).
+  regexTarget = "line"
+  regexes = [
+    '''mcp-auth-server:logto-prev-\d{8}''',
+  ]

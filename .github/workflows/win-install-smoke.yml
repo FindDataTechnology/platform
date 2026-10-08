@@ -1,0 +1,260 @@
+# Windows install smoke — the beta-promotion evidence for add-desktop-release 4.2.
+#
+#   workflow_dispatch with a release tag → downloads the PUBLISHED .exe from
+#   that GitHub Release on a real windows-latest machine, installs it silently
+#   (NSIS /S, per-user), then verifies the packaged backend boots:
+#
+#     Phase A (app launch): start the installed app; the Electron shell must
+#       stay alive and spawn the bundled node.exe backend under the install
+#       dir. (The in-app /api/ready probe is flaky on a headless runner — the
+#       dsh init phase answers 503 by design and the windowless shell can
+#       tear down — so the PASS/FAIL signal here is the bundled backend
+#       PROCESS, which is exactly what v1.3.0 got wrong.)
+#     Phase B (backend probe, the hard evidence): run the packaged server.js
+#       DIRECTLY with the packaged node.exe — no Electron involved — and wait
+#       for GET /api/ready 200 on the desktop port. Same surface as the mac
+#       install smoke (tasks 1.2). stderr streams into the CI log, so a crash
+#       names its own cause (v1.3.0's ERR_MODULE_NOT_FOUND showed here).
+#
+# A green run is the smoke record that lets release-sync drop --beta=windows.
+
+name: win-install-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to smoke (e.g. v1.3.1)"
+        required: true
+        default: "v1.3.1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the published installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.tag }}" --repo ${{ github.repository }} --pattern "*.exe" --clobber
+          Get-ChildItem *.exe | Format-Table Name, Length
+
+      - name: Silent install (NSIS /S, per-user)
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem *.exe | Select-Object -First 1).FullName
+          Write-Host "Installing $exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "/S" -PassThru -Wait
+          Write-Host "installer exit code: $($p.ExitCode)"
+          Start-Sleep -Seconds 3
+          $installed = Get-ChildItem "$env:LOCALAPPDATA\Programs\platform" -Filter "Platform*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installed) { throw "installed Platform*.exe not found under $env:LOCALAPPDATA\Programs\platform" }
+          Write-Host "Installed at: $($installed.FullName)"
+          "APP_DIR=$(Split-Path $installed.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # ── Phase A: the app shell launches and spawns the bundled backend ─────
+      - name: Launch app, wait for bundled backend process
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "$env:APP_DIR\Platform.exe"
+          $deadline = (Get-Date).AddMinutes(3)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            $nodes = Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$env:APP_DIR*" }
+            if ($nodes) {
+              Write-Host "bundled backend node.exe running: pid $($nodes.Id -join ',') ($($nodes.Path))"
+              $ok = $true; break
+            }
+          }
+          if (-not $ok) {
+            Write-Host "--- Platform processes ---"
+            Get-Process Platform -ErrorAction SilentlyContinue | Format-Table Name, Id, Path | Out-String | Write-Host
+            throw "app did not spawn the bundled node.exe backend within 3 minutes"
+          }
+
+          # ── Phase A+: the WINDOW's target answers ──────────────────────────
+          # The renderer loads http://127.0.0.1:47600 (DESKTOP_SERVER_PORT the
+          # first-run seeds). A backend bound to ::1-only (v1.3.5: HOST defaulted
+          # to "localhost", Node resolved it IPv6) passes every localhost probe
+          # while the window hits a closed IPv4 socket — the user sees a black
+          # window, the process checks above stay green. Probe exactly what the
+          # window loads.
+          $deadline = (Get-Date).AddMinutes(2)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:47600/api/config" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "window target http://127.0.0.1:47600/api/config -> 200"; $ok = $true; break }
+            } catch { Write-Host "waiting for window target: $($_.Exception.Message)" }
+          }
+          if (-not $ok) { throw "backend not reachable at the window URL http://127.0.0.1:47600 (bind-family mismatch?)" }
+
+          # Stop the app before Phase B: the two instances share ~/.dsh and the
+          # app instance holds settings.yaml open — on Windows that makes the
+          # Phase B boot's atomic rename fail with EPERM (v1.3.5 smoke: agent
+          # init degraded, ready stuck 503 for the full probe window). Phase A
+          # has proven its point (the shell spawns the bundled backend).
+          Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process node -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -like "$env:APP_DIR*" } | Stop-Process -Force
+          Start-Sleep -Seconds 3
+          Write-Host "Phase A instance stopped — Phase B gets exclusive ~/.dsh"
+
+      # ── Phase B: the packaged backend boots and serves, no Electron involved ──
+      # This is the real "does the installed app work" evidence: the same
+      # server.js + bundled node.exe the app runs, with its own data dir so the
+      # probe does not race the Phase A instance.
+      - name: Probe packaged server.js directly (Phase B)
+        shell: pwsh
+        run: |
+          # PORT + HOST, NOT DESKTOP_SERVER_PORT: a directly-run server.js reads
+          # process.env.PORT (the supervisor injects DESKTOP_SERVER_PORT→PORT
+          # only for app-spawned children). v1.3.2/v1.3.3 smoke rounds: the
+          # server listened on 3000 while this probe knocked on 47611 for the
+          # full 6-minute deadline — a guaranteed-false-negative harness bug.
+          # HOST=127.0.0.1 pins the bind address (the default "localhost" can
+          # resolve to ::1 on Windows runners while the probe hits 127.0.0.1).
+          $env:PORT = "47611"
+          $env:HOST = "127.0.0.1"
+          $env:PLATFORM_DATA_DIR = "$env:RUNNER_TEMP\smoke-data"
+          New-Item -ItemType Directory -Force -Path $env:PLATFORM_DATA_DIR | Out-Null
+          $node = "$env:APP_DIR\resources\node\node.exe"
+          if (-not (Test-Path $node)) { throw "bundled node.exe missing at $node" }
+          # asar:false layout: electron-builder places app code under
+          # resources/app/ (verified on the mac bundle: Resources/app/server.js).
+          $appRoot = "$env:APP_DIR\resources\app"
+          if (-not (Test-Path "$appRoot\server.js")) { throw "server.js not found at $appRoot (unexpected package layout)" }
+          $nodeDir = "$appRoot\resources\node"
+          if (-not (Test-Path $nodeDir)) {
+            New-Item -ItemType Directory -Force -Path "$appRoot\resources" | Out-Null
+            Copy-Item "$env:APP_DIR\resources\node" $nodeDir -Recurse -Force
+          }
+          Write-Host "probing: $node server.js (app root $appRoot, data dir $env:PLATFORM_DATA_DIR)"
+          $p = Start-Process -FilePath $node -ArgumentList "server.js" -WorkingDirectory $appRoot `
+                 -RedirectStandardOutput "$env:RUNNER_TEMP\server-out.log" `
+                 -RedirectStandardError "$env:RUNNER_TEMP\server-err.log" -PassThru
+          $deadline = (Get-Date).AddMinutes(6)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            if ($p.HasExited) {
+              Write-Host "--- server exited code $($p.ExitCode); stdout tail ---"
+              Get-Content "$env:RUNNER_TEMP\server-out.log" -Tail 30 | Write-Host
+              Write-Host "--- stderr tail ---"
+              Get-Content "$env:RUNNER_TEMP\server-err.log" -Tail 30 | Write-Host
+              throw "packaged server.js exited during boot (code $($p.ExitCode))"
+            }
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:47611/api/ready" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "/api/ready -> 200 after $((($deadline - (Get-Date)).TotalMinutes))"; $ok = $true; break }
+              Write-Host "/api/ready -> $($r.StatusCode) (still booting)"
+            } catch { Write-Host "waiting: $($_.Exception.Message)" }
+          }
+          Write-Host "--- server stdout tail ---"
+          Get-Content "$env:RUNNER_TEMP\server-out.log" -Tail 25 | Write-Host
+          if (-not $ok) {
+            Write-Host "--- server stderr tail ---"
+            Get-Content "$env:RUNNER_TEMP\server-err.log" -Tail 40 | Write-Host
+            throw "packaged server.js did not reach /api/ready 200 within 6 minutes"
+          }
+          Write-Host "::notice::Phase B PASS — packaged backend serves /api/ready 200"
+
+      # ── Phase C: the window actually PAINTS (the black-screen gate) ────────
+      # A/B prove the backend is alive and answers on the port the window uses.
+      # They proved that for v1.3.5 too — on the user's machine the window was
+      # still a black rectangle. The runner's windows-latest image ships a real
+      # interactive desktop session, so the app can be started as a GUI and the
+      # pixels can be inspected: this is the only check that can catch black.
+      #   title          → the renderer reached first paint (SPA title escaped)
+      #   pixel analysis → the framebuffer is not a single flat backdrop colour
+      # A screenshot artifact is uploaded either way, so a human can eyeball it.
+      - name: Launch the GUI, assert the window paints (Phase C)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\shots" | Out-Null
+          Start-Process -FilePath "$env:APP_DIR\Platform.exe"
+          $proc = Get-Process Platform -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $proc) { throw "app process did not start for Phase C" }
+
+          $deadline = (Get-Date).AddMinutes(3)
+          $hwnd = 0
+          while ((Get-Date) -lt $deadline) {
+            $hwnd = $proc.MainWindowHandle
+            if ($hwnd -ne 0 -and $proc.MainWindowTitle) {
+              Write-Host "window visible: hwnd=$hwnd title='$($proc.MainWindowTitle)'"
+              break
+            }
+            Start-Sleep -Seconds 5
+            $proc.Refresh()
+          }
+          if ($hwnd -eq 0) { throw "app window never appeared (MainWindowHandle 0) within 3 minutes" }
+
+          # Give the renderer time for first paint after the window exists.
+          $paintDeadline = (Get-Date).AddMinutes(2)
+          $title = ""
+          while ((Get-Date) -lt $paintDeadline) {
+            Start-Sleep -Seconds 5
+            $proc.Refresh()
+            if ($proc.MainWindowTitle -and $proc.MainWindowTitle.Length -gt 0) { $title = $proc.MainWindowTitle; break }
+          }
+          if (-not $title) { throw "window title stayed empty — renderer never painted" }
+          Write-Host "rendered title: $title"
+
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $r = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bmp = New-Object System.Drawing.Bitmap $r.Width, $r.Height
+          $g = [System.Drawing.Graphics]::FromImage($bmp)
+          $g.CopyFromScreen($r.Location, [System.Drawing.Point]::Empty, $r.Size)
+          $shot = "$env:RUNNER_TEMP\shots\phase-c.png"
+          $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+          $g.Dispose(); $bmp.Dispose()
+          Write-Host "screenshot: $shot ($($r.Width)x$($r.Height))"
+
+          # Black-screen detector: count non-background pixels. A painted SPA is
+          # text/icons spread over ~all of the viewport, so 1% will jump by orders
+          # of magnitude; a hung/unpainted window shows one flat backdrop colour.
+          Add-Type -AssemblyName System.Drawing
+          $img = [System.Drawing.Bitmap]::FromFile($shot)
+          $w = $img.Width; $h = $img.Height
+          $target = [System.Drawing.Color]::FromArgb(13, 17, 23)  # window backgroundColor #0d1117
+          $samples = 0; $painted = 0
+          for ($y = 0; $y -lt $h; $y += 4) {
+            for ($x = 0; $x -lt $w; $x += 4) {
+              $samples++
+              $px = $img.GetPixel($x, $y)
+              if ([Math]::Abs($px.R - $target.R) -gt 12 -or
+                  [Math]::Abs($px.G - $target.G) -gt 12 -or
+                  [Math]::Abs($px.B - $target.B) -gt 12) { $painted++ }
+            }
+          }
+          $img.Dispose()
+          $pct = [Math]::Round(100.0 * $painted / $samples, 2)
+          Write-Host "non-background pixels: $painted/$samples ($pct%)"
+          if ($pct -lt 1.0) {
+            throw "BLACK SCREEN: only $pct% of the frame differs from the backdrop — the window did not paint content"
+          }
+          Write-Host "::notice::Phase C PASS — window painted ($pct% non-backdrop pixels)"
+
+      - name: Upload window screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-c-window
+          path: ${{ runner.temp }}\shots\phase-c.png
+          if-no-files-found: warn
+
+      - name: Stop processes
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process node -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -like "$env:APP_DIR*" } | Stop-Process -Force
+          Write-Host "smoke cleanup done"
