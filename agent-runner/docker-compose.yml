@@ -1,0 +1,50 @@
+# Agent-runner — multi-tenant host for deployed Agent Services (ADR-0004).
+#
+# Same-image third role: the platform image carries the repo source
+# (agent-runner/ included since fix-agent-data-workspace-writes) and the /opt/dsh
+# install with the pinned dsh runtime — the runner is that image with a
+# different entrypoint. This file mirrors the production shape: durable state
+# on the named volume at /data (agent homes, meter.jsonl, fleet spool), the
+# ops port + per-agent span bound to one host IP only. Deploy next to the
+# registry on a host with memory headroom (NOT the 4GB prod node); see
+# docs/adr/0004 for the runner design.
+#
+# Migrating a bind-mounted (code-copy) deployment onto this shape: keep the
+# same volume (agent-runner-data → /data), drop every code bind, carry
+# agent-runner.env + the token files' values over, and do NOT set
+# DSH_MATRIX_OVERRIDE — the image's /opt/dsh matches the frozen matrix.
+#
+#   REGISTRY_IMAGE        image reference (the platform image)
+#   AGENT_RUNNER_BIND_IP  host IP for the port span: the private-network IP in
+#                         production, 127.0.0.1 for a local smoke
+#   docker compose up -d
+
+services:
+  agent-runner:
+    image: ${REGISTRY_IMAGE:-platform:latest}
+    command: node agent-runner/index.js
+    # Volume state (homes/meter/fleet spool) is root-owned from the root-run
+    # generations; the image default (node) cannot write any of it — meter
+    # and child spawns fail with EACCES (live incident 2026-10-07). Pin the
+    # proven identity; migrating the volume to uid 1000 is a separate
+    # least-privilege decision, not a rollout default.
+    user: "0:0"
+    restart: unless-stopped
+    ports:
+      - "${AGENT_RUNNER_BIND_IP:-127.0.0.1}:8790-8850:8790-8850" # ops port + per-agent span (8791+), never the public internet
+    env_file:
+      - ./agent-runner.env
+    environment:
+      AGENT_RUNNER_PORT: "8790"
+      AGENT_RUNNER_HOME: /data
+    volumes:
+      - agent-runner-data:/data
+    mem_limit: ${AGENT_RUNNER_MEM_LIMIT:-1500m}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8790/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  agent-runner-data:

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["@tarojs/taro", "@types/webpack-env"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@platform/core": ["../packages/core/src/index.ts"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["src", "config", "types"],
+  "exclude": ["node_modules", "dist"]
+}
