@@ -1,0 +1,33 @@
+{
+  "name": "@finddatatechnology/facet",
+  "version": "0.2.1",
+  "description": "谦面 Facet CLI — install packs (skills) into editor targets (Claude Code, Cursor, ZCode, Codex, Gemini CLI) and connect their MCP references with a caller key.",
+  "type": "module",
+  "bin": {
+    "facet": "facet.js"
+  },
+  "files": [
+    "facet.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FindDataTechnology/platform.git",
+    "directory": "facet/cli"
+  },
+  "keywords": [
+    "skills",
+    "mcp",
+    "claude-code",
+    "cursor",
+    "agent",
+    "marketplace"
+  ]
+}

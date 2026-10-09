@@ -1,0 +1,159 @@
+# Image build verification (no registry): build (load) → record size →
+# office-layer smoke → boot smoke (/api/config) → dsh contracts on /opt/dsh.
+# This is the build-only variant of the private repo's image.yml — everything
+# that names the internal TCR topology is deliberately absent. Public repo,
+# free Actions; exists to verify Dockerfile changes before they land.
+#
+# The office-layer smoke runs FIRST among smokes: it needs only
+# `docker run python3`, not the server, so a boot regression elsewhere still
+# leaves the office execution layer verified (add-doc-studio).
+
+name: image-build-check
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: image-check-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+    # Cold builds exceeded 90m before the gha cache had its first success;
+    # 240m lets the first success break the cache deadlock.
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (load, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          push: false
+          load: true
+          provenance: false
+          tags: platform:check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Image size on record for every build (add-doc-studio 1.3: the office
+      # execution layer's footprint is tracked per build, not measured once),
+      # with the top layers for delta math.
+      - name: Record image size
+        run: |
+          SIZE="$(docker images --format '{{.Size}}' platform:check | head -1)"
+          echo "image size: $SIZE" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "### top layers" >> "$GITHUB_STEP_SUMMARY"
+          docker history platform:check --format '{{.Size}}\t{{.CreatedBy}}' | head -12 | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # Office execution layer present in the runtime stage (add-doc-studio):
+      # imports resolve and a docx round-trips through python-docx.
+      - name: Smoke test (office execution layer)
+        run: |
+          docker run --rm platform:check python3 --version
+          docker run --rm platform:check python3 -c "import docx, openpyxl, pptx, mammoth; print('office imports ok')"
+          docker run --rm platform:check python3 -c "
+          from docx import Document
+          d = Document(); d.add_heading('probe', 0); d.save('/tmp/probe.docx')
+          from docx import Document as D2
+          assert D2('/tmp/probe.docx').paragraphs, 'round-trip failed'
+          print('docx round-trip ok')"
+
+      - name: Smoke test (/api/config)
+        run: |
+          set -e
+          docker rm -f platform-smoke >/dev/null 2>&1 || true
+          docker run -d --name platform-smoke \
+            -e AUTH_MODE=none -e PORT=3000 -e HOST=0.0.0.0 \
+            -e PLATFORM_DATA_DIR=/data -e NODE_ENV=production \
+            platform:check >/dev/null
+          ok=0
+          for i in $(seq 1 40); do
+            sleep 5
+            if docker exec platform-smoke curl -fsS -m 5 http://127.0.0.1:3000/api/config >/dev/null 2>&1; then
+              ok=1; echo "smoke: /api/config healthy after ~$((i*5))s"; break
+            fi
+            if [ "$(docker inspect -f '{{.State.Running}}' platform-smoke 2>/dev/null)" != "true" ]; then
+              echo "smoke: container exited after ~$((i*5))s"; break
+            fi
+          done
+          if [ "$ok" != "1" ]; then
+            echo "SMOKE TEST FAILED — image does not serve /api/config; logs follow"
+            docker logs platform-smoke 2>&1 | tail -40
+            exit 1
+          fi
+
+      # Agent-liveness gate: /api/config is the SHALLOW route (it answers while
+      # dsh init is still running) — a dead agent runtime still returns 200
+      # there. /api/ready flips 200 only after the dsh child completed its
+      # initialize handshake, which is what every cell's chat actually needs.
+      # 2026-10-09 prod roll sha-f2af032 shipped with /api/config green while
+      # EVERY cell's dsh child died on ERR_MODULE_NOT_FOUND
+      # (@deepseek-ai/cordis-plugin-loader via the app-tree dsh binary);
+      # /api/ready was 503 the whole time. This step is that gate.
+      - name: Smoke test (agent liveness — /api/ready)
+        run: |
+          set -e
+          ok=0
+          for i in $(seq 1 24); do
+            code="$(docker exec platform-smoke curl -sS -m 5 -o /tmp/ready.json -w '%{http_code}' http://127.0.0.1:3000/api/ready 2>/dev/null || echo 000)"
+            if [ "$code" = "200" ]; then
+              ok=1; echo "smoke: /api/ready green after ~$((i*5))s: $(docker exec platform-smoke cat /tmp/ready.json)"; break
+            fi
+            sleep 5
+          done
+          if [ "$ok" != "1" ]; then
+            echo "SMOKE TEST FAILED — agent runtime did not become ready (/api/ready never 200); last body + logs follow"
+            docker exec platform-smoke cat /tmp/ready.json 2>/dev/null | head -c 2000 || true
+            echo
+            docker logs platform-smoke 2>&1 | tail -50
+            exit 1
+          fi
+
+      # The dsh-contracts gate (add-dsh-contracts, ADR-0007): the six
+      # upstream-behavior contracts run IN the container against the image's
+      # own /opt/dsh install.
+      - name: Smoke test (dsh contracts on /opt/dsh)
+        run: docker exec platform-smoke node /app/scripts/dsh-contracts.mjs --tree /opt/dsh
+
+      # Module-identity gate: the child resolves its plugins through the
+      # PROFILE dir, not /opt/dsh directly — and if anything shadows the
+      # runtime's packages with the app tree's copies, the child loads two
+      # instances of a package and its Symbols stop matching (2026-10-09
+      # sha-e956091: every tool call died on undefined.prepare). Contracts on
+      # /opt/dsh cannot see this; this probe resolves from the profile path
+      # and requires every bridge package to land inside the matrix tree.
+      - name: Smoke test (module identity — profile resolution)
+        run: |
+          docker exec platform-smoke node --input-type=module -e '
+            import { createRequire } from "node:module";
+            import { realpathSync } from "node:fs";
+            const anchor = "/opt/dsh-home/profiles/platform/package.json";
+            const req = createRequire(anchor);
+            const pkgs = ["@deepseek-ai/schemastery", "@deepseek-ai/dsh-session", "@deepseek-ai/dsh-tools", "@deepseek-ai/dsh-sdk-jsonrpc-server"];
+            const bad = [];
+            for (const p of pkgs) {
+              let real;
+              try { real = realpathSync(req.resolve(p + "/package.json")); }
+              catch { real = realpathSync(req.resolve(p)); }
+              if (!real.startsWith("/opt/dsh/")) bad.push(`${p} -> ${real}`);
+            }
+            if (bad.length) {
+              console.error("MODULE IDENTITY FAILED — profile resolution escapes the matrix tree:\n  " + bad.join("\n  "));
+              process.exit(1);
+            }
+            console.log("module identity ok: all bridge packages resolve inside /opt/dsh");
+          '
+
+      - name: Summarize
+        run: echo "build-check passed (size above; no image was pushed)" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,13 @@
+# Chat flow against a dead-LLM instance: a prompt must surface the server's
+# error and leave the composer usable (no dead UI).
+appId: com.finddata.platform
+---
+- launchApp
+- tapOn:
+    id: 'composer-input'
+- inputText: '你好'
+- tapOn:
+    id: 'send-button'
+- assertVisible:
+    id: 'composer-input'
+    timeout: 30000

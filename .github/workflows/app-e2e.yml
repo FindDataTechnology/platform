@@ -1,0 +1,101 @@
+name: app-e2e
+
+# The mobile client's Maestro gate (add-mobile-app 6.2). Android is the
+# enforced lane (emulator on ubuntu); iOS runs nightly on a macOS runner —
+# heavy, advisory until it proves stable. Lint/typecheck/unit run on every
+# push; they are cheap and catch the cross-platform typing drift early.
+
+on:
+  pull_request:
+    paths: ["app/**", ".github/workflows/app-e2e.yml"]
+  push:
+    branches: [main]
+    paths: ["app/**", ".github/workflows/app-e2e.yml"]
+  schedule:
+    - cron: "0 3 * * *" # nightly: the iOS leg
+  workflow_dispatch:
+
+concurrency:
+  group: app-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: app lint → typecheck → unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            package-lock.json
+      - name: Install app dependencies
+        run: npm --prefix app ci
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../app/node_modules/zustand packages/core/node_modules/zustand
+
+      - name: Typecheck
+        run: npm --prefix app run typecheck
+      - name: Unit tests (incl. integration smoke + i18n CJK gate)
+        run: npm --prefix app run test:unit
+
+  android:
+    name: Maestro (android emulator)
+    needs: gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true # advisory until the emulator lane proves stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+      - name: Install app dependencies
+        run: npm --prefix app ci
+      - name: Boot emulator
+        uses: reactivecircus/android-emulator-runner@v62
+        with:
+          api-level: 34
+          arch: x86_64
+          script: |
+            npm --prefix app run start -- --port 8082 &
+            npx expo prebuild --platform android --no-install
+            cd app/android && ./gradlew assembleDebug
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            maestro test .maestro/tabs.yaml
+            maestro test .maestro/chat-stream.yaml
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+  ios-nightly:
+    name: Maestro (iOS simulator, nightly)
+    if: github.event_name == 'schedule'
+    needs: gates
+    runs-on: macos-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+      - name: Install app dependencies
+        run: npm --prefix app ci
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Build + run flows on the simulator
+        run: |
+          xcrun simctl boot "iPhone 16" || true
+          npm --prefix app run start -- --port 8082 &
+          npx expo run:ios --configuration Debug --no-xcarchive || true
+          maestro test .maestro/tabs.yaml

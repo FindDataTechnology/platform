@@ -1,0 +1,10 @@
+# Settings language switch applies immediately (spec scenario).
+appId: com.finddata.platform
+---
+- launchApp
+- tapOn:
+    id: 'settings-entry'
+- tapOn: 'English'
+- assertVisible: 'Paired devices|Settings|Language'
+- tapOn: '简体中文'
+- assertVisible: '语言|设置'

@@ -1,0 +1,158 @@
+name: app-build
+
+# Builds the installable Android APK on every landing (add-mobile-app 6.3's
+# CI path — EAS remains the signed/release lane). The Expo template signs the
+# release build with the debug keystore, so the artifact installs directly on
+# any Android device (unknown-sources sideload) and bundles the JS — no
+# Metro needed. Gates (typecheck + unit incl. the integration smoke and the
+# i18n CJK lint) run first: a red gate never ships a package.
+
+on:
+  push:
+    branches: [main]
+    paths: ["app/**", "packages/core/**", ".github/workflows/app-build.yml"]
+  pull_request:
+    paths: ["app/**", "packages/core/**", ".github/workflows/app-build.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: app-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: gates → android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            package-lock.json
+
+      - name: Install root dependencies (the integration smoke boots server.js)
+        run: npm ci --legacy-peer-deps
+
+      - name: Install app dependencies (+ linked core)
+        run: |
+          npm --prefix app ci
+          npm --prefix app install --no-audit --no-fund
+
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          # @platform/core resolves zustand through packages/core/node_modules
+          # (the consumer provides it — see core's package.json note). Local
+          # dev gets it from the repo root's node_modules; CI only installs
+          # app/, so link app's copy into core's lookup path.
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../app/node_modules/zustand packages/core/node_modules/zustand
+
+      - name: Typecheck
+        run: npm --prefix app run typecheck
+
+      - name: Unit tests (integration smoke + i18n gate)
+        working-directory: app
+        run: npm run test:unit
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # ubuntu-latest ships the Android SDK; pin the pieces gradle will ask
+      # for and accept the licenses non-interactively.
+      - name: Android SDK components
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME || '/usr/local/lib/android/sdk' }}
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager | head -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Prebuild native project
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Gradle assembleRelease
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Rename artifact
+        run: |
+          mkdir -p app/artifacts
+          cp app/android/app/build/outputs/apk/release/app-release.apk \
+             app/artifacts/yizuo-${{ github.sha }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yizuo-android-apk
+          path: app/artifacts/*.apk
+          retention-days: 30
+
+  ios-simulator:
+    name: iOS simulator app (unsigned)
+    # macOS runners are free on public repos. Unsigned = simulator-only: a
+    # device/TestFlight build needs the Apple Developer Program (certs), which
+    # is the standing action item — this lane proves the app compiles and runs
+    # in the simulator meanwhile.
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install app dependencies
+        run: |
+          npm --prefix app ci
+          npm --prefix app install --no-audit --no-fund
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          # Metro resolves core's imports from the REALPATH
+          # (packages/core), so zustand must sit in core's lookup path —
+          # same fix the gates job applies for tsc.
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../app/node_modules/zustand packages/core/node_modules/zustand
+      - name: Prebuild native iOS project
+        working-directory: app
+        run: npx expo prebuild --platform ios --no-install
+      - name: Pod install (creates the workspace)
+        working-directory: app/ios
+        run: |
+          ls -la
+          pod install
+          ls -la *.xcworkspace *.xcodeproj 2>/dev/null || true
+
+      - name: Build for the simulator (no codesigning)
+        working-directory: app/ios
+        run: |
+          set -o pipefail
+          WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -1)
+          SCHEME=$(basename "$WS" .xcworkspace)
+          echo "workspace: $WS | scheme: $SCHEME"
+          xcodebuild -workspace "$SCHEME.xcworkspace" -scheme "$SCHEME" \
+            -configuration Release -sdk iphonesimulator -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tail -40
+      - name: Package the .app
+        working-directory: app/ios
+        run: |
+          ls -la build/Build/Products/ || true
+          ls -la build/Build/Products/Release-iphonesimulator/ || true
+          APP=$(find build/Build/Products/Release-iphonesimulator -maxdepth 1 -name "*.app" | head -1)
+          if [ -z "$APP" ]; then echo "no .app found"; exit 1; fi
+          mkdir -p ../artifacts
+          ditto -c -k --keepParent "$APP" "../artifacts/yizuo-ios-simulator-${{ github.sha }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yizuo-ios-simulator
+          path: app/artifacts/*.zip
+          retention-days: 30

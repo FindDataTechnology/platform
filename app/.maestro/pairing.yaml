@@ -1,0 +1,17 @@
+# Pairing flow (task 6.1): manual-entry path against the mock instance.
+# The camera path needs a physical QR — manual is the scripted lane.
+appId: com.finddata.platform
+---
+- launchApp
+- assertVisible: '连接你的壹座|Connect to your Yizuo'
+- tapOn:
+    id: 'server-input'
+- inputText: ${OUTPUT_INSTANCE}
+- tapOn:
+    id: 'code-input'
+- inputText: ${PAIRING_CODE}
+- tapOn:
+    text: '.*绑定|.*Pair'
+- assertVisible:
+    text: '.*对话|.*Chat'
+    timeout: 15000
