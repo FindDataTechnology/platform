@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Platform Preferences</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #0d1117;
+      color: #f0f6fc;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #30363d;
+    }
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      color: #8b949e;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      color: #f0f6fc;
+      border-bottom-color: #2f81f7;
+      background: #21262d;
+    }
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #c9d1d9;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      background: #0d1117;
+      color: #f0f6fc;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    textarea {
+      min-height: 300px;
+      resize: vertical;
+    }
+    button {
+      background: #238636;
+      color: white;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #2ea043;
+    }
+    button.secondary {
+      background: #30363d;
+      color: #f0f6fc;
+    }
+    button.secondary:hover {
+      background: #444c56;
+    }
+    .error {
+      color: #f85149;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border: 1px solid #f8514940;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #3fb950;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border: 1px solid #3fb95040;
+      border-radius: 6px;
+    }
+    .readonly {
+      background: #21262d !important;
+      color: #8b949e;
+    }
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+    <div class="tab active" data-tab="general">General</div>
+  </div>
+
+  <div class="tab-panel active" data-panel="general">
+    <div class="form-group">
+      <label for="llmApiKey">LLM API Key</label>
+      <input type="text" id="llmApiKey" name="llmApiKey">
+    </div>
+    <div class="form-group">
+      <label for="llmBaseUrl">LLM Base URL</label>
+      <input type="text" id="llmBaseUrl" name="llmBaseUrl" placeholder="http://your-gateway:port">
+    </div>
+    <div class="form-group">
+      <label for="defaultModel">Default Model</label>
+      <input type="text" id="defaultModel" name="defaultModel">
+    </div>
+    <div class="actions">
+      <button id="saveGeneral">Save & Restart Server</button>
+      <span id="generalStatus"></span>
+    </div>
+  </div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

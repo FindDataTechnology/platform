@@ -1,0 +1,50 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.11/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.json",
+      "!**/package-lock.json",
+      "!.claude",
+      "!.zcode",
+      "!.pi",
+      "!connect-app",
+      "!resources",
+      "!dist",
+      "!web/dist",
+      "!test-results",
+      "!data",
+      "!openspec"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
+  "assist": {
+    "enabled": false
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "style": "off",
+      "complexity": "off",
+      "a11y": "off",
+      "correctness": {
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error"
+      }
+    }
+  },
+  "javascript": {
+    "globals": ["process", "console", "fetch", "URL", "AbortSignal"]
+  }
+}
