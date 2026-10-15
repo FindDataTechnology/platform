@@ -1,0 +1,23 @@
+{
+  "$comment": "The adapter layer (CONTEXT.md 适配层; ADR-0007's north star, now CI-enforced per ADR-0023): the ONLY files allowed to directly import @deepseek-ai/* packages. This list is the reviewed boundary fact — scripts/lint-dsh-adapter.mjs fails when a file outside it adds such an import, or when a listed file no longer exists/imports nothing dsh (a stale entry). Changes here ride the same review as dsh-matrix changes. Scan scope: repo .js/.mjs except node_modules, web, facet, openspec, docs, e2e (test harness has its own rules), dist trees, and dsh-matrix itself (lock/tooling, not code).",
+  "adapterFiles": [
+    "agent-runner/index.js",
+    "dsh-bridge.js",
+    "dsh-profile-template/bot-notify.js",
+    "dsh-profile-template/platform-chart-bind-bridge.js",
+    "dsh-profile-template/platform-notify-bridge.js",
+    "dsh-profile-template/platform-permission-bridge.js",
+    "dsh-profile-template/platform-preset-bridge.js",
+    "dsh-profile-template/platform-tool-search-bridge.js",
+    "dsh-profile-template/platform-user-questions-bridge.js",
+    "scripts/dsh-contracts.mjs",
+    "scripts/lib/dsh-contracts/probe/contracts-agent-probe.mjs",
+    "scripts/measure-dsh-pod-shape.mjs",
+    "scripts/probe-concurrent-turn-close.mjs",
+    "scripts/probe-data-workspace-writable.mjs",
+    "scripts/probe-llm-retry.mjs",
+    "scripts/probe-stream-channel.mjs",
+    "scripts/test-session-resume.mjs",
+    "scripts/test-tool-scope-register-seam.mjs"
+  ]
+}

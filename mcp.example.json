@@ -1,0 +1,26 @@
+{
+  "_comment": "Copy this file to mcp.json and edit. mcp.json is gitignored. Two server shapes are supported: stdio (spawns a local process) and http (connects to a remote Streamable HTTP / SSE endpoint).",
+
+  "mcpServers": {
+    "example-stdio": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"],
+      "env": {
+        "SOME_VAR": "value"
+      }
+    },
+
+    "example-http": {
+      "url": "https://example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
+      }
+    },
+
+    "playwright": {
+      "_comment": "Playwright browser automation tools. Enable for browser control (navigate, screenshots, form filling, element extraction). Run `npx playwright install chromium` first.",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp-server", "--launch-options", "{'headless': true}"]
+    }
+  }
+}

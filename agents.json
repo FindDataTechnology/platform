@@ -1,0 +1,29 @@
+{
+  "apps": [
+    {
+      "id": "yizuo-packs",
+      "type": "app",
+      "kind": "link",
+      "name": "壹座·Packs",
+      "url": "https://mcp.finddatatech.cloud",
+      "description": "壹座 packs 市场——发现、订阅、安装功能集，能力直达对话"
+    },
+    {
+      "id": "wanxing-token",
+      "type": "app",
+      "kind": "external-service",
+      "name": "萬星·词元",
+      "url": "https://token.finddatatech.cloud",
+      "description": "模型网关与计量计费——内置模型车道的用量、额度与账单"
+    },
+    {
+      "id": "wanxing-connector",
+      "type": "app",
+      "kind": "link",
+      "name": "萬星·连接器",
+      "url": "https://connector.finddatatech.cloud",
+      "description": "SaaS 连接网关——统一托管外部服务凭据，为 agent 铸造访问令牌"
+    }
+  ],
+  "agents": []
+}

@@ -1,0 +1,7 @@
+/* Facet's Tailwind entry: the shared token sheet, plus an explicit source
+   declaration. Tailwind v4 auto-detection scans from the vite root
+   (facet/web) and never follows the alias into ../../web/src, so without
+   @source the reused 壹座 components ship with zero utility classes — the
+   exact "no styles" failure the first deploy showed. */
+@import "@/styles/globals.css";
+@source "../../../web/src";
