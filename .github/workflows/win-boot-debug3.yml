@@ -1,0 +1,90 @@
+name: win-boot-debug3
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download the published installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v1.3.13 --repo ${{ github.repository }} --pattern "*.exe" --clobber
+
+      - name: Silent install (NSIS /S)
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem *.exe | Select-Object -First 1).FullName
+          $p = Start-Process -FilePath $exe -ArgumentList "/S" -PassThru -Wait
+          Write-Host "installer exit code: $($p.ExitCode)"
+          Start-Sleep -Seconds 3
+          $installed = Get-ChildItem "$env:LOCALAPPDATA\Programs\platform" -Filter "Platform*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installed) { throw "not installed" }
+          "APP_DIR=$(Split-Path $installed.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "APP_DIR=$env:APP_DIR"
+
+      # EXACT smoke Phase A shape: plain Start-Process, NO redirect, NO -PassThru
+      - name: Launch app exactly like smoke Phase A, collect evidence
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "$env:APP_DIR\Platform.exe"
+          $deadline = (Get-Date).AddMinutes(3)
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            $nodes = Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$env:APP_DIR*" }
+            if ($nodes) { Write-Host "bundled backend node.exe running: pid $($nodes.Id -join ',')"; break }
+          }
+          $deadline2 = (Get-Date).AddMinutes(2)
+          $ok = $false
+          while ((Get-Date) -lt $deadline2) {
+            Start-Sleep -Seconds 5
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:47600/api/config" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "WINDOW TARGET -> 200 OK"; $ok = $true; break }
+            } catch { Write-Host "waiting 47600: $($_.Exception.Message)" }
+          }
+
+          Write-Host "=== node.exe command lines ==="
+          Get-CimInstance Win32_Process -Filter "Name='node.exe'" | ForEach-Object {
+            Write-Host "pid=$($_.ProcessId) ppid=$($_.ParentProcessId)"
+            Write-Host "  cmd: $($_.CommandLine)"
+          }
+          Write-Host "=== node.exe listening sockets (any family/port) ==="
+          $nodeIds = (Get-Process node -ErrorAction SilentlyContinue).Id
+          Get-NetTCPConnection -ErrorAction SilentlyContinue |
+            Where-Object { $_.OwningProcess -in $nodeIds } |
+            Format-Table LocalAddress, LocalPort, State, OwningProcess | Out-String | Write-Host
+          Write-Host "=== anything on 47600 (any owner) ==="
+          Get-NetTCPConnection -LocalPort 47600 -ErrorAction SilentlyContinue |
+            Format-Table LocalAddress, LocalPort, State, OwningProcess | Out-String | Write-Host
+          Write-Host "=== settings.json ==="
+          Get-Content "$env:APPDATA\platform\settings.json" -ErrorAction SilentlyContinue
+          Write-Host "=== userData listing ==="
+          Get-ChildItem "$env:APPDATA\platform" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 40 FullName | Out-String | Write-Host
+          Write-Host "=== main.log (app's own mirror: electron + piped server child logs) ==="
+          Get-Content "$env:APPDATA\platform\main.log" -Tail 150 -ErrorAction SilentlyContinue
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug3-evidence
+          path: |
+            ${{ env.APPDATA }}\platform\main.log
+            ${{ env.APPDATA }}\platform\settings.json
+          if-no-files-found: warn
+
+      - name: Stop processes
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process node -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -like "$env:APP_DIR*" } | Stop-Process -Force
