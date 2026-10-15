@@ -1,0 +1,6 @@
+{
+  "_comment": "Read-only replay allowlist for chart data bindings (openspec: add-chart-data-binding). Only tools named here may ever be called by a refresh, and only under an exact name match — prefixes and patterns are not allowlist semantics (probed: `policy_delete`, `platform_trigger`, `fetch` and `auth_launch_login` all mutate upstream state and none matches a create/update/add prefix). Absent file or absent server => nothing is replayable. `fd-open-data-mcp/read` (read-through) stays OFF until a live probe shows it is cache-only on a hit — see the change's open question; `read_series` is the cache-only default.",
+  "servers": {
+    "fd-open-data-mcp": ["read_series"]
+  }
+}

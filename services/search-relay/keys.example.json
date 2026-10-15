@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy to keys.json (gitignored). ciyuan: the platform gateway websearch lane — the pool's normal supply, called with an internal lane key (its own group, zero websearch price, usage still booked); provider keys live in the gateway's account pool, not here. serpapi: COLD STANDBY only — covers lane outages (a failing lane request falls back here; 3 consecutive lane failures open a 60s breaker that skips the lane). Both halves of ciyuan or nothing, else the relay runs direct-only as before. glm: reserved for a second provider — not wired yet. tokens: Bearer tokens the platform deployments use (issue one per customer/deployment so a leak costs one token's daily cap, not the pool).",
+  "ciyuan": {
+    "url": "https://token.finddatatech.cloud",
+    "key": "INTERNAL_LANE_KEY"
+  },
+  "serpapi": [
+    "YOUR_SERPAPI_KEY_1"
+  ],
+  "glm": [],
+  "tokens": [
+    "GENERATE_WITH_openssl_rand_hex_24"
+  ]
+}

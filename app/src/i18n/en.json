@@ -1,0 +1,135 @@
+{
+  "tabs": {
+    "chat": "Chat",
+    "cron": "Scheduled",
+    "resources": "Library"
+  },
+  "pair": {
+    "title": "Connect to your Yizuo",
+    "subtitle": "Mint a pairing code on the web (Settings → Paired devices), then scan or type it to bind this device to your account.",
+    "scan": "Scan to pair",
+    "scanHint": "The QR carries both the server address and the code — nothing to type.",
+    "cameraDenied": "Camera unavailable — type the server address and the 6-digit code instead.",
+    "serverLabel": "Server address",
+    "serverPlaceholder": "https://your-yizuo.example.com",
+    "codeLabel": "6-digit pairing code",
+    "codePlaceholder": "000000",
+    "submit": "Pair",
+    "submitting": "Pairing…",
+    "errCode": "Invalid or expired code — mint a fresh one and retry.",
+    "errNetwork": "Cannot reach the server — check the address and your network.",
+    "errOldServer": "This server predates device pairing; upgrade Yizuo to use it.",
+    "errUnknown": "Pairing failed — please retry."
+  },
+  "gate": {
+    "connecting": "Connecting…",
+    "rebind": "This device's binding was revoked — pair again."
+  },
+  "chat": {
+    "placeholderTitle": "Chat",
+    "placeholderBody": "The full chat lane lands with tasks 3.x.",
+    "disconnected": "Disconnected",
+    "reconnect": "Reconnect",
+    "placeholder": "Type a message…",
+    "gatedPlaceholder": "Answer the question above to continue…",
+    "stop": "Stop",
+    "attach": "Attach",
+    "regenerate": "Regenerate",
+    "fileDefault": "file"
+  },
+  "cron": {
+    "placeholderTitle": "Scheduled tasks",
+    "placeholderBody": "The task list lands with task 4.3.",
+    "empty": "No scheduled tasks yet",
+    "pause": "Pause",
+    "resume": "Resume",
+    "state": {
+      "scheduled": "Scheduled",
+      "running": "Running",
+      "paused": "Paused",
+      "completed": "Completed",
+      "expired": "Expired",
+      "error": "Error",
+      "manual": "Manual"
+    }
+  },
+  "resources": {
+    "placeholderTitle": "Resource library",
+    "placeholderBody": "The library lands with task 4.3.",
+    "search": "Search resources…",
+    "empty": "The library is empty — charts and files from chats land here",
+    "type": {
+      "all": "All",
+      "chart": "Charts",
+      "file": "Files"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "instance": "Server",
+    "reachability": "reachable",
+    "unreachable": "unreachable",
+    "language": "Language",
+    "unbind": "Unbind this device",
+    "unbindConfirm": "Unbinding clears local pairing and returns to the pairing screen. Continue?",
+    "confirm": "Unbind",
+    "cancel": "Cancel",
+    "about": "About",
+    "version": "Version",
+    "lang": {
+      "zh": "简体中文",
+      "en": "English"
+    }
+  },
+  "share": {
+    "title": "Shared session",
+    "tokenLabel": "Share token",
+    "open": "Open",
+    "unavailable": "The share is gone or was revoked."
+  },
+  "common": {
+    "loading": "Loading…",
+    "retry": "Retry",
+    "error": "Something went wrong"
+  },
+  "history": {
+    "title": "History",
+    "newSession": "＋ New session",
+    "untitled": "Untitled",
+    "empty": "No sessions yet"
+  },
+  "panel": {
+    "models": "Models",
+    "agents": "Personas",
+    "locked": "A turn is running — picks apply after it settles…",
+    "empty": "Empty list"
+  },
+  "ask": {
+    "optional": "Add detail (optional)",
+    "answerHere": "Type your answer",
+    "skip": "Skip",
+    "submit": "Submit answers"
+  },
+  "artifact": {
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "In library",
+    "saveFailed": "Save failed"
+  },
+  "turn": {
+    "steps": "{{name}} · {{count}} steps",
+    "activity": "Activity · {{count}} steps",
+    "thinking": "Thinking… {{text}}",
+    "cronCard": "Scheduled task",
+    "delegationCard": "Delegated task",
+    "copy": "Copy"
+  },
+  "welcome": {
+    "skills": "Discover skills",
+    "skillsText": "List the available skills and what each one does",
+    "verify": "Verify a question",
+    "verifyText": "Help me verify a technical question and cite the sources",
+    "write": "Polish writing",
+    "writeText": "Turn these bullets into a concise weekly report:\n- Point one\n- Point two"
+  }
+}

@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 theme tokens.
+ *
+ * Every token is a `light-dark(<light>, <dark>)` pair. The dark half is the
+ * original palette, unchanged. Which half applies is decided by `color-scheme`
+ * below — so "follow the OS" costs no JavaScript and cannot flash, and an
+ * explicit choice is one attribute on <html>.
+ *
+ * Names mirror shadcn/ui's convention so components dropped in by the shadcn
+ * CLI use these tokens without further wiring.
+ *
+ * Contrast is enforced, not eyeballed: scripts/test-palette-contrast.mjs parses
+ * this file and fails if any pairing the UI renders drops below WCAG AA in
+ * either theme. Run it after touching a value here.
+ */
+
+/*
+ * `color-scheme` drives light-dark() AND native chrome (scrollbars, form
+ * controls, spellcheck underlines). :root with both keywords = follow the OS,
+ * which is the default when <html> carries no data-theme.
+ */
+:root {
+  color-scheme: light dark;
+}
+[data-theme="light"] {
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@theme {
+  /* Neutral scale. Dark: near-black → off-white. Light: near-white → near-black,
+   * with card ABOVE background in both (the sidebar sits on card, and a raised
+   * surface reads raised in either theme). */
+  --color-background: light-dark(oklch(0.98 0 0), oklch(0.16 0 0));
+  --color-foreground: light-dark(oklch(0.22 0 0), oklch(0.96 0 0));
+
+  --color-card: light-dark(oklch(1 0 0), oklch(0.19 0 0));
+  --color-card-foreground: light-dark(oklch(0.22 0 0), oklch(0.96 0 0));
+
+  --color-popover: light-dark(oklch(1 0 0), oklch(0.19 0 0));
+  --color-popover-foreground: light-dark(oklch(0.22 0 0), oklch(0.96 0 0));
+
+  --color-muted: light-dark(oklch(0.96 0 0), oklch(0.23 0 0));
+  --color-muted-foreground: light-dark(oklch(0.48 0 0), oklch(0.65 0 0));
+
+  --color-border: light-dark(oklch(0.90 0 0), oklch(0.28 0 0));
+  --color-input: light-dark(oklch(0.90 0 0), oklch(0.28 0 0));
+  --color-ring: light-dark(oklch(0.52 0.15 250), oklch(0.55 0.15 250));
+
+  /* Accent (single blue, two lightness steps — same hue 250, same chroma).
+   * primary is the bright step: text, focus borders, state edges, tints on the
+   * base surfaces. Dark needs it light (0.64) to carry against near-black;
+   * light needs it dark (0.48) to carry as text against white — the same value
+   * cannot do both. primary-deep is the fill step: surfaces under white text,
+   * and 0.53 clears AA against oklch(0.99 0 0) in either theme, so it is
+   * shared. */
+  --color-primary: light-dark(oklch(0.48 0.16 250), oklch(0.64 0.16 250));
+  --color-primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.99 0 0));
+  --color-primary-deep: light-dark(oklch(0.53 0.16 250), oklch(0.53 0.16 250));
+
+  --color-secondary: light-dark(oklch(0.96 0 0), oklch(0.24 0 0));
+  --color-secondary-foreground: light-dark(oklch(0.22 0 0), oklch(0.96 0 0));
+
+  --color-accent: light-dark(oklch(0.96 0 0), oklch(0.24 0 0));
+  --color-accent-foreground: light-dark(oklch(0.22 0 0), oklch(0.96 0 0));
+
+  /* Signals. `destructive` needs the same two-step split as `primary`, and for
+   * the same reason: as error TEXT on a near-black surface it must be light
+   * (0.62 → 4.8:1), but as a FILL under white text it must be dark (0.55 →
+   * 5.3:1). One value cannot do both — 0.62 under white is 3.9:1, an AA fail
+   * that shipped unnoticed on the Delete confirm button. `destructive-deep` is
+   * the fill step; use it wherever `destructive-foreground` sits on top.
+   * The light half is darkened until it clears AA on white. */
+  --color-destructive: light-dark(oklch(0.52 0.22 25), oklch(0.62 0.22 25));
+  --color-destructive-deep: light-dark(oklch(0.52 0.22 25), oklch(0.55 0.22 25));
+  --color-destructive-foreground: light-dark(oklch(0.99 0 0), oklch(0.99 0 0));
+  --color-success: light-dark(oklch(0.52 0.15 145), oklch(0.72 0.17 145));
+  --color-warning: light-dark(oklch(0.52 0.14 85), oklch(0.80 0.15 85));
+
+  /* Backdrop behind modals and the mobile nav drawer. A token, not bg-black/60,
+   * so it can be lighter in light mode where a near-opaque black scrim is
+   * jarring. */
+  --color-scrim: light-dark(oklch(0.44 0 0 / 0.40), oklch(0 0 0 / 0.60));
+
+  /* Radii */
+  --radius: 0.625rem;
+
+  /* Type — match the current app closely enough that font swap is invisible */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+/*
+ * Baseline. `bg-background text-foreground` on <body> so components without
+ * explicit surfaces don't render on white during the streaming-in period.
+ */
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/*
+ * Shiki dual-theme output. `defaultColor: false` makes shiki emit both palettes
+ * as custom properties per token instead of baking one in; these rules pick.
+ * light-dark() keeps the choice on the same mechanism as every other token, so
+ * code blocks follow `color-scheme` — including the OS-preference case — with
+ * no JavaScript and no re-highlight.
+ */
+@layer base {
+  .shiki,
+  .shiki span {
+    color: light-dark(var(--shiki-light), var(--shiki-dark));
+    background-color: light-dark(var(--shiki-light-bg), var(--shiki-dark-bg));
+    font-style: light-dark(var(--shiki-light-font-style), var(--shiki-dark-font-style));
+    font-weight: light-dark(var(--shiki-light-font-weight), var(--shiki-dark-font-weight));
+    text-decoration: light-dark(var(--shiki-light-text-decoration), var(--shiki-dark-text-decoration));
+  }
+}
+
+/*
+ * Outline jump flash (add-chat-outline). Applied imperatively by Chat's
+ * jumpToTurn (classList, not JSX) and removed after 1.2s; the forced reflow
+ * before re-adding lets a rapid re-tap restart the animation. A primary-tint
+ * wash that fades — readable in both themes via the token pair.
+ */
+@keyframes outline-jump-flash {
+  from {
+    background-color: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.outline-jump-flash {
+  animation: outline-jump-flash 1.2s ease-out 1;
+  border-radius: var(--radius);
+}

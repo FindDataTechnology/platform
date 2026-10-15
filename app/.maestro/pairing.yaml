@@ -1,0 +1,30 @@
+# Pairing flow (task 6.1): manual-entry path against the mock instance.
+# The camera path needs a physical QR — manual is the scripted lane.
+appId: com.finddata.platform
+---
+- launchApp
+# 90s: a release cold start on the software-rendered CI emulator can take
+# well over the default assert window before the first JS frame renders.
+- extendedWaitUntil:
+    visible:
+      text: '连接你的壹座|Connect to your Yizuo'
+    timeout: 90000
+- tapOn:
+    id: 'server-input'
+- inputText: ${OUTPUT_INSTANCE}
+# The soft keyboard covers the next field (and the bind button) — drop it
+# between inputs (38154792952: tap code-input FAILED behind the keyboard).
+- hideKeyboard
+- tapOn:
+    id: 'code-input'
+- inputText: ${PAIRING_CODE}
+- hideKeyboard
+# By id, never by text: the text form matched the subtitle ("Mint a *Pair*ing
+# code…") while the real button sat below the fold (38157370263 — submit
+# never even ran, no [pair] log line).
+- tapOn:
+    id: 'bind-button'
+- extendedWaitUntil:
+    visible:
+      text: '.*对话|.*Chat'
+    timeout: 30000

@@ -1,0 +1,29 @@
+# The platform's deployment persona composition (0.2.0).
+#
+# Translation note from the 0.1.1 shipped `standard` (252 lines): dsh-base
+# 0.2.0 now composes the ENTIRE agent host plane itself — the shell/fs/jobs
+# tools, skills, plan mode, compaction internals, subagent tools, ralph, todo,
+# web, and the workflow engine (workflow-ptc). What a deployment still owns is
+# exactly what the base bundle's comments say it is: "the deployment persona
+# is a deployment choice" — the persona row — plus any deployment-specific
+# model-facing rows. This file is that remainder.
+#
+# Schema notes vs 0.1.1: dsh-persona's `text` became `prefix`/`suffix`
+# sections; the standalone workflow-worker-thread row is gone (the engine is
+# workflow-ptc in the base bundle).
+
+# The preset's own persona, shadowing the deployment default for this agent.
+# `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    prefix: >-
+      You are a coding agent powered by the {{model}} model. Your working directory is {{cwd}}.
+
+# The ask_user_question tool: the platform's inquiry flow (add-user-questions)
+# rides its host-side provider — the user-questions bridge registers the
+# userQuestions service this tool resolves. Kept deployment-side because the
+# base bundle composes no ask tool (its sessions pin ask through the
+# permission service instead).
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'
