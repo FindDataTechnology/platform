@@ -2,7 +2,7 @@
 // ── @finddatatechnology/facet — 谦面 CLI (add-facet-platform S3; add-ecosystem-bridge) ──
 //
 // Installs a published pack's skills from the facet marketplace into editor
-// targets (Claude Code, Cursor, ZCode, Codex, Gemini CLI). Marketplace fetches
+// targets (Claude Code, Cursor, ZCode, Codex, Gemini CLI, WorkBuddy). Marketplace fetches
 // are the same anonymous public routes the registry uses; a pack reference is
 // its id (or any URL/string containing it). The install is a version snapshot
 // — no subscription is created, no update push follows (spec: facet-editor-cli).
@@ -29,12 +29,32 @@ const VERSION = JSON.parse(
 ).version;
 const DEFAULT_BASE = process.env.FACET_BASE || "https://facet.finddatatech.cloud";
 const DEFAULT_REGISTRY = process.env.FACET_REGISTRY || "https://mcp.finddatatech.cloud";
+// Keyless MCP lane (add-workbuddy-mcp-lane, 2026-10-30): a pre-registered
+// PUBLIC client on our Logto tenant. Server side is fully live and was
+// verified end-to-end with a headless PKCE round-trip in the SDK's exact
+// semantics: static client_id (no DCR) → authorize → token (aud = the
+// gateway origin) → gateway 200 → 160+ tools, zero pasted keys. The tenant's
+// custom-JWT script injects roles/email for gateway-audience tokens, and the
+// auth-server accepts the gateway's own advertised resource URL as audience
+// (accepted-audiences env on the auth-server).
+// CLIENT-side caveat, established by reading the shipped app.asar (5.9.3):
+// the static oauth.clientId is honored on the connector/marketplace-template
+// paths (toConnectorMcpItem/toDependencyItem read descriptor.oauth.clientId),
+// but the USER-level mcp.json loader is not there yet — parseMcpServerEntry
+// keeps only transport/trust fields and UserMcpProvider's auth mapper passes
+// provider:{name} only, so a file entry falls back to DCR (which our Logto
+// does not offer). The entry written here matches the client's own connector
+// shape, so it is the forward-compatible form; key-based connect remains
+// the working path on 5.9.3. App id overridable for non-prod registries.
+const DEFAULT_OAUTH_CLIENT_ID = process.env.FACET_OAUTH_CLIENT_ID || "tvmzkpz3ld5kqlmse5se9";
+const DEFAULT_OAUTH_SCOPE = "openid gateway:access offline_access";
 
 const USAGE = `facet v${VERSION} — 谦面功能集安装器 / 萬星调用者偏好
 
 用法：
-  facet install <packRef> [--target claude-code|cursor|zcode|codex|gemini-cli]
+  facet install <packRef> [--target CC|cursor|zcode|codex|gemini-cli|workbuddy]
                           [--project <dir>] [--base <url>] [--registry <url>]
+                          [--write-mcp|--no-write-mcp] [--oauth [--oauth-client <id>]]
   facet update [packRef] [--target <t>] [--base <url>]   # 重取最新版快照（无订阅副作用）
   facet connect [--key wgk-…] [--registry <url>] [--clear] [--show] [--no-open]
   facet prefs <agent-slug> [--key sk-…] [--wanxing <url>]
@@ -45,10 +65,14 @@ const USAGE = `facet v${VERSION} — 谦面功能集安装器 / 萬星调用者�
   facet help | --version
 
   <packRef>  功能集 id（市场详情页可见）或含 id 的 URL
-  --target   安装目标（默认 claude-code）：写技能到目标编辑器的技能目录
-  --project  项目级安装：写进 <dir>/.<target>/skills/ 而非用户级目录
+  --target   安装目标（默认 CC）：写技能到目标编辑器的技能目录
+  --project  项目级安装：写进 <dir>/<dotdir>/skills/ 而非用户级目录
   --base     谦面地址（默认 ${DEFAULT_BASE}）
   --registry 注册处地址——打印 MCP 端点；connect 用它验活与铸造
+  --oauth    workbuddy 免键(OAuth)条目：mcp.json 写 oauth.clientId（静态客户端，与
+             客户端连接器模板同形）。服务端侧已端到端实证；5.9.3 客户端的用户文件加载
+             器暂不消费该块——今日真连接用贴键（connect + --write-mcp）。暂仅 workbuddy
+  --oauth-client 覆盖免键条目的 OAuth client_id（默认 facet-mcp-keyless 应用）
 
   connect 子命令（ecosystem-bridge）：铸取并验活 wgk- 调用键，存本地后
   install 可写各编辑器的 MCP 连接配置。--key 免交互粘贴；缺省打开铸造页
@@ -61,10 +85,12 @@ const USAGE = `facet v${VERSION} — 谦面功能集安装器 / 萬星调用者�
   --set-callback 回合完成回调：URL 与 HMAC 签名密钥（两者同设同清）
   --set-reap     上下文收割窗（分钟）；--clear 显式清除即回落平台默认
 
-目标布局（五家同构：<dotdir>/skills/<skill>/SKILL.md）：
-  claude-code ~/.claude/skills/…   cursor  ~/.cursor/skills/…
+目标布局（技能同为 <dotdir>/skills/<skill>/SKILL.md）：
+  CC ~/.claude/skills/…   cursor  ~/.cursor/skills/…
   zcode       ~/.zcode/skills/…    codex   ~/.codex/skills/…
-  gemini-cli  ~/.gemini/skills/…   （项目级均为 <dir>/.<target>/skills/…）
+  gemini-cli  ~/.gemini/skills/…   workbuddy  ~/.workbuddy/skills/…
+  （项目级均为 <dir>/<dotdir>/skills/…；workbuddy 的 MCP 配置同为 .workbuddy 下：
+    用户级 ~/.workbuddy/mcp.json、项目级 <dir>/.workbuddy/mcp.json）
 
   update 子命令（F2.3）：按 ~/.facet/installed.json 的记录重取各包最新版——已最新
   即 no-op，升级打印 v旧 → v新；零订阅副作用（快照模型）。
@@ -112,6 +138,8 @@ function parseArgs(argv) {
     else if (a === "--no-open") out.noOpen = true;
     else if (a === "--write-mcp") out.writeMcp = true;
     else if (a === "--no-write-mcp") out.noWriteMcp = true;
+    else if (a === "--oauth") out.oauth = true;
+    else if (a === "--oauth-client") out.oauthClient = rest.shift();
     else if (a === "--show") out.show = true;
     else if (a === "--help" || a === "-h") out.command = "help";
     else if (a === "--version" || a === "-v") out.command = "version";
@@ -146,6 +174,16 @@ const SKILLS_SUBDIR = {
   zcode: ".zcode",
   codex: ".codex",
   "gemini-cli": ".gemini",
+  // WorkBuddy's user-level skills directory is `.workbuddy/skills` — verified on
+  // a real install (2026-10-30): a probe SKILL.md placed there appeared in the
+  // client's own `.skill-list-cache.json` with `source: "userSettings"`, while
+  // the same probe under `~/.codebuddy/skills` was NOT picked up. The client's
+  // code agrees (`createSkillsService`: join(resolveWorkbuddyConfigDir(), "skills")).
+  // The docs' Project page mentions `.codebuddy/skills/` for repository-scoped
+  // code-development config; that is a DIFFERENT surface from the user-level
+  // skill list this target writes, and it is not what the client scans for
+  // user skills. MCP config lives apart too — see MCP_TARGETS below.
+  workbuddy: ".workbuddy",
 };
 
 // FACET_HOME redirects every user-level path (skills targets, MCP configs,
@@ -186,6 +224,33 @@ const MCP_TARGETS = {
     userFile: () => path.join(HOME(), ".codex", "config.toml"),
     toml: true,
   },
+  // WorkBuddy keeps both skills and MCP under its own dotdir: skills at
+  // ~/.workbuddy/skills (see SKILLS_SUBDIR) and MCP at
+  // ~/.workbuddy/mcp.json (its MCP guide; client code getMcpConfigPath() =
+  // <configDir>/mcp.json). Same root, not two — verified on a real install
+  // 2026-10-30, which also disproved the earlier ".codebuddy" reading.
+  // Remote transport is declared explicitly (type "http"). TWO connection
+  // forms:
+  //  - entry(): header-keyed (wgk- caller key) — the working path on 5.9.3,
+  //    also what headless/CI callers use.
+  //  - entryOauth(): keyless — the client's own connector-template shape
+  //    (`oauth.clientId` short-circuits DCR on the connector/plugin paths,
+  //    per the shipped app.asar). The USER-level mcp.json loader does not yet
+  //    consume this block on 5.9.3 (parseMcpServerEntry drops it), so the
+  //    written entry is the forward-compatible form; see the keyless-lane
+  //    note above DEFAULT_OAUTH_CLIENT_ID. Tokens would live in the CLIENT's
+  //    encrypted store, never in this file.
+  workbuddy: {
+    userFile: () => path.join(HOME(), ".workbuddy", "mcp.json"),
+    projectFile: (dir) => path.join(dir, ".workbuddy", "mcp.json"),
+    json: { container: (doc) => doc, key: "mcpServers" },
+    entry: (url, headers) => ({ type: "http", url, headers }),
+    entryOauth: (url, clientId, scope) => ({
+      type: "http",
+      url,
+      oauth: { name: "facet", clientId, scope },
+    }),
+  },
 };
 
 function readJsonFile(file) {
@@ -225,14 +290,25 @@ async function upsertTomlMcp(file, name, url, headers) {
 }
 
 // Write the pack's MCP references into the target's native config. Returns
-// the list of files written (for the CLI's report). Only ever user-level
-// except claude-code, whose native project-level surface is <dir>/.mcp.json.
-async function writeMcpConfig(target, { registry, servers, key, project }) {
+// the list of files written (for the CLI's report). Project-level writes go
+// to whichever targets declare a projectFile (CC: <dir>/.mcp.json,
+// WorkBuddy: <dir>/.workbuddy/mcp.json); the rest are user-level only.
+async function writeMcpConfig(target, { registry, servers, key, project, oauth }) {
   const t = MCP_TARGETS[target];
   if (!t) throw new Error(`目标「${target}」没有 MCP 配置约定`);
+  if (oauth && !t.entryOauth) {
+    throw new Error(`目标「${target}」未证实免键(OAuth)连接面——免键车道目前仅 workbuddy；其余目标用 wgk- 调用键（facet connect 铸键）。`);
+  }
   const files = [];
   for (const s of servers) {
     const url = `${registry}/${s.registryName}/mcp`;
+    if (oauth) {
+      const clientId = typeof oauth === "string" ? oauth : DEFAULT_OAUTH_CLIENT_ID;
+      const entry = t.entryOauth(url, clientId, DEFAULT_OAUTH_SCOPE);
+      const file = project && t.projectFile ? t.projectFile(project) : t.userFile();
+      files.push(await upsertJsonMcp(file, t.json.container, t.json.key, s.registryName, entry));
+      continue;
+    }
     const headers = { Authorization: `Bearer ${key}` };
     if (t.toml) files.push(await upsertTomlMcp(t.userFile(), s.registryName, url, headers));
     else {
@@ -367,13 +443,29 @@ export async function verifyCallerKey(registry, key) {
   }
   let servers = null;
   try {
-    const r = await fetch(`${registry}/api/servers`, { headers });
-    if (r.ok) {
+    // Paginated read (registry-list-completeness): one page is not the full
+    // set. Best-effort stays best-effort — any failure here must not fail
+    // the connect, and a walk that cannot complete still shows what it got.
+    const PAGE = 500;
+    const names = [];
+    let offset = 0;
+    for (let page = 0; page < 100; page += 1) {
+      const r = await fetch(`${registry}/api/servers?limit=${PAGE}&offset=${offset}`, { headers });
+      if (!r.ok) break;
       const doc = await r.json();
-      servers = (Array.isArray(doc) ? doc : doc?.servers ?? [])
-        .map((s) => s?.name ?? s?.server?.name ?? s?.id)
-        .filter(Boolean);
+      const rows = Array.isArray(doc) ? doc : doc?.servers ?? [];
+      names.push(...rows.map((s) => s?.name ?? s?.server?.name ?? s?.id).filter(Boolean));
+      const total = Number.isFinite(Number(doc?.total_count)) ? Number(doc.total_count) : null;
+      const hasNext =
+        typeof doc?.has_next === "boolean"
+          ? doc.has_next
+          : total !== null
+            ? names.length < total
+            : rows.length >= PAGE;
+      if (!hasNext || rows.length === 0) break;
+      offset += rows.length;
     }
+    if (names.length) servers = names;
   } catch { /* best-effort */ }
   return { servers };
 }
@@ -503,6 +595,40 @@ async function install(opts) {
 
   const mcp = detail.manifest?.mcpServers ?? [];
   if (mcp.length > 0) {
+    if (opts.oauth) {
+      // 免键车道（add-workbuddy-mcp-lane）：条目带 oauth.clientId（与客户端连接器模板
+      // 同形）。服务端侧端到端实证就绪；WorkBuddy 5.9.3 的用户级 mcp.json 加载器暂不
+      // 消费该块（见上注），写入的是前瞻形状——token 若被消费也只存客户端加密库。
+      const shouldWrite = opts.writeMcp === true || (opts.noWriteMcp !== true && process.stdin.isTTY
+        ? await (async () => {
+            const rl = (await import("node:readline/promises")).createInterface({ input: process.stdin });
+            try {
+              const a = (await rl.question("写入免键(OAuth 授权)连接配置？[y/N] ")).trim().toLowerCase();
+              return a === "y" || a === "yes";
+            } finally { rl.close(); }
+          })()
+        : false);
+      if (!shouldWrite) {
+        console.log("\nMCP 引用（--oauth 但未写入；--write-mcp 启用写入）：");
+        for (const s of mcp) {
+          console.log(`  · ${s.registryName} — 端点 ${registry}/${s.registryName}/mcp`);
+        }
+      } else {
+        const files = await writeMcpConfig(opts.target, {
+          registry, servers: mcp, project: opts.project, oauth: opts.oauthClient || true,
+        });
+        console.log("\nMCP 免键连接配置已写入（无凭据落盘）：");
+        for (const f of [...new Set(files)]) console.log(`  ✓ ${f}`);
+        if (opts.target === "workbuddy") {
+          console.log("  注：服务端免键车道已端到端实证（静态 client_id 绕开动态注册）。");
+          console.log("      WorkBuddy 5.9.3 的用户级 mcp.json 加载器暂不消费 oauth 块（客户端连接器/市场模板路径才消费）——");
+          console.log("      该条目为前瞻形状，与客户端连接器模板同形；今日真连接仍走贴键（facet connect 后 --write-mcp）。");
+        }
+        for (const s of mcp) {
+          if (s.requiredGroup) console.log(`  注：${s.registryName} 需要组 ${s.requiredGroup}——授权账号不持该角色时调用会被拒。`);
+        }
+      }
+    } else {
     const stored = await loadCredentials();
     if (!stored) {
       console.log("\nMCP 引用（未写入任何编辑器配置——本地未存调用键）：");
@@ -513,6 +639,9 @@ async function install(opts) {
         console.log(`    端点 ${endpoint} — 连接需 wgk- 调用键`);
       }
       console.log("  运行 facet connect 铸取并验活调用键；之后 install 可代写连接配置。");
+      if (opts.target === "workbuddy") {
+        console.log("  workbuddy 亦可免键：重跑本命令加 --oauth（写前瞻条目——服务端已实证就绪，5.9.3 客户端用户文件暂不消费该块）。");
+      }
     } else {
       const shouldWrite = opts.writeMcp === true || (opts.noWriteMcp !== true && process.stdin.isTTY
         ? await (async () => {
@@ -541,6 +670,7 @@ async function install(opts) {
         }
       }
     }
+    }
   }
 
   if (opts.target === "cursor") {
@@ -548,6 +678,13 @@ async function install(opts) {
   }
   if (opts.target === "codex") {
     console.log("\n注：Codex 亦有 ~/.agents/skills/ 约定但发现尚不稳定；本安装写官方 ~/.codex/skills/ 路径。");
+  }
+  if (opts.target === "workbuddy") {
+    console.log(
+      "\n注：WorkBuddy 的技能目录是 ~/.workbuddy/skills/（真机实证：放进去的 SKILL.md 会进客户端技能列表，source=userSettings）；"
+      + "MCP 配置在同目录的 mcp.json。若客户端未识别技能，检查「已安装」列表与技能开关（关闭≠未安装），并确认客户端已重启或该目录在监听表内。"
+    );
+    console.log("    免键车道（两层状态，2026-10-30 定案）：授权/网关侧已端到端实证（静态 client_id 绕开动态注册，token 零落盘）；WorkBuddy 5.9.3 客户端的用户级 mcp.json 加载器暂不消费 oauth 块（仅连接器/市场模板路径消费）——`facet install … --oauth --write-mcp` 写的是同形前瞻条目，今日真连接走 facet connect 贴键 + --write-mcp。两层证据与去向见 docs/ecosystem/workbuddy.md §1a。");
   }
   console.log(`\n完成：${detail.id} v${version}（快照安装，无订阅副作用）。`);
   console.log(`把功能集装进运行时（对话/Agent 服务）请到壹座：设置 → 功能集 → 我的功能集（订阅后一键安装）。`);
