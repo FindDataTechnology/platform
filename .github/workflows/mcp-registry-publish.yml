@@ -1,0 +1,172 @@
+# MCP Registry publish — 谦面公开 server → 官方 MCP Registry
+#
+# Publishes the facet's public MCP servers (groups = []) to
+# registry.modelcontextprotocol.io under the organization namespace
+# io.github.FindDataTechnology/*.
+#
+# Why this repo exists: `workflow_dispatch` requires the workflow file to be on
+# the default branch. The main source repo is PRIVATE and its
+# account's private Actions minutes are exhausted (2011/2000), so a run there
+# dies at t=5s. Public repos get unlimited free standard runners, and OIDC grants
+# the namespace by *repository owner* — so a plumbing-only public repo under the
+# FindDataTechnology org is the cheapest correct home for this.
+#
+# Why OIDC and not `mcp-publisher login github`: the interactive device flow
+# issues a GitHub-App token that cannot read organization membership, so the
+# registry only ever grants it *personal* io.github.<username>/* (upstream
+# Warning + registry issue #1468). Publishing under an organization name has
+# exactly two paths — this OIDC flow, or a read:org PAT from an org Owner. OIDC
+# is the free, credential-free one.
+#
+# The script's source of truth is paas `scripts/publish-mcp-registry.mjs`;
+# the copy in this repo is a vendor snapshot. Change it there first, then sync.
+#
+# Operations:
+#   * dry-run — every run (incl. the weekly cron) validates the whole projection
+#     and writes nothing. A projection regression turns this red.
+#   * publish — dispatch with confirm=publish. Re-runs are idempotent: entries
+#     already in the registry are reported as "已在名录" and skipped, so only new
+#     servers go out.
+#   * retire — dispatch with confirm=retire. Sets status=deleted for the servers
+#     named in `retire` (default: the three fd-wire test cells that were
+#     published before the default skip list existed). The official registry has
+#     NO delete endpoint (spec'd but returns 501); status=deleted is the
+#     withdrawal mechanism and is reversible via --status active.
+#
+# First-publish prerequisites (2026-10-31, all satisfied): the account running
+# this is an Owner of FindDataTechnology; the namespace is claimed.
+name: mcp-registry-publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      facet_url:
+        description: "Facet base URL serving /api/mcp-registry.json"
+        required: false
+        default: "https://facet.finddatatech.cloud"
+      confirm:
+        description: "`publish` = publish servers, `retire` = withdraw listed test cells, empty = dry-run"
+        required: false
+        default: ""
+      skip:
+        description: "Comma-separated servers excluded from publishing (default keeps the fd-wire test cells out until that line fixes its registration)"
+        required: false
+        default: "fd-wire-cell-drillcust001,fd-wire-cell-pgauto001,fd-wire-cell-wiretester2"
+      retire:
+        description: "Comma-separated server names to set status=deleted (used with confirm=retire)"
+        required: false
+        default: "fd-wire-cell-drillcust001,fd-wire-cell-pgauto001,fd-wire-cell-wiretester2"
+  schedule:
+    # Weekly drift check: dry-run only, so a projection regression surfaces as a
+    # red workflow rather than as a stale registry listing for months.
+    - cron: "0 3 * * 1"
+
+permissions:
+  contents: read
+  id-token: write # the credential: GitHub OIDC → registry namespace grant
+
+jobs:
+  dry-run:
+    name: validate projection (no writes)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Project + validate (writes nothing)
+        run: |
+          set -euo pipefail
+          ARGS=()
+          IFS=',' read -ra NAMES <<< "${{ inputs.skip || 'fd-wire-cell-drillcust001,fd-wire-cell-pgauto001,fd-wire-cell-wiretester2' }}"
+          for n in "${NAMES[@]}"; do n="$(echo "$n" | xargs)"; [ -n "$n" ] && ARGS+=("--skip" "$n"); done
+          node scripts/publish-mcp-registry.mjs \
+            --facet-url "${{ inputs.facet_url || 'https://facet.finddatatech.cloud' }}" \
+            "${ARGS[@]}" --dry-run
+
+  publish:
+    name: publish to MCP Registry
+    needs: dry-run
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm == 'publish'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # mcp-publisher ships as a Go binary; the release bundle below is the
+      # official distribution path.
+      - name: Install mcp-publisher
+        run: |
+          set -euo pipefail
+          curl -sSL \
+            "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar -xz mcp-publisher
+          install -m 0755 mcp-publisher /usr/local/bin/mcp-publisher
+          mcp-publisher --help >/dev/null
+
+      # login github-oidc mints the registry token from the workflow's OIDC
+      # identity. No secret is stored anywhere.
+      - name: Log in with GitHub OIDC
+        run: mcp-publisher login github-oidc
+
+      # Pre-publish visibility gate: the source must be the public projection.
+      # The script only ever reads /api/mcp-registry.json (groups = [] servers,
+      # no credential headers, no internal endpoints), and re-validates the whole
+      # batch before any write, so a malformed or leaky document aborts the run.
+      - name: Publish public servers
+        run: |
+          set -euo pipefail
+          ARGS=()
+          IFS=',' read -ra NAMES <<< "${{ inputs.skip || 'fd-wire-cell-drillcust001,fd-wire-cell-pgauto001,fd-wire-cell-wiretester2' }}"
+          for n in "${NAMES[@]}"; do n="$(echo "$n" | xargs)"; [ -n "$n" ] && ARGS+=("--skip" "$n"); done
+          node scripts/publish-mcp-registry.mjs \
+            --facet-url "${{ inputs.facet_url || 'https://facet.finddatatech.cloud' }}" \
+            --out mcp-registry-out \
+            "${ARGS[@]}" --publish
+
+  retire:
+    name: withdraw listed servers (status=deleted)
+    if: github.event_name == 'workflow_dispatch' && inputs.confirm == 'retire'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mcp-publisher
+        run: |
+          set -euo pipefail
+          curl -sSL \
+            "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" \
+            | tar -xz mcp-publisher
+          install -m 0755 mcp-publisher /usr/local/bin/mcp-publisher
+
+      - name: Log in with GitHub OIDC
+        run: mcp-publisher login github-oidc
+
+      # The official registry implements no DELETE (spec'd, returns 501), so
+      # withdrawal = lifecycle status. `deleted` removes the entry from public
+      # listings (include_deleted defaults to false) and stays reversible with
+      # `--status active`. Exit-code accounting: a server that is already
+      # deleted counts as success, everything else stays a visible failure.
+      - name: Set status=deleted
+        run: |
+          set -uo pipefail
+          rc=0
+          IFS=',' read -ra NAMES <<< "${{ inputs.retire }}"
+          for n in "${NAMES[@]}"; do
+            n="$(echo "$n" | xargs)"
+            [ -z "$n" ] && continue
+            full="io.github.FindDataTechnology/$n"
+            echo "── retire $full"
+            if ! mcp-publisher status --status deleted --all-versions --yes \
+                 --message "test cell — not intended for public discovery (paas ledger §15.108)" "$full" 2>&1 | tee /tmp/retire.log; then
+              if grep -qi "already" /tmp/retire.log; then
+                echo "   = already deleted, ok"
+              else
+                echo "   ✗ failed"
+                rc=1
+              fi
+            fi
+          done
+          exit $rc

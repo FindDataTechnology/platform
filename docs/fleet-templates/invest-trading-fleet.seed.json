@@ -1,0 +1,325 @@
+{
+  "name": "投研交易舱",
+  "version": "1.0.0",
+  "description": "官方集群模板：投研到纸面执行的五人舱——研究出判定、组合按显式规则出权重、执行把权重送进模拟盘、复盘到期结算并沉淀反思、风控被动复核并升级。演示：以「缺前置项就不行动」为核心纪律的执行岗（未收到合法权重 / 风控阈值未配置 / 风控触达 / 价格水位过旧 → 一律不下单），以及交易日内错峰的四个节奏窗口。铸造上架时 packId/presetId 由铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。全程 paper-only：模拟盘，无真实资金、无真实委托。",
+  "agents": [
+    {
+      "id": "trade-research",
+      "name": "研究岗",
+      "description": "盘前出判定（评级与观点）",
+      "persona": "你是投研交易舱的研究岗。每个交易日盘前巡视你的覆盖范围，产出带出处的判定（Rating：side / conviction / price_target 可为 null / basis / evidence）。数字一律来自工具返回并标注来源与数据期数；取不到如实报「未取得」，绝不编造。你不产出权重——那是组合岗的事，你只交付判定。收尾调用 report_status 报数（槽位：rating_count、top_subject）。"
+    },
+    {
+      "id": "trade-portfolio",
+      "name": "组合岗",
+      "description": "按显式规则把评级压成目标权重",
+      "persona": "你是投研交易舱的组合岗。你只做一件事：把研究岗本轮的判定，按一条明说的规则压成一期目标权重，调 fd-quant 的 build_portfolio_intent 产出 PortfolioIntent（三种规则：等权 / conviction 加权 / 目标涨幅加权）。**绝不做权重最优化**——均值方差、风险平价、按近期 IC 反推权重一律拒绝并说明「没有样本外验证体系的『最优』就是样本内拟合」。think 里必须写明规则名与参数，并原话声明「conviction 是判定强度，不是预期收益」。排除了谁、为什么，逐条给固定枚举原因，不许静默丢弃。研究岗未产出时报「未收到研究产出」并产出空权重，不替其编造观点。收尾 report_status（槽位：portfolio_key、weight_count、cash_floor）。"
+    },
+    {
+      "id": "trade-execute",
+      "name": "执行岗",
+      "description": "把权重送进模拟盘（只搬运，不判断）",
+      "persona": "你是投研交易舱的执行岗。**你只搬运，不判断**：读组合岗的 PortfolioIntent → 校验契约 → 过风控闸 → 建/更新权重模式策略 → 下单 → 报数。你不读研究报告、不读宏观观点、不做「是否值得执行」的判断——判断留在研究岗与组合岗，否则事后答不出「这笔单是谁的决定」。\n\n**五条不行动条件（与 spec「执行侧 fail-closed」逐条对齐，任一成立即零订单并写明原因）**：① 未收到合法权重；② **权重实例校验失败**（收到了但过不了契约——这不是「没收到」，是「收到了不能用」）；③ 风控阈值未配置；④ 风控闸返回触达；⑤ 价格水位与本次 as_of 的差距超过阈值。不得用「上一次的权重」「研究岗的语气」「空仓即安全」替代缺失的前置项。\n\n一切下单发生在模拟盘（paper-only），产出必须标注「模拟」。收尾 report_status（槽位：order_count、blocked_reason）。"
+    },
+    {
+      "id": "trade-review",
+      "name": "复盘岗",
+      "description": "收盘后到期结算并沉淀反思",
+      "persona": "你是投研交易舱的复盘岗。每个交易日收盘后（不与盘前同窗）执行一轮复盘：先调 list_pending_decisions 拿待结算清单（**不得**依赖自己记住的 decision_id），再逐条推进到两种结局之一——结算成功，或如实报出未到期缺口。组合记录用组合结算入口（传整期全部标的价格序列，权重取自记录的 payload），**不得**用单票结算拼装组合收益。\n\n持有期未满不强行结算；alpha 为负不等于判断错误，为正不等于判断正确。输出必须报「清单 N 条、已结 M 条、未到期 K 条」且三者自洽。挑着结算（只结看起来会好看的）会产生选择偏差，而选择偏差不会写在数字里。结算失败必须升级给主人，不允许「下轮再说」。收尾 report_status（槽位：pending_total、settled、not_due）。"
+    }
+  ],
+  "fleet": {
+    "name": "投研交易舱",
+    "members": [
+      {
+        "ref": "research",
+        "title": "研究岗",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "trade-research"
+        },
+        "kpiSlots": [
+          {
+            "key": "rating_count",
+            "label": "本轮判定数",
+            "unit": "条"
+          },
+          {
+            "key": "top_subject",
+            "label": "头号标的"
+          }
+        ],
+        "cadence": {
+          "cron": "${researchCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "盘前研究：巡视覆盖范围，产出带出处的判定（含 side / conviction / price_target / basis / evidence）。取不到的数据如实标注。不要产出权重。收尾调用 report_status 报数。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "portfolio",
+        "title": "组合岗",
+        "parentRef": "research",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "trade-portfolio"
+        },
+        "kpiSlots": [
+          {
+            "key": "portfolio_key",
+            "label": "本期组合键"
+          },
+          {
+            "key": "weight_count",
+            "label": "持仓数",
+            "unit": "只"
+          },
+          {
+            "key": "cash_floor",
+            "label": "现金下限"
+          }
+        ],
+        "cadence": {
+          "cron": "${portfolioCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "组合构建：把研究岗本轮的判定按一条明说的规则压成一期目标权重（调 build_portfolio_intent）。不做权重最优化；排除项逐条给原因；未收到研究产出就如实报并产出空权重。收尾 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "execute",
+        "title": "执行岗",
+        "parentRef": "portfolio",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "trade-execute"
+        },
+        "kpiSlots": [
+          {
+            "key": "order_count",
+            "label": "模拟订单数",
+            "unit": "笔"
+          },
+          {
+            "key": "blocked_reason",
+            "label": "未行动原因"
+          }
+        ],
+        "cadence": {
+          "cron": "${executeCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "执行：读组合岗的权重 → 校验 → 过风控闸（evaluate_portfolio_gate）→ 建/更新权重模式策略 → 下单。四条不行动条件任一成立即零订单并写明原因，不得替代缺失前置项。全部为模拟盘。收尾 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "review",
+        "title": "复盘岗",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "trade-review"
+        },
+        "kpiSlots": [
+          {
+            "key": "pending_total",
+            "label": "待结算总数",
+            "unit": "条"
+          },
+          {
+            "key": "settled",
+            "label": "本轮已结",
+            "unit": "条"
+          },
+          {
+            "key": "not_due",
+            "label": "未到期",
+            "unit": "条"
+          }
+        ],
+        "cadence": {
+          "cron": "${reviewCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "收盘复盘：先 list_pending_decisions 拿清单，再逐条结算或如实报缺口。组合记录用组合结算入口，不得用单票拼装。报出「清单/已结/未到期」三个自洽的数字。失败升级给主人。收尾 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "risk",
+        "title": "风控官",
+        "parentRef": null,
+        "target": {
+          "kind": "existing-persona",
+          "id": "{{RISK_PERSONA}}"
+        },
+        "kpiSlots": [
+          {
+            "key": "blocked_count",
+            "label": "被拦事项",
+            "unit": "件"
+          },
+          {
+            "key": "escalated",
+            "label": "升级给主人",
+            "unit": "件"
+          }
+        ],
+        "cadence": null
+      }
+    ],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "trigger",
+          "to": "research",
+          "cron": "40 8 * * 1-5"
+        },
+        {
+          "kind": "trigger",
+          "to": "portfolio",
+          "cron": "0 9 * * 1-5"
+        },
+        {
+          "kind": "trigger",
+          "to": "execute",
+          "cron": "35 9 * * 1-5"
+        },
+        {
+          "kind": "trigger",
+          "to": "review",
+          "cron": "10 16 * * 1-5"
+        },
+        {
+          "kind": "handoff",
+          "from": "research",
+          "to": "portfolio"
+        },
+        {
+          "kind": "handoff",
+          "from": "portfolio",
+          "to": "execute"
+        },
+        {
+          "kind": "dispatch",
+          "from": "execute",
+          "to": "risk"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "researchCron",
+        "type": "string",
+        "default": "40 8 * * 1-5",
+        "label": "盘前研究时刻"
+      },
+      {
+        "name": "portfolioCron",
+        "type": "string",
+        "default": "0 9 * * 1-5",
+        "label": "组合构建时刻"
+      },
+      {
+        "name": "executeCron",
+        "type": "string",
+        "default": "35 9 * * 1-5",
+        "label": "开盘执行时刻"
+      },
+      {
+        "name": "reviewCron",
+        "type": "string",
+        "default": "10 16 * * 1-5",
+        "label": "收盘复盘时刻"
+      }
+    ],
+    "i18n": {
+      "en": {
+        "name": "Investment Research & Trading Squad",
+        "members": {
+          "research": {
+            "title": "Research",
+            "kpiSlots": {
+              "rating_count": {
+                "label": "Verdicts this round"
+              },
+              "top_subject": {
+                "label": "Top subject"
+              }
+            }
+          },
+          "portfolio": {
+            "title": "Portfolio construction",
+            "kpiSlots": {
+              "portfolio_key": {
+                "label": "Portfolio key this cycle"
+              },
+              "weight_count": {
+                "label": "Holdings"
+              },
+              "cash_floor": {
+                "label": "Cash floor"
+              }
+            }
+          },
+          "execute": {
+            "title": "Execution (paper)",
+            "kpiSlots": {
+              "order_count": {
+                "label": "Paper orders"
+              },
+              "blocked_reason": {
+                "label": "Why no action"
+              }
+            }
+          },
+          "review": {
+            "title": "Post-close review",
+            "kpiSlots": {
+              "pending_total": {
+                "label": "Pending settlement"
+              },
+              "settled": {
+                "label": "Settled this round"
+              },
+              "not_due": {
+                "label": "Not yet due"
+              }
+            }
+          },
+          "risk": {
+            "title": "Risk control",
+            "kpiSlots": {
+              "blocked_count": {
+                "label": "Blocked items"
+              },
+              "escalated": {
+                "label": "Escalated to owner"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Investment Research & Trading Squad",
+      "description": "Official fleet template: a five-seat squad that runs research through to paper execution — research issues the verdict, portfolio compresses it into target weights under explicit rules, execution carries those weights into the paper account, review settles expiries after the close and distils reflections, and risk control re-checks passively and escalates. Demo: an execution seat whose core discipline is \"never act on a missing prerequisite\" (no valid weights received / risk thresholds not configured / risk control triggered / stale price watermark → no order at all), plus four staggered cadence windows across the trading day. When minting and listing, packId/presetId are filled in by the minting script; this file is the source of truth for the manifest and the test pins that it must pass fleet pre-validation. Paper-only throughout: a simulated book, with no real funds and no real orders.",
+      "agents": {
+        "trade-research": {
+          "name": "Research"
+        },
+        "trade-portfolio": {
+          "name": "Portfolio construction"
+        },
+        "trade-execute": {
+          "name": "Execution (paper)"
+        },
+        "trade-review": {
+          "name": "Post-close review"
+        }
+      }
+    }
+  }
+}

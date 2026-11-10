@@ -1,0 +1,48 @@
+# gitleaks config — extends the full default ruleset, then allowlists
+# secret-SHAPED strings that are not secrets.
+# IMPORTANT: a config without [extend] useDefault replaces the default rules
+# with nothing (every scan goes silently green). Keep the extend block.
+# scripts/make-public-snapshot.mjs passes this config explicitly.
+title = "platform gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Non-secrets: e2e fixtures, kubectl placeholder docs, docker rollback tags"
+  paths = [
+    '''e2e/branding\.spec\.js''',
+    '''k8s/deployment\.yaml''',
+    # SecureStore KEY NAMES in the mobile app (handle constants, not values):
+    # "yizuo.ed25519.priv" trips generic-api-key's entropy heuristic.
+    '''app/src/lib/device-identity\.ts''',
+    # Lane-probe fixture: LANE_KEY = "sk-lane-internal-123" is a dummy constant
+    # in a node:test stub (siblings "lane-static-token" / "standby-key-1" against
+    # https://ciyuan.unit.test); the sk- prefix trips generic-api-key.
+    '''scripts/test-search-relay-lane\.mjs''',
+    # Steward custody test material (add-cell-lifecycle): the base64 constant
+    # decodes to "private-key-material-for-tests" — a fixture, never a key.
+    '''scripts/smoke-steward-resident\.mjs''',
+    '''scripts/test-steward-keycustody\.mjs''',
+    # DPAPI entropy/file-name constants ("platform-steward-v1") trip the
+    # entropy heuristic; they name a custody folder, not a credential.
+    '''supervisor/steward-identity\.js''',
+    # Studio publisher test fixtures (2026-11-07 public-snapshot gate hit):
+    # "sk-live-abcdef123456" / "sk-live-abc123456789" are literal placeholders
+    # in a node:test stub, same shape as the lane-probe fixture above.
+    '''scripts/test-facet-studio\.mjs''',
+    # Trial-exec validation-gate fixture (2026-11-07 public-snapshot gate hit):
+    # "sk-abc123def456ghi789" is a literal placeholder persona string whose only
+    # job is to trip the credential-scan gate (asserting a 422) — never a key.
+    '''scripts/test-trial-exec\.mjs''',
+    # Redaction-helper fixture (2026-11-08 public-snapshot gate hit): the test
+    # asserts redact() shreds a token-shaped STRING, so the literal has to look
+    # like a token — "abcdefgh1234" is a placeholder, never a credential.
+    '''scripts/test-bench-proposal-client\.mjs''',
+  ]
+  # Docker rollback tag in the registry-fork patch README — tag-shaped, not a
+  # credential (its entropy trips the generic-api-key rule).
+  regexTarget = "line"
+  regexes = [
+    '''mcp-auth-server:logto-prev-\d{8}''',
+  ]

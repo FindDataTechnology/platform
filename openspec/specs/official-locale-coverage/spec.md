@@ -1,0 +1,110 @@
+# official-locale-coverage Specification
+
+## Purpose
+在仓官方资产（官方助手包、官方 pack、团队模板种子）的 en 副轨覆盖契约：官方资产是平台的门面，
+英文访客在市场与登录墙前看到的官方显示面必须已是英文，不允许回落中文。zh 仍是唯一主轨与唯一回落
+（契约不放松）；本能力只管「官方资产的副轨必须满」与防漂移门。
+
+## Requirements
+
+### Requirement: 官方资产的 en 副轨覆盖其 zh 主轨声明的全部显示字段
+
+仓库内官方资产——`docs/official-packs/*.json`、`packs/*/manifest.json`、
+`docs/fleet-templates/*.seed.json` 与 `docs/fleet-architect.seed.json`——SHALL 各自携带 `i18n.en`
+overlay，且覆盖其 zh 主轨实际声明的每一个显示字段：name、description、notes（声明时）、guide
+（三步整组，含每步 title/body）、每条声明 skill 的 description、每个声明 agent 的 name
+（带 serving.card 的另覆盖 card.name 与 card.description）。团队种子 SHALL 另携带
+`fleet.i18n.en`，覆盖 fleet 名、每个成员岗的 title 与每个 KPI 槽位的 label。
+内容字段（技能正文、persona、promptTemplate）SHALL NOT 进 overlay——内容层单语言是既有契约。
+
+#### Scenario: 英文访客看官方包全英文显示面
+
+- **WHEN** 英文访客以 locale=en 打开任一官方 pack 的市场详情
+- **THEN** 名称、描述、三步指南、技能描述、agent 名全部为英文，无回落中文的字段
+
+#### Scenario: 英文访客实例化官方团队模板
+
+- **WHEN** 英文用户按 en 实化一份官方团队种子
+- **THEN** 团队名、岗位名、KPI 标签呈现英文；节奏 prompt 与 persona 保持中文主轨（内容层不翻）
+
+#### Scenario: 架构师种子无 fleet 段不背 fleet overlay 义务
+
+- **WHEN** 检查 `docs/fleet-architect.seed.json`（无 fleet 段）
+- **THEN** 只要求 manifest 级 i18n.en 覆盖，不要求 fleet.i18n
+
+### Requirement: 官方资产 locale 门是防漂移门
+
+单测 SHALL 钉死官方资产的覆盖契约：任一官方资产新增/修改 zh 显示字段而未同步 en 副轨、
+overlay 混入 zh 块或非显示键、guide 部分翻译，均 SHALL 红。该门 SHALL 随 `test:unit` 全量跑。
+
+#### Scenario: 新增显示字段漏翻即红
+
+- **WHEN** 官方 manifest 新增一个 guide 步骤而 en overlay 未同步
+- **THEN** locale 门失败并指名文件与字段路径
+
+#### Scenario: 部分翻译的 guide 被拒
+
+- **WHEN** en overlay 只翻了三步指南中的一步
+- **THEN** 门失败——overlay 规则本就要求整组或全无
+
+#### Scenario: zh 块混入 overlay 被拒
+
+- **WHEN** 任一官方资产出现 `i18n.zh`
+- **THEN** 门失败（zh 主轨住在基字段，overlay 声明 zh 视为非法）
+
+### Requirement: 在架官方条目的 en 副轨覆盖审计门
+
+平台 SHALL 提供一个对**在架目录**（生产市场读面或其导出快照）的覆盖审计：对每一条被来源判定为官方的条目，按组织面分母（name、description、声明了的 notes、声明了的 promise/outcomes/tags/examples、每条声明技能的 description、每个声明角色的名、每个声明 bot 的名、声明了的 guide 整组）核算其 en 副轨覆盖；任一官方条目存在未覆盖的组织面时审计 SHALL 以非零退出结束，并输出指名 pack id 与字段路径的缺项清单。审计 SHALL NOT 改变任何运行时读面行为。
+
+#### Scenario: 全覆盖时审计绿
+
+- **WHEN** 在架目录中全部官方条目的组织面均被 `i18n.en` 覆盖
+- **THEN** 审计以零退出结束，输出各条目的覆盖统计
+
+#### Scenario: 任一缺项即红并指名
+
+- **WHEN** 某官方条目的 en 副轨缺 2 条技能描述的覆盖
+- **THEN** 审计以非零退出结束，缺项清单包含该 pack id 与两条技能的字段路径
+
+#### Scenario: 分母是组织面而非字符
+
+- **WHEN** 一个官方条目的 en 描述是 zh 描述的意译（长度不同但完整对应）
+- **THEN** 该字段计为已覆盖；审计不因长度差异报缺项
+
+#### Scenario: 审计不改变读面
+
+- **WHEN** 审计对在架目录执行
+- **THEN** 市场列表、详情、安装面的响应与审计执行前逐字节相同
+
+### Requirement: 官方作者的发布受 en 覆盖门约束
+
+被来源名册判定为官方的作者发布 manifest 时，其 zh 主轨声明了的每一个组织面 SHALL 已被 `i18n.en` 覆盖；未满足时发布 SHALL 被结构化错误拒绝，错误 SHALL 逐项指名缺失的字段路径。非名册作者的发布 SHALL NOT 受此门约束。该门 SHALL 与既有发布闸（身份闸、限流、manifest 校验、工具面闸）叠加而非替代。
+
+#### Scenario: 官方作者缺覆盖被拒
+
+- **WHEN** 一名名册作者提交一份声明了 4 条技能但 `i18n.en.skills` 只覆盖 3 条的 manifest
+- **THEN** 发布被拒绝，错误指名缺失的那条技能的字段路径，且不写入任何版本
+
+#### Scenario: 官方作者满覆盖通过
+
+- **WHEN** 同一名作者提交补齐 en 覆盖后的同一 manifest
+- **THEN** 发布通过，行为与其它发布闸全绿时完全一致
+
+#### Scenario: 社区作者不受此门约束
+
+- **WHEN** 一名非名册作者提交一份完全没有 `i18n` 块的 manifest
+- **THEN** 发布按既有规则通过，不因覆盖度被拒
+
+### Requirement: 覆盖度是可见信息而非社区硬门
+
+对非官方条目，覆盖度 SHALL 以可见信息呈现（详情页的边界与诚实声明段显示"本条目 <locale> 覆盖 n/m 组织面"并列出缺项），SHALL NOT 阻断其订阅、安装或后续发布；缺项列出 SHALL 精确到字段路径，SHALL NOT 只给一个百分比。
+
+#### Scenario: 社区条目的覆盖标记
+
+- **WHEN** 一个无 en 覆盖的社区条目被英文访客打开详情
+- **THEN** 详情的边界与诚实声明段显示覆盖为 0/m 并列出全部缺失字段路径
+
+#### Scenario: 覆盖标记不阻断动作
+
+- **WHEN** 英文访客查看一个覆盖不全的社区条目
+- **THEN** 订阅与安装动作照常可用，覆盖标记不产生任何禁用态

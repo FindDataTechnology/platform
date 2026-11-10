@@ -1,0 +1,54 @@
+# Facet CLI publish — npm OIDC trusted publishing (add-facet-platform 4.5).
+#
+# Publishing happens from GitHub Actions with --provenance; no long-lived npm
+# token lives anywhere. The package publishes to the org scope
+# `@finddatatechnology/facet` (org `finddatatechnology`, owned by the
+# maintainer account `finddatatechonology` — the account name itself is
+# misspelled and cannot be renamed on npm).
+# 2026-10-06: republished under the correct org scope; OIDC trusted publisher
+# registered (FindDataTechnology/platform · facet-cli-publish.yml).
+# History and the old-scope sunset: facet/cli/NPM-SCOPE-FIX.md.
+# One-time bootstrap (package does
+# not exist on npm yet, and trusted-publisher settings live on the package's
+# npmjs.com page):
+#   1. bootstrap first publish from a logged-in maintainer machine:
+#        cd facet/cli && npm publish --access public
+#   2. on the package's npmjs.com settings → Trusted Publisher, register:
+#        GitHub org FindDataTechnology, repo platform, workflow
+#        facet-cli-publish.yml;
+#   3. from then on, tag `facet-cli-v<version>` publishes via this workflow.
+name: facet-cli-publish
+
+on:
+  push:
+    tags: ["facet-cli-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+      # Trusted publishing needs npm >= 11.5.1; the runner's bundled npm 10
+      # signs provenance but cannot do the OIDC exchange (observed 2026-10-06:
+      # PUT 404 with a signed statement). Keep this step until the runner
+      # image ships npm 11 by default.
+      - name: Ensure npm supports trusted publishing
+        run: npm install -g npm@^11
+      # Provenance is signed only when the source repository is public — the
+      # registry rejects bundles from private repos (E422, observed 2026-10-06)
+      # while the public open-source snapshot (`FindDataTechnology/platform`)
+      # publishes with a verifiable attestation. Same file serves both.
+      - name: Publish @finddatatechnology/facet
+        working-directory: facet/cli
+        env:
+          PUBLISH_FLAGS: ${{ github.event.repository.visibility == 'public' && '--provenance' || '' }}
+        run: npm publish --access public ${{ env.PUBLISH_FLAGS }}

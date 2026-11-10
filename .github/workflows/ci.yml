@@ -1,0 +1,295 @@
+name: CI
+
+# Green since 2026-10-02 (run 36896622780): lint backlog cleared, unit suite
+# deterministic (serialized runner), CI dsh bootstrap pins cordis-plugin-hmr
+# @1.0.16, and the fresh-machine dsh/runtime suites gate on a probe. Push is
+# back on so every landing runs the full gate; workflow_dispatch stays for
+# on-demand reruns.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# QUEUED, not cancelling (openspec: queue-release-ci-runs).
+# The unit step really runs for ~26 minutes, and this workspace is worked by
+# several sessions in parallel, each cutting its own snapshot. With
+# `cancel-in-progress: true` the run that started first is almost always killed
+# mid-unit-test by the next push — measured four times on 2026-11-09 alone. That
+# does not save resources, it makes image builds unusable and burns a full CI
+# round each time. Runs on the same ref now queue; different refs still parallel.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gates:
+    name: lint → typecheck → unit → locales → build → e2e (fast)
+    runs-on: ubuntu-latest
+    # Measured, not guessed. The UNIT step alone runs ~63 min on a fresh
+    # 2-core runner (run 42630983629, 2026-11-09) — the suite spawns servers
+    # and dsh children, and every case is serialised by --test-concurrency=1
+    # because the tests share global state. With the old 90-minute ceiling that
+    # left ~27 min for build + e2e, i.e. one slow case away from a job kill that
+    # looks exactly like a product failure. 120 buys headroom without changing
+    # any semantics. Raising this is a stop-gap: the real fix is sharding the
+    # unit suite or trimming its slowest server-spawning cases (capacity work,
+    # tracked separately) — a shard split has to be done carefully BECAUSE the
+    # serial constraint is what keeps those tests deterministic.
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      # npm 11 (bundled with Node 25) is required by the lockfile format;
+      # see release.yml and Dockerfile for the same pin.
+      - name: Install dependencies (skip resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      - name: Lint (Biome)
+        run: npm run lint
+
+      # release-line-hygiene: the same judgement the local pre-push hook makes,
+      # over the pushed range. It exists because a pusher without the hook (or
+      # with SKIP_LINT_HOOK=1) would otherwise ship lint-red code and block the
+      # IMAGE build — where the submit already left the machine and someone else
+      # has to clear it. Scoped to the changed files so pre-existing debt in
+      # untouched files never turns this red.
+      - name: Lint (pushed range)
+        if: github.event_name == 'push'
+        run: node scripts/lint-changed.mjs --range "${{ github.event.before }}..${{ github.sha }}"
+
+      - name: dsh adapter boundary (ADR-0023)
+        run: node scripts/lint-dsh-adapter.mjs
+
+      # publish-surface-hygiene: the open-source snapshot is what goes to the public
+      # docs repo and what the release chain builds the image from. Its forbidden-pattern
+      # scan is the only thing between an internal name and a public commit, yet nothing
+      # in CI ran it — only a human at release time. That is exactly how
+      # docs/deploy-record-personal-agent-2026-11-10.md (internal registry, gitops repo,
+      # production pod name) broke the build on 2026-11-10 without anyone noticing: the
+      # whole release path was dead until someone tried to cut an image. ~6s, no deps.
+      #
+      # The `if` is load-bearing, not defensive: the built snapshot deliberately does not
+      # contain this script (`scripts/make-public-snapshot.mjs` is in EXCLUDE_PATHS), so in
+      # the mirror repo where CI also runs the file is absent and this step must no-op
+      # instead of failing on a missing module. gitleaks is skipped here — it is not on the
+      # runner, and the secret scan already runs as part of a real release.
+      - name: Publish surface (snapshot gate)
+        if: hashFiles('scripts/make-public-snapshot.mjs') != ''
+        env:
+          SNAPSHOT_SKIP_LINE_CHECK: "1"
+        run: node scripts/make-public-snapshot.mjs --ref HEAD --out dist-opensource/ci-check --skip-gitleaks
+
+      # Must precede typecheck/build: web's tsc (TS 5.7) resolves from
+      # web/node_modules — without this, npm falls back to the root
+      # typescript@7 devDep, which rejects web/tsconfig.json (baseUrl removed).
+      - name: Install web dependencies
+        run: npm run web:install
+
+      # The facet shell smoke e2e (e2e/facet-shell-server.mjs) builds the
+      # thin SPA from src — same as the Dockerfile — so its deps must be
+      # present before the fast e2e project boots its webServer chain.
+      - name: Install facet/web dependencies
+        run: npm --prefix facet/web install --ignore-scripts
+
+      - name: Typecheck (web)
+        run: npm run typecheck
+
+      # The unit suites AND the e2e server spawn the dsh runtime child
+      # (dsh-bridge.js COMMAND), so the shared install has to exist before
+      # unit. This replicates the IMAGE's recipe (Dockerfile) rather than the
+      # retired `dsh plugin add` + pnpm dance: one `npm ci` from the frozen
+      # dsh-matrix lock, then the profile's node_modules is a SYMLINK onto it.
+      #
+      # Generation matters more than anything else here. The old bootstrap
+      # pinned dsh/dsh-base 0.1.1-rc.2 and sdk-jsonrpc-server 0.0.1-rc.5 while
+      # the repo, dsh-matrix and the image had all moved to 0.2.0-rc.2, so the
+      # composed profile was 0.1.1 plugins on a 0.2.0 harness: every plugin
+      # failed its peer range ("Plugin @deepseek-ai/dsh-llm@0.1.1-rc.2 is
+      # incompatible with dsh 0.2.0-rc.2"), got disabled, `tools`/`systemPrompt`
+      # never came up, /api/ready never answered, and the e2e suite could not
+      # run on CI at all (run 42457279018, 2026-11-08). The matrix lock is the
+      # single version truth (ADR-0007/0023) — never hand-pin here again.
+      - name: Install dsh runtime + platform profile from the matrix
+        run: |
+          mkdir -p "$HOME/.dsh-matrix"
+          cp dsh-matrix/package.json dsh-matrix/package-lock.json "$HOME/.dsh-matrix/"
+          # .npmrc may be absent in the lock tree; copy it only when present.
+          [ -f dsh-matrix/.npmrc ] && cp dsh-matrix/.npmrc "$HOME/.dsh-matrix/" || true
+          cp -r dsh-matrix/samples "$HOME/.dsh-matrix/samples"
+          # npm's resolver exhausts the default heap on this closure (Dockerfile
+          # needs the same bump). Default peer resolution, NO --legacy-peer-deps:
+          # under npm 11 the flag makes npm ci skip every lock entry marked
+          # "peer": true and the dsh rc.2 plugin closure vanishes.
+          NODE_OPTIONS=--max-old-space-size=8192 npm ci --prefix "$HOME/.dsh-matrix"
+          # The profile keeps only its scaffold files and borrows the tree —
+          # exactly the image's seedHome shape, so the hundreds-of-MB closure is
+          # never duplicated per home.
+          mkdir -p "$HOME/.dsh/profiles/platform"
+          cp dsh-profile-template/package.json \
+             dsh-profile-template/pnpm-workspace.yaml \
+             dsh-profile-template/cordis.yml \
+             dsh-profile-template/cordis.patch.yml \
+             "$HOME/.dsh/profiles/platform/"
+          # NOTE: the tree is installed but NOT linked into the shared home yet.
+          # A complete home makes the dsh-dependent UNIT suites spawn a real
+          # child, and that is a separate axis from "can e2e run at all" — this
+          # landing moves only the generation (0.1.1 profile → 0.2.0 matrix) so
+          # a regression is attributable. The probe step below links it.
+
+      - name: Unit tests
+        # 2, not 1: the blanket serialization this lane used to impose was a
+        # safety choice, never a measured requirement. Measured 2026-11-10 on one
+        # tree: the full suite (520 files) at --test-concurrency=4 finished in
+        # 315s and re-running its 14 failing files SERIALLY reproduced all 27 of
+        # those failures — zero concurrency-induced. 2 is the conservative step
+        # for this runner (2 cores, i.e. one process per core); the only failure
+        # concurrency surfaced was a wall-clock race in test-mp-demo (reading the
+        # data root in the same tick as the reaper's status flip), now polled.
+        # Raising further is a single number here; dropping back to 1 is too.
+        env:
+          UNIT_TEST_CONCURRENCY: "2"
+        run: npm run test:unit
+
+      - name: Locale parity
+        run: npm run check:locales
+
+      # e2e serves web/dist via express.static; build with the e2e test seam
+      # (window.__chatStore) — release builds never set VITE_E2E_SEAM.
+      - name: Build web (e2e seam)
+        run: npm run web:build:e2e
+
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      # The e2e server boots the real dsh runtime; that needs a COMPLETE
+      # shared install (see scripts/lib/dsh-available.mjs). The matrix tree from
+      # the bootstrap becomes the shared home HERE — after unit, so unit keeps
+      # the environment it had before this landing (its dsh-dependent suites
+      # skip; that pre-existing gap is tracked separately). --dump-config
+      # composes the profile first: a broken composition then fails in seconds
+      # with a readable error instead of as a 3-minute Playwright timeout.
+      - name: Link the dsh matrix tree into the shared home
+        run: |
+          mkdir -p "$HOME/.dsh/profiles/platform"
+          ln -sfn "$HOME/.dsh-matrix/node_modules" "$HOME/.dsh/profiles/platform/node_modules"
+          ln -sfn "$HOME/.dsh-matrix/node_modules" "$HOME/.dsh/profiles/node_modules"
+          # Invoke the MATRIX tree's own CLI, not whatever is on PATH: the
+          # composing binary and the plugins must be one generation, and the
+          # matrix lock is that generation's single truth. (Removing the old
+          # global install is why `dsh` alone is no longer found — exit 127.)
+          DSH_BIN="$HOME/.dsh-matrix/node_modules/.bin/dsh"
+          echo "dsh: $("$DSH_BIN" --version)"
+          "$DSH_BIN" --profile platform --dump-config > /dev/null
+
+      - name: Probe dsh runtime usability
+        id: dsh
+        run: echo "usable=$(node --input-type=module -e "const { dshRuntimeAvailable } = await import('./scripts/lib/dsh-available.mjs'); process.stdout.write(String(dshRuntimeAvailable()))")" >> "$GITHUB_OUTPUT"
+
+      - name: E2E (fast project, offline)
+        if: steps.dsh.outputs.usable == 'true'
+        # ENFORCED (2026-11-08). The suite now runs for real on CI and passes:
+        # run 42471080944 → 653 passed / 2 flaky / 37 skipped / 0 failed (19.0m),
+        # with the gate still advisory, so this green is not the step swallowing
+        # an exit code. Getting here took three separate fixes, recorded so they
+        # are not undone by accident:
+        #   1. the bootstrap installed a 0.1.1-rc.2 profile against a 0.2.0-rc.2
+        #      harness, so every plugin was disabled and /api/ready never
+        #      answered — e2e silently never ran (it was skipped for months);
+        #   2. five specs depended on suite order (projects-automation,
+        #      registry-connect, sso-user-bindings ×2, starter-teams-sequence) —
+        #      each now establishes its own state instead of asserting on a
+        #      global one;
+        #   3. the job's 30-minute ceiling could not fit the chain once e2e ran.
+        # The two flaky specs (session-open, fleets) pass on retry, which is what
+        # `retries: CI ? 2 : 0` exists for; a genuine regression fails all three
+        # attempts and blocks here.
+        timeout-minutes: 45
+        run: npm run test:e2e
+
+      # The escape hatch is now a FAILURE, not a notice. For months this branch
+      # was a silently-skipped step, so every "green" CI run above it certified a
+      # suite that never executed — the exact false green this landing removed.
+      # The bootstrap composes the profile from dsh-matrix, so on CI the probe
+      # must be true; a `false` here means that step regressed and the gate would
+      # go quiet again. Loud beats green.
+      - name: E2E could not run (runtime unusable)
+        if: steps.dsh.outputs.usable != 'true'
+        run: |
+          echo "::error::E2E did not run: the shared dsh runtime is not usable on this runner."
+          echo "The bootstrap step composes the profile from dsh-matrix (healProfilesModuleFallback),"
+          echo "so 'usable=false' means that step regressed — not that this runner is special."
+          echo "See scripts/lib/dsh-available.mjs for the two paths the probe checks."
+          exit 1
+
+  # dsh-contracts gate (add-dsh-contracts, ADR-0007): when a PR touches the
+  # dsh install matrix, the six upstream-behavior contracts run against the
+  # PR's own scratch npm-ci tree — a red contract fails the check. This job is
+  # deliberately INDEPENDENT of `gates` (needs: []): the repo carries an
+  # outstanding lint backlog (header note above), and a matrix PR's contracts
+  # verdict must not inherit unrelated debt. Both jobs must pass for the PR.
+  dsh-contracts:
+    name: dsh contracts (matrix scratch tree)
+    runs-on: ubuntu-latest
+    needs: []
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The path filter diffs the PR head against its base sha.
+          fetch-depth: 0
+
+      - name: Did this PR touch dsh-matrix?
+        id: matrix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            if git diff --name-only "$BASE"...HEAD -- dsh-matrix/ | grep -q .; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              echo "no dsh-matrix/ changes — skipping the contracts job"
+            fi
+          else
+            # workflow_dispatch is an explicit ask: always run.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.matrix.outputs.changed == 'true'
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Install runner deps
+        if: steps.matrix.outputs.changed == 'true'
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      # The scratch npm ci (~450 packages) is the slow leg; cache it keyed on
+      # the matrix lock. MUST come after `npm ci` above — that step removes
+      # node_modules wholesale and would delete a restored cache with it. The
+      # runner re-verifies a restored tree against the lock (dsh-matrix-verify)
+      # before trusting it, so a partial save self-heals into a rebuild
+      # instead of failing contracts.
+      - name: Cache scratch tree
+        if: steps.matrix.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/dsh-contracts-tree
+          key: dsh-contracts-tree-${{ hashFiles('dsh-matrix/package-lock.json') }}
+
+      - name: Run dsh contracts
+        if: steps.matrix.outputs.changed == 'true'
+        run: node scripts/dsh-contracts.mjs

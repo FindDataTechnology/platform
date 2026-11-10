@@ -1,0 +1,389 @@
+# 通道注记（revive-nonweb-ci，2026-10-27）：本档仅 workflow_dispatch，且实跑
+# 走公开池（池 main 有复用副本，`-f tag=vX.Y.Z`）——Windows ×2 分钟不吃私仓额度。
+# 详见 docs/registry-maintenance.md「非 web 端通道」。
+#
+# Windows install smoke — the beta-promotion evidence for add-desktop-release 4.2.
+#
+#   workflow_dispatch with a release tag → downloads the PUBLISHED .exe from
+#   that GitHub Release on a real windows-latest machine, installs it silently
+#   (NSIS /S, per-user), then verifies the packaged backend boots:
+#
+#     Phase A (app launch): start the installed app; the Electron shell must
+#       stay alive and spawn the bundled node.exe backend under the install
+#       dir. (The in-app /api/ready probe is flaky on a headless runner — the
+#       dsh init phase answers 503 by design and the windowless shell can
+#       tear down — so the PASS/FAIL signal here is the bundled backend
+#       PROCESS, which is exactly what v1.3.0 got wrong.)
+#     Phase B (backend probe, the hard evidence): run the packaged server.js
+#       DIRECTLY with the packaged node.exe — no Electron involved — and wait
+#       for GET /api/ready 200 on the desktop port. Same surface as the mac
+#       install smoke (tasks 1.2). stderr streams into the CI log, so a crash
+#       names its own cause (v1.3.0's ERR_MODULE_NOT_FOUND showed here).
+#     Phase B+ (runner leg, harden-windows-runner-smoke): the packaged
+#       agent-runner hosts a real dsh child from a local-feed deployment —
+#       the child must reach the READY handshake and survive ≥30s. Catches
+#       the 0xc0000142-class "child dies at spawn" and profile-boot
+#       regressions the windows-admin drill exposed (2026-11-06).
+#     Phase C (window renders): the app self-tests its own renderer
+#       (did-finish-load + mounted DOM + capturePage) and exits 0/1.
+#
+# Scope note (2026-10-28): this lane judges ONE thing — does the PUBLISHED
+# artifact install and run. The steward residency chain (attach → UI exit →
+# stale-discovery fallback → uninstall drains the resident) lives in
+# release.yml `installer e2e (windows)`, which runs on every tag; the Phase D
+# that used to duplicate it here was folded into that job.
+#
+# A green run is the smoke record that lets release-sync drop --beta=windows.
+
+name: win-install-smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to smoke (e.g. v1.3.1)"
+        required: true
+        default: "v1.3.1"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Download the published installer
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${{ inputs.tag }}" --repo ${{ github.repository }} --pattern "*.exe" --clobber
+          Get-ChildItem *.exe | Format-Table Name, Length
+
+      - name: Silent install (NSIS /S, per-user)
+        shell: pwsh
+        run: |
+          $exe = (Get-ChildItem *.exe | Select-Object -First 1).FullName
+          Write-Host "Installing $exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "/S" -PassThru -Wait
+          Write-Host "installer exit code: $($p.ExitCode)"
+          Start-Sleep -Seconds 3
+          $installed = Get-ChildItem "$env:LOCALAPPDATA\Programs\platform" -Filter "Platform*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installed) { throw "installed Platform*.exe not found under $env:LOCALAPPDATA\Programs\platform" }
+          Write-Host "Installed at: $($installed.FullName)"
+          "APP_DIR=$(Split-Path $installed.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      # ── Phase A: the app shell launches and spawns the bundled backend ─────
+      - name: Launch app, wait for bundled backend process
+        shell: pwsh
+        run: |
+          Start-Process -FilePath "$env:APP_DIR\Platform.exe"
+          $deadline = (Get-Date).AddMinutes(3)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            $nodes = Get-Process node -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$env:APP_DIR*" }
+            if ($nodes) {
+              Write-Host "bundled backend node.exe running: pid $($nodes.Id -join ',') ($($nodes.Path))"
+              $ok = $true; break
+            }
+          }
+          if (-not $ok) {
+            Write-Host "--- Platform processes ---"
+            Get-Process Platform -ErrorAction SilentlyContinue | Format-Table Name, Id, Path | Out-String | Write-Host
+            throw "app did not spawn the bundled node.exe backend within 3 minutes"
+          }
+
+          # ── Phase A+: the WINDOW's target answers ──────────────────────────
+          # The renderer loads http://127.0.0.1:47600 (DESKTOP_SERVER_PORT the
+          # first-run seeds). A backend bound to ::1-only (v1.3.5: HOST defaulted
+          # to "localhost", Node resolved it IPv6) passes every localhost probe
+          # while the window hits a closed IPv4 socket — the user sees a black
+          # window, the process checks above stay green. Probe exactly what the
+          # window loads.
+          $deadline = (Get-Date).AddMinutes(2)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:47600/api/config" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "window target http://127.0.0.1:47600/api/config -> 200"; $ok = $true; break }
+            } catch { Write-Host "waiting for window target: $($_.Exception.Message)" }
+          }
+          if (-not $ok) { throw "backend not reachable at the window URL http://127.0.0.1:47600 (bind-family mismatch?)" }
+
+          # Stop the app before Phase B: the two instances share ~/.dsh and the
+          # app instance holds settings.yaml open — on Windows that makes the
+          # Phase B boot's atomic rename fail with EPERM (v1.3.5 smoke: agent
+          # init degraded, ready stuck 503 for the full probe window). Phase A
+          # has proven its point (the shell spawns the bundled backend).
+          Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process node -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -like "$env:APP_DIR*" } | Stop-Process -Force
+          Start-Sleep -Seconds 3
+          Write-Host "Phase A instance stopped — Phase B gets exclusive ~/.dsh"
+
+      # ── Phase B: the packaged backend boots and serves, no Electron involved ──
+      # This is the real "does the installed app work" evidence: the same
+      # server.js + bundled node.exe the app runs, with its own data dir so the
+      # probe does not race the Phase A instance.
+      - name: Probe packaged server.js directly (Phase B)
+        shell: pwsh
+        run: |
+          # PORT + HOST, NOT DESKTOP_SERVER_PORT: a directly-run server.js reads
+          # process.env.PORT (the supervisor injects DESKTOP_SERVER_PORT→PORT
+          # only for app-spawned children). v1.3.2/v1.3.3 smoke rounds: the
+          # server listened on 3000 while this probe knocked on 47611 for the
+          # full 6-minute deadline — a guaranteed-false-negative harness bug.
+          # HOST=127.0.0.1 pins the bind address (the default "localhost" can
+          # resolve to ::1 on Windows runners while the probe hits 127.0.0.1).
+          $env:PORT = "47611"
+          $env:HOST = "127.0.0.1"
+          # Seat id for the local roster feed (Phase B+): deployed entries get
+          # metadata.runner_id = this value, and the Phase B+ runner's
+          # AGENT_RUNNER_FLEET_ID must match it or the sharding filter drops
+          # every entry (windows-admin drill 2026-11-06: poll stayed at 0).
+          $env:WANXING_PLUGIN_RUNNER_ID = "smoke-seat"
+          $env:PLATFORM_DATA_DIR = "$env:RUNNER_TEMP\smoke-data"
+          New-Item -ItemType Directory -Force -Path $env:PLATFORM_DATA_DIR | Out-Null
+          $node = "$env:APP_DIR\resources\node\node.exe"
+          if (-not (Test-Path $node)) { throw "bundled node.exe missing at $node" }
+          # asar:false layout: electron-builder places app code under
+          # resources/app/ (verified on the mac bundle: Resources/app/server.js).
+          $appRoot = "$env:APP_DIR\resources\app"
+          if (-not (Test-Path "$appRoot\server.js")) { throw "server.js not found at $appRoot (unexpected package layout)" }
+          $nodeDir = "$appRoot\resources\node"
+          if (-not (Test-Path $nodeDir)) {
+            New-Item -ItemType Directory -Force -Path "$appRoot\resources" | Out-Null
+            Copy-Item "$env:APP_DIR\resources\node" $nodeDir -Recurse -Force
+          }
+          Write-Host "probing: $node server.js (app root $appRoot, data dir $env:PLATFORM_DATA_DIR)"
+          $p = Start-Process -FilePath $node -ArgumentList "server.js" -WorkingDirectory $appRoot `
+                 -RedirectStandardOutput "$env:RUNNER_TEMP\server-out.log" `
+                 -RedirectStandardError "$env:RUNNER_TEMP\server-err.log" -PassThru
+          $deadline = (Get-Date).AddMinutes(6)
+          $ok = $false
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 5
+            if ($p.HasExited) {
+              Write-Host "--- server exited code $($p.ExitCode); stdout tail ---"
+              Get-Content "$env:RUNNER_TEMP\server-out.log" -Tail 30 | Write-Host
+              Write-Host "--- stderr tail ---"
+              Get-Content "$env:RUNNER_TEMP\server-err.log" -Tail 30 | Write-Host
+              throw "packaged server.js exited during boot (code $($p.ExitCode))"
+            }
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:47611/api/ready" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "/api/ready -> 200 after $((($deadline - (Get-Date)).TotalMinutes))"; $ok = $true; break }
+              Write-Host "/api/ready -> $($r.StatusCode) (still booting)"
+            } catch { Write-Host "waiting: $($_.Exception.Message)" }
+          }
+          Write-Host "--- server stdout tail ---"
+          Get-Content "$env:RUNNER_TEMP\server-out.log" -Tail 25 | Write-Host
+          if (-not $ok) {
+            Write-Host "--- server stderr tail ---"
+            Get-Content "$env:RUNNER_TEMP\server-err.log" -Tail 40 | Write-Host
+            throw "packaged server.js did not reach /api/ready 200 within 6 minutes"
+          }
+          Write-Host "::notice::Phase B PASS — packaged backend serves /api/ready 200"
+          # ── Phase B+: the packaged runner hosts a real dsh child ───────────────
+          # Runs INSIDE the Phase B step (same pwsh session): the GH Windows
+          # runner tears down step-spawned processes at step close, so a Phase B+
+          # step found the Phase B server dead 3s after its PASS notice
+          # (v1.3.28 first dispatch, run 42157057033: guards passed, first POST
+          # refused — nothing was listening on 47611). Same session = same
+          # lifetime as the windows-admin drill. Phase B proves the backend
+          # serves; this leg proves the SERVING half: the packaged agent-runner —
+          # spawned exactly as the desktop supervisor spawns it
+          # (supervisor/descriptors.js runnerEnv) — polls the local roster feed,
+          # materializes a private dsh home, and spawns the dsh child, which must
+          # reach the READY handshake (health "resident") and stay ready ≥30s.
+          # This is the regression gate for the 2026-11-06 drill: a child that
+          # dies at spawn (0xc0000142-class) or during profile boot never reaches
+          # "resident" — the poll times out with the runner's own logs attached.
+          # LLM keys are deliberately NOT injected: residency is the assertion.
+          # Runs INSIDE the Phase B step (same pwsh session): the GH Windows
+          # runner tears down step-spawned processes at step close, so a Phase B+
+          # step found the Phase B server dead 3s after its PASS notice
+          # (v1.3.28 first dispatch, run 42157057033: guards passed, first POST
+          # refused — nothing was listening on 47611). Same session = same
+          # lifetime as the windows-admin drill. Phase B proves the backend
+          # serves; this leg proves the SERVING half: the packaged agent-runner —
+          # spawned exactly as the desktop supervisor spawns it
+          # (supervisor/descriptors.js runnerEnv) — polls the local roster feed,
+          # materializes a private dsh home, and spawns the dsh child, which must
+          # reach the READY handshake (health "resident") and stay ready ≥30s.
+          # This is the regression gate for the 2026-11-06 drill: a child that
+          # dies at spawn (0xc0000142-class) or during profile boot never reaches
+          # "resident" — the poll times out with the runner's own logs attached.
+          # LLM keys are deliberately NOT injected: residency is the assertion.
+          $node = "$env:APP_DIR\resources\node\node.exe"
+          $appRoot = "$env:APP_DIR\resources\app"
+          $dshEntry = "$appRoot\node_modules\@deepseek-ai\dsh\lib\bin.js"
+          foreach ($f in @("$appRoot\agent-runner\index.js", $dshEntry)) {
+            if (-not (Test-Path $f)) { throw "packaged file missing: $f" }
+          }
+          # The seed home the runner copies private profile scaffolds from —
+          # the same shared ~/.dsh the desktop supervisor points
+          # AGENT_RUNNER_SEED_HOME at; Phase B's boot established it.
+          $seed = "$env:USERPROFILE\.dsh"
+          if (-not (Test-Path "$seed\profiles\platform")) { throw "shared dsh profile missing at $seed\profiles\platform (Phase B boot did not materialize ~/.dsh)" }
+
+          $base = "http://127.0.0.1:47611"
+          # 1. Install a minimal serving pack (manifest body — the headless
+          #    path; version must be an integer, serving.protocol must be a2a).
+          $manifest = @{
+            name = "smoke-serving-pack"
+            description = "win-install-smoke Phase B+ minimal serving pack"
+            agents = @(@{
+              id = "smoke-agent"
+              name = "Smoke Agent"
+              persona = "Phase B+ smoke agent — answers briefly."
+              serving = @{
+                protocol = "a2a"
+                # Children spawn LAZILY — reconcile only starts the per-agent
+                # A2A listener; the dsh child materializes+spawns on the first
+                # TURN (acquire). The rhythm self-turn is that first touch:
+                # it fires one period after the scheduler's first tick and its
+                # LLM call fails (no keys by design) AFTER the child is up —
+                # park stays off because the CI store has no provider route
+                # (classify fails open). Exactly the residency the leg asserts.
+                rhythm = @(@{ every = "5m"; do = "smoke residency self-turn" })
+              }
+            })
+          }
+          $body = @{ packId = "smoke-serving-pack"; version = 1; manifest = $manifest } | ConvertTo-Json -Depth 10
+          $r = Invoke-RestMethod -Uri "$base/api/mypacks/install" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 30
+          Write-Host "pack installed: $($r | ConvertTo-Json -Depth 5 -Compress)"
+
+          # 2. Deploy it to this seat's local fleet: the write lands in the
+          #    deployment store, the feed composes the roster entry seat-tagged
+          #    with WANXING_PLUGIN_RUNNER_ID (set in Phase B).
+          $body = @{ packId = "smoke-serving-pack"; agentId = "smoke-agent" } | ConvertTo-Json
+          $r = Invoke-RestMethod -Uri "$base/api/wanxing/fleet/deployments" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 30
+          Write-Host "deployed: $($r | ConvertTo-Json -Depth 5 -Compress)"
+
+          # 3. Spawn the packaged runner — env mirrors the desktop supervisor's
+          #    runnerEnv (the cloud-default sentinel keeps the desktop sharding
+          #    posture: only entries tagged to THIS seat are served).
+          $env:DSH_BIN = $node
+          $env:DSH_BIN_ARGS = ConvertTo-Json -InputObject @($dshEntry) -Compress
+          $env:AGENT_RUNNER_HOME = "$env:RUNNER_TEMP\wanxing-runner"
+          $env:AGENT_RUNNER_PORT = "8790"
+          $env:AGENT_RUNNER_HOST = "127.0.0.1"
+          $env:AGENT_RUNNER_POD_MODE = "1"
+          $env:AGENT_RUNNER_FLEET_ID = "smoke-seat"
+          $env:AGENT_RUNNER_DEFAULT_ID = "cloud-default"
+          $env:AGENT_SERVING_REGISTRY_URL = "$base/local-registry"
+          $env:AGENT_RUNNER_SEED_HOME = $seed
+          $p = Start-Process -FilePath $node -ArgumentList "agent-runner\index.js" -WorkingDirectory $appRoot `
+                 -RedirectStandardOutput "$env:RUNNER_TEMP\runner-out.log" `
+                 -RedirectStandardError "$env:RUNNER_TEMP\runner-err.log" -PassThru
+
+          # 4. Poll /health until a hosted agent reaches the READY handshake
+          #    (resident — or serving if a turn somehow lands). "starting"
+          #    forever = spawn/boot regression.
+          $deadline = (Get-Date).AddMinutes(12)
+          $ready = $false
+          $last = "(no poll answered)"
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep -Seconds 10
+            if ($p.HasExited) {
+              Write-Host "--- runner exited code $($p.ExitCode); stdout tail ---"
+              Get-Content "$env:RUNNER_TEMP\runner-out.log" -Tail 40 | Write-Host
+              Write-Host "--- stderr tail ---"
+              Get-Content "$env:RUNNER_TEMP\runner-err.log" -Tail 40 | Write-Host
+              throw "packaged agent-runner exited during Phase B+ (code $($p.ExitCode))"
+            }
+            try {
+              $h = Invoke-RestMethod -Uri "http://127.0.0.1:8790/health" -TimeoutSec 5
+              $last = ($h.agents | ForEach-Object { "$($_.key)=$($_.state)" }) -join " "
+              Write-Host "health: children=$($h.children) [$last]"
+              if ($h.agents | Where-Object { $_.state -in @("resident", "serving") }) { $ready = $true; break }
+            } catch { Write-Host "health poll: $($_.Exception.Message)" }
+          }
+          if (-not $ready) {
+            Write-Host "--- runner stdout tail ---"
+            Get-Content "$env:RUNNER_TEMP\runner-out.log" -Tail 60 | Write-Host
+            Write-Host "--- runner stderr tail ---"
+            Get-Content "$env:RUNNER_TEMP\runner-err.log" -Tail 60 | Write-Host
+            throw "no hosted agent reached the ready handshake within 12 minutes (last health: $last) — child spawn/boot regression"
+          }
+
+          # 5. Survival: still ready ≥30s later — the drill's killer was a
+          #    child that died seconds after spawn, while "children" stayed 1.
+          Start-Sleep -Seconds 30
+          $survived = $false
+          try {
+            $h = Invoke-RestMethod -Uri "http://127.0.0.1:8790/health" -TimeoutSec 5
+            $survived = [bool]($h.agents | Where-Object { $_.state -in @("resident", "serving") })
+            if (-not $survived) {
+              Write-Host "health after 30s: $($h | ConvertTo-Json -Depth 5 -Compress)"
+            }
+          } catch { Write-Host "health poll after 30s failed: $($_.Exception.Message)" }
+          if (-not $survived) {
+            Write-Host "--- runner stdout tail ---"
+            Get-Content "$env:RUNNER_TEMP\runner-out.log" -Tail 40 | Write-Host
+            Write-Host "--- runner stderr tail ---"
+            Get-Content "$env:RUNNER_TEMP\runner-err.log" -Tail 40 | Write-Host
+            throw "child reached ready but did not stay ready across the 30s survival window (0xc0000142-class regression)"
+          }
+          Write-Host "::notice::Phase B+ PASS — packaged runner hosts a ready dsh child, stable across 30s"
+          # Stop the runner before Phase C: the GUI app spawns its own runner
+          # and both would fight over :8790.
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          Write-Host "Phase B+ runner stopped — Phase C gets :8790"
+
+      # ── Phase C: the app testifies about its own rendering ────────────────
+      # A/B prove the backend is alive and answers on the port the window uses.
+      # They proved that for v1.3.5 too — on the user's machine the window was
+      # still a black rectangle. External screenshots do NOT work here (v1 of
+      # this phase: the runner's wallpaper filled the frame and the window was
+      # never captured). So the app checks ITSELF: wait for did-finish-load
+      # (a black screen never reaches it), read the live DOM (React mounted?),
+      # capturePage() the renderer's own framebuffer, then exit 0/1.
+      - name: Launch the GUI, assert the window renders (Phase C)
+        shell: pwsh
+        env:
+          PLATFORM_SMOKE_SELFTEST: "1"
+          PLATFORM_SMOKE_REPORT: ${{ runner.temp }}\selftest-report.json
+          PLATFORM_SMOKE_SHOT: ${{ runner.temp }}\selftest-window.png
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\shots" | Out-Null
+          $p = Start-Process -FilePath "$env:APP_DIR\Platform.exe" -PassThru
+          $deadline = (Get-Date).AddMinutes(5)
+          while ((Get-Date) -lt $deadline -and -not $p.HasExited) { Start-Sleep -Seconds 5 }
+          if (-not $p.HasExited) {
+            Write-Host "--- app did not self-exit; forcing ---"
+            Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+            throw "Phase C: app never completed its self-test within 5 minutes"
+          }
+          Write-Host "app exit code: $($p.ExitCode)"
+          if (Test-Path $env:PLATFORM_SMOKE_REPORT) {
+            Write-Host "--- self-test report ---"
+            Get-Content $env:PLATFORM_SMOKE_REPORT | Write-Host
+          } else {
+            throw "Phase C: no self-test report at $env:PLATFORM_SMOKE_REPORT (app died before reporting)"
+          }
+          if ($p.ExitCode -ne 0) { throw "Phase C: self-test FAILED (exit $($p.ExitCode)) — see report above" }
+          Write-Host "::notice::Phase C PASS — the window rendered (self-test exit 0)"
+
+      - name: Upload self-test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-c-selftest
+          path: |
+            ${{ runner.temp }}\selftest-report.json
+            ${{ runner.temp }}\selftest-window.png
+          if-no-files-found: warn
+
+      - name: Stop processes
+        if: always()
+        shell: pwsh
+        run: |
+          Get-Process Platform -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-Process node -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -like "$env:APP_DIR*" } | Stop-Process -Force
+          Write-Host "smoke cleanup done"

@@ -1,0 +1,59 @@
+# 通道注记（add-cell-lifecycle 5.3，可自动化半）：本档仅 workflow_dispatch，且真跑
+# 一律在公开仓（scs001/platform-image-verify 的同名镜像档）——公开仓的
+# Windows/macOS runner 免费，私仓 2000 分钟/月只留给 ubuntu 经济门。
+# 详见 docs/registry-maintenance.md「非 web 端通道」。
+#
+# steward resident smoke — the CI half of the eight-act walk-through:
+#   - DPAPI key custody (windows-latest boots a REAL CryptProtectData sphere:
+#     seal/migrate/tamper/fallback; mac/linux run custody with the injected seam)
+#   - full steward suites (control plane / policy engine / uplink+reporter /
+#     install plumbing / key custody / cell-lifecycle vocabulary)
+#   - resident smoke through the REAL entry (supervisor/steward-main.js):
+#     跑: control plane answers + steward.pid agrees with discovery
+#     排干: drainQuit removes discovery+pid and exits 0
+#     撤销: a 401-everything platform burns the steward's own identity
+# What stays human/elsewhere: sleep & reboot survival (no runner naps), and
+# attach-from-installed-UI + uninstaller drain — both live in release.yml's
+# `installer e2e (windows)` against a real installer.
+
+name: steward-smoke
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install deps (--ignore-scripts skips the electron/playwright binaries; better-sqlite3 ships its prebuilds in the tarball)
+        run: npm ci --ignore-scripts
+        timeout-minutes: 15
+      # Per file + a per-test ceiling: a hang or a slow Windows runner must name
+      # the offending test and fail, never silently eat the whole job budget.
+      - name: Steward unit suites (per file, bounded)
+        shell: bash
+        run: |
+          for f in scripts/test-cell-lifecycle.mjs scripts/test-steward-*.mjs; do
+            echo "── $f"
+            node --test --test-timeout=60000 "$f"
+          done
+      - name: Resident smoke (跑→排干→撤销 through the real boot)
+        run: node scripts/smoke-steward-resident.mjs
+      - name: Steward stdout/stderr on failure
+        if: failure()
+        shell: bash
+        run: |
+          find "$RUNNER_TEMP" /tmp -name "steward-smoke-*" -o -name "steward-revoke-*" 2>/dev/null | head -20

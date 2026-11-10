@@ -1,0 +1,237 @@
+# ── Desktop in-app update E2E (add-desktop-in-app-update, tasks 3.2) ─────────
+#
+# GitHub-hosted runners test the updater lifecycle end to end without any
+# tailnet dependency: the job builds the packaged app, serves the lane from
+# localhost, and watches the env-gated state mirror (UPDATER_STATE_FILE) as the
+# updater walks its states.
+#
+#   Phase 1 (honest up-to-date): lane version == running version → `up-to-date`.
+#   Phase 2 (newer lane):        lane version → 99.0.0 (same artifacts, same
+#                                hashes — electron-updater's integrity check
+#                                runs for real) → win: download → `downloaded`;
+#                                unsigned mac: notify-only + dmg URL surfaced.
+#
+# The quit-install NSIS mechanics are stock electron-updater + covered by
+# win-install-smoke; this lane pins the part WE wrote: discover → verify → state.
+#
+# Run: workflow_dispatch.
+
+name: desktop-update-e2e
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: update e2e (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            arch: x64
+            exe: dist/win-unpacked/Platform.exe
+          - os: macos-latest
+            arch: arm64
+            exe: dist/mac-arm64/Platform.app/Contents/MacOS/Platform
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          architecture: ${{ matrix.arch }}
+          cache: 'npm'
+
+      - name: Cache resources/
+        uses: actions/cache@v4
+        with:
+          path: resources
+          key: resources-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('package.json', 'scripts/build-*.js', 'scripts/verify-bundle.js') }}
+          restore-keys: |
+            resources-${{ matrix.os }}-${{ matrix.arch }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build bundled resources + verify
+        run: npm run predist
+
+      - name: Package app
+        shell: bash
+        run: |
+          echo "PRODUCT_NAME='${PRODUCT_NAME:-Platform}'"
+          npm run dist -- --${{ matrix.arch }}
+        env:
+          PRODUCT_NAME: ${{ vars.PRODUCT_NAME }}
+          ICON_URL: ${{ vars.ICON_URL }}
+          COMPANY_NAME: ${{ vars.COMPANY_NAME }}
+
+      - name: Generate lane metadata at the running version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "running version: $VERSION"
+          echo "APP_VERSION=$VERSION" >> "$GITHUB_ENV"
+          node scripts/gen-desktop-latest-yml.mjs dist "$VERSION"
+          mkdir -p lane
+          cp dist/latest*.yml lane/ 2>/dev/null || true
+          # Phase-2 lane (newer version, SAME artifacts + hashes — the
+          # integrity check still has to pass for real).
+          node -e '
+            const fs = require("fs");
+            for (const f of fs.readdirSync("lane")) {
+              const yml = fs.readFileSync("lane/" + f, "utf8")
+                .replace(/^version: .*$/m, "version: 99.0.0");
+              fs.writeFileSync("lane/" + f, yml);
+            }
+          '
+
+      - name: Serve the lane
+        shell: bash
+        run: |
+          node -e '
+            const http = require("http");
+            const fs = require("fs");
+            const path = require("path");
+            const root = path.resolve(process.cwd());
+            http.createServer((req, res) => {
+              const rel = decodeURIComponent(req.url.split("?")[0]).replace(/^\/+/, "");
+              const file = path.join(root, rel);
+              if (!file.startsWith(root) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+                res.writeHead(404).end("nope");
+                return;
+              }
+              res.writeHead(200, { "content-length": fs.statSync(file).size });
+              fs.createReadStream(file).pipe(res);
+            }).listen(8099, "127.0.0.1", () => console.log("lane on :8099"));
+          ' &
+          sleep 2
+          curl -s -o /dev/null -w "lane latest.yml: %{http_code}\n" http://127.0.0.1:8099/dist/latest.yml
+
+      # Resolve the packaged binary (PRODUCT_NAME is fork-settable — never
+      # hardcode "Platform" here).
+      - name: Resolve packaged binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            EXE=$(ls dist/win-unpacked/*.exe | head -1)
+            APP_ROOT="dist/win-unpacked/resources/app"
+          else
+            EXE=$(ls dist/mac*/**/Contents/MacOS/* dist/mac*/*/Contents/MacOS/* 2>/dev/null | head -1)
+            # EXE = <App>/Contents/MacOS/<bin> → two dirnames = Contents
+            APP_ROOT="$(dirname "$(dirname "$EXE")")/Resources/app"
+          fi
+          echo "APP_EXE=$EXE" >> "$GITHUB_ENV"
+          echo "binary: $EXE"
+          echo "app root: $APP_ROOT"
+          ls -la "$(dirname "$EXE")" | head -4
+          # The updater imports electron-updater at module scope; if the
+          # afterPack runtime mirror dropped it (or a transitive dep), the
+          # packaged main process dies on import and the E2E sees only silence.
+          # Assert it shipped HERE so a missing-package failure reads as a real
+          # defect, not a mysterious timeout. (Round 5 lesson: require() with a
+          # bare relative path resolves as a MODULE NAME — use resolve().)
+          if [ ! -d "$APP_ROOT/node_modules/electron-updater" ]; then
+            echo "::error::electron-updater NOT in packaged app ($APP_ROOT/node_modules) — afterPack runtime mirror gap"
+            exit 1
+          fi
+          echo "packaged electron-updater: present"
+          node -e '
+            const path = require("node:path");
+            const target = path.resolve(process.argv[1], "node_modules/electron-updater");
+            require(target);
+            console.log("electron-updater resolves in packaged tree");
+          ' "$APP_ROOT" || {
+            echo "::error::electron-updater present but unresolvable (missing transitive dep)"; exit 1; }
+
+      # ── Phase 1: honest up-to-date ────────────────────────────────────────────
+      - name: Phase 1 — lane matches running version → up-to-date
+        shell: bash
+        env:
+          DESKTOP_UPDATE_URL: http://127.0.0.1:8099/dist
+          UPDATER_STATE_FILE: ${{ github.workspace }}/updater-state.json
+        run: |
+          set -euo pipefail
+          rm -f updater-state.json app-out.log
+          "$APP_EXE" --enable-logging=stderr > app-out.log 2>&1 &
+          APP_PID=$!
+          for i in $(seq 1 60); do
+            sleep 5
+            if [ -f updater-state.json ]; then
+              STATUS=$(node -p "try{JSON.parse(require('fs').readFileSync('updater-state.json','utf8')).status}catch{''}")
+              echo "state: $STATUS"
+              case "$STATUS" in
+                up-to-date) echo "PHASE1 OK"; break ;;
+                error) echo "PHASE1 FAIL: $(cat updater-state.json)"; tail -30 app-out.log 2>/dev/null; exit 1 ;;
+              esac
+            fi
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "PHASE1 APP EXITED (pid $APP_PID gone) — electron log tail:"; tail -40 app-out.log 2>/dev/null || echo "(no log)"; exit 1
+            fi
+            [ "$i" = "60" ] && { echo "PHASE1 TIMEOUT — electron log tail:"; tail -40 app-out.log 2>/dev/null || echo "(no log file)"; exit 1; }
+          done
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then taskkill //F //IM "$(basename "$APP_EXE")" //T >/dev/null 2>&1 || true; else pkill -f "$(basename "$APP_EXE")" || true; fi
+          sleep 3
+
+      # ── Phase 2: newer lane ───────────────────────────────────────────────────
+      - name: Phase 2 — lane 99.0.0 → win downloaded / mac notify-only
+        shell: bash
+        env:
+          DESKTOP_UPDATE_URL: http://127.0.0.1:8099/dist
+          UPDATER_STATE_FILE: ${{ github.workspace }}/updater-state.json
+        run: |
+          set -euo pipefail
+          # Swap the lane to the 99.0.0 metadata, then restart the app fresh so
+          # the boot check sees the newer lane.
+          cp lane/latest.yml dist/latest.yml 2>/dev/null || true
+          cp lane/latest-mac.yml dist/latest-mac.yml 2>/dev/null || true
+          rm -f updater-state.json app-out.log
+          "$APP_EXE" --enable-logging=stderr > app-out.log 2>&1 &
+          APP_PID=$!
+          EXPECT=notify-only
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then EXPECT=downloaded; fi
+          for i in $(seq 1 90); do
+            sleep 5
+            if [ -f updater-state.json ]; then
+              STATUS=$(node -p "try{JSON.parse(require('fs').readFileSync('updater-state.json','utf8')).status}catch{''}")
+              echo "state: $STATUS"
+              case "$STATUS" in
+                $EXPECT) echo "PHASE2 OK ($EXPECT)"; break ;;
+                error) echo "PHASE2 FAIL: $(cat updater-state.json)"; tail -30 app-out.log 2>/dev/null; exit 1 ;;
+              esac
+            fi
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+              echo "PHASE2 APP EXITED (pid $APP_PID gone) — electron log tail:"; tail -40 app-out.log 2>/dev/null || echo "(no log)"; exit 1
+            fi
+            [ "$i" = "90" ] && { echo "PHASE2 TIMEOUT (expected $EXPECT) — electron log tail:"; tail -40 app-out.log 2>/dev/null || echo "(no log file)"; exit 1; }
+          done
+          node -e "
+            const s = JSON.parse(require('fs').readFileSync('updater-state.json','utf8'));
+            console.log('final state:', JSON.stringify(s));
+            if (s.status !== '$EXPECT') process.exit(1);
+          "
+
+      # ── Failure evidence ──────────────────────────────────────────────────────
+      # The packaged app mirrors every console.* to userData/main.log (main.js
+      # MAIN_LOG_PATH) — stdout is silent BY DESIGN, so this file is the real
+      # witness. Dump it whenever any phase failed.
+      - name: Dump app main.log (on failure)
+        if: failure()
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            LOG="$APPDATA/Platform/main.log"
+          else
+            LOG="$HOME/Library/Application Support/Platform/main.log"
+          fi
+          echo "=== $LOG ==="
+          tail -80 "$LOG" 2>/dev/null || echo "(no main.log — app never reached the console mirror)"
+          echo "=== updater-state.json ==="
+          cat updater-state.json 2>/dev/null || echo "(absent)"
+          # Belt: any app process left behind?
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then tasklist | grep -i "Platform" || true; else pgrep -fl "Platform" || true; fi

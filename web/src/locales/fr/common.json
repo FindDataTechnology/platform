@@ -1,0 +1,4221 @@
+{
+  "shell": {
+    "error": {
+      "title": "Impossible de charger cette page",
+      "body": "Une erreur est survenue lors de l'affichage de cette vue. Vous pouvez réessayer ou recharger la page.",
+      "retry": "Réessayer",
+      "reload": "Recharger la page"
+    }
+  },
+  "common": {
+    "loading": "Chargement…",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "add": "Ajouter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "close": "Fermer",
+    "disconnect": "Déconnecter",
+    "retry": "Réessayer",
+    "more": "Charger plus",
+    "dismiss": "Fermer",
+    "extensions": {
+      "mcp": {
+        "advanced": "Avancé"
+      }
+    },
+    "personaEvo": {
+      "title": "Révisions de persona",
+      "subtitle": "Révisions de rôle proposées par les agents après les tours : proposition → évaluation A/B → révision finale humaine. Les presets perso se matérialisent ; accepter une persona de pack ouvre un brouillon de fork — le pack n'est jamais écrit.",
+      "empty": "Aucune révision pour l'instant. Les agents déposent des candidats ici quand un tour réel expose un manque de rôle.",
+      "target": {
+        "preset": "preset perso",
+        "pack": "persona de pack"
+      },
+      "current": "Persona actuelle",
+      "amended": "Persona révisée",
+      "viewDiff": "Voir le diff",
+      "evidence": "Preuve : {source} · corrige : {fixed}",
+      "evaluate": "Lancer l'évaluation A/B",
+      "promote": "Accepter et matérialiser",
+      "promoteFork": "Accepter et ouvrir un brouillon de fork",
+      "status": {
+        "candidate": "candidate",
+        "evaluated": "porte franchie",
+        "promoted": "promue",
+        "rejected": "rejetée"
+      }
+    },
+    "packs": {
+      "editor": {
+        "mcpDescription": "Description (piste zh)",
+        "mcpDescriptionEn": "Description (superposition en)"
+      }
+    }
+  },
+  "nav": {
+    "chat": "Discussion",
+    "family": {
+      "knowledge": "Connaissances",
+      "build": "Construire",
+      "run": "Exécution",
+      "access": "Accès"
+    },
+    "knowledge": "Bibliothèque",
+    "resources": "Résultats",
+    "agents": "Matériels",
+    "bots": "Bots",
+    "trace": "Traçage",
+    "openMenu": "Ouvrir le menu de navigation",
+    "tasks": "Automatisation",
+    "fleets": "Équipes d'agents",
+    "apps": "Apps",
+    "fleet": "Cluster de runners",
+    "zhiyu": "Zhiyu",
+    "memory": "Mémoire",
+    "blueprints": "Studio de plans",
+    "machines": "Machines",
+    "tuning": "Réglage",
+    "channels": "Canaux",
+    "shortcuts": {
+      "tools": "Outils",
+      "plugins": "Plugins",
+      "models": "Modèles"
+    },
+    "familyActiveHint": "Ce groupe contient la vue courante"
+  },
+  "trace": {
+    "title": "Traçage",
+    "description": "Trace par tour : chaque requête LLM, appel d'outil et événement dans l'ordre.",
+    "errorsOnly": "Erreurs uniquement",
+    "loading": "Chargement…",
+    "empty": "Aucune trace pour l'instant. L'enregistrement commence au prochain tour de chat.",
+    "back": "Retour aux traces",
+    "errorBadge": "erreur",
+    "prev": "Précédent",
+    "next": "Suivant",
+    "toolCalls": "appels d'outils",
+    "retries": "tentatives",
+    "textChars": "caractères",
+    "col": {
+      "time": "Heure",
+      "model": "Modèle",
+      "duration": "Durée",
+      "events": "Événements",
+      "session": "Session"
+    },
+    "fleetBadge": "Équipe d'agents"
+  },
+  "agentsPage": {
+    "studio": "Studio",
+    "title": "Constructeur d'Agents",
+    "agents": "Experts",
+    "market": "Agents",
+    "create": "Nouvel expert",
+    "myExperts": "Mes experts",
+    "connect": "Connecter",
+    "connecting": "Connexion…",
+    "loadFailed": "Échec du chargement du catalogue : {{error}}",
+    "myClusters": "Mes groupes",
+    "clustersEmpty": "Aucun groupe — utilisez « + Créer un groupe » pour regrouper des agents.",
+    "clusterDetail": "Détails du groupe",
+    "clusterAgents": "Agents du groupe",
+    "clusterStatus": "Statut",
+    "clusterCreated": "Créé",
+    "clusterTerminate": "Dissoudre le groupe",
+    "clusterTerminateHint": "La dissolution arrête le groupe ; les agents installés restent en place.",
+    "close": "Fermer",
+    "build": "Construire",
+    "supply": "Catalogue",
+    "creations": "Mes créations",
+    "tuning": "Ajustement"
+  },
+  "sidebar": {
+    "brand": "{{brand}}",
+    "chats": "Discussions",
+    "new": "+ Nouveau",
+    "noChats": "Aucune discussion. Cliquez sur « + Nouveau ».",
+    "untitled": "Sans titre",
+    "language": "Langue",
+    "collapse": "Replier la barre latérale",
+    "expand": "Déplier la barre latérale",
+    "workspaces": "Projets",
+    "searchChats": "Rechercher des conversations…",
+    "ungrouped": "Non groupées",
+    "defaultProject": "Projet par défaut",
+    "showMore": "Afficher {{count}} de plus",
+    "showLess": "Afficher moins",
+    "newWorkspace": "Nouveau projet",
+    "closeSearch": "Fermer la recherche",
+    "unread": "Nouveautés",
+    "projectNamePlaceholder": "ex. Rapport trimestriel",
+    "useExistingFolder": "Choisir un dossier existant…",
+    "createProject": "Créer le projet",
+    "backToNewProject": "← Nouveau projet",
+    "running": "Réponse en cours",
+    "queued": "Message en file d'attente",
+    "collapseAllFamilies": "Tout replier",
+    "expandAllFamilies": "Tout déplier"
+  },
+  "modelsPage": {
+    "title": "Modèles",
+    "defaultLabel": "Par défaut",
+    "addProvider": "Ajouter un fournisseur",
+    "editProvider": "Modifier le fournisseur",
+    "addHint": "Ajoutez un fournisseur LLM compatible OpenAI.",
+    "editHint": "Laissez la clé API vide pour conserver la clé actuelle.",
+    "fieldName": "Nom",
+    "fieldBaseUrl": "URL de base",
+    "fieldApiKey": "Clé API",
+    "keyPlaceholder": "Clé API (laisser vide pour conserver l'actuelle)",
+    "keyMasked": "La clé API est stockée chiffrée sur le serveur et n'est jamais affichée.",
+    "apiKeyRequired": "La clé API est requise",
+    "keyPresent": "Clé API configurée",
+    "keyMissing": "Aucune clé API",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "deleteProvider": "Supprimer",
+    "confirmDeleteTitle": "Supprimer le fournisseur ?",
+    "confirmDelete": "Supprimer « {{name}} » ? Cette action est irréversible.",
+    "testConnection": "Tester la connexion",
+    "setDefault": "Définir par défaut",
+    "default": "Par défaut",
+    "builtIn": "Intégré",
+    "empty": "Aucun fournisseur configuré. Cliquez sur « Ajouter un fournisseur ».",
+    "settingsUpdated": "Paramètres mis à jour.",
+    "restartFailed": "Impossible d'appliquer les paramètres : {{message}}",
+    "anotherEditInProgress": "Une autre modification des paramètres est en cours. Réessayez.",
+    "lastTest": {
+      "never": "Non testé",
+      "ok": "OK",
+      "failed": "Échec"
+    },
+    "fieldEfforts": "Niveaux de réflexion (facultatif)",
+    "effortsHint": "Niveaux acceptés par ce fournisseur, séparés par des virgules (par ex. low, medium, high). Laissez vide pour la valeur par défaut.",
+    "thinkingLevel": "Niveau de réflexion",
+    "thinkingDefault": "Par défaut",
+    "syncModels": "Synchroniser les modèles",
+    "syncSummary": "+{{added}} ajoutés · {{serving}} actifs · {{flagged}} signalés",
+    "discoveryStatus": {
+      "serving": "en service",
+      "unauthorized": "non autorisé",
+      "upstream_down": "amont indisponible",
+      "rate_limited": "limité",
+      "not_chat": "hors chat",
+      "error": "erreur"
+    },
+    "editModels": "Modifier les modèles",
+    "addModel": "Ajouter",
+    "addModelPlaceholder": "Id du modèle, ex. deepseek-v4.1-flash",
+    "maxTokensLabel": "Tokens maximaux de sortie pour {{id}}",
+    "maxTokensLabelShort": "Tokens max",
+    "removeModel": "Retirer {{id}}",
+    "saveModels": "Enregistrer les modèles",
+    "duplicateModelId": "Les ids de modèle doivent être uniques et non vides.",
+    "otherDiscovered": "Autres modèles détectés (hors liste)",
+    "prefillHint": "par défaut : {{context}} ctx / {{maxTokens}} sortie",
+    "contextWindowLabel": "Fenêtre de contexte (tokens d'entrée max) pour {{id}}",
+    "contextWindowLabelShort": "Contexte",
+    "overrideActive": "Surchargé",
+    "overrideBaseUrlPlaceholder": "Surcharge d'URL de base (vide = aucune)",
+    "overrideSave": "Enregistrer l'URL",
+    "overrideClear": "Effacer la surcharge",
+    "modelFallbackToast": "Le modèle par défaut {{from}} est éteint ; basculé sur {{to}}",
+    "localPresets": "Serveurs locaux :",
+    "localAuthHint": "les serveurs locaux n'ont pas besoin de clé",
+    "keyNotNeeded": "Les serveurs locaux n'ont pas besoin de clé API."
+  },
+  "status": {
+    "connected": "Connecté",
+    "connecting": "Connexion…",
+    "disconnected": "Déconnecté"
+  },
+  "composer": {
+    "placeholder": "Demandez n'importe quoi à l'{{assistant}}… (tapez / pour les commandes, Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
+    "placeholderDisabled": "Connexion…",
+    "send": "Envoyer",
+    "dropHint": "Relâchez pour joindre le document",
+    "uploadFailed": "Échec de l'envoi : {{message}}",
+    "attach": "Joindre un fichier",
+    "removeAttachment": "Retirer la pièce jointe",
+    "attachments": "{{count}} pièce(s) jointe(s)",
+    "slashPicker": {
+      "sectionCommands": "Commandes",
+      "sectionSkills": "Compétences",
+      "noMatches": "Aucune commande correspondante"
+    },
+    "cmd": {
+      "model": "changer ou afficher le modèle actif",
+      "new": "démarrer une nouvelle session de discussion",
+      "clear": "effacer la vue de discussion",
+      "help": "Ouvrir le centre d’aide"
+    },
+    "stop": "Arrêter",
+    "uploading": "Envoi en cours…",
+    "cancelUpload": "Annuler l’envoi",
+    "strip": {
+      "workspace": "Projet de session",
+      "workspaceUnset": "Aucun dossier",
+      "workspaceRecents": "Dossiers récents",
+      "workspacePlaceholder": "Chemin absolu vers un dossier…",
+      "workspaceBrowse": "Parcourir les dossiers…",
+      "workspaceAbsolute": "Saisissez un chemin absolu.",
+      "workspaceConfirm": "Basculer le projet de session vers {{path}} ?\n\nCela redémarre l'agent. Les messages précédents peuvent référencer des chemins devenus invalides.",
+      "commands": "Commandes",
+      "model": "Modèle",
+      "modelUnset": "Aucun modèle",
+      "effort": "Réflexion",
+      "effortDefault": "Par défaut",
+      "agent": "Agent",
+      "agentUnset": "Par défaut",
+      "agentFocused": "Focalisé · {{agent}} · {{skills}} compétences · {{mcp}} MCP",
+      "agentFocusedCustom": "Focalisé · perso · {{skills}} compétences · {{mcp}} MCP",
+      "permission": "Permissions",
+      "permissionUnset": "Par défaut",
+      "permissionCustom": "Personnalisé",
+      "permissionReadonly": {
+        "label": "Chat seul",
+        "desc": "L'agent discute sans lire ni écrire les fichiers du projet."
+      },
+      "permissionWrite": {
+        "label": "Lire et écrire les fichiers",
+        "desc": "L'agent peut modifier le dossier du projet."
+      },
+      "permissionFull": {
+        "label": "Accès complet",
+        "desc": "L'agent peut tout modifier, sans validation.",
+        "confirmTitle": "Activer l’accès complet ?",
+        "confirmBody": "L’accès complet supprime le bac à sable et les confirmations d’approbation : l’agent peut lire et écrire tout ce que vous pouvez, y compris hors de l’espace de travail.",
+        "acknowledge": "Je comprends le risque",
+        "confirm": "Activer l’accès complet"
+      },
+      "add": "Ajouter un fichier ou une commande",
+      "more": "Plus",
+      "websearch": "Recherche web",
+      "websearchHint": "Active la recherche web pour cette conversation (désactivée par défaut)",
+      "ctx": "ctx {{pct}}%",
+      "ctxHint": "{{tokens}} / {{window}} tokens",
+      "clusterLoad": "Charger le groupe",
+      "clusterLoading": "Chargement…",
+      "clusterLoadHint": "Lie cet groupe à la session active : bascule sur le premier membre par défaut ; le fan-out passe par les tâches d'groupe.",
+      "workspaceAdvanced": "Avancé"
+    },
+    "sending": "Envoi…",
+    "voice": {
+      "record": "Saisie vocale",
+      "stop": "Arrêter l'enregistrement",
+      "recording": "Enregistrement — cliquez pour arrêter",
+      "transcribing": "Transcription…",
+      "file": "Voix vers texte (envoyer un audio)",
+      "permissionDenied": "Accès au microphone refusé",
+      "failed": "Échec de la transcription",
+      "dismiss": "Fermer"
+    }
+  },
+  "chat": {
+    "empty": "Envoyez un message pour commencer à discuter.",
+    "loadingSession": "Chargement de la conversation…",
+    "loadEarlier": "Charger les messages précédents ({{count}} restants)",
+    "plan": {
+      "title": "Progression",
+      "ariaLabel": "Plan de l’agent",
+      "statusPending": "{{count}} à faire",
+      "statusInProgress": "{{count}} en cours",
+      "statusCompleted": "{{count}} terminées",
+      "expand": "Développer le plan",
+      "collapse": "Réduire le plan",
+      "updated": "Plan mis à jour ({{done}}/{{total}})"
+    },
+    "welcome": {
+      "greeting": "Comment puis-je vous aider aujourd'hui ?",
+      "suggestedPrompts": "Suggestions",
+      "recentChats": "Discussions récentes",
+      "viewAll": "Tout voir",
+      "modelFooter": "Modèle : {{model}}",
+      "agentFooter": "Agent : {{agent}}",
+      "prompts": {
+        "docs": {
+          "title": "Interrogez vos documents",
+          "text": "Résume les points clés des documents les plus récents de ma bibliothèque"
+        },
+        "skills": {
+          "title": "Découvrez les compétences",
+          "text": "Liste les compétences disponibles et à quoi sert chacune"
+        },
+        "tools": {
+          "title": "Vérifiez une question",
+          "text": "Recherche une question technique et cite les sources"
+        },
+        "write": {
+          "title": "Rédigez et organisez",
+          "text": "Transforme ces points en un rapport hebdomadaire concis :\n- point un\n- point deux"
+        }
+      },
+      "viewLess": "Réduire",
+      "promptsFocused": {
+        "1": {
+          "title": "Voir ce que sait cet expert",
+          "text": "En trois phrases, dis-moi ce que tu peux faire pour moi, avec un exemple chacune."
+        },
+        "2": {
+          "title": "Traite mon fichier",
+          "text": "Traite le fichier que je t’envoie : extrais les points clés, signale les problèmes, donne les résultats.\n(glisse le fichier dans la zone de saisie)"
+        },
+        "3": {
+          "title": "Suivre ton flux pro",
+          "text": "Traite la tâche suivante selon ton flux professionnel — liste d’abord les étapes :\n(décris la tâche)"
+        },
+        "4": {
+          "title": "Mettre en document",
+          "text": "Mets les résultats ci-dessus en document formel et enregistre-le dans Résultats."
+        }
+      }
+    },
+    "preset": {
+      "label": "Mode de l'agent",
+      "unset": "Choisir un mode",
+      "userBadge": "Personnalisé",
+      "brokenBadge": "Indisponible",
+      "names": {
+        "standard": "Mode standard",
+        "code": "Mode PTC",
+        "minimal": "Mode minimal",
+        "cordis": "Mode créatif"
+      },
+      "descriptions": {
+        "standard": "L'agent de codage complet : édition de fichiers, shell, recherche de fichiers et web, skills, plans, objectifs, sous-agents et workflows.",
+        "code": "Tout le mode standard, avec les outils exposés via le SDK Code Mode afin que le modèle compose des opérations multi-étapes dans un seul programme TypeScript.",
+        "minimal": "Un agent de codage à deux outils : bash persistant et str_replace_editor.",
+        "cordis": "Pour créer des presets d'agent personnalisés : tout le mode standard, plus des contrôles à l'exécution, l'expérimentation de plugins et des conseils de création de presets."
+      }
+    },
+    "header": {
+      "editTitle": "Renommer la session",
+      "titlePlaceholder": "Titre de la session",
+      "rename": "Enregistrer le nouveau titre",
+      "sessionActions": "Actions de session",
+      "clusterBound": "Exécution avec le groupe {{name}}",
+      "clusterExpiring": "Exécution avec le groupe {{name}} — inactif, fin automatique à {{time}} sauf utilisation avant"
+    },
+    "titleTooLong": "Le titre doit comporter 200 caractères ou moins",
+    "connectionLost": "Connexion perdue — reconnexion en cours…",
+    "ariaStreaming": "Génération de la réponse…",
+    "ariaDone": "Réponse terminée",
+    "retry": "Réessayer",
+    "outlineLabel": "Plan de la conversation",
+    "outlineCollapse": "Réduire le plan",
+    "outlineJump": "Aller à cette question",
+    "chart": {
+      "inLibrary": "Dans la bibliothèque"
+    },
+    "artifactStrip": {
+      "title": "Fichiers de ce tour",
+      "saved": "Dans la bibliothèque"
+    },
+    "queuedBehind": "En attente de la fin de « {{title}} »",
+    "queuedIdle": "En attente que l'assistant soit libre",
+    "queuedCancel": "Annuler",
+    "queuedPreempt": "L'arrêter et exécuter ceci maintenant",
+    "cluster": {
+      "terminatedNotice": "L'groupe « {{name}} » a été terminé ; retour à l'agent intégré"
+    },
+    "presetLink": {
+      "pending": "Bascule vers {{name}}…",
+      "rejected": "Bascule refusée — l'assistant est en train de répondre ; réessayez bientôt",
+      "retry": "Réessayer",
+      "missing": "{{name}} n'est plus disponible (l'agent a peut-être été désinstallé) ; l'assistant actuel est conservé"
+    },
+    "assistant": {
+      "label": "Parler à",
+      "standardSection": "Standard",
+      "packSection": "Rôles d'agents",
+      "mineSection": "Mes experts",
+      "otherSection": "Autres assistants",
+      "composeLocked": "Cette session a déjà commencé, son mode est fixé ; ouvrez un nouveau chat pour changer."
+    },
+    "loadingEarlier": "Chargement…"
+  },
+  "turn": {
+    "assistantName": "{{assistant}}",
+    "thinkingStreaming": "Réflexion…",
+    "thinking": "Réflexion",
+    "activityThinking": "Réflexion…",
+    "activityRunning": "Étape {{step}} en cours…",
+    "activityDoneTimed": "A réfléchi pendant {{seconds}} s · {{count}} étapes",
+    "activityThought": "A réfléchi pendant {{seconds}} s",
+    "activityDone": "A fait {{count}} étapes",
+    "activityErrored": "Un problème est survenu · {{count}} étapes effectuées",
+    "statusRunning": "en cours…",
+    "statusError": "erreur",
+    "statusDone": "terminé",
+    "input": "Entrée",
+    "partial": "Partiel",
+    "output": "Sortie",
+    "outputError": "Erreur",
+    "interrupted": "Interrompu",
+    "copy": "Copier",
+    "copied": "Copié",
+    "regenerate": "Régénérer",
+    "editResend": "Modifier et renvoyer",
+    "retryWaiting": "Passerelle saturée, nouvelle tentative ({{retry}}/{{budget}})…",
+    "retryWaitingNoBudget": "Passerelle saturée, nouvelle tentative ({{retry}})…",
+    "retryStarted": "Nouvelle tentative…",
+    "connectionLost": "Connexion perdue, reprise…",
+    "resumedLag": "Reconnecté ; le contenu peut être en retard",
+    "usage": "in {{in}} · out {{out}}",
+    "connectAction": "Connecter",
+    "speak": "Lire à voix haute",
+    "speakStop": "Arrêter la lecture",
+    "speakTruncated": "Réponse longue ; seuls les 4000 premiers caractères sont lus",
+    "speakFailed": "Échec de la lecture"
+  },
+  "markdown": {
+    "copy": "Copier",
+    "copied": "Copié",
+    "copyFailed": "Échec de la copie"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "loadFailed": "Échec du chargement de l'état : {{error}}",
+    "retry": "réessayer",
+    "none": "aucun",
+    "servers": "Serveurs",
+    "activeModel": "Modèle actif",
+    "provider": "Fournisseur : {{name}}",
+    "uptime": "Disponibilité : {{sec}}s",
+    "documents": "Documents",
+    "knowledge": "Knowledge",
+    "collections": "Collections : {{count}}",
+    "mcpTools": "Outils MCP",
+    "state": {
+      "healthy": "sain",
+      "unhealthy": "défaillant",
+      "starting": "démarrage",
+      "disabled": "désactivé"
+    }
+  },
+  "systemStatus": {
+    "title": "État du système",
+    "refresh": "Actualiser",
+    "refreshing": "Actualisation…",
+    "loadFailed": "Échec du chargement de l'état : {{error}}",
+    "retry": "réessayer",
+    "none": "aucun",
+    "health": "Santé",
+    "activeConfig": "Configuration active",
+    "resources": "Ressources",
+    "activeAgent": "Agent actif",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "documents": "Documents",
+    "collections": "Collections : {{count}}",
+    "mcpTools": "Outils MCP",
+    "provider": "Fournisseur : {{name}}",
+    "uptime": "Disponibilité : {{sec}}s",
+    "manage": "Gérer",
+    "state": {
+      "healthy": "sain",
+      "unhealthy": "défaillant",
+      "starting": "démarrage",
+      "disabled": "désactivé"
+    }
+  },
+  "sessionMenu": {
+    "delete": "Supprimer",
+    "confirmTitle": "Supprimer cette discussion ?",
+    "confirmBody": "Cette action est irréversible.",
+    "cannotDeleteActive": "Basculez d'abord vers une autre session",
+    "deleteFailed": "Échec de la suppression : {{error}}",
+    "clear": "Effacer",
+    "cannotClearInactive": "Basculez d'abord sur cette discussion",
+    "cannotDeleteRunning": "Cette conversation est en cours",
+    "cannotDeleteQueued": "Cette conversation a un message en file d'attente"
+  },
+  "documents": {
+    "title": "Bibliothèque",
+    "loading": "Chargement…",
+    "disabledMessage": "Les documents sont indisponibles (la collection de documents est désactivée ou la base de données est inaccessible).",
+    "remove": "Retirer",
+    "removeConfirm": "Cette action est irréversible. Retirer ce document ?",
+    "status": {
+      "ready": "prêt",
+      "indexing": "indexation",
+      "queued": "en file d'attente",
+      "error": "erreur"
+    },
+    "list": {
+      "count": "Documents ({{count}})",
+      "refresh": "Actualiser",
+      "empty": "Déposez contrats, tableurs ou comptes rendus : l’agent s’appuiera dessus pour répondre."
+    },
+    "content": {
+      "title": "Contenu"
+    },
+    "ingest": {
+      "uploadFile": "Envoyer un fichier",
+      "working": "Traitement…",
+      "textPlaceholder": "Collez du texte brut ou des notes…",
+      "addNote": "Ajouter une note",
+      "addUrl": "Ajouter une URL"
+    },
+    "collection": {
+      "title": "Collections",
+      "namePlaceholder": "Nom de la collection…",
+      "create": "Créer",
+      "makeAgent": "Créer un agent avec ceci",
+      "makeAgentHint": "Épinglez cette collection dans un plan pour créer un agent dédié",
+      "empty": "Aucune collection.",
+      "docsCount": "{{count}} docs",
+      "delete": "Supprimer",
+      "noDocuments": "Aucun document.",
+      "addDocPlaceholder": "Ajouter un document…",
+      "add": "Ajouter un fichier ou une commande",
+      "confirmDelete": "Supprimer cette collection ?",
+      "projectFilter": "Filtrer par projet",
+      "projectAll": "Tous les projets",
+      "emptyFiltered": "Aucune collection dans ce filtre."
+    },
+    "startConversation": "Démarrer la conversation…",
+    "stuckWarning": "Trop longtemps — l’ingestion s’est peut-être bloquée",
+    "retrieval": {
+      "title": "Recherche",
+      "usage": "{{calls}} appels d'embedding · {{chars}} caractères",
+      "alwaysOn": "Toujours active",
+      "lexical": {
+        "name": "Recherche par mots-clés",
+        "note": "Correspond au texte littéral. Le chinois est indexé par groupes de trois caractères : une reformulation ne trouve rien."
+      },
+      "semantic": {
+        "name": "Recherche sémantique",
+        "note": "Correspond au sens : chercher « taux de croissance du chiffre d'affaires » trouve aussi les passages qui disent « le chiffre d'affaires a progressé sur un an »."
+      },
+      "modelLine": "Modèle d'embedding {{model}} · {{dim}} dims",
+      "unavailable": "La recherche sémantique est indisponible",
+      "ackLabel": "Je comprends et j'accepte : le texte des fragments de cette bibliothèque sera envoyé au canal d'embedding ci-dessus",
+      "enable": "Activer la recherche sémantique",
+      "working": "En cours…",
+      "footprint": "Vecteurs ~{{mb}}Mo sur un plafond de {{cap}}Mo ({{chunks}} fragments)",
+      "ackAt": "Sortie des données acceptée le {{at}}",
+      "noAck": "Aucune confirmation enregistrée",
+      "loadFailed": "Impossible de lire les réglages de recherche.",
+      "retry": "Réessayer",
+      "actionFailed": "L'opération a échoué. Réessayez.",
+      "backfillDone": "{{done}} document(s) vectorisé(s) ; {{left}} restant(s)."
+    }
+  },
+  "embedded": {
+    "iframeTitle": "service intégré",
+    "blockedMessage": "L'interface intégrée n'a pas pu être chargée dans un cadre.",
+    "openInNewTab": "Ouvrir dans un nouvel onglet",
+    "notConfigured": "{{name}} n'est pas configuré."
+  },
+  "extensions": {
+    "title": "Extensions",
+    "description": "Gérez MCP et les compétences pour étendre votre agent",
+    "tabs": {
+      "installed": "Activées",
+      "market": "Boutique",
+      "external": "Externes"
+    },
+    "status": {
+      "disabled": "Désactivé",
+      "auto": "auto"
+    },
+    "fields": {
+      "enabled": "Activé"
+    },
+    "mcp": {
+      "title": "MCP",
+      "subtitle": "Ajoutez ou modifiez un serveur MCP que le runtime de l'agent peut appeler.",
+      "addButton": "Ajouter MCP",
+      "empty": "Aucun MCP configuré. Ajoutez-en un pour étendre votre agent.",
+      "fullSurface": "Surface complète",
+      "fullSurfaceHint": "Les serveurs marqués exposent tous leurs outils en mode complet et ciblé, au-dessus des listes des agents. Appliqué à la prochaine composition.",
+      "addTitle": "Ajouter MCP",
+      "editTitle": "Modifier MCP",
+      "confirmDelete": "Supprimer « {{name}} » ?",
+      "fields": {
+        "name": "Nom",
+        "type": "Type",
+        "command": "Commande",
+        "args": "Arguments (séparés par des espaces)",
+        "env": "Variables d'environnement (JSON)",
+        "url": "URL",
+        "headers": "En-têtes (JSON)"
+      },
+      "applying": "Application…",
+      "runtimeBusy": "Runtime occupé — application à la fin du tour en cours",
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "commandRequired": "La commande est requise pour stdio",
+        "urlRequired": "L'URL est requise pour HTTP",
+        "envInvalid": "Les variables d'environnement doivent être un JSON valide",
+        "headersInvalid": "Les en-têtes doivent être un JSON valide"
+      },
+      "bundledWiringHint": "La connexion de cet outil se gère dans Paramètres → Connexions → Service de recherche.",
+      "goConnect": "Ouvrir la carte de connexion →"
+    },
+    "skills": {
+      "title": "Compétences",
+      "subtitle": "Créez ou modifiez une compétence qui ajoute un comportement réutilisable de l'agent.",
+      "addButton": "Créer une compétence",
+      "empty": "Aucune compétence personnalisée. Créez-en une pour ajouter des comportements d'agent réutilisables.",
+      "addTitle": "Créer une compétence",
+      "editTitle": "Modifier la compétence",
+      "confirmDelete": "Supprimer « {{name}} » ?",
+      "custom": "Personnalisée",
+      "builtIn": "Intégrée",
+      "fields": {
+        "name": "Nom",
+        "description": "Description",
+        "content": "Contenu (Markdown)"
+      },
+      "errors": {
+        "nameRequired": "Le nom est requis",
+        "contentRequired": "Le contenu est requis"
+      },
+      "package": {
+        "title": "Téléverser un paquet de compétence",
+        "subtitle": "Téléversez un paquet zip (SKILL.md + références et scripts) ; il s'installe comme une compétence utilisable en conversation.",
+        "uploadButton": "Téléverser le paquet",
+        "pick": "Choisir un paquet zip de compétence",
+        "bodyLabel": "Aperçu du corps de la compétence",
+        "filesLabel": "Fichiers ({{count}} stockés / {{total}} au total)",
+        "omittedBinary": "binaire, non stocké",
+        "omittedLarge": "trop volumineux, non stocké",
+        "scriptWarning": "Je comprends que ce paquet contient des scripts exécutables",
+        "install": "Installer le paquet",
+        "success": "Compétence {{name}} installée ({{count}} fichiers auxiliaires)",
+        "successReplaced": "Compétence {{name}} remplacée intégralement",
+        "normalizedAs": "sera normalisé en {{name}} (origine : {{upstream}})",
+        "fileCountBadge": "{{count}} fichiers"
+      }
+    },
+    "market": {
+      "mcpTitle": "MCP",
+      "skillsTitle": "Compétences",
+      "empty": "Rien de disponible dans la boutique pour le moment.",
+      "install": "Installer",
+      "installSuccess": "{{name}} installé",
+      "installFailed": "Échec de l'installation de {{name}} : {{error}}",
+      "readyToUse": "Prêt à l'emploi",
+      "needsConfig": "Configuration requise"
+    },
+    "registry": {
+      "title": "Facet · Marché d'outils",
+      "state": {
+        "connected": "Connecté",
+        "disconnected": "Non connecté",
+        "stale": "Reconnexion requise",
+        "expired": "Expiré"
+      },
+      "connect": "Connecter",
+      "reconnect": "Reconnecter",
+      "connecting": "Connexion…",
+      "pasteToggle": "Coller un jeton",
+      "pasteHint": "Générez un jeton dans l'interface du marché (Get JWT Token) puis collez-le ici : il est stocké exactement comme un jeton émis automatiquement.",
+      "tokenLabel": "Jeton du marché",
+      "tokenPlaceholder": "eyJ…",
+      "expires": "Expire le {{date}}",
+      "disconnect": "Déconnecter",
+      "unconfigured": "Aucun marché MCP n'est configuré sur ce déploiement — collez un jeton.",
+      "staleHint": "Le marché a rejeté le jeton enregistré. Reconnectez-vous pour restaurer les serveurs du registre."
+    },
+    "connector": {
+      "title": "Wanxing · Connecteur",
+      "state": {
+        "connected": "Connecté",
+        "disconnected": "Non connecté",
+        "stale": "Invalidé"
+      },
+      "pasteToggle": "Coller le PAT",
+      "repasteToggle": "Recoller le PAT",
+      "tokenLabel": "PAT du connecteur",
+      "tokenPlaceholder": "oct_…",
+      "updated": "Mis à jour {{date}}",
+      "disconnect": "Déconnecter",
+      "staleHint": "Le connecteur a rejeté ce PAT. Génère-en un nouveau et recolle-le.",
+      "pasteHint": "Génère un jeton d'accès personnel (oct_…) sur la page « Mes connexions » du connecteur et colle-le ici.",
+      "meLink": "Ouvrir Mes connexions",
+      "openConsole": "Ouvrir la console du connecteur",
+      "pasteHintNoLink": "Génère un jeton d'accès personnel (oct_…) sur la page « Mes connexions » du connecteur et colle-le ici.",
+      "connectNew": "Connecter un compte",
+      "connecting": "Connexion…",
+      "activeBadge": "Actif",
+      "setActive": "Définir comme actif",
+      "reconnect": "Reconnecter",
+      "noActiveHint": "Aucun compte actif actuellement : choisissez-en un pour rétablir les appels d'outils du connecteur.",
+      "emptyHintZeroPaste": "Aucun compte connecteur pour l'instant. Cliquez sur « Connecter un compte » — en un clic, sans collage de jeton ; le collage d'un PAT reste possible.",
+      "emptyHintPasteOnly": "Aucun compte connecteur pour l'instant. Créez un PAT sur le connecteur et collez-le ici.",
+      "slotPlaceholder": "Nom du compte (facultatif)",
+      "contextLine": "Connectez vos comptes SaaS une fois et émettez des jetons d'accès pour vos plateformes d'agents.",
+      "learnMore": "En savoir plus"
+    },
+    "paperTrading": {
+      "title": "Wire · Trading Simulé",
+      "connected": "Connecté",
+      "notConnected": "Non connecté",
+      "staleBadge": "Invalidé",
+      "updated": "Mis à jour {{date}}",
+      "disconnect": "Déconnecter",
+      "staleHint": "Le service de trading simulé a rejeté ce jeton. Générez-en un nouveau sur le web du service et recollez-le.",
+      "pasteHint": "Générez un jeton d'API (fdt_…) sur le web du service et collez-le ici. Simulation uniquement — pas d'argent réel.",
+      "openService": "Ouvrir le service →",
+      "paperOnlyNote": "Simulation uniquement : trading fictif, sans fonds réels."
+    },
+    "external": {
+      "title": "Sources externes",
+      "subtitle": "Entrées miroir de marchés externes de skills. Non vérifiées par cette plateforme — pour la découverte ; l'installation affiche d'abord les fichiers et scripts dans un panneau de confirmation.",
+      "searchPlaceholder": "Rechercher dans les marchés externes…",
+      "searchButton": "Rechercher",
+      "empty": "Aucune entrée externe correspondante.",
+      "sourceBadge": "externe",
+      "resultCount": "{{count}} entrées",
+      "stale": "périmé · mis à jour {{time}}",
+      "sourceFailed": "cette source est temporairement indisponible",
+      "notReviewed": "non validé par cette plateforme",
+      "openUpstream": "Ouvrir la page amont",
+      "version": "version {{version}}",
+      "license": {
+        "declared": "Licence : déclarée",
+        "not-declared": "Licence : non déclarée",
+        "unknown": "Licence : inconnue"
+      },
+      "install": {
+        "button": "Installer cette skill",
+        "title": "Installer {{name}}",
+        "bodyLabel": "Corps de la skill (extrait)",
+        "filesLabel": "Fichiers du paquet ({{count}})",
+        "omittedBinary": "non stocké (binaire)",
+        "omittedLarge": "non stocké (trop volumineux)",
+        "normalizedAs": "installée sous : {{name}}",
+        "upstream": "Ouvrir la page source",
+        "scriptWarning": "Cette skill contient des fichiers de script exécutables et n'a pas été vérifiée par cette plateforme. Les scripts ne s'exécutent jamais automatiquement — les lancer est votre décision dans la conversation. Je comprends et je souhaite continuer.",
+        "confirm": "Confirmer l'installation",
+        "installing": "Installation…",
+        "success": "« {{name}} » installée.",
+        "successReplaced": "« {{name}} » mise à jour (réinstallation).",
+        "findInInstalled": "Retrouvez-la dans l'onglet Installées.",
+        "retry": "Réessayer"
+      },
+      "update": {
+        "button": "Vérifier la mise à jour",
+        "title": "Mettre à jour la compétence : {{name}}",
+        "versionLine": "Version amont : {{current}} → {{upstream}}",
+        "noChanges": "À jour — identique à la source amont.",
+        "bodyChanged": "Corps de la compétence modifié",
+        "bodyUnchanged": "Corps de la compétence inchangé",
+        "countsLine": "{{added}} ajoutés · {{changed}} modifiés · {{removed}} supprimés · {{unchanged}} inchangés",
+        "status": {
+          "added": "Ajouté",
+          "removed": "Supprimé",
+          "changed": "Modifié",
+          "unchanged": "Inchangé"
+        },
+        "filesLabel": "Diff de fichiers ({{count}})",
+        "confirm": "Mettre à jour vers la version amont",
+        "updating": "Mise à jour…",
+        "success": "{{name}} mis à jour (rechargé à chaud, sans redémarrage)"
+      },
+      "zoneTitle": "Marché externe",
+      "zoneSubtitle": "Marchés de skills tiers non revus par la plateforme ; entrées avec origine et licence, et aperçu complet avant installation."
+    },
+    "chatwoot": {
+      "title": "Bureau CRM (Chatwoot)",
+      "connected": "Connecté",
+      "notConnected": "Non connecté",
+      "staleBadge": "Invalide",
+      "staleHint": "Votre token Chatwoot a été refusé — collez-en un nouveau pour récupérer.",
+      "pasteHint": "Collez le token API de VOTRE compte Chatwoot (Profil → Access Token). Votre surface d’outils et vos envois tournent sur votre propre tenant.",
+      "tokenLabel": "Token API Chatwoot",
+      "tokenPlaceholder": "Collez le token…",
+      "loginSection": "Identifiants de connexion pour le bureau intégré (facultatif)",
+      "loginEmail": "Email de connexion Chatwoot",
+      "loginPassword": "Mot de passe Chatwoot",
+      "loginHint": "Sert uniquement à vous connecter lors de l’ouverture du bureau dans cette plateforme. Laissez vide : l’entrée intégrée restera indisponible (les outils ne sont pas affectés).",
+      "save": "Connecter",
+      "disconnect": "Déconnecter",
+      "loginReady": "Intégration prête (identifiants enregistrés)",
+      "tokenOnly": "Token connecté — l’intégration nécessite des identifiants"
+    }
+  },
+  "help": {
+    "title": "Aide",
+    "subtitle": "Commandes, compétences et raccourcis clavier",
+    "commands": "Commandes",
+    "skills": "Compétences ({{count}})",
+    "emptySkills": "Aucune compétence chargée.",
+    "shortcuts": {
+      "title": "Raccourcis",
+      "send": "Envoyer le message",
+      "newline": "Nouvelle ligne",
+      "picker": "Ouvrir le sélecteur de commandes",
+      "dismiss": "Fermer le sélecteur / annuler",
+      "thinking": "Replier/déplier tous les blocs de réflexion",
+      "sessionMenu": "Menu contextuel de session (sur une ligne)"
+    },
+    "concepts": {
+      "title": "Comment ça marche",
+      "attachments": "Les pièces jointes sont d’abord envoyées à votre bibliothèque ; le message les référence en @doc: — les réponses s’appuient sur le contenu du document.",
+      "knowledge": "La page Connaissances gère votre collection ; les fichiers joints dans le chat arrivent dans la même collection.",
+      "sessions": "Les sessions sont stockées dans la base locale ; changez via la liste latérale, marquez l’URL (/chat/<id>).",
+      "tools": "Les blocs d’outil montrent les appels réels : bleu = en cours, vert = terminé, rouge = échec ; cliquez pour déplier."
+    },
+    "tabs": {
+      "start": "Prise en main",
+      "guides": "Guides par scénario",
+      "reference": "Commandes et raccourcis"
+    },
+    "start": {
+      "title": "Trois pas pour démarrer",
+      "s1": "Choisissez un expert : via le sélecteur en haut de Discussion, ou installez un agent sectoriel dans Agents.",
+      "s2": "Énoncez le besoin : briefez comme un collègue et déposez les fichiers dans la zone de saisie.",
+      "s3": "Récupérez les résultats : ce que produit l’agent est enregistré automatiquement dans Résultats.",
+      "replay": "Revoir la visite",
+      "glossaryTitle": "À quoi correspondent les noms",
+      "glossary": {
+        "library": "Bibliothèque — les documents que vous donnez à l’agent ; les réponses s’appuient dessus.",
+        "outputs": "Résultats — graphiques et fichiers produits pour vous, enregistrés automatiquement.",
+        "experts": "Experts — rôles de conversation qui connaissent un métier ; à choisir ou créer dans Agents.",
+        "packs": "Agents sectoriels — un expert et ses outils installés en un clic."
+      },
+      "starterTitle": "Équipes de démarrage officielles (ordre recommandé)",
+      "starterRole": {
+        "preferred": "Commencez ici",
+        "secondary": "Démos suivantes",
+        "advanced": "Approfondissements"
+      },
+      "starterNote": "L'installation est une action explicite par pack — abonnez-vous par nom dans la Place des Matériaux d'Agents, provisionnez, puis confirmez dans le cockpit avant d'allumer."
+    },
+    "guidesEmpty": "Pas encore de guides par scénario."
+  },
+  "botsPage": {
+    "title": "Bots",
+    "subtitle": "Connectez l'assistant aux conversations WeCom, Feishu, Telegram et WeChat Official Account.",
+    "addBot": "Ajouter un bot",
+    "editBot": "Modifier le bot",
+    "empty": "Aucun bot configuré pour l'instant.",
+    "formHint": "Les identifiants sont stockés sur le serveur et ne sont jamais renvoyés au navigateur.",
+    "type": "Plateforme",
+    "name": "Nom",
+    "enabled": "Activé",
+    "keepStored": "Configuré — laisser vide pour conserver",
+    "copy": "Copier",
+    "webhookCopied": "URL du webhook copiée",
+    "copyFailed": "Impossible de copier l'URL du webhook",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "confirmDeleteTitle": "Supprimer le bot ?",
+    "confirmDelete": "Cela supprime définitivement « {{name}} » et ses identifiants.",
+    "gridHint": "Cliquez sur une plateforme pour ajouter un bot de ce type.",
+    "configuredTitle": "Bots configurés",
+    "saved": "Enregistré",
+    "qr": {
+      "title": "Accès utilisateur (QR)",
+      "resolving": "Résolution…",
+      "copyLink": "Copier le lien",
+      "linkCopied": "Lien copié",
+      "manualPrompt": "Pas encore de lien d'entrée — collez l'URL que les utilisateurs doivent ouvrir, puis enregistrez.",
+      "manualPlaceholder": "https://…",
+      "saveLink": "Enregistrer le lien",
+      "resolveFailed": "Impossible de générer le QR :",
+      "disabledNote": "Le bot est désactivé — le QR affiche encore son entrée.",
+      "hint": {
+        "telegram": "Ouvrez ce lien dans Telegram et appuyez sur Start.",
+        "wechatOa": "Scannez avec WeChat pour suivre et ouvrir le compte officiel.",
+        "manual": "Scannez le code pour ouvrir l'accès du bot."
+      }
+    },
+    "types": {
+      "telegram": "Telegram",
+      "feishu": "Feishu / Lark",
+      "wecom": "WeCom",
+      "wechat-oa": "Compte officiel WeChat",
+      "wecom-bot": "Bot WeCom (groupes)"
+    },
+    "effort": "Profondeur de raisonnement",
+    "effortInherit": "Hériter (par défaut)",
+    "contextBudget": "Budget de contexte (tokens/tour)",
+    "contextBudgetUnlimited": "Illimité",
+    "persona": "Identité (persona public)",
+    "personaPlaceholder": "ex. : Vous êtes Zhiyu, l'assistant public de cette plateforme. Répondez uniquement aux questions sur les fonctionnalités et la mise en route.",
+    "personaHint": "Laissez vide pour le libellé neutre par défaut : il nomme le bot, répond uniquement à partir de ses propres connaissances et n'imite jamais un opérateur ni un rôle interne.",
+    "allowTools": "Autoriser les appels d'outils",
+    "allowToolsHint": "Désactivé par défaut. Sans effet tant que le plafond de déploiement n'est pas activé ; une fois activé, les réponses de ce bot peuvent contenir une sortie d'outil.",
+    "roomBinding": {
+      "label": "Room binding (Zhiyu)",
+      "hint": "Route this bot's group messages into the room; the room's answers come back with seat attribution.",
+      "placeholder": "room id starting with zy_",
+      "bind": "Bind",
+      "unbind": "Unbind"
+    },
+    "disabled": "désactivé"
+  },
+  "assistant": {
+    "name": "Assistant {{brand}}",
+    "brand": "Platform"
+  },
+  "login": {
+    "title": "Connexion",
+    "description": "Ce déploiement utilise le connexion unique de votre organisation. Connectez-vous pour accéder à {{company}}.",
+    "action": "Se connecter avec le SSO",
+    "logout": "Déconnexion",
+    "loadFailed": "Impossible de charger l’état d’authentification : {{error}}",
+    "stateError": "La session de connexion a expiré ou ne correspond pas. Réessayez.",
+    "callbackError": "Échec de la connexion. Réessayez."
+  },
+  "settings": {
+    "title": "Paramètres",
+    "billingMode": "Mode de facturation",
+    "billingModeBilled": "Régler via la clé de facturation du siège (par défaut)",
+    "billingModeShowcase": "Mode démonstration (gratuit par conception ; non facturé attendu)",
+    "billingModeHint": "En mode démonstration, un siège sans clé de facturation répond quand même et est enregistré comme non facturé attendu ; le budget quotidien et le plafond de réponses restent appliqués.",
+    "sections": {
+      "general": "Général",
+      "account": "Compte",
+      "models": "Modèles",
+      "mcp": "Outils et compétences",
+      "skills": "Outils et compétences",
+      "channels": "Canaux",
+      "diagnostics": "Diagnostic",
+      "wechat-app": "Mini-programme WeChat",
+      "branding": "Image de marque du déploiement",
+      "status": "État du système",
+      "packs": "Agents",
+      "presets": "Préréglages perso",
+      "devices": "Appareils appariés",
+      "roles": "Rôles utilisateur",
+      "layout": "Disposition de l'espace",
+      "connections": "Connexions",
+      "plugins": "Extensions",
+      "delegation": "Délégation des décisions",
+      "pairing": "Appairage",
+      "mandate": "Mandat",
+      "mandateIntake": "Entrée des sujets"
+    },
+    "groups": {
+      "basics": "Général",
+      "capabilities": "Capacités",
+      "management": "Gestion"
+    },
+    "general": {
+      "theme": "Thème",
+      "themeHint": "Suivre le système ou en choisir un.",
+      "themeOption": {
+        "light": "Clair",
+        "dark": "Sombre",
+        "system": "Système"
+      }
+    },
+    "account": {
+      "title": "Compte",
+      "email": "E-mail connecté",
+      "openHint": "Cette instance est ouverte et ne nécessite pas de compte.",
+      "signedOutHint": "Connectez-vous via le SSO de votre organisation pour utiliser cette instance.",
+      "optionalSsoHint": "Connectez-vous avec le SSO de votre organisation pour conserver votre modèle et vos préférences MCP sur ce runtime partagé."
+    },
+    "wechat-app": {
+      "title": "Mini-programme WeChat",
+      "scanHint": "Dans le mini-programme, appuyez sur 扫码绑定 depuis la page de connexion, puis scannez ce code.",
+      "typeHint": "Pas d'appareil photo, ou le scan ne fonctionne pas ? Saisissez les 6 chiffres sur cette même page du mini-programme : c'est le même code.",
+      "validity": "Usage unique, valable 5 minutes.",
+      "expiresIn": "Expire dans {{time}}",
+      "expired": "Ce code a expiré.",
+      "refresh": "Actualiser",
+      "retry": "Réessayer",
+      "loading": "Récupération…",
+      "signedOut": "Connectez-vous pour associer ce compte à votre WeChat.",
+      "signIn": "Se connecter",
+      "openInstance": "Cette instance est ouverte et sans compte : il n'y a rien à associer au mini-programme.",
+      "unavailable": "Ce serveur est antérieur à la version qui génère les codes de liaison ; mettez-le à jour pour associer le mini-programme.",
+      "error": "Impossible d'obtenir un code de liaison."
+    },
+    "branding": {
+      "title": "Image de marque du déploiement",
+      "hint": "Comment ce déploiement se présente sur la page de connexion et dans l'onglet du navigateur. Les champs vides reviennent aux variables d'environnement ou aux valeurs intégrées.",
+      "companyName": "Nom de l'entreprise",
+      "assistantName": "Nom de l'assistant",
+      "brandIconUrl": "URL de l'icône de marque",
+      "brandIconUrlHint": "Affichée sur la carte de connexion et comme icône d'onglet. Doit être une URL http(s)://.",
+      "loginFooterText": "Texte du pied de page de connexion",
+      "loginFooterTextHint": "Une ligne sous la carte de connexion. Vide = aucun pied de page.",
+      "loginHero": "Hero de la page de connexion",
+      "loginHeroHint": "Panneau marketing facultatif à côté de la carte de connexion. Non configuré, la carte neutre reste (forme par défaut). Résolution : langue actuelle, sinon anglais, sinon rien.",
+      "loginHeroLocale": "Langue",
+      "loginHeroTitle": "Titre",
+      "loginHeroSubtitle": "Sous-titre",
+      "loginHeroImageUrl": "URL de l'image (facultatif)",
+      "loginHeroPoints": "Points",
+      "loginHeroPointsHint": "Un par ligne, jusqu'à 4.",
+      "loginHeroLinks": "Liens",
+      "loginHeroLinksHint": "Une « libellé | https://url » par ligne, jusqu'à 4.",
+      "loginHeroLineError": "Ligne {{line}} invalide : format « libellé | https://url ».",
+      "saved": "Enregistré — actualisez pour voir la nouvelle marque partout.",
+      "saveFailed": "Échec de l'enregistrement : {{error}}"
+    },
+    "devices": {
+      "title": "Appareils appariés",
+      "scanHint": "Dans l'écran d'appairage de l'app mobile, touchez Scanner et visez le code QR : il porte à la fois l'adresse de cette instance et le code.",
+      "typeHint": "Pas d'appareil photo sous la main ? Saisissez l'adresse du serveur et les mêmes 6 chiffres dans l'écran d'appairage.",
+      "validity": "À usage unique, valable 5 minutes.",
+      "expiresIn": "Expire dans {{time}}",
+      "expired": "Le code d'appairage a expiré.",
+      "refresh": "Actualiser",
+      "retry": "Réessayer",
+      "loading": "Chargement…",
+      "signedOut": "Connectez-vous pour appairer ce compte avec l'app.",
+      "signIn": "Se connecter",
+      "openInstance": "Cette instance est en accès libre sans comptes — rien à appairer.",
+      "unavailable": "Ce serveur est antérieur à l'appairage d'appareils ; mettez-le à jour pour appairer l'app.",
+      "error": "Échec de récupération du code d'appairage.",
+      "listTitle": "Appareils appariés",
+      "listError": "Échec du chargement de la liste des appareils.",
+      "empty": "Aucun appareil apparié pour l'instant. Appariez le premier avec le code ci-dessus.",
+      "boundAt": "Apparié {{time}}",
+      "revokeConfirm": "Révoquer cet appareil ?",
+      "revoke": "Révoquer",
+      "cancel": "Annuler",
+      "machinesPointer": "L'appairage, la liste et la dissociation des machines d'agents (intendant en arrière-plan) ont été déplacés vers la page « Machines » dans la navigation supérieure."
+    },
+    "websearch": {
+      "subtitle": "Le service de recherche qui alimente l'outil web_search de l'agent. Laissez vide pour utiliser la configuration intégrée de ce déploiement.",
+      "urlLabel": "URL du service de recherche",
+      "urlPlaceholder": "http://127.0.0.1:4597",
+      "tokenLabel": "Jeton d'accès",
+      "tokenPlaceholder": "Collez le jeton",
+      "tokenStoredPlaceholder": "Enregistré ({{hint}}) — saisissez pour remplacer",
+      "tokenHint": "Écriture seule : les jetons enregistrés ne sont jamais affichés. Laissez vide pour conserver l'actuel.",
+      "clearToken": "Effacer le jeton enregistré (revenir au réglage du déploiement)",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré",
+      "testing": "Test en cours…",
+      "sourceStored": "Enregistré ici",
+      "sourceEnv": "Réglage du déploiement",
+      "unconfiguredHint": "Non configuré — la recherche web de l'agent se déclarera indisponible tant qu'aucun service n'est indiqué.",
+      "scopeHint": "L'enregistrement réécrit immédiatement le câblage des outils de l'agent ; aucun redémarrage nécessaire.",
+      "byok": {
+        "title": "Ma clé de recherche",
+        "subtitle": "Apportez votre propre clé de fournisseur de recherche. Si elle est définie, vos recherches l'utilisent ; sinon, ou en cas d'échec, le pool partagé vous sert.",
+        "keyLabel": "Ma clé (SerpAPI)",
+        "keyPlaceholder": "Collez votre clé",
+        "keyStoredPlaceholder": "Enregistrée — saisissez pour remplacer",
+        "storedBadge": "Enregistrée ({{hint}})",
+        "keyHint": "Écriture seule : les clés enregistrées ne sont jamais affichées. Vos recherches utilisent d'abord votre clé ; en cas d'échec, retour automatique au pool partagé.",
+        "clear": "Supprimer ma clé",
+        "noKeyHint": "Aucune clé définie — les recherches utilisent le pool partagé.",
+        "servedUser": "avec votre clé",
+        "servedPool": "avec le pool partagé",
+        "servedFallback": "votre clé a échoué — retour au pool partagé"
+      },
+      "shared": {
+        "title": "Service de recherche partagé",
+        "subtitle": "Le câblage du relais de ce déploiement et son pool de clés partagé (admin). Les utilisateurs sans clé propre sont servis par ce pool.",
+        "poolTitle": "État du pool partagé",
+        "poolUsage": "{{day}} : {{used}} recherches avec des clés utilisateur, {{fallback}} retours au pool",
+        "poolUnreachable": "Statistiques du relais injoignables",
+        "upstreamLane": "Amont : voie de recherche de la passerelle (ciyuan)",
+        "upstreamLaneErrors": "{{count}} erreur(s) de voie",
+        "upstreamLaneDown": "Voie indisponible — plus de secours froid ; la recherche échoue jusqu'au rétablissement de la voie"
+      },
+      "test": "Tester la connexion",
+      "testStates": {
+        "ok": "Connecté",
+        "auth-rejected": "Jeton refusé",
+        "upstream-degraded": "Joignable, mais le fournisseur de recherche est dégradé",
+        "unreachable": "Service injoignable",
+        "invalid-url": "Saisissez d'abord une URL http(s) valide"
+      }
+    },
+    "roles": {
+      "intro": "Attribuez à chaque utilisateur un rôle métier. Le rôle principal détermine sa disposition et son expert par défaut ; le statut d'administrateur est indépendant des rôles métier.",
+      "loading": "Chargement…",
+      "empty": "Aucun utilisateur pour l'instant. Ils apparaîtront ici après leur première visite.",
+      "primaryLabel": "Rôle principal",
+      "adminLabel": "Administrateur"
+    },
+    "layout": {
+      "intro": "Choisissez la disposition par défaut du déploiement et les dispositions par rôle, et masquez des surfaces pour tous. Les surfaces masquées restent accessibles par leur route ; seule l'entrée disparaît.",
+      "defaultPreset": "Préréglage par défaut du déploiement",
+      "defaultPresetHint": "S'applique à tout utilisateur sans préréglage de rôle.",
+      "presets": {
+        "standard-snapshot": "Standard (disposition actuelle)",
+        "simple": "Simple (surfaces de travail ciblées)"
+      },
+      "rolePresets": "Préréglages par rôle",
+      "rolePresetsHint": "Le préréglage d'un rôle restreint le défaut pour ses utilisateurs. « Hériter » conserve le défaut.",
+      "roleInherit": "Hériter",
+      "hiddenSurfaces": "Masquées pour tous",
+      "hiddenSurfacesHint": "Définitif : aucun utilisateur ne peut les réactiver pour lui-même.",
+      "groupNav": "Navigation",
+      "groupSettings": "Sections des réglages",
+      "groupAgentsTabs": "Onglets des agents",
+      "loading": "Chargement…",
+      "workbenchTitle": "Personnaliser l'espace",
+      "workbenchHint": "Masquez ou réordonnez les surfaces disponibles pour vous. Cela n'affecte que votre compte.",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "hide": "Masquer",
+      "restore": "Restaurer la disposition héritée"
+    },
+    "connections": {
+      "subtitle": "Gérez vos connexions aux services externes — outils, recherche et modèles fonctionnent une fois leur connexion active. Les identifiants sont en écriture seule.",
+      "glossary": {
+        "title": "Qui est qui ? (déplie l'aide-mémoire)",
+        "ciyuan": {
+          "name": "Wanxing Ciyuan",
+          "desc": "La passerelle de capacités IA : modèles, recherche et voix par couloir, au volume; Liez votre compte pour facturer sur votre propre quota."
+        },
+        "facet": {
+          "name": "Facet",
+          "desc": "La Place des Matériaux d'Agents — où skills, serveurs MCP et personas sont publiés."
+        },
+        "connector": {
+          "name": "Connecteur Wanxing",
+          "desc": "Le service de connexion SaaS — héberge vos identifiants externes pour les agents."
+        },
+        "wire": {
+          "name": "Wire",
+          "desc": "Ligne métier — tickets de demande, requêtes de données et abonnements."
+        },
+        "lex": {
+          "name": "Lex",
+          "desc": "Ligne métier — comptes, usage et gestion des identifiants de récupération."
+        }
+      },
+      "cards": {
+        "ciyuanAccount": {
+          "subtitle": "Liez votre compte 词元 : les conversations sont facturées sur votre propre quota et la même clé alimente les outils d'exploitation 萬星."
+        },
+        "facetGroup": {
+          "title": "Facet"
+        },
+        "registry": {
+          "subtitle": "Connexion au marché d'outils — installe les outils et active le MCP du registre."
+        },
+        "facetMarket": {
+          "subtitle": "Appairage de l'appareil du marché — active le MCP Facet."
+        },
+        "connector": {
+          "subtitle": "Comptes du connecteur — hébergent des identifiants SaaS et débloquent l'écosystème."
+        },
+        "lines": {
+          "subtitle": "Identifiants des opérations par ligne — Wire/Lex se frappent en silence ; Wanxing Caller prend une clé de facturation."
+        },
+        "paperTrading": {
+          "subtitle": "Identifiant de trading simulé — collez un token fdt_ pour débloquer les outils."
+        },
+        "search": {
+          "title": "Service de recherche",
+          "subtitle": "Identifiants et câblage de la recherche web : votre clé et le service partagé (admin)."
+        },
+        "chatwoot": {
+          "subtitle": "Votre propre tenant Chatwoot — collez votre token ; l'agent et le bureau tournent sur votre compte"
+        }
+      },
+      "bindings": {
+        "title": "Besoins de connecteur des packs installés",
+        "summary": "{{packs}} packs · {{bindings}} liaisons · {{unresolved}} à résoudre · {{unwired}} lacunes",
+        "optional": "Facultatif",
+        "action": {
+          "connect": "Connecter",
+          "grant": "Autoriser",
+          "reconnect": "Reconnecter",
+          "revoke": "Révoquer l’autorisation",
+          "chooseSystem": "Choisir le système",
+          "changeSystem": "Changer de système"
+        },
+        "grantedAt": "Autorisé {{when}}",
+        "actionFailed": "L’action n’a pas abouti : {{error}}",
+        "state": {
+          "satisfied": "Connecté",
+          "missing": "Non connecté",
+          "stale": "Expiré",
+          "unwired": "Lacune de capacité",
+          "undetermined": "Indéterminé",
+          "unmapped": "Choisir un système"
+        },
+        "hint": {
+          "unwired": "Le catalogue de connecteurs ne couvre pas une opération déclarée par ce pack — aucun compte ne peut la combler.",
+          "undetermined": "Les faits du catalogue sont indisponibles, l'état reste indéterminé.",
+          "unmapped": "Ce pack a besoin d'un système qu'il désigne par rôle. Indiquez celui que vous utilisez — rien ne manque dans le catalogue et rien n'est encore à connecter."
+        },
+        "operations": {
+          "read": "lecture",
+          "write": "écriture"
+        },
+        "choose": {
+          "placeholder": "Choisissez l'un de vos systèmes connectés…",
+          "empty": "Aucun de vos systèmes connectés ne couvre ce dont ce pack a besoin — connectez-en un dans la console du connecteur.",
+          "unavailable": "Impossible de lire vos systèmes connectés pour le moment.",
+          "currentNotUsable": "actuellement choisi, indisponible",
+          "emptyButRejected": "Vos systèmes connectés ne couvrent pas ce dont ce pack a besoin :",
+          "gapsMissing": "manque {{gaps}}"
+        },
+        "summaryUnmapped": "{{count}} en attente de votre choix",
+        "browseCatalog": "Parcourir le répertoire des applications"
+      },
+      "filterPlaceholder": "Filtrer les connexions…"
+    },
+    "lines": {
+      "title": "Opérations par ligne",
+      "subtitle": "Identifiants des MCP d'opérations",
+      "wire": {
+        "title": "Opérations Wire",
+        "hint": "Identifiant demandes/requêtes/abonnements (frappe silencieuse, auto-renouvelé)"
+      },
+      "lex": {
+        "title": "Opérations Lex",
+        "hint": "Identifiant comptes/usage/récupération (frappe silencieuse, auto-renouvelé)"
+      },
+      "connect": "Connecter",
+      "connecting": "Connexion…",
+      "connected": "Connecté",
+      "connectedUntil": "Connecté · jusqu'au",
+      "stale": "Expiré — reconnectez",
+      "notConnected": "Non connecté",
+      "unknown": "…",
+      "save": "Enregistrer",
+      "pasteKey": "Coller la clé",
+      "mintFailed": "Connexion inachevée — réessayez",
+      "footnote": "Quand un ID token de courte durée expire, ses outils se mettent en pause ; cliquer sur Connecter le réémet en silence (sans interaction tant que la session Logto vit)."
+    },
+    "facetMarket": {
+      "title": "Marché Facet",
+      "connectedAs": "Connecté",
+      "notConnected": "Non connecté",
+      "staleHint": "Appareil révoqué — réappairez",
+      "silentHint": "L'identifiant se renouvelle seul",
+      "pairHint": "Générez un code à 6 chiffres dans les réglages du marché et collez-le ici",
+      "pair": "Appairer",
+      "openSettings": "Ouvrir les réglages du marché →",
+      "tokenUntil": "Identifiant valide jusqu'au"
+    },
+    "ciyuanAccount": {
+      "title": "Compte 萬星·词元",
+      "hint": "Liez votre compte 词元 : une seule clé ouvre modèles, recherche et voix par voie ; la disponibilité suit votre forfait.",
+      "connected": "Connecté",
+      "stale": "Reconnexion requise",
+      "notConnected": "Non connecté",
+      "keyLine": "Clé",
+      "pastedSource": "Source : clé collée manuellement",
+      "laneCell": "La voie modèles est facturée sur votre quota 词元 ; la déconnexion revient à la clé du déploiement.",
+      "laneShared": "Ce déploiement est mono-processus : le compte ne sert qu'aux outils d'exploitation ; la voie modèles garde la clé du déploiement.",
+      "emailPlaceholder": "E-mail 词元",
+      "passwordPlaceholder": "Mot de passe 词元",
+      "connecting": "Liaison…",
+      "rebind": "Relier",
+      "bind": "Lier le compte",
+      "passwordNote": "Le mot de passe sert une seule fois à émettre la clé et n'est jamais conservé.",
+      "testing": "Test…",
+      "test": "Tester la connexion",
+      "testDone": "Testé",
+      "revokeHint": "Identifiant local supprimé. La clé existe toujours dans 词元 : révoquez-la sur token.finddatatech.cloud.",
+      "pasteInstead": "Vous avez déjà une clé ? Collez-la",
+      "probe": "Sonde",
+      "footnote": "Un 401 marque la clé comme à reconnecter ; relier émet une nouvelle clé. Le compte lié prime sur une clé collée."
+    },
+    "delegation": {
+      "hint": "Déléguez une partie de la file à l'adjoint de l'équipe d'agents ; le reste reste pour vous. Les catégories à haut risque (config, personnel, dépenses) restent toujours votre décision.",
+      "enabled": "Activer la délégation",
+      "routes": "Routage par catégorie",
+      "category": {
+        "routine-ops": "Opérations courantes",
+        "infra-ticket": "Incidents d'infrastructure",
+        "config-change": "Changements de config.",
+        "hr": "RH",
+        "spend": "Dépenses"
+      },
+      "ownerOnly": "non délégable",
+      "routeOwner": "Propriétaire",
+      "routeDeputy": "Adjoint",
+      "routeTriage": "Adjoint (suivi)",
+      "maxSeverity": "Gravité max délégable",
+      "dailyBudget": "Budget quotidien de décisions",
+      "save": "Enregistrer",
+      "saved": "Enregistré",
+      "digest": "Fréquence du résumé",
+      "digestDaily": "Quotidien",
+      "digestWeekly": "Hebdomadaire",
+      "digestOff": "Désactivé",
+      "model": "Modèle de décision",
+      "modelInherit": "Vide = hériter",
+      "modelHint": "Vide suit le modèle par défaut de l'équipe/cellule ; une valeur s'applique au poste d'adjoint dès sa prochaine ronde."
+    },
+    "searchPlaceholder": "Rechercher un réglage…",
+    "searchEmpty": "Aucun réglage correspondant",
+    "pairing": {
+      "tabs": {
+        "wechat": "Mini-programme",
+        "app": "Application bureau",
+        "machine": "Machines"
+      },
+      "machine": {
+        "body": "L'appairage, la convergence et le détachement des machines se font dans la console des machines : elle montre aussi l'état réel de chacune, un second assistant ici ne ferait que diverger.",
+        "open": "Ouvrir la console des machines"
+      }
+    },
+    "status": {
+      "tabs": {
+        "health": "Santé",
+        "trace": "Trace par tour"
+      }
+    },
+    "mandate": {
+      "title": "Mandat",
+      "hint": "Décidez, par domaine, jusqu'où l'agent peut agir : conseiller / rédiger / agir puis signaler / autonome. Les domaines non configurés ne font que conseiller et n'ont aucun quota.",
+      "domain": {
+        "ops": "Opérations d'équipe",
+        "external-comms": "Communication externe",
+        "advancement": "Avancement des tâches",
+        "research": "Production de recherche"
+      },
+      "mode": "Mode de décision",
+      "modeAdvise": "Conseiller seulement",
+      "modeDraft": "Rédiger et attendre",
+      "modeNotify": "Agir puis signaler",
+      "modeSilent": "Autonome, synthèse seule",
+      "quota": "Plafond quotidien d'actions",
+      "expiry": "Valable jusqu'au",
+      "revokeWindow": "Fenêtre de révocation (min)",
+      "readScope": "Peut lire",
+      "discloseScope": "Peut divulguer",
+      "scopeHint": "Lire n'est pas divulguer : les deux périmètres sont jugés séparément.",
+      "level": {
+        "public": "Public",
+        "internal": "Interne",
+        "confidential": "Confidentiel",
+        "hr": "RH",
+        "finance": "Finance"
+      },
+      "save": "Enregistrer",
+      "saved": "Enregistré",
+      "ledger": "Actions récentes de l'agent",
+      "ledgerEmpty": "Aucune action n'a encore été pilotée par un mandat.",
+      "ledgerDomain": "Domaine",
+      "ledgerMode": "Mode",
+      "ledgerReversible": "Réversible jusqu'à",
+      "ledgerIrreversible": "Irréversible",
+      "ledgerRevoked": "Révoquée",
+      "revoke": "Révoquer",
+      "revoked": "Révoquée",
+      "revokeClosed": "Fenêtre de révocation fermée",
+      "violations": "Bloqué aujourd'hui",
+      "violationsNone": "Rien n'a été bloqué aujourd'hui.",
+      "noDowngrade": "Les actions de publication et destructrices ne peuvent être que conseillées ou rédigées.",
+      "intake": {
+        "title": "Entrée des sujets",
+        "hint": "Décidez quels sujets entrent dans quel domaine. Tout est désactivé par défaut : rien n'est confié à l'agent avant activation. Cela ne décide que de l'entrée ; jusqu'où l'agent peut agir reste fixé par le mandat ci-dessus.",
+        "source": {
+          "cross-line-blocker": "Blocages inter-lignes",
+          "supplier-thread": "Formulation fournisseurs",
+          "people-schedule": "Personnes et planning"
+        },
+        "targetDomain": "Entre dans le domaine",
+        "enable": "Entrée",
+        "consistency": "Cohérence de comportement",
+        "consistencyValue": "{{rate}} ({{samples}} échantillons comparables)",
+        "consistencyNone": "Aucun échantillon comparable pour l'instant",
+        "cannotPromote": "Preuves insuffisantes : trop peu d'échantillons ou taux sous le seuil, impossible de passer à « agir puis signaler ».",
+        "candidates": "Règles de précédent en attente",
+        "candidatesEmpty": "Aucune règle candidate en attente.",
+        "candidateApprove": "Adopter",
+        "candidateReject": "Rejeter",
+        "candidateRejectPrompt": "Motif du rejet (conservé pour l'auditeur, évite les re-propositions)",
+        "candidateRejectRequired": "Un rejet exige un motif",
+        "rejections": "Candidates rejetées",
+        "levelSamples": "Échantillons par niveau de divulgation",
+        "levelSamplesHint": "L'envoi automatique est autorisé par niveau : un niveau sans échantillons suffisants ne peut pas être dit automatiquement.",
+        "levelMissing": "Échantillons insuffisants",
+        "levelReady": "Prêt"
+      }
+    }
+  },
+  "bindings": {
+    "myModel": "Mon modèle",
+    "saveAsMyModel": "Enregistrer comme mon modèle",
+    "saved": "Enregistré comme votre modèle",
+    "pending": "Enregistré — sera appliqué lorsque l’assistant sera inactif",
+    "globalSource": "Valeur globale utilisée",
+    "personalMcp": "Pour moi uniquement",
+    "apply": "Appliquer maintenant",
+    "applyFailed": "Impossible d’appliquer votre profil : {{error}}",
+    "signIn": "Connectez-vous pour conserver votre modèle et vos préférences MCP.",
+    "lockedMcp": "Verrouillé par votre administrateur",
+    "continueAnonymous": "Continuer sans se connecter"
+  },
+  "preview": {
+    "title": "Aperçu du fichier",
+    "close": "Fermer l’aperçu",
+    "download": "Télécharger",
+    "loading": "Chargement…",
+    "openLocal": "Aperçu d’un fichier local",
+    "openInDrawer": "Aperçu",
+    "noRenderer": "Aucun aperçu disponible pour ce type de fichier.",
+    "unavailable": "Ce fichier n’est plus disponible.",
+    "downloadName": "Télécharger {{name}}"
+  },
+  "share": {
+    "banner": "Session partagée — lecture seule, partagée par son propriétaire",
+    "loading": "Chargement de la session partagée…",
+    "unavailable": "Cette session partagée n'est plus disponible.",
+    "menuItem": "Partager",
+    "copied": "Lien copié dans le presse-papiers",
+    "failed": "Échec du partage : {{error}}",
+    "manage": "Liens partagés…",
+    "dialogTitle": "Liens partagés",
+    "dialogHint": "Toute personne disposant du lien peut voir la session. Révoquez pour couper l'accès.",
+    "none": "Aucun lien partagé actif.",
+    "revoke": "Révoquer"
+  },
+  "tasks": {
+    "title": "Automatisation",
+    "empty": "Aucune tâche pour l'instant — créez une tâche planifiée qui s'exécutera selon le plan.",
+    "projectFilter": "Filtrer par projet",
+    "projectAll": "Tous les projets",
+    "status": {
+      "scheduled": "Planifiée",
+      "running": "En cours",
+      "paused": "En pause",
+      "completed": "Terminée",
+      "expired": "Expirée",
+      "error": "Erreur",
+      "queued": "En attente",
+      "failed": "Échec",
+      "interrupted": "Interrompue",
+      "manual": "Déléguée",
+      "done": "Terminée"
+    },
+    "actions": {
+      "pause": "Pause",
+      "resume": "Reprendre",
+      "runNow": "Exécuter",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer cette tâche planifiée ?",
+      "output": "Résultat",
+      "rerun": "Relancer"
+    },
+    "fields": {
+      "agent": "Agent",
+      "nextRun": "Prochaine exécution",
+      "lastRun": "Dernière exécution",
+      "never": "jamais exécutée",
+      "missedRuns": "manquée {{count}} fois",
+      "missedTotal": "{{count}} manquées",
+      "lastOk": "réussie",
+      "lastFailed": "échouée",
+      "cluster": "Groupe {{name}} · {{count}} agents"
+    },
+    "schedule": {
+      "daily": "chaque jour à {{time}}",
+      "weekdays": "jours ouvrés à {{time}}",
+      "weeklyOn": "chaque {{days}} à {{time}}",
+      "everyNMinutes": "toutes les {{n}} minutes",
+      "everyMinute": "chaque minute",
+      "custom": "cron « {{expr}} »",
+      "once": "une fois, {{when}}"
+    },
+    "form": {
+      "title": "Nouvelle tâche",
+      "close": "Fermer",
+      "submit": "Créer la tâche",
+      "mode": {
+        "recurring": "Récurrente",
+        "once": "Unique"
+      },
+      "freq": {
+        "daily": "Quotidienne",
+        "weekly": "Hebdomadaire",
+        "custom": "Cron personnalisé"
+      },
+      "cronPlaceholder": "Expression cron, ex. */15 * * * *",
+      "namePlaceholder": "Nom (facultatif) — deviendra le titre de la session",
+      "promptPlaceholder": "Que doit faire l'agent à cet horaire ?",
+      "tz": "Fuseau horaire",
+      "every": "toutes les",
+      "maxRuns": "Exécutions max.",
+      "maxRunsPlaceholder": "illimité",
+      "onceAbsolute": "Heure précise",
+      "onceRelative": "Relatif à maintenant",
+      "minutesAfterNow": "minutes à partir de maintenant",
+      "unit": {
+        "minute": "minutes",
+        "hour": "heures",
+        "day": "jours",
+        "week": "semaines"
+      },
+      "errors": {
+        "prompt": "Un message est requis",
+        "maxRuns": "Le nombre max d'exécutions doit être un entier positif",
+        "intervalNumber": "L'intervalle doit être un entier 1–200",
+        "delayMinutes": "Le délai doit être un entier ≥ 1 (minutes)",
+        "weekday": "Choisissez au moins un jour",
+        "cron": "Saisissez une expression cron",
+        "when": "Choisissez date et heure"
+      }
+    },
+    "tool": {
+      "title": "Tâche planifiée",
+      "created": "Tâche créée depuis le chat",
+      "notFound": "État de la tâche indisponible — ouvrez la page Tâches."
+    },
+    "history": {
+      "title": "Historique ({{count}})",
+      "progress": "{{runs}}/{{cap}} exécutées",
+      "missed": "{{count}} manquées",
+      "state": {
+        "done": "fait",
+        "failed": "échec",
+        "interrupted": "interrompu",
+        "skipped": "ignoré",
+        "missed": "manqué"
+      }
+    },
+    "trigger": {
+      "schedule": "Planifiée",
+      "manual": "Déléguée"
+    },
+    "card": {
+      "title": "Tâche déléguée",
+      "tokens": "{{count}} tokens",
+      "remote": "Marché"
+    },
+    "summary": {
+      "label": "Résumé des tâches"
+    },
+    "nl": {
+      "label": "Quand exécuter ?",
+      "placeholder": "ex. les lundis à 8 h / tous les jours à 9 / toutes les 30 minutes",
+      "preview": "Exécution {{summary}} ({{cron}})",
+      "apply": "Appliquer au formulaire",
+      "fallback": "Non reconnu — utilisez les contrôles de fréquence ci-dessous."
+    },
+    "templates": {
+      "label": "Partir d’un modèle",
+      "briefing": {
+        "name": "Briefing quotidien",
+        "prompt": "Compile les points clés du jour de ton domaine en un briefing d’une page : sources, conclusions, veille de demain."
+      },
+      "weekly": {
+        "name": "Rapport hebdomadaire",
+        "prompt": "Transforme les conversations de la semaine en un rapport d’une page : réalisé, chiffres clés, plan de la semaine prochaine. Ton formel."
+      },
+      "inspection": {
+        "name": "Vérification horaire",
+        "prompt": "Fais une vérification de routine de tes métriques ou pages. Une phrase si tout va bien ; détails sinon."
+      }
+    }
+  },
+  "resources": {
+    "binding": {
+      "asOf": "arrêté à {{age}}",
+      "ageNow": "à l'instant",
+      "ageMinutes": "il y a {{count}} min",
+      "ageHours": "il y a {{count}} h",
+      "ageDays": "il y a {{count}} j",
+      "stale": "Les données peuvent être obsolètes",
+      "notRefreshable": "Actualisation non activée ici",
+      "refreshing": "Actualisation…",
+      "refresh": "Actualiser",
+      "refreshed": "Mis à jour · {{added}} ajoutés, {{revised}} modifiés",
+      "refreshUnchanged": "Déjà à jour",
+      "refreshFailed": "Échec de l'actualisation",
+      "unbind": "Délier",
+      "unbindConfirm": "Délier ce graphique de sa source de données ? Le graphique conserve les données actuelles comme instantané statique.",
+      "series": "Série {{index}}",
+      "periodLabel": "Périodes",
+      "period": {
+        "6m": "6 derniers mois",
+        "1y": "Dernière année",
+        "all": "Tout"
+      },
+      "periodCount": "{{count}} périodes stockées",
+      "periodShown": "{{count}} affichés",
+      "bindAction": "Lier une source de données",
+      "pickTitle": "Choisissez l'appel à l'origine de ce graphique",
+      "cancel": "Annuler",
+      "pickEmpty": "Ce tour n'a exécuté aucun appel de données liable.",
+      "pickPoints": "{{count}} points",
+      "attach": "Lier",
+      "timeline": "Historique",
+      "timelineTitle": "Historique des actualisations",
+      "timelineEmpty": "Aucune actualisation enregistrée.",
+      "window": {
+        "24h": "24 heures",
+        "7d": "7 jours",
+        "30d": "30 jours",
+        "all": "Tout l'historique"
+      },
+      "backToCurrent": "Revenir à l'actuel",
+      "viewingAsOf": "Affichage du graphique arrêté à {{moment}}",
+      "viewAsOf": "Voir à ce moment",
+      "historical": "Vue historique",
+      "trigger": {
+        "manual": "Manuelle",
+        "scheduled": "Planifiée",
+        "onOpen": "À l'ouverture"
+      },
+      "outcome": {
+        "ok": "Mis à jour",
+        "unchanged": "Inchangé",
+        "skipped_fresh": "Ignorée (données fraîches)",
+        "error": "Échec"
+      },
+      "count": {
+        "added": "{{count}} ajoutés",
+        "revised": "{{count}} révisés",
+        "resourced": "{{count}} d'une autre source",
+        "unchanged": "{{count}} inchangés",
+        "missing": "{{count}} manquants",
+        "anomalies": "{{count}} conflits"
+      },
+      "reason": {
+        "credential": "connexion requise",
+        "unreachable": "source injoignable",
+        "tool_error": "la source a renvoyé une erreur",
+        "unit_mismatch": "l'unité a changé",
+        "map_violation": "la forme de la réponse a changé",
+        "allowlist": "non activé pour l'actualisation",
+        "fresh": "encore frais"
+      }
+    },
+    "title": "Résultats",
+    "search": "Rechercher des ressources",
+    "count": "{{count}} éléments",
+    "loading": "Chargement des ressources…",
+    "loadMore": "Charger plus",
+    "error": "Impossible de charger la bibliothèque : {{message}}",
+    "empty": "Demandez un graphique ou un document à l’agent : le résultat arrive ici ; on peut aussi enregistrer depuis la discussion.",
+    "emptyFiltered": "Aucune ressource ne correspond à ce filtre.",
+    "chartUnrenderable": "Ce graphique n'a pas pu être affiché.",
+    "kind": {
+      "chart": "Graphique",
+      "file": "Fichier"
+    },
+    "filter": {
+      "all": "Tout",
+      "chart": "Graphiques",
+      "file": "Fichiers"
+    },
+    "actions": {
+      "save": "Enregistrer dans les ressources",
+      "rename": "Renommer",
+      "renameSave": "Enregistrer",
+      "delete": "Supprimer",
+      "deleteConfirm": "Supprimer cette ressource ? Action irréversible.",
+      "download": "Télécharger",
+      "jump": "Ouvrir la conversation"
+    },
+    "save": {
+      "saved": "Enregistré dans les ressources",
+      "exists": "Déjà dans les ressources",
+      "failed": "Échec de l'enregistrement : {{message}}",
+      "errors": {
+        "invalid_path": "Ce fichier est en dehors de l'espace de travail.",
+        "file_not_found": "Le fichier n'existe plus dans l'espace de travail.",
+        "file_too_large": "Le fichier est trop volumineux pour être enregistré.",
+        "db_unavailable": "La bibliothèque est indisponible pour le moment.",
+        "store_failed": "Échec de l'enregistrement. Réessayez."
+      }
+    },
+    "export": "Exporter la sélection ({{count}})",
+    "exporting": "Empaquetage…",
+    "selectHint": "Cochez des fichiers pour les exporter ensemble",
+    "time": {
+      "label": "Date",
+      "all": "Tout",
+      "today": "Aujourd'hui",
+      "7d": "7 derniers jours",
+      "30d": "30 derniers jours"
+    },
+    "group": {
+      "label": "Type",
+      "chart": "Graphiques",
+      "document": "Documents",
+      "spreadsheet": "Tableurs",
+      "image": "Images",
+      "slideshow": "Diapositives",
+      "archive": "Archives",
+      "web": "Web",
+      "data": "Données",
+      "other": "Autres"
+    },
+    "memory": {
+      "tier": {
+        "label": "Niveau",
+        "all": "Tous",
+        "draft": "Brouillon",
+        "stable": "Prêt",
+        "canonical": "Canonique"
+      },
+      "tags": {
+        "label": "Tags",
+        "prompt": "Edit tags (comma-separated)"
+      },
+      "actions": {
+        "remember": "Remember",
+        "pinCanonical": "Pin as canonical",
+        "unpinCanonical": "Unpin",
+        "editTags": "Edit tags"
+      }
+    }
+  },
+  "facetShell": {
+    "tabs": {
+      "intro": "Présentation",
+      "packs": "Agents",
+      "mcp": "Services MCP",
+      "mine": "Mes agents",
+      "curate": "Curation",
+      "docs": "Docs",
+      "studio": "Studio"
+    },
+    "langLabel": "Langue",
+    "packsFootnote": "Navigation anonyme ; connectez-vous pour publier et vous abonner. Usage de la CLI :",
+    "loginBanner": {
+      "state": "La connexion ne s'est pas terminée : échec de la vérification de session. Veuillez réessayer.",
+      "token": "La connexion ne s'est pas terminée : échec de l'échange de jetons. Veuillez réessayer.",
+      "generic": "La connexion ne s'est pas terminée. Veuillez réessayer.",
+      "retry": "Réessayer la connexion",
+      "dismiss": "Fermer"
+    },
+    "loggedInAs": "Connecté en tant que {{email}}",
+    "studioTitle": "Studio"
+  },
+  "facetDocs": {
+    "title": "Documentation",
+    "subtitle": "Tout ce qu'il faut pour passer d'un id de agent à une installation fonctionnelle : installer, connecter, créer.",
+    "packageNote": "Paquet CLI publié :",
+    "nav": {
+      "install": "Installer",
+      "mcp": "Accès MCP",
+      "create": "Créer"
+    },
+    "install": {
+      "title": "Installer un agent",
+      "lead": "Abonnez-vous sur le marché, puis installez l'instantané d'une version dans l'outil que vous utilisez. 壹座 est la voie de première classe — sans ligne de commande. La CLI couvre cinq éditeurs.",
+      "marketNote": "Marché : parcourez et copiez l'id de l'agent sur",
+      "yizuoTab": "壹座 (sans CLI)",
+      "yizuo": {
+        "title": "壹座 — la voie de première classe",
+        "body": "Connectez-vous à 壹座 avec la même identité que ce marché, abonnez-vous à un agent, puis installez-le dans votre runtime de conversation en un clic — les identifiants MCP sont déjà câblés.",
+        "step1": "Parcourez le marché et abonnez-vous à un agent.",
+        "step2": "Dans 壹座, ouvrez Réglages → Agents → Mes agents.",
+        "step3": "Installez l'agent abonné — ses compétences, références MCP et personas d'agent arrivent ensemble."
+      },
+      "client": {
+        "skillDir": "Les compétences sont écrites dans",
+        "mcpFile": "Fichier de configuration MCP natif :",
+        "deepGuide": "Guide détaillé de ce client (dépôt public)",
+        "selfHost": "Facet auto-hébergé : ajoutez --base vers votre propre instance"
+      }
+    },
+    "clients": {
+      "claude-code": {
+        "label": "Claude Code",
+        "body": "Les compétences s'installent comme instantané de version ; une fois une clé d'appel enregistrée, les références MCP de l'agent peuvent être écrites dans sa configuration MCP native."
+      },
+      "cursor": {
+        "label": "Cursor",
+        "body": "Les compétences vont dans le répertoire de compétences de Cursor ; les entrées MCP sont écrites dans le fichier de configuration propre à Cursor."
+      },
+      "zcode": {
+        "label": "ZCode",
+        "body": "Les compétences vont dans le répertoire de compétences de ZCode ; les entrées MCP sont écrites dans la configuration CLI de ZCode."
+      },
+      "codex": {
+        "label": "Codex CLI",
+        "body": "Les compétences vont dans le répertoire de compétences de Codex ; les entrées MCP sont écrites en TOML dans la configuration de Codex."
+      },
+      "gemini-cli": {
+        "label": "Gemini CLI",
+        "body": "Les compétences vont dans le répertoire de compétences de Gemini CLI ; les entrées MCP utilisent sa forme httpUrl."
+      }
+    },
+    "mcp": {
+      "title": "Connecter les services MCP",
+      "lead": "Les agents référencent des serveurs MCP qui passent par la passerelle du registre. Deux voies de connexion : la voie universelle par clé d'appel et la voie native du client par découverte OAuth.",
+      "keyPath": {
+        "title": "Clé d'appel (universelle)",
+        "body": "Créez une clé wgk- dans la console du registre ; la CLI la vérifie et l'enregistre localement (0600). Ensuite, install peut écrire la configuration MCP native de chaque cible avec cette clé.",
+        "mintNote": "Créez des clés dans la console du registre :"
+      },
+      "oauthPath": {
+        "title": "Découverte OAuth (native du client)",
+        "body": "Le registre répond aux requêtes MCP non authentifiées par un en-tête WWW-Authenticate pointant vers les métadonnées de ressource protégée, et sert les documents de découverte standards — les clients compatibles peuvent terminer l'autorisation dans le navigateur.",
+        "honest": "L'absence de saisie manuelle dépend du support OAuth de votre client ; l'enregistrement dynamique de clients n'est pas proposé."
+      },
+      "essentials": {
+        "title": "Points clés",
+        "quota": "Les appels sont gratuits dans le quota mensuel ; au-delà, ils sont refusés avec 402 et réinitialisés le mois suivant.",
+        "tier": "Les serveurs de niveau payant (p. ex. law-bench) refusent les clés community avec une invitation à changer de niveau nommant celui-ci.",
+        "revoke": "Les clés peuvent être révoquées dans la console du registre à tout moment ; la copie locale peut être effacée depuis la CLI."
+      }
+    },
+    "create": {
+      "title": "Créer et publier un agent",
+      "lead": "La publication exige le groupe creators. Trois voies de création ; toutes passent par la même porte de publication et les versions publiées sont immuables.",
+      "routesTitle": "Trois voies de création",
+      "route1": "Dans 壹座 : Réglages → Agents → Nouveau agent — composez compétences, références MCP et personas sous forme de brouillon.",
+      "route2": "Conversion en un clic : transformez un preset personnel en brouillon de agent (Réglages → Presets personnalisés → Publier), avec un rapport de ce qui a été repris et de ce qui reste à remplacer.",
+      "route3": "Depuis la console d'auteur (#/mine) : soumettez un manifest directement à l'endpoint de publication ; les erreurs de validation s'affichent telles quelles.",
+      "disciplineTitle": "Discipline de publication",
+      "versions": "Chaque publication ajoute une version immuable ; chaque version peut porter une note courte (≤500 caractères).",
+      "subscribe": "S'abonner et installer sont deux actes : l'abonnement est enregistré sur le marché ; l'installation prend un instantané de version précis.",
+      "gate": "Seuls les serveurs MCP enregistrés au registre peuvent être référencés ; les entrées d'agent sont limitées au persona.",
+      "deepGuide": "Guide détaillé de création (dépôt public)"
+    },
+    "matrix": {
+      "title": "Matrice de capacités",
+      "capability": "Capacité",
+      "skillsUser": "Compétences · niveau utilisateur",
+      "skillsProject": "Compétences · niveau projet",
+      "mcpUser": "Config MCP · niveau utilisateur",
+      "mcpProject": "Config MCP · niveau projet",
+      "marketplace": "Forme marketplace de plugins",
+      "verified": "Vérification réelle",
+      "note": "Chaque cellule renvoie à un fait de code ou à un enregistrement vérifié.",
+      "deepDoc": "Matrice complète avec sources →"
+    }
+  },
+  "facetIntro": {
+    "title": "Mille facettes — la Place des Matériaux d'Agents",
+    "subtitle": "Un agent réunit compétences, références MCP et personas — parcourir, s'abonner, publier, et installer dans Claude Code / Cursor en une ligne",
+    "factRow": "Navigation anonyme ; connectez-vous pour publier et vous abonner (même identité que Platform)",
+    "ctaPacks": "Parcourir les agents",
+    "ctaMcp": "Voir les services MCP",
+    "card": {
+      "contents": {
+        "title": "Ce que contient un agent",
+        "body": "Compétences, références MCP et personas d'agents, plus la version, les étiquettes et l'auteur. La vue détaillée expose le texte intégral de chaque compétence et l'historique des versions."
+      },
+      "install": {
+        "title": "S'abonner et installer sont deux actes",
+        "body": "L'abonnement est enregistré dans le marché — le même marché et la même identité que la Store intégrée à Platform. Installer met le contenu sur votre poste de travail ; il existe trois chemins."
+      },
+      "version": {
+        "title": "Instantanés de version",
+        "body": "L'installation prend une version précise ; relancer install prend un nouvel instantané. La CLI n'écrit aucune configuration MCP et ne détient aucun identifiant — ils sont raccordés dans Platform."
+      }
+    },
+    "pathTitle": "Fonctionnement",
+    "quickTitle": "Démarrage rapide",
+    "quickArg": "<id de l'agent ou une URL contenant l'id>",
+    "quickNote": "Installe dans Claude Code par défaut ; --target cursor et --project <dir> sont optionnels.",
+    "quickHelpPrefix": "Autres usages :",
+    "lineLink": "Site officiel FindData — ligne Facet →",
+    "pathGraph": {
+      "market": "Marché Facet",
+      "creator": "Créateur",
+      "platform": "Platform (壹座)",
+      "editors": "Claude Code / Cursor",
+      "edgePublish": "publier",
+      "edgeSubscribe": "s'abonner · installation en un clic dans l'environnement de conversation",
+      "edgeSubscribeNote": "Les identifiants MCP sont déjà câblés dans Platform",
+      "edgeCli": "installation par CLI",
+      "edgeCliNote": "instantané de la compétence sur disque ; références MCP imprimées"
+    }
+  },
+  "facetFooter": {
+    "tagline": "La Place des Matériaux d'Agents pour les éditeurs d'IA",
+    "contactLabel": "Contact",
+    "linesLabel": "Lignes de produits FindData",
+    "lines": {
+      "base": "Base",
+      "lex": "Lex",
+      "wire": "Wire",
+      "facet": "Facet",
+      "constellation": "Constellation"
+    },
+    "current": "Site actuel",
+    "entriesLabel": "Accès",
+    "entries": {
+      "packs": "Place des Matériaux d'Agents",
+      "mcp": "Catalogue des services MCP",
+      "line": "Page de la ligne Facet"
+    },
+    "mission": "FindData construit une infrastructure de traitement de texte et de données pour l'ère de l'IA, en promouvant l'égalité d'accès à l'information et, à terme, l'équité sociale.",
+    "copyright": "© 2026 FindData · Facet"
+  },
+  "packs": {
+    "tabs": {
+      "market": "Marché",
+      "mine": "Mien"
+    },
+    "market": {
+      "galleryTitle": "Agents officiels — aperçu spec, les trois buckets complets dans le détail",
+      "searchPlaceholder": "Rechercher des agents…",
+      "search": "Rechercher",
+      "empty": "Aucun agent sur le marché pour l'instant.",
+      "staleLocale": "Impossible d'actualiser cette vue dans la nouvelle langue — le contenu est encore dans la langue précédente. Réessayez ou rechargez.",
+      "domains": "Domaines",
+      "lineEmpty": "Rien de publié sur cette ligne pour l'instant.",
+      "allCategories": "Toutes",
+      "featured": "En vedette",
+      "facade": "Avatar IA",
+      "agentSize": "Filtrer par nombre d'agents",
+      "agentSizeAny": "Tous",
+      "agentSizeValue": "{{value}} agents",
+      "assistantHint": "Guide du marché : le copilote (en bas à droite) répond avec 谦面助手 en focus. L'agent assistant n'est pas installé sur cette cellule — installez-le pour focaliser le guide.",
+      "official": "Officiel",
+      "officialBadge": "Officiel",
+      "officialAdoptedBadge": "Sélection officielle · Vérifié",
+      "installedBadge": "Installé v{{version}}",
+      "updateBadge": "Mettre à jour vers v{{version}}",
+      "emptyHint": "Rien n'est encore répertorié ici — essayez une autre ligne ou effacez les filtres.",
+      "clearFilters": "Effacer les filtres"
+    },
+    "detail": {
+      "fork": "Forker vers mon studio",
+      "forkHint": "Génère une copie éditable dans le studio d'agents à partir du manifeste lisible — la filiation accompagne ; la publication passe les portails existants",
+      "notFound": "Agent introuvable ou retiré",
+      "adoptedUpstream": "Source {{name}}",
+      "adoptedLicense": "Licence {{license}}",
+      "adoptedRevision": "Épinglé {{sha}}",
+      "adoptedHint": "Contenu tiers, vérifié et republié",
+      "skills": "Compétences",
+      "mcp": "Serveurs MCP",
+      "toolFaceDeclared": "{{declared}} / {{total}} outils déclarés",
+      "toolFaceDeclaredNoTotal": "{{declared}} outils déclarés",
+      "toolFaceFull": "Tous les {{total}} outils (surface complète)",
+      "toolFaceFullNoTotal": "Surface complète des outils",
+      "toolFaceUndeclared": "Tous les {{total}} outils (non déclaré)",
+      "toolFaceUndeclaredNoTotal": "Surface complète (non déclarée)",
+      "toolFaceReason": "Raison : {{reason}}",
+      "agents": "Agents",
+      "requiresGroup": "nécessite le groupe {{group}}",
+      "subscribe": "S'abonner et installer",
+      "gotoMine": "Voir mes agents",
+      "deployTitle": "Déployer en tant que service",
+      "deployBtn": "Déployer",
+      "deployOnline": "en ligne",
+      "deployEffective": "Déploiement envoyé — effectif sous ~{{minutes}} min (scrutation du runner).",
+      "gotoConfig": "Configurer",
+      "rhythmOverride": "Remplacer le rythme (optionnel, @{{id}})",
+      "paused": "En pause",
+      "pauseBtn": "Pause",
+      "resumeBtn": "Reprendre",
+      "private": "Privé",
+      "balance": "Solde : {{balance}}",
+      "balanceUnknown": "Solde inconnu (établi au premier déploiement)",
+      "balanceLow": "Solde bas — les déploiements seront refusés ; contactez l'opérateur pour recharger.",
+      "noAccountHintNew": "Pas encore de compte de facturation — un clic sur « Connecter sub2api » vous connecte (SSO Logto) et crée votre compte automatiquement ; créez une clé dans le panneau, puis collez-la ci-dessous.",
+      "noAccountHintExisting": "Déjà utilisateur de la passerelle ? Le SSO lie votre compte existant — le panneau demande une seule fois votre mot de passe d'origine.",
+      "connectPanel": "Connecter sub2api",
+      "keyPasteLabel": "Clé mesurée pour @{{id}} — créez-la dans le panneau, puis collez-la ici",
+      "keyPastePlaceholder": "sk-…",
+      "keyBoundBadge": "clé liée",
+      "keyRequired": "Cet agent dessert des rôles — chacun nécessite une clé mesurée créée dans votre panneau de facturation (connexion Logto), collée ci-dessus.",
+      "keyInvalid": {
+        "shape": "Ceci ne ressemble pas à une clé sub2api (elle doit commencer par sk-).",
+        "unknown-agent": "Une clé a été collée pour un rôle qui n'est pas un agent de service de ce agent.",
+        "duplicate": "Une clé ne peut pas servir deux agents du même agent — créez-en une par agent dans le panneau.",
+        "liveness": "Le panneau de facturation a refusé cette clé (supprimée, désactivée ou quota épuisé) — recréez-en une dans le panneau.",
+        "ownership": "Cette clé appartient à un autre compte sub2api — collez une clé créée sous votre propre compte."
+      },
+      "downloadSkill": "Télécharger SKILL.md",
+      "manifestJson": "Manifeste JSON",
+      "selfhostTitle": "Déployez ce agent sur le cloud officiel",
+      "selfhostBody": "Cette instance auto-hébergée n'exécute pas le service d'agents. Pour mettre en ligne les rôles de cet agent — pages partageables, facturation au tour, revenus créateur — publiez-le sur la marketplace officielle ; le déploiement en un clic y est exécuté.",
+      "selfhostMarketBtn": "Ouvrir la marketplace officielle",
+      "selfhostCreatingBtn": "Guide de publication",
+      "selfhostNote": "Auto-héberger la pile de service est également possible — voir la documentation du dépôt ; la voie de la marketplace ne demande aucune infrastructure supplémentaire.",
+      "deploySummary": "Déployer met les rôles de cet agent en ligne comme un service de conversation : vous obtenez une page de chat publique partageable, les visiteurs sont mesurés par tour, et vous (le déployeur) percevez un partage de revenus.",
+      "keySubtitle": "Clé de mesure = le quota qui paie les tours des visiteurs : les visiteurs discutent gratuitement, les tours sont facturés sur la clé que vous collez ici.",
+      "rhythmSubtitle": "Rythme = s'il agit par lui-même : sans entrée, il ne fait que répondre ; avec des entrées, la plateforme le réveille à horaire fixe (consomme votre quota).",
+      "modelSubtitle": "Modèle = avec quel modèle il pense : vide conserve le réglage en vigueur (un override existant, sinon la valeur déclarée par l'agent).",
+      "budgetSubtitle": "Budget = durée maximale d'un tour : vide conserve le réglage en vigueur (un override existant, sinon le plafond déclaré ou la valeur plateforme).",
+      "modelOverride": "Modèle (optionnel, @{{id}})",
+      "budgetOverride": "Budget par tour · minutes (optionnel, @{{id}})",
+      "modelPlaceholder": "vide = conserver le réglage en vigueur",
+      "budgetPlaceholder": "vide = plafond déclaré ou valeur plateforme",
+      "modelHintWhitelist": "Modèles valides : {{list}} · validé contre les lanes de modèles de ta clé à l'envoi",
+      "modelHintNoWhitelist": "Aucune liste blanche déclarée — validé contre les lanes de modèles de ta clé à l'envoi",
+      "budgetInvalid": "Le budget par tour doit être un nombre entier de minutes, 1–120",
+      "modelLaneRejected": "Choix de modèle refusé : {{reason}}",
+      "modelNotInRoster": "Modèle absent du répertoire du runner hôte : {{reason}}",
+      "modelLanesUnavailable": "Impossible de valider les lanes de modèles (panneau de facturation non lié) — videz le champ modèle pour déployer sur la valeur par défaut.",
+      "deployOutcome": "Après le déploiement, vous obtenez une page de conversation partageable.",
+      "authRequired": "Connexion requise — connectez-vous avant de vous abonner ou d'installer.",
+      "loginHint": "S'abonner et installer nécessitent une connexion.",
+      "loginGo": "Se connecter",
+      "close": "Fermer",
+      "skillFiles": "{{count}} fichiers auxiliaires",
+      "scriptGateTitle": "Ce agent contient des scripts exécutables",
+      "scriptGateBody": "Les compétences ci-dessous contiennent des scripts qui seront déposés dans votre runtime ; rien ne s'installe avant votre confirmation (unique).",
+      "scriptGateConfirm": "Confirmer l'installation",
+      "cluster": {
+        "title": "Informations du groupe",
+        "agentCount": "{{count}} agents",
+        "agents": "Composition des agents",
+        "showOptional": "Afficher les agents optionnels",
+        "hideOptional": "Masquer les agents optionnels"
+      },
+      "facade": {
+        "title": "Avatar IA",
+        "attribution": "Opéré par {{owner}} (identité de la plateforme)",
+        "asOf": "Corpus à jour au {{date}}",
+        "stanceHosted": "Gratuit pour les visiteurs · l'hôte paie",
+        "chatEntry": "Discuter avec cet avatar",
+        "notDeployed": "Réception non déployée — chat indisponible",
+        "mattersTitle": "Affaires",
+        "mattersHint": "Les questions auxquelles la réception ne peut pas répondre (ou qui exigent une personne) arrivent ici en affaires ; votre réponse est relayée au visiteur mot pour mot. Une affaire clôturée n'accepte plus de réponse.",
+        "matterStatus": {
+          "open": "En attente de réponse",
+          "responded": "Répondu",
+          "closed": "Clôturé"
+        },
+        "matterVisitor": "Visiteur : {{hint}}",
+        "matterReplyPlaceholder": "Répondez au visiteur… (la réception le relaie mot pour mot)",
+        "matterReplyBtn": "Répondre",
+        "matterCloseBtn": "Clôturer",
+        "matterEntry": {
+          "open": "Ouverture",
+          "reply": "Réponse",
+          "close": "Clôture"
+        }
+      },
+      "buyPack": "Acheter ${{price}}",
+      "oneOff": " (achat unique)",
+      "perPeriod": " / {{days}} jours",
+      "purchase": {
+        "insufficient": "Solde insuffisant — rechargez dans le panneau de tokens puis réessayez.",
+        "noBilling": "Aucun compte de facturation sub2api lié — terminez la liaison avant dacheter.",
+        "required": "Achetez ce agent avant de linstaller.",
+        "settlementFailed": "La transaction nest pas finalisée — en attente ; réessayez bientôt depuis Mes agents."
+      },
+      "purchased": "acheté",
+      "vendorBy": "par {{name}}",
+      "fleetWizardBtn": "Instancier en équipe",
+      "boundary": "Limites et honnêteté",
+      "outcomes": "Ce que vous obtenez",
+      "coverage": "Cette entrée couvre {{covered}}/{{total}} champs de surface en {{locale}}",
+      "coverageFull": "Surface entièrement couverte en {{locale}}",
+      "coverageMissing": "Champs manquants",
+      "bindingsReady": "{{count}} liaison(s) de connecteur prête(s) ({{keys}})",
+      "bindingsFailed": "{{count}} liaison(s) de connecteur non prête(s) ({{keys}}) — connectez le système puis redéployez pour les émettre",
+      "bindingsRevoked": "{{count}} jeton(s) de liaison devenus inutiles ont été révoqués",
+      "bindingReason": {
+        "no_account": "Aucun compte de connecteur n’est connecté : aucune identité à atténuer",
+        "empty_scope": "La liaison ne déclare aucune surface de lecture/écriture autorisable",
+        "connector_not_configured": "Ce déploiement n’a aucun connecteur configuré",
+        "other": "Échec inattendu ({{code}})"
+      }
+    },
+    "report": {
+      "title": "Résultat d'installation de « {{name}} »",
+      "hint": "Résultats par élément ; les éléments ignorés ou indisponibles indiquent la raison.",
+      "skill": "Compétence",
+      "mcp": "MCP",
+      "agent": "Agent",
+      "status": {
+        "installed": "Installé",
+        "reused": "Réutilisé",
+        "replaced": "Mis à jour",
+        "skipped": "Ignoré",
+        "unavailable": "Indisponible",
+        "bound": "Lié à au local",
+        "awaiting-local-binding": "En attente du serveur local"
+      },
+      "nextHint": "Installé. Passez au chat — votre expert est déjà sélectionné.",
+      "openChat": "Ouvrir Discussion",
+      "files": "{{count}} fichiers auxiliaires",
+      "filesWithScripts": "{{count}} fichiers auxiliaires (scripts : {{scripts}})",
+      "nextHintCluster": "Installé. Passez au chat avec tout le groupe — le rôle principal est déjà sélectionné.",
+      "openChatCluster": "Ouvrir le chat et charger le groupe",
+      "bot": "Bot"
+    },
+    "mine": {
+      "empty": "Aucun abonnement pour l'instant. Parcourez le marché.",
+      "updateAvailable": "mise à jour vers v{{version}}",
+      "upgrade": "Mettre à jour",
+      "uninstall": "Se désabonner",
+      "sourceBundle": "installé hors ligne"
+    },
+    "uninstall": {
+      "title": "Se désabonner de « {{name}} »",
+      "willRemove": "Cela supprimera les compétences, agents et bots suivants :",
+      "mcpKept": "Les configurations MCP sont conservées (utilitaires partagés) : {{servers}}",
+      "modifiedWarning": "Ces compétences ont été modifiées après l'installation ; les changements seront perdus : {{skills}}",
+      "confirm": "Se désabonner",
+      "botsCredentialsKept": "Les identifiants de canal des bots supprimés sont conservés pour réutilisation : {{bots}}"
+    },
+    "drafts": {
+      "title": "Mes créations",
+      "create": "Nouveau agent",
+      "empty": "Aucun brouillon pour l'instant.",
+      "defaultName": "Agent sans titre",
+      "published": "Publié",
+      "draft": "Brouillon",
+      "partCounts": "{{skills}} compétences · {{mcp}} MCP · {{agents}} agents"
+    },
+    "editor": {
+      "title": "Modifier l'agent",
+      "save": "Enregistrer le brouillon",
+      "publish": "Publier",
+      "publishOk": "Publié en v{{version}}.",
+      "name": "Nom",
+      "description": "Description",
+      "tags": "Étiquettes (séparées par des virgules)",
+      "tagsPlaceholder": "juridique, contrats",
+      "skills": "Compétences",
+      "addSkill": "Ajouter une compétence",
+      "skillName": "Nom de la compétence (ex. legal-contract-workflow)",
+      "skillDescription": "Description de la compétence",
+      "skillContent": "Corps du SKILL.md",
+      "remove": "Retirer",
+      "mcp": "Références MCP",
+      "mcpHint": "Choisissez uniquement des serveurs du registre du catalogue ; les agents ne transportent pas d'endpoints.",
+      "mcpEmpty": "Aucun serveur du registre dans le catalogue.",
+      "agents": "Agents",
+      "addAgent": "Ajouter un agent",
+      "agentHint": "Les agents sont des personas locaux — sans endpoint, modèle ni identifiants.",
+      "agentId": "Id de l'agent (ex. agent-reviewer)",
+      "agentName": "Nom de l'agent",
+      "agentPersona": "Texte de la persona",
+      "personaCost": "Persona {{chars}} caractères ≈ {{tokens}} tokens/tour (~3 caractères/token, estimation ; facturé à chaque tour)",
+      "resourceSet": "Ressources (facultatif)",
+      "resourceHint": "Non coché = toutes les ressources de l'agent ; coché, seul le sous-ensemble sélectionné est chargé (aucun = référence seule). Seules les compétences et références MCP de l'agent sont proposées.",
+      "limitSkills": "Limiter les compétences",
+      "limitMcp": "Limiter les serveurs MCP",
+      "resourceEmptySkills": "Le brouillon ne déclare pas encore de compétences — ajoutez-en ci-dessus.",
+      "resourceEmptyMcp": "Le brouillon ne choisit pas encore de références MCP — choisissez-en ci-dessus.",
+      "agentServing": "Déployer en tant que service d'agent (A2A)",
+      "agentServingHint": "Après publication, déployez en un clic depuis la page de l'agent ; le service répond en A2A via la passerelle.",
+      "visibility": "Visibilité",
+      "visibilityPublic": "Public (listé)",
+      "visibilityPrivate": "Privé (propriétaire seul)",
+      "toolsAll": "Tous les outils",
+      "toolsN": "{{n}} outils",
+      "toolsEdit": "Sélectionner des outils",
+      "toolsCollapse": "Replier",
+      "toolsClear": "Surface complète",
+      "toolsNoSnapshot": "Le registre n'a pas encore de liste d'outils pour ce serveur — pas de vérification par outil à la publication",
+      "toolsMarkFull": "Marquer surface complète (outils choisis indirectement)",
+      "toolsFullReason": "Raison de la surface complète",
+      "toolsFullReasonPlaceholder": "ex. les outils sont choisis via tool_search",
+      "toolsFaceRequired": "Ces références MCP n'ont pas encore de surface d'outils : {{servers}}. Sélectionnez leurs outils ou marquez la surface complète avec une raison.",
+      "guide": {
+        "title": "Guide d’utilisation (trois étapes)",
+        "hint": "Écrivez « quoi préparer → quoi dire → ce qu’on obtient » ; affiché sur la page de détail. Les trois étapes sont requises pour publier avec l'agent.",
+        "stepTitle": "Titre de l’étape {{n}}",
+        "stepBody": "Description de l’étape {{n}}"
+      },
+      "uploadSkillPackage": "Téléverser le paquet",
+      "skillFiles": "{{count}} fichiers auxiliaires : {{paths}}",
+      "export": "Exporter .yizpack",
+      "exporting": "Exportation…",
+      "exportOk": "Exporté {{file}}",
+      "import": "Importer le paquet",
+      "importing": "Importation…",
+      "importOk": "Importé comme brouillon « {{name}} »",
+      "domains": "Domaines (vocabulaire contrôlé, max 3)",
+      "audience": "Audience (vocabulaire contrôlé, max 3)",
+      "vocabKeepHint": "Les valeurs hors vocabulaire sont conservées telles quelles — choisissez des entrées valides avant publication.",
+      "vocabBlocked": "Ces choix sont hors du vocabulaire contrôlé ; publication bloquée : {{values}}",
+      "workbench": "Atelier de traduction (piste anglaise)",
+      "workbenchHint": "Remplissez chaque champ face au rastro zh ; étiquettes et guide sont des groupes : sérialisation seulement si toutes les cases sont remplies.",
+      "workbenchMcpPointer": "Les descriptions anglaises des serveurs MCP s'éditent dans la section serveurs ci-dessus.",
+      "recompute": "Enregistrer et recalculer la couverture",
+      "coverageAdvisory": "L'anglais couvre {{covered}}/{{total}} champs de surface (la publication communautaire n'est jamais bloquée)",
+      "coverageUnknown": "Couverture non calculée — utilisez Enregistrer et recalculer",
+      "officialGateHint": "Publication officielle bloquée par la porte de couverture anglaise — lacunes ci-dessous, cliquez pour naviguer"
+    },
+    "bridge": {
+      "title": "Importé depuis le preset : {{skills}} compétences, {{servers}} serveurs. Non migré :",
+      "reason": {
+        "pack": "appartient au agent {{agent}}, ce n'est pas ton contenu",
+        "unavailable": "actuellement indisponible",
+        "operator": "serveur opérateur du déploiement, sans équivalent marché",
+        "local": "serveur configuré localement, sans équivalent marché"
+      },
+      "replaceHint": "Remplace ou complète les éléments ci-dessous avant de publier."
+    },
+    "rhythm": {
+      "title": "Rythme de travail (octroi d'autonomie)",
+      "add": "Ajouter une entrée",
+      "remove": "Retirer",
+      "every": "Intervalle",
+      "daily": "Quotidien",
+      "doPlaceholder": "Que faire au déclenchement (optionnel)",
+      "invalid": "Invalide : every exige Nm/Nh (≥5m), daily exige HH:MM",
+      "hint": "Déclarer un rythme accorde l'autonomie ; sans rythme, réponse seule."
+    },
+    "guide": {
+      "title": "Comment utiliser ce agent",
+      "step": "Étape {{n}}",
+      "hint": "Une fois installé, revenez dans Discussion et choisissez cet expert dans le sélecteur.",
+      "examples": "Essayez de demander",
+      "copied": "Copié"
+    },
+    "versions": {
+      "title": "Historique des versions",
+      "current": "actuelle",
+      "empty": "Aucune version pour l'instant",
+      "failed": "Échec du chargement de l'historique des versions : {{message}}",
+      "skillsToggle": "Corps des skills",
+      "noSkills": "Cette version ne déclare aucune skill"
+    },
+    "mineSections": {
+      "installed": "Installés",
+      "creations": "Mes créations"
+    },
+    "badge": {
+      "blueprint": "Plan",
+      "facade": "Façade",
+      "assistant": "Assistant",
+      "toolkit": "Outils"
+    },
+    "earnings": {
+      "title": "Liquidation fournisseur",
+      "settled": "Part liquidée",
+      "pending": "En attente",
+      "credit": "Crédit disponible",
+      "creditSpent": "Crédit consumido",
+      "myPurchases": "Mes achats récents",
+      "periodKind": "Abonnement de {{days}} jours",
+      "onceKind": "achat unique"
+    },
+    "wizard": {
+      "title": "Provisionnement de modèle d'équipe d'agents",
+      "cancel": "Annuler",
+      "doneBtn": "Terminé",
+      "donePaused": "Équipe provisionnée (en pause) — allumez quand vous êtes prêt.",
+      "igniteBtn": "Allumer la première exécution",
+      "lit": "Allumé — l'équipe tourne.",
+      "missingParam": "Le paramètre obligatoire « {{name}} » est vide.",
+      "missingTargets": "({{n}} poste(s) né(s) vacant(s) — à pourvoir plus tard)",
+      "conflictTargets": "({{n}} cible(s) déjà occupée(s) — deviennent vacantes)",
+      "noParams": "Aucun emplacement de paramètre — provisionnez directement.",
+      "paramInvalidServer": "Paramètre « {{name}} » invalide : {{reason}}",
+      "runBtn": "Provisionner l'équipe",
+      "stepInstall": "Abonnement et installation…",
+      "stepPay": "Finalisation de lachat…",
+      "stepProvision": "Provisionnement de l'équipe…"
+    },
+    "draftsBuilderPointer": "Ou laissez l'auteur de packs le rédiger dans le chat — il vous interviewe, compile le manifest et dépose un brouillon éditable.",
+    "specSheet": {
+      "emptyPersona": "Aucun texte de persona",
+      "emptySkills": "Aucune compétence",
+      "emptyMcp": "Aucune référence d'outil",
+      "skillBody": "Corps de la compétence",
+      "compactPersonaMissing": "Sans persona",
+      "compactSkills": "Compétences {{n}}",
+      "compactSkillsZero": "Aucune compétence",
+      "compactRoles": "Rôles {{n}}",
+      "compactTools": "Outils {{n}}",
+      "compactToolsZero": "Aucun outil",
+      "forkedFrom": "Dérivé de {{packId}} v{{version}}"
+    },
+    "checklist": {
+      "title": "Contrôle avant publication",
+      "pending": "{{count}} à corriger",
+      "ready": "Tout est bon — prêt à publier",
+      "more": "{{count}} de plus",
+      "collapse": "Réduire",
+      "jump": "Corriger",
+      "gate": {
+        "toolsFace": "Surface d'outils",
+        "vocabulary": "Vocabulaire",
+        "enCoverage": "Couverture anglaise",
+        "manifest": "Manifeste"
+      }
+    },
+    "trial": {
+      "action": "Essayer dans un espace de travail",
+      "busy": "Installation…",
+      "unpublished": "Ce brouillon n'a jamais été publié — publiez d'abord une version ; une installation ne peut prendre qu'une version publiée.",
+      "started": "Installé dans votre espace de travail (v{{version}}) — ouverture de la conversation."
+    },
+    "relation": {
+      "never": "Pas encore publié",
+      "same": "Identique à la version publiée v{{version}}",
+      "ahead": "Modifications non publiées depuis v{{version}}"
+    }
+  },
+  "studio": {
+    "aiDraft": {
+      "title": "Brouillon IA",
+      "promptLabel": "Décrivez en une phrase ce que cet agent doit faire…",
+      "action": "Brouillon",
+      "adopt": "Adopter",
+      "discard": "Annuler"
+    },
+    "fork": {
+      "unavailable": "Impossible de lire cet agent ({{status}}) — le fork suit la visibilité de lecture",
+      "seeded": "« {{name}} » chargé comme document de travail — filiation estampillée"
+    },
+    "title": "Studio d'agents",
+    "roster": {
+      "new": "Nouvel agent",
+      "empty": "Aucun agent — commencez par « Nouvel agent »"
+    },
+    "canvas": {
+      "empty": "Choisissez un agent à gauche, ou créez-en un"
+    },
+    "agent": {
+      "id": "ID (attribué selon les règles du portail)",
+      "name": "Nom affiché"
+    },
+    "doc": {
+      "section": "Infos du document (enveloppe du manifeste)",
+      "name": "Nom",
+      "description": "Description",
+      "tags": "Étiquettes (séparées par des virgules)"
+    },
+    "skill": {
+      "importLocal": "Importer depuis les compétences locales…",
+      "inline": "Nouvelle compétence en ligne",
+      "description": "Description (≤300 caractères)",
+      "content": "Corps de la compétence (SKILL.md)"
+    },
+    "mcp": {
+      "pick": "Choisir un serveur du registre…"
+    },
+    "team": {
+      "tab": "Structure d'équipe",
+      "empty": "Ce document n'a pas encore de structure d'équipe (bloc fleet) — le graphe restitue le document, en lecture seule",
+      "readOnlyHint": "Graphe en lecture seule : les membres s'éditent via les cartes de rôle ; les arêtes d'orchestration relèvent des blueprints/modèles"
+    },
+    "blueprint": {
+      "pick": "Ouvrir un brouillon de blueprint…",
+      "new": "Nouveau blueprint",
+      "untitled": "Blueprint sans titre",
+      "empty": "Ouvrez un document depuis la bibliothèque ou créez-en un — l'espace suit l'ordre réel du serveur (valider → approuver → fusionner → essai → signer → re-sceller).",
+      "status": {
+        "draft": "Brouillon",
+        "approved": "Approuvé",
+        "cast": "Coulé"
+      },
+      "track": {
+        "form": "Formulaire",
+        "json": "JSON"
+      },
+      "boundary": {
+        "name": "Nom de scène",
+        "oneLine": "Positionnement en une ligne",
+        "outOfScope": "Hors périmètre"
+      },
+      "judge": "Modèle juge",
+      "judgeFollowDefault": "Suivre le défaut de déploiement",
+      "judgeFollows": "Suivre le défaut de déploiement (résolu vers {{model}})",
+      "sources": "Sources de données (collections de connaissances / noms du registre)",
+      "pickCollection": "Choisir une collection de connaissances…",
+      "jsonHint": "Les sections organisation/supervision/acceptation s'éditent via la piste JSON ; les deux pistes partagent une source et passent la chaîne complète à la soumission.",
+      "jsonApply": "Analyser et charger dans le formulaire",
+      "saveValidate": "Enregistrer et valider",
+      "trial": "Essai",
+      "trialReport": "Rapport d'essai",
+      "approve": "Approuver",
+      "cast": "Coulser au marché",
+      "castRef": "Coulé : pack {{packId}} v{{version}}",
+      "sign": "Signer le rapport d'essai (clé finale)",
+      "unsign": "Retirer la signature",
+      "savedValid": "Enregistré, validation verte",
+      "untitledAgent": "Agent sans titre"
+    },
+    "validate": {
+      "running": "Validation…",
+      "ok": "Valide — les mêmes validateurs que le portail de publication",
+      "bad": "{{n}} problème(s) (libellés du portail de publication)"
+    },
+    "emit": {
+      "preset": "Enregistrer comme préréglage personnel (ce cell)",
+      "draft": "Enregistrer comme brouillon d'agent (→ marché)",
+      "busy": "Émission…",
+      "presetOk": "Préréglage « {{name}} » créé — sélectionnez-le dans le sélecteur de conversation",
+      "draftOk": "Brouillon créé — poursuis la publication dans « Mes créations »",
+      "failed": "Échec de l'émission : {{message}}"
+    },
+    "remove": "Retirer",
+    "workspace": {
+      "title": "Espace de travail de l'agent",
+      "back": "Retour au constructeur",
+      "dirty": "Modifications non enregistrées",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré v{{version}}",
+      "saveFailed": "Échec de l'enregistrement",
+      "overwriteDone": "Votre version a été enregistrée",
+      "conflict": "Ce document a changé ailleurs (serveur v{{server}}, le vôtre v{{local}}). Choisissez la suite — vos modifications sont conservées jusque-là.",
+      "conflictShort": "Conflit de version",
+      "conflictReload": "Charger la dernière",
+      "conflictOverwrite": "Garder la mienne",
+      "conflictOverwriteConfirm": "Cela écrasera la version plus récente du serveur avec vos modifications. Le serveur revalidera tout ; l'autre version reste dans l'historique du document.",
+      "actionFailed": "Action échouée : {{action}}",
+      "createFailed": "Impossible de créer le document",
+      "openFailed": "Impossible d'ouvrir le document",
+      "forkMiss": "Le document source n'est pas lisible — retour à la bibliothèque",
+      "approved": "Approuvé",
+      "castOk": "Fusion : paquet {{packId}} v{{version}}",
+      "signed": "Rapport d'essai signé",
+      "trialGreen": "Essai réussi — assertions au vert",
+      "trialRed": "L'essai s'est terminé avec des assertions rouges",
+      "toggleLibrary": "Afficher/masquer la bibliothèque",
+      "toggleInspector": "Afficher/masquer l'inspecteur",
+      "section": {
+        "envelope": "Périmètre"
+      },
+      "canvas": {
+        "empty": "Aucun document ouvert — choisissez-en un dans la bibliothèque ou créez-en un."
+      },
+      "emit": {
+        "section": "Cibles d'émission",
+        "needGreen": "La validation doit être au vert avant l'émission"
+      },
+      "draft": {
+        "adopt": "Adopter",
+        "adoptAll": "Tout adopter",
+        "adoptPicked": "Adopter la sélection",
+        "skip": "Ignorer",
+        "close": "Fermer",
+        "inert": "Rien n'a été écrit — le document est inchangé.",
+        "field": {
+          "name": "Nom",
+          "description": "Description",
+          "persona": "Persona",
+          "mcpServers": "Outils (MCP)",
+          "skills": "Compétences",
+          "fleet": "Structure d'équipe (fleet)"
+        },
+        "skillsNote": "Les compétences du brouillon IA ne peuvent pas encore être adoptées — éditez-les dans le compartiment compétences du document."
+      },
+      "library": {
+        "search": "Rechercher des documents",
+        "empty": "Aucun document pour l'instant.",
+        "guideBlank": "Nouveau document — une page blanche, auto-enregistrée pendant la saisie.",
+        "guideAi": "Brouillon IA — décrivez l'agent, champ par champ, puis adoptez.",
+        "guideMarket": "Dupliquer depuis la marketplace — copiez un paquet installé dans un nouveau document.",
+        "newAgent": "Nouvel agent",
+        "newTeam": "Nouvelle équipe",
+        "starters": "Partir d'un modèle officiel",
+        "startersEmpty": "Aucun modèle officiel au catalogue",
+        "starterUnavailable": "Modèle indisponible",
+        "starterCreated": "Document créé depuis « {name} »"
+      },
+      "ribbon": {
+        "stage": {
+          "draft": "Brouillon",
+          "approve": "Approuver",
+          "cast": "Fusion",
+          "trial": "Essai",
+          "sign": "Signature",
+          "reseal": "Re-sceller"
+        },
+        "reseal": "Re-sceller le paquet",
+        "sign": "Signer le rapport",
+        "trialRunning": "Essai en cours…"
+      },
+      "ribbonNeedGreen": "Corrigez d'abord toutes les erreurs de validation",
+      "ribbonOnlyApprover": "Seul l'approbateur peut fusionner ce document",
+      "ribbonRecastNote": "Vous avez modifié après la fusion — retour au brouillon. Le paquet de la marketplace garde la dernière version fondue jusqu'à nouvelle approbation et fusion.",
+      "ribbonCastRef": "Fondu vers le paquet de la marketplace. Lancez un essai, puis signez le rapport.",
+      "ribbonSignStale": "Le rapport a été relancé depuis votre signature — la signature ne correspond plus.",
+      "ribbonResealHint": "Au vert, signé et inchangé depuis l'approbation — re-scellez pour que le rapport signé rejoigne le paquet.",
+      "validation": {
+        "jump": "Aller au champ",
+        "jumpMiss": "Ce champ n'est pas sur cet écran",
+        "copy": "Copier l'erreur",
+        "copied": "Copié"
+      },
+      "kind": {
+        "agent": "Agent",
+        "team": "Équipe"
+      },
+      "agent": {
+        "description": "Description en une ligne",
+        "hint": "Un document d'agent reste un brouillon : émettez un preset (utilisable ici) ou un brouillon de marché depuis les ports ci-dessous. Pas d'approbation/fusion/essai."
+      },
+      "graph": {
+        "edit": "Modifier l'orchestration",
+        "confirm": "Confirmer la fusion",
+        "discard": "Abandonner",
+        "applying": "Application…",
+        "designHint": "Tirez pour connecter ; cliquez une arête déclarée pour la retirer ; confirmer fusionne dans le document.",
+        "readHint": "Orchestration déclarée (les positions restent locales à ce navigateur).",
+        "emptyHint": "Aucun membre déclaré — le graphe se dessine depuis la section fleet.",
+        "loading": "Chargement du graphe…",
+        "rejected": "Fusion refusée par la validation",
+        "applied": "Orchestration fusionnée dans le document"
+      },
+      "deployTeam": "Déployer l'équipe",
+      "deployOk": "Équipe provisionnée (née en pause)",
+      "deployFailed": "Échec du déploiement",
+      "sourceDoc": "Doc source",
+      "softLock": "Ce document est aussi ouvert dans une autre fenêtre — les sauvegardes restent protégées par l'avis de conflit 409",
+      "softLockDismiss": "Compris"
+    },
+    "errors": {
+      "name_too_long": "Le nom doit être non vide et faire au plus 80 caractères (le CJK compte double)",
+      "description_too_long": "La description doit être un texte de 2000 caractères au plus",
+      "pack_needs_one_reference": "Au moins un élément est requis : compétence, outil, agent ou bot",
+      "skills_too_many": "Trop de compétences",
+      "skill_entry_invalid": "Une compétence a une forme invalide",
+      "skill_name_invalid": "Les noms de compétence acceptent lettres, chiffres, . _ - (1-64)",
+      "skill_name_duplicate": "Nom de compétence en double",
+      "skill_description_invalid": "La description de compétence doit être un texte non vide de 300 caractères au plus",
+      "skill_content_invalid": "Le contenu de compétence doit être un texte non vide",
+      "mcp_too_many": "Trop de références d'outil (MCP)",
+      "mcp_entry_invalid": "Une entrée d'outil (MCP) a une forme invalide",
+      "mcp_forbidden_keys": "Les références ne peuvent nommer que des serveurs du registre, sans endpoint ni commande",
+      "mcp_needs_registry_name": "Choisissez un serveur du registre pour la référence",
+      "allowtools_conflict": "allowTools et fullSurface ne peuvent être déclarés ensemble",
+      "fullsurface_false": "fullSurface doit valoir true lorsqu'il est présent (omettez la clé)",
+      "fullsurface_needs_reason": "fullSurface exige un motif non vide",
+      "reason_needs_fullsurface": "Seules les références fullSurface peuvent omettre la liste d'outils",
+      "allowtools_invalid": "allowTools doit être un tableau non vide de noms d'outils",
+      "agents_too_many": "Trop d'agents",
+      "agent_entry_invalid": "Un agent a une forme invalide",
+      "agent_forbidden_keys": "Les agents ne portent qu'une persona, aucune configuration",
+      "agent_id_invalid": "Les ids d'agent acceptent lettres, chiffres, . _ - (1-64)",
+      "agent_id_duplicate": "Id d'agent en double",
+      "agent_name_invalid": "Le nom d'agent doit être un texte non vide de 60 caractères au plus",
+      "agent_persona_invalid": "La persona doit être un texte non vide de 16384 caractères au plus",
+      "credential_secret_literal": "Les documents ne peuvent porter de secrets ni de credentials",
+      "credential_forbidden_key": "Cette clé ne peut apparaître dans un document (endpoint ou credential probable)",
+      "datasources_invalid": "Les sources de données ont une forme invalide",
+      "datasource_entry_invalid": "Une source de données doit être { ref, note? }",
+      "datasource_ref_invalid": "La référence doit nommer un serveur, une bibliothèque ou une collection — jamais un endpoint",
+      "datasource_library_unresolved": "La collection de connaissances référencée est invisible ou inexistante",
+      "datasource_note_invalid": "La note de source de données doit être un texte",
+      "judge_model_unknown": "Le modèle juge n'est pas dans le roster — choisissez-en un ou videz le champ",
+      "v1_format": "Seuls les documents au format v2 sont acceptés",
+      "acceptance_entry_invalid": "Une assertion d'acceptation a une forme invalide",
+      "acceptance_kind_unsupported": "Type d'assertion non pris en charge",
+      "acceptance_target_invalid": "La cible de l'assertion doit être un titre d'agent",
+      "acceptance_expect_invalid": "Les assertions escalate-bounded exigent un expect numérique",
+      "acceptance_rubric_required": "Les assertions llm-judged exigent un critère non vide",
+      "acceptance_judge_cap": "Trop d'assertions llm-judged — fusionnez-en ou supprimez-en",
+      "fleet_name_invalid": "Le nom du cluster doit être un texte non vide",
+      "fleet_missing": "Un document d'équipe exige sa structure de cluster (section fleet)",
+      "fleet_members_empty": "Une équipe exige au moins un membre",
+      "fleet_member_needs_ref": "Un membre exige un ref",
+      "fleet_member_needs_title": "Un membre exige un titre",
+      "fleet_member_needs_target": "Un membre exige une cible",
+      "fleet_target_kind_invalid": "Le type de cible n'est pas autorisé",
+      "fleet_tool_target_shape": "Les cibles d'outil doivent être 'server::tool'",
+      "handoff_cycle": "Les relations parent-enfant forment un cycle",
+      "handoff_unknown_parent": "Le parent d'un membre n'existe pas"
+    }
+  },
+  "overlay": {
+    "title": "Ajustement des ressources",
+    "adjust": "Ajuster les ressources",
+    "desc": "Ajustez les serveurs MCP et les compétences de ce rôle. Les modifications sont enregistrées comme un diff de préférence et s'appliquent à la prochaine session ; les entrées invalidées par une mise à niveau sont ignorées automatiquement.",
+    "mcp": "Serveurs MCP",
+    "skills": "Compétences du rôle",
+    "baseline": "Compétences de base (disponibles dans tous les modes)",
+    "noneAddable": "(rien à ajouter)",
+    "remove": "Retirer",
+    "restore": "Restaurer",
+    "add": "Ajouter",
+    "apply": "Appliquer",
+    "applying": "Application…",
+    "appliedNote": "Enregistré — prend effet à la prochaine session.",
+    "streamBusy": "L'agent répond ; attendez la fin du tour avant d'ajuster.",
+    "loadError": "Échec du chargement",
+    "deploymentNote": "Les ajustements sont communs à tous les clients de ce déploiement."
+  },
+  "customPresets": {
+    "title": "Mes experts",
+    "desc": "Composez un rôle conversationnel à partir des compétences et serveurs MCP de cette cellule — il tourne en mode focalisé, reste local à cette cellule et ne se publie pas.",
+    "create": "Nouveau préréglage",
+    "empty": "Aucun préréglage perso pour l'instant.",
+    "name": "Nom",
+    "persona": "Persona",
+    "personaPlaceholder": "Qui est ce rôle et comment doit-il répondre ? Précisez son domaine, son ton et ce qu'il ne doit jamais inventer…",
+    "tags": "Étiquettes",
+    "tagsPlaceholder": "séparées par des virgules",
+    "skills": "Références de compétences",
+    "skillHint": "Choisies parmi les compétences disponibles localement (les vôtres ou celles d'un agent installé). Les références indisponibles sont ignorées et redeviennent actives automatiquement.",
+    "mcp": "Références de serveurs MCP",
+    "mcpHint": "Choisies parmi les serveurs activés ; une référence ne réactive jamais un serveur que vous avez désactivé.",
+    "noSkills": "Aucune compétence disponible dans cette cellule.",
+    "noMcp": "Aucun serveur MCP activé.",
+    "save": "Enregistrer",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "deleteConfirm": "Supprimer ce préréglage ? S'il est sélectionné, le runtime reviendra à l'agent intégré.",
+    "streamBusy": "L'agent répond — réessayez dans un instant.",
+    "refs": "{{skills}} compétences · {{mcp}} MCP",
+    "unavailable": "indisponible",
+    "shadowed": "surchargé",
+    "shadowedHint": "Le fichier opérateur ou le cloud définit le même id ; le rôle se compose actuellement sous l'entrée qui le surcharge.",
+    "toPackDraft": "Convertir en brouillon de agent",
+    "bridgeDenied": "La conversion nécessite les droits de gestion du déploiement (admin ou propriétaire du cell) ; tu peux aussi créer le brouillon à la main",
+    "examples": "Exemples de questions",
+    "examplesHint": "Jusqu'à 3 ; elles deviennent les exemples d'essai après publication",
+    "examplePlaceholder": "Exemple {{n}} (facultatif)"
+  },
+  "presetPublish": {
+    "action": "Publier et déployer",
+    "title": "Publier et déployer — {{name}}",
+    "compose": "Composition du brouillon de l'agent…",
+    "confirmHint": "Vérifiez l'agent composé avant publication. Le nom et la description sont modifiables ; les skills, les références MCP et l'agent sont repris tels quels.",
+    "name": "Nom de l'agent",
+    "description": "Description",
+    "notes": "Note de version (facultatif, ≤500 caractères)",
+    "parts": "{{skills}} skill(s) · {{mcp}} MCP · {{agents}} agent(s)",
+    "facadeToggle": "Publier comme avatar IA",
+    "facadeHint": "Après publication, cet agent est votre avatar IA : une fois la réception déployée, les visiteurs discutent gratuitement depuis le catalogue — il répond honnêtement à partir de toutes les compétences de l'agent et le dit quand il ne peut pas. Le coût va sur votre quota (hosted).",
+    "facadeNeedServing": "Un avatar IA nécessite un agent de service — ce brouillon n'en a aucun avec contrat de service.",
+    "facadeNeedSkill": "Un avatar IA nécessite au moins une compétence comme corpus — ce brouillon n'en emporte aucune.",
+    "facadeReception": "Agent de réception",
+    "reportTitle": "Non repris — à compléter ou remplacer dans l'éditeur de brouillons après publication si besoin :",
+    "publish": "Publier",
+    "step": {
+      "compose": "Composition du brouillon",
+      "publish": "Publication",
+      "deploy": "Déploiement"
+    },
+    "stepFailed": "Échec de {{step}} : {{message}}",
+    "publishDenied": "publication refusée — l'appartenance au groupe créateur est requise (403)",
+    "publishedBadge": "Publié",
+    "published": "Publié v{{version}} — visible dans le marché.",
+    "noServing": "Ce agent n'a pas d'agent avec contrat de service — rien à déployer.",
+    "deployTitle": "Déployer comme Agent Service",
+    "deployHint": "L'agent porte un contrat de service — déployez pour le rendre appelable via A2A.",
+    "deploy": "Déployer",
+    "viewMarket": "Voir dans le marché",
+    "done": "Terminé"
+  },
+  "question": {
+    "title": "Votre réponse est attendue",
+    "waitingHint": "la conversation reprend après votre réponse",
+    "customPlaceholder": "ou saisissez une réponse libre…",
+    "cancel": "Annuler la question",
+    "submit": "Envoyer la réponse",
+    "answered": "Question répondue",
+    "cancelled": "Question annulée",
+    "customAnswer": "Réponse libre"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "logout": "Se déconnecter"
+  },
+  "onboarding": {
+    "title": "Dans quel but allez-vous l'utiliser ?",
+    "subtitle": "Choisissez les domaines correspondant à votre travail (trois au maximum). Nous configurerons votre espace, vos assistants et vos outils en conséquence — modifiable à tout moment.",
+    "noteLabel": "Une idée précise en tête ? (facultatif)",
+    "notePlaceholder": "p. ex. réviser des contrats fournisseurs",
+    "submit": "Configurer mon espace",
+    "skip": "Passer pour l'instant",
+    "readyTitle": "Prêt à configurer pour {{role}}",
+    "planPack": "Installer {{name}}",
+    "planAlready": "déjà installé",
+    "planExpert": "Sélectionner votre assistant par défaut",
+    "planLayout": "Ajuster la disposition de votre espace",
+    "degradedNote": "Certains contenus ne sont pas disponibles sur ce déploiement — le reste sera configuré.",
+    "activate": "Activer",
+    "doneTitle": "Tout est prêt",
+    "doneExpert": "Votre assistant est prêt. Posez votre question.",
+    "doneGeneric": "Votre espace est prêt.",
+    "doneClose": "Fermer",
+    "reopenTitle": "Domaines de travail",
+    "reopenHint": "Changez vos domaines de travail — de nouvelles ressources s'ajoutent, rien de ce qui est installé n'est supprimé.",
+    "reopen": "Choisir à nouveau",
+    "doneIssues": "Non installé cette fois : {{items}}. Vous pourrez l'ajouter plus tard depuis le marché.",
+    "doneExpertUnavailable": "L'assistant par défaut de ce domaine n'est pas encore disponible sur ce déploiement.",
+    "tour": {
+      "stepLabel": "Étape {{n}}",
+      "skip": "Passer",
+      "next": "Suivant",
+      "finish": "Terminer",
+      "step1": {
+        "title": "Choisissez un expert",
+        "body": "Choisissez l'assistant adapté à la tâche — cette étape s'ancre sur le sélecteur."
+      },
+      "step2": {
+        "title": "Formulez votre demande",
+        "body": "Écrivez-la ou choisissez une suggestion — cette étape s'ancre sur le composeur."
+      },
+      "step3": {
+        "title": "Voyez les résultats",
+        "body": "Les résultats arrivent dans Sorties — cette étape s'ancre sur l'entrée de navigation."
+      },
+      "stepFleet": {
+        "title": "Lancez votre premier cluster de runners local",
+        "body": "Installez l'agent de démarrage fourni, puis ouvrez la console de runners pour déployer des agents et les voir tourner sur cette machine.",
+        "install": "Installer l'agent de démarrage",
+        "installing": "Installation…",
+        "installed": "Installé — ouvrez la console de runners",
+        "failed": "Échec de l'installation — réessayez depuis la console de runners"
+      }
+    }
+  },
+  "mcp": {
+    "narrative": {
+      "title": "Infrastructure de la plateforme vs contenu des agents",
+      "body": "Les serveurs MCP et les skills de cette page sont l'infrastructure fournie par la plateforme : connectez-les à votre client MCP ou agent et utilisez-les directement. Un agent est un ensemble de contenu qui combine skills, références MCP et personas en une unité installable."
+    },
+    "tabs": {
+      "servers": "Serveurs MCP",
+      "skills": "Catalogue de skills"
+    },
+    "intro": "Catalogue des services MCP du registre (lecture seule). La connexion nécessite des identifiants de compte du registre — autorisez via la connexion au registre ; l'URL est l'endpoint de chaque carte.",
+    "empty": "Aucun service MCP visible pour cette identité (connectez-vous pour en voir plus).",
+    "unavailable": "Catalogue indisponible : {{error}}",
+    "requiresGroup": "nécessite le groupe {{group}}",
+    "depth": {
+      "back": "Retour à la liste",
+      "failed": "Échec du chargement : {{message}}",
+      "endpoint": "Endpoint",
+      "license": "Licence",
+      "provider": "Fournisseur",
+      "tier": "Hébergement",
+      "groups": "Accès",
+      "public": "public",
+      "notDeclared": "non déclaré",
+      "tools": "Outils",
+      "toolCount": "{{count}} déclarés",
+      "toolsMissing": "Aucun instantané d'outils capturé pour ce serveur — l'entrée du registre précède une actualisation.",
+      "groupOther": "Autres",
+      "filterPlaceholder": "Filtrer les outils…",
+      "expand": "Déplier",
+      "collapse": "Replier",
+      "noResults": "Aucun outil correspondant."
+    },
+    "skills": {
+      "empty": "Aucune skill visible pour cette identité (connectez-vous pour en voir plus).",
+      "search": "Rechercher : nom / description / auteur / tag",
+      "count": "{{count}} au total",
+      "noDescription": "—",
+      "source": "Source",
+      "author": "Auteur",
+      "prev": "Précédent",
+      "next": "Suivant",
+      "page": "Page {{page}} / {{pages}}"
+    }
+  },
+  "appCenter": {
+    "loadError": "Impossible de charger le catalogue des produits. Les cartes de marque ci-dessus restent disponibles.",
+    "title": "Centre d'applications",
+    "subtitle": "Produits de l'écosystème qui tournent sur Yizuo — une carte par produit : ouvrez-le ou connectez votre compte",
+    "open": "Ouvrir",
+    "here": "Vous êtes ici",
+    "status": {
+      "early": "Phase précoce"
+    },
+    "connection": {
+      "connected": "Connecté",
+      "partial": "Partiellement connecté",
+      "stale": "Reconnexion requise",
+      "disconnected": "Non connecté",
+      "connect": "Connecter"
+    },
+    "line": {
+      "yizuo": {
+        "name": "Yizuo",
+        "tagline": "Plateforme multi-client d'exécution IA : chat, tâches et socle de chaque ligne"
+      },
+      "facet": {
+        "name": "Facet",
+        "tagline": "Place des Matériaux d'Agents : découvrir, installer et créer des agents IA"
+      },
+      "wanxing": {
+        "name": "Wanxing",
+        "tagline": "Couche d'exécution d'agents : déployez vos agents et ouvrez-les au monde"
+      },
+      "lex": {
+        "name": "Lex",
+        "tagline": "Données, applications et modèles juridiques"
+      },
+      "wire": {
+        "name": "Wire",
+        "tagline": "Plateforme de données d'entreprise : hub dopé aux indicateurs macro"
+      }
+    },
+    "board": "Tableau",
+    "openOrigin": "Ouvrir le site d'origine",
+    "nangoConnect": "Connecter",
+    "nangoConnecting": "Connexion…"
+  },
+  "sessionSolution": {
+    "menuItem": "Enregistrer comme ma solution",
+    "title": "Enregistrer comme ma solution",
+    "subtitle": "Transformez ce que vous avez réglé dans cette conversation en une solution réutilisable et partageable",
+    "defaultName": "Ma solution",
+    "nameLabel": "Nom",
+    "personaLabel": "Persona",
+    "personaPlaceholder": "Qui est l'assistant de cette solution et comment il travaille (prérempli depuis le persona de la session, modifiable)",
+    "examplesLabel": "Exemples de questions (jusqu'à {{max}} ; ils deviennent les exemples d'essai après publication)",
+    "tooLong": "(plus de 200 caractères — sera ignoré à l'enregistrement)",
+    "needNamePersona": "Le nom et le persona sont requis",
+    "save": "Enregistrer la solution",
+    "savedAs": "« {{name}} » enregistré. Modifiez-le dans Mes experts ou publiez-le sur la Place des Matériaux d'Agents en un clic.",
+    "goPublish": "Publier",
+    "modeCreate": "Nouvelle solution",
+    "modeUpdate": "Mettre à jour",
+    "targetLabel": "Cible",
+    "targetPlaceholder": "Choisir la solution à mettre à jour…",
+    "boundary": "Le persona de cette session et les exemples choisis remplaceront la cible ; ses compétences et sa composition MCP restent intactes.",
+    "needTarget": "Choisissez la solution à mettre à jour",
+    "updatedAs": "« {{name}} » mis à jour. Le nouveau réglage est écrit ; la composition n'a pas été touchée.",
+    "noTargets": "Pas encore de solutions à mettre à jour"
+  },
+  "fleet": {
+    "title": "Flotte Wanxing",
+    "desktopOnly": {
+      "body": "La console de flotte Wanxing est exclusive à la version bureau : elle lit le runner intégré à l'app bureau (la flotte locale) — un navigateur n'a pas de « machine locale » à lire.",
+      "hint": "Ouvrez Yizuo dans l'app bureau et activez le plugin Wanxing Fleet dans les Préférences, puis redémarrez l'app."
+    },
+    "live": {
+      "title": "Cette machine",
+      "budget": "Empreinte mémoire",
+      "agent": "Agent",
+      "state": "État",
+      "version": "Version",
+      "port": "Port",
+      "empty": "Aucun agent déployé sur ce poste",
+      "loading": "Chargement…",
+      "guide": {
+        "notRunning": "Le runner de flotte n'est pas activé",
+        "error": "Le runner de flotte est injoignable",
+        "howToEnable": "Activez-le dans Préférences → Wanxing Fleet puis redémarrez l'app"
+      },
+      "states": {
+        "serving": "en service",
+        "resident": "résident",
+        "starting": "démarrage",
+        "draining": "purge",
+        "paused": "en pause",
+        "warm": "tiède"
+      },
+      "summary_one": "{{agents}} agent · {{children}} processus d'exécution",
+      "summary_other": "{{agents}} agents · {{children}} processus d'exécution"
+    },
+    "catalog": {
+      "title": "Catalogue",
+      "refresh": "Actualiser",
+      "empty": "Le catalogue est vide",
+      "guide": {
+        "notConfigured": "Registre non configuré (Préférences → Wanxing Fleet)",
+        "unreachable": "Le catalogue est injoignable"
+      },
+      "idle": "Chargez l'annuaire cloud (lecture seule) si nécessaire",
+      "readOnlyNote": "L'annuaire cloud est un pont en lecture seule — les déploiements se font dans le cluster local ci-dessus."
+    },
+    "local": {
+      "capacity": "Groupes d'exécution : {{used}} / {{cap}}",
+      "capacityHint": "Tous les groupes sont utilisés — arrêtez ou retirez un déploiement d'abord",
+      "capacityExceeded": "Les {{cap}} groupes d'exécution sont utilisés ({{used}} utilisés) — retirez un déploiement pour en libérer un",
+      "actionFailed": "Échec de l'action : {{code}}",
+      "candidatesTitle": "Déployer depuis les agents installés",
+      "candidatesEmpty": "Aucun rôle servable parmi les agents installés — installez d'abord un agent",
+      "candidatesNote": "Les déploiements s'exécutent uniquement sur cette machine. Un groupe d'exécution est un processus enfant ; en mode pod, tous les rôles du même agent partagent le même.",
+      "unavailable": "Le stockage du cluster local est indisponible",
+      "stateRunning": "en cours",
+      "stateStopped": "arrêté",
+      "stateNotDeployed": "non déployé",
+      "deploy": "Déployer",
+      "stop": "Arrêter",
+      "start": "Démarrer",
+      "remove": "Retirer",
+      "sourceCloud": "Souhaité (cloud)",
+      "sourceManual": "Manuel local",
+      "diverged": "Divergence"
+    }
+  },
+  "roles": {
+    "slug": {
+      "legal": "Juridique",
+      "economic": "Analyse économique",
+      "financial": "Analyse financière",
+      "stock": "Analyse boursière",
+      "screenplay": "Écriture de scénario",
+      "paper": "Rédaction académique",
+      "technical": "Utilisateur technique",
+      "standard": "Utilisateur standard"
+    },
+    "note": {
+      "legal": "Avocats et personnel juridique",
+      "economic": "Analystes économiques",
+      "financial": "Analystes financiers",
+      "stock": "Analystes boursiers",
+      "screenplay": "Scénaristes",
+      "paper": "Rédacteurs académiques",
+      "technical": "Utilisateurs techniques",
+      "standard": "Tous les autres (par défaut)"
+    },
+    "admin": "Administrateur",
+    "panelTitle": "Rôles métier"
+  },
+  "voiceCard": {
+    "title": "Voix",
+    "subtitle": "La saisie vocale et la lecture passent par la voie audio 词元 avec le protocole audio OpenAI fixe ; les canaux se configurent côté 词元",
+    "enabled": "Activer la voix",
+    "asrModel": "Modèle de transcription",
+    "ttsModel": "Modèle de synthèse",
+    "ttsVoice": "Voix",
+    "ttsFormat": "Format audio",
+    "blankHint": "Vide = valeur par défaut côté 词元",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Réglages vocaux enregistrés",
+    "readOnly": "Les paramètres vocaux sont définis par un administrateur",
+    "status": {
+      "loading": "Vérification…",
+      "available": "Disponible",
+      "disabled": "Désactivé",
+      "noKey": "Aucun identifiant configuré",
+      "unavailable": "Indisponible"
+    },
+    "keySource": {
+      "user": "Facturé sur votre compte 词元",
+      "deployment": "Identifiant du déploiement utilisé"
+    }
+  },
+  "clusters": {
+    "composer": {
+      "title": "Créer un groupe",
+      "clusterName": "Nom du groupe",
+      "description": "Description",
+      "selectAgents": "Sélectionner des agents",
+      "addAllFromPack": "Ajouter tous les rôles de l'agent",
+      "defaultAgent": "Par défaut",
+      "activateAllOnCreation": "Activer tous les agents à la création",
+      "bindToCurrentSession": "Lier à la session actuelle",
+      "noAgents": "Aucun agent disponible. Installez d'abord des agents.",
+      "creating": "Création du groupe...",
+      "created": "Groupe créé",
+      "createCluster": "Créer le groupe",
+      "creatingBtn": "Création...",
+      "cancel": "Annuler",
+      "nameRequired": "Le nom du groupe est requis",
+      "nameTooLong": "Le nom du groupe doit contenir au plus 100 caractères",
+      "atLeastOneAgent": "Sélectionnez au moins un agent",
+      "manage": "Gérer"
+    }
+  },
+  "board": {
+    "notFound": "Cette ligne n'est pas encore intégrée. Veuillez réessayer plus tard.",
+    "openOrigin": "Ouvrir le site d'origine",
+    "tab": {
+      "overview": "Aperçu",
+      "my-packs": "Mes agents",
+      "publish-history": "Historique de publication",
+      "fleet-summary": "Résumé du cluster",
+      "missions": "Missions",
+      "deployments": "Déploiements",
+      "datasets": "Mes données",
+      "artifacts": "Artefacts",
+      "demands": "Demandes",
+      "credentials": "Mes identifiants",
+      "suites": "Suites Lex",
+      "billing": "Facturation"
+    },
+    "subtitle": "Yizuo · tableau {{line}}",
+    "disabled": "Les tableaux de ligne ne sont pas activés (LINE_BOARDS_ENABLED)",
+    "empty": "Liste vide",
+    "noEvents": "Aucun événement",
+    "proposing": "Proposition…",
+    "partial": "Indisponible pour l'instant : {{blocks}}",
+    "unconnected": {
+      "title": "Non connecté",
+      "body": "Connectez {{title}} pour voir son état et agir depuis Yizuo.",
+      "expiredTitle": "Session expirée",
+      "expiredBody": "Votre session a expiré — revenez à la page de connexion pour vous réautoriser. Aucune clé à coller.",
+      "connect": "Se connecter"
+    },
+    "back": "Retour au centre d'applications",
+    "underConstruction": "En construction — la vue complète est sur le site d'origine",
+    "metric": {
+      "datasets": "Jeux de données",
+      "artifacts": "Artefacts",
+      "demands": "Demandes",
+      "quota": "Quota du plan gratuit",
+      "my_packs": "Mes packs",
+      "published_versions": "Versions publiées",
+      "identity": "Identité",
+      "usage_calls": "Appels de recherche",
+      "quota_state": "État du quota"
+    },
+    "tabsLabel": "Sections de {{title}}",
+    "lineConstruction": {
+      "title": "{{title}} : en construction",
+      "hint": "Cette ligne n'a pas encore de données source lisibles. Le panneau n'affiche que des données réelles et ne remplit jamais de chiffres fictifs — consultez le site d'origine pour la vue complète."
+    },
+    "hostLine": {
+      "title": "Yizuo est l'hôte : pas de panneau de ligne",
+      "body": "Un panneau est la vue native de Yizuo sur une ligne de produit externe. Yizuo lui-même est ici — commencez simplement à l'utiliser.",
+      "action": "Démarrer une conversation"
+    }
+  },
+  "copilot": {
+    "context": "Affichage",
+    "clearContext": "Effacer le contexte",
+    "focused": "Préréglage ciblé",
+    "focusPending": "Passage au préréglage ciblé…",
+    "focusRejected": "La conversation principale répond ; pas encore ciblé",
+    "focusRetry": "Réessayer",
+    "unfocused": "Non ciblé : l'agent assistant de cette ligne n'est pas installé",
+    "pack": "Inspection"
+  },
+  "action": {
+    "pending": "Proposition...",
+    "approved": "Approuvé",
+    "executed": "Exécuté",
+    "rejected": "Rejeté",
+    "expired": "Expiré",
+    "tier": "Niveau de confirmation",
+    "result": "Traité",
+    "state": {
+      "pending": "En attente de confirmation",
+      "approved": "Approuvé",
+      "executed": "Exécuté",
+      "rejected": "Rejeté",
+      "expired": "Expiré",
+      "failed": "Échec de l'exécution"
+    },
+    "tierName": {
+      "auto": "Automatique",
+      "inline": "Confirmation en ligne",
+      "second": "Double confirmation",
+      "async": "Approbation asynchrone"
+    },
+    "confirm": "Confirmer",
+    "cancel": "Annuler",
+    "confirming": "Exécution…",
+    "fillRequired": "Renseignez d'abord les champs obligatoires",
+    "failed": "Échec de l'exécution",
+    "reconnect": "Réautoriser la connexion",
+    "userFill": {
+      "title": "À renseigner par vous-même",
+      "hint": "Les valeurs proposées par le modèle pour ces champs sont ignorées ; vous les confirmez vous-même."
+    },
+    "field": {
+      "source_urls": "URL des sources publiques (une par ligne)",
+      "public_data_asserted": "Je confirme que toutes les sources ci-dessus sont des données publiques"
+    }
+  },
+  "fleets": {
+    "title": "Équipes d'agents",
+    "create": "Créer une équipe",
+    "empty": "Aucune équipe d'agents — créez la première",
+    "nameLabel": "Nom",
+    "namePlaceholder": "ex. Studio de contenu",
+    "membersCount": "{{count}} postes",
+    "detail": {
+      "empty": "Sélectionnez ou créez une équipe d'agents"
+    },
+    "state": {
+      "active": "Active",
+      "paused": "En pause",
+      "archived": "Archivée"
+    },
+    "ops": {
+      "pause": "Tout suspendre",
+      "resume": "Tout reprendre",
+      "archive": "Archiver",
+      "dissolve": "Dissoudre",
+      "confirmArchive": "L'archivage arrête chaque cadence et gèle les écritures ; l'historial reste lisible. Continuer ?",
+      "confirmDissolve": "Dissoudre supprime les tâches matérialisées ; les lignes d'historial restent. Continuer ?"
+    },
+    "tree": {
+      "empty": "Aucun poste — commencez par en créer un",
+      "structure": "Vue structure"
+    },
+    "addMember": "Ajouter un poste",
+    "member": {
+      "titleLabel": "Poste",
+      "target": "Titulaire",
+      "kindLabel": "Type de cible",
+      "targetPlaceholder": "Choisir une cible",
+      "parent": "Rend compte à",
+      "noParent": "Aucun (niveau supérieur)",
+      "cadence": "Exécutions programmées",
+      "passive": "En attente (sans horaire; agit sur demande)",
+      "pause": "Suspendre",
+      "resume": "Reprendre",
+      "remove": "Supprimer",
+      "model": "Modèle effectif",
+      "modelFallback": "Repli de modèle",
+      "confirmRemove": "Supprimer le poste arrête sa tâche ; les enfants remontent d'un niveau. Continuer ?"
+    },
+    "kind": {
+      "persona": "Persona",
+      "cluster": "Groupe",
+      "a2a": "Service d'agents",
+      "tool": "Outil"
+    },
+    "cadence": {
+      "hourlyMode": "Chaque heure",
+      "dailyMode": "Chaque jour",
+      "customMode": "Cron personnalisé",
+      "daily": "Quotidien {{hour}}:{{minute}}",
+      "hourly": "Chaque heure (à la minute {{minute}})",
+      "tzPlaceholder": "Fuseau horaire, ex. Asia/Shanghai (vide = local)",
+      "promptPlaceholder": "Modèle d'invite du tour (ex. patrouille et résumé du jour)"
+    },
+    "status": {
+      "on_duty": "Normal",
+      "paused": "En pause",
+      "missing": "En retard",
+      "vacant": "Vacant",
+      "passive": "En attente",
+      "failing": "À surveiller"
+    },
+    "evidence": {
+      "lastRun": "Dernier tour",
+      "nextRun": "Prochain",
+      "staleWindow": "Tolérance",
+      "missedRounds": "Manquées (arrêt)",
+      "catchUpPending": "Rattrapage en cours",
+      "missedUnit": "tour(s)"
+    },
+    "swap": "Changer le titulaire",
+    "swapLine": {
+      "freshSession": "Session neuve (efface la conversation du poste ; l'historique de rapports est intact)"
+    },
+    "dense": {
+      "confirm": "Cette cadence se déclenche plus souvent que toutes les 10 minutes et peut coûter cher.",
+      "accept": "Compris — créer"
+    },
+    "report": {
+      "drawerTitle": "Détails des livraisons",
+      "drawerOpen": "Livraison",
+      "selfBadge": "Livraison du poste",
+      "derivedBadge": "résumé d'exécution · non auto-déclaré",
+      "note": "Note personnelle",
+      "blockers": "Blocages",
+      "noReports": "Aucune livraison",
+      "openSession": "Session source",
+      "loadMore": "Charger plus ancien",
+      "refresh": "Rafraîchir"
+    },
+    "decisions": {
+      "waitingBadge": "{{count}} vous attendent",
+      "queueEmpty": "Approbations",
+      "drawerTitle": "Approbations",
+      "showAll": "Tout afficher (résolues/expirées)",
+      "empty": "Rien à approuver",
+      "severity": {
+        "low": "basse",
+        "normal": "normale",
+        "high": "haute"
+      },
+      "state": {
+        "open": "ouverte",
+        "approved": "approuvée",
+        "rejected": "rejetée",
+        "expired": "expirée",
+        "delivered": "délivrée"
+      },
+      "suggested": "Délai suggéré (affichage)",
+      "recommendation": "Le poste recommande",
+      "notePlaceholder": "Note (facultatif)",
+      "approve": "Approuver",
+      "reject": "Rejeter",
+      "amend": "Amender",
+      "reopen": "Rouvrir",
+      "executeNow": "Exécuter",
+      "choicePrefix": "Choix :",
+      "rejectedAs": "Rejetée. Motif : {{note}}",
+      "awaitDelivery": "en attente de livraison",
+      "awaitMember": "en attente de poste",
+      "delivered": "délivrée",
+      "memberGone": "(poste supprimé)",
+      "viewOwner": "À toi",
+      "viewDeputy": "Adjoint",
+      "routedDeputy": "Délégué à l'adjoint",
+      "escalatedTimes": "Réescaladé ×{{count}}",
+      "ruledByDeputy": "Tranché par l'adjoint",
+      "evidence": "Fondement",
+      "recall": "Reprendre (je tranche)",
+      "executed": "Exécuté",
+      "notExecuted": "Décidé mais non exécuté"
+    },
+    "tpl": {
+      "awaitStart": "Équipe d'agents montée depuis le gabarit (tout en pause) — vérifiez puis démarrez",
+      "start": "Démarrer",
+      "newer": "Le gabarit a une version plus récente v{{v}} (l'équipe active n'est pas touchée)"
+    },
+    "stream": {
+      "title": "Dernières livraisons",
+      "noReport": "Aucune livraison"
+    },
+    "turn": {
+      "failed": "tour échoué",
+      "interrupted": "tour interrompu",
+      "consecutive": "échecs consécutifs",
+      "neverRun": "jamais exécuté",
+      "skipped": "tour non exécuté"
+    },
+    "health": {
+      "onDuty": "Normal",
+      "paused": "En pause",
+      "missing": "En retard",
+      "vacant": "Vacant",
+      "passive": "En attente",
+      "budgetPressure": "Budget de modèles épuisé : {{failures}} tours en échec sur {{members}} poste(s) en {{hours}} h",
+      "budgetSince": "(depuis {{time}})",
+      "failing": "en échec"
+    },
+    "orch": {
+      "title": "Orchestration",
+      "cron": "cron",
+      "implicit": "implicite",
+      "chainDepth": "profondeur max",
+      "budget": "budget/saut",
+      "mode": {
+        "schedule": "planifié",
+        "supervisor": "superviseur",
+        "pipeline": "pipeline"
+      },
+      "edge": {
+        "trigger": "déclencheur",
+        "report": "rapport",
+        "dispatch": "délégation",
+        "handoff": "relais",
+        "fanout": "éventail",
+        "event": "événement"
+      },
+      "phrase": {
+        "report": "remonte le rapport",
+        "dispatch": "permission de déléguer",
+        "handoff": "termine → suivant",
+        "judge": "arbitre",
+        "aggregate": "agrégation",
+        "event": "réveil"
+      },
+      "implicitAll": "Mode superviseur : tous peuvent déléguer à tous ({{pairs}} paires, implicite)",
+      "graph": "Graphe d'orchestration",
+      "graphEmpty": "Permissions implicites seules — aucun arc explicite"
+    },
+    "hints": {
+      "on_duty": "Tout va bien : pourvu et actif selon ses horaires",
+      "paused": "L'équipe ou le poste est en pause — rien ne s'exécute",
+      "missing": "N'a pas tourné/rapporté à temps (fenêtre de tolérance dépassée)",
+      "vacant": "Le poste n'a pas de titulaire (ou son titulaire n'existe plus)",
+      "passive": "Sans horaire ni coût au repos ; agit sur demande",
+      "queue": "Les postes y remontent les décisions au-delà de leur autorité/budget ; approuvez pour exécuter",
+      "stream": "La dernière livraison de chaque poste, du plus récent au plus ancien",
+      "report": "Livraison structurée du poste : métriques, résumé, blocages"
+    },
+    "terms": {
+      "_treeLabel": "Vue structure",
+      "title": "Vocabulaire",
+      "intro": "Ancien terme → terme actuel",
+      "rows": [
+        [
+          "rapport",
+          "livraison"
+        ],
+        [
+          "décision",
+          "approbation"
+        ],
+        [
+          "injoignable",
+          "en retard"
+        ],
+        [
+          "vacant",
+          "vacant"
+        ],
+        [
+          "passif",
+          "en attente"
+        ],
+        [
+          "échange",
+          "changer le titulaire"
+        ],
+        [
+          "cadence",
+          "exécutions programmées"
+        ],
+        [
+          "flux quotidien",
+          "dernières livraisons"
+        ],
+        [
+          "relais",
+          "flux"
+        ]
+      ]
+    },
+    "canvas": {
+      "loading": "Chargement du canevas…",
+      "reset": "Réinitialiser la disposition"
+    },
+    "runs": {
+      "title": "Chronique d'exécution",
+      "loading": "Chargement de la chronique…",
+      "empty": "Aucune exécution — les tours apparaîtront ici dès que l'équipe s'exécute",
+      "filterStatus": "Filtrer par état",
+      "allStatuses": "Tous les états",
+      "filterSource": "Filtrer par source",
+      "allSources": "Toutes les sources",
+      "status": {
+        "open": "En cours",
+        "ok": "Réussie",
+        "failed": "Échouée",
+        "partial": "Partielle"
+      },
+      "source": {
+        "cron": "Planifiée",
+        "manual": "Manuelle",
+        "delegation": "Déléguée",
+        "event": "Événement"
+      },
+      "waterfall": "Cascade",
+      "replaying": "Lecture",
+      "replay": "Curseur de relecture",
+      "live": "Direct",
+      "noTrace": "sans trace",
+      "filterMember": "Filtrer par poste",
+      "allMembers": "Tous les postes",
+      "stopRun": "Arrêter cette exécution",
+      "stopTitle": "Arrêter cette exécution ?",
+      "stopBody": "Les tours en cours sont interrompus et enregistrés comme interrompus ; les tours terminés et leurs rapports sont conservés. Aucun autre relais ni déploiement ne sera déclenché depuis cette exécution.",
+      "stopConfirm": "Arrêter l'exécution",
+      "stopCancel": "La laisser continuer",
+      "stopping": "Arrêt…",
+      "stopDone": "Arrêtée : {{turns}} tour(s) en cours interrompu(s).",
+      "stopAlready": "Cette exécution était déjà arrêtée.",
+      "stopFailed": "Échec de l'arrêt : {{error}}",
+      "stopped": "Arrêtée",
+      "stoppedWithReason": "Arrêtée ({{reason}})",
+      "stopReasonDefault": "Arrêtée par le propriétaire depuis le cockpit",
+      "noMatch": "Aucune exécution de ce poste sur cette page"
+    },
+    "inspector": {
+      "open": "Détails",
+      "statusBasis": "Base du statut",
+      "modelChain": "Chaîne de modèles",
+      "declared": "Déclaré",
+      "fallback": "Repli",
+      "effective": "Effectif",
+      "lastTurn": "Dernier tour",
+      "slots": "Slots KPI",
+      "cadence": "Cadence",
+      "promptTemplate": "Modèle de prompt",
+      "noDecisions": "Aucune décision de ce poste",
+      "edgeTraffic": "Trafic du bord (24h)",
+      "noTraffic": "Aucun passage ces 24h",
+      "tab": {
+        "overview": "Aperçu",
+        "config": "Config",
+        "turns": "Tours",
+        "reports": "Rapports",
+        "decisions": "Décisions"
+      },
+      "runNow": "Livrer maintenant",
+      "runStarted": "Livraison lancée — le tour apparaîtra dans la chronique",
+      "alreadyRunning": "Un tour est déjà en cours — la livraison s'y joint",
+      "effort": "Profondeur de raisonnement",
+      "effortInherit": "Hériter (équipe/cellule)",
+      "contextBudget": "Budget de contexte (tokens/tour)",
+      "contextBudgetUnlimited": "Illimité",
+      "contextBudgetInvalid": "Le budget doit être un entier positif (tokens par tour)",
+      "botChannel": "Canal bot",
+      "botInbound": "dernière entrée",
+      "botOutbound": "dernière sortie",
+      "botLastError": "dernière erreur",
+      "botOpenPage": "Ouvrir la page Bots"
+    },
+    "design": {
+      "enter": "Concevoir",
+      "on": "En conception",
+      "exit": "Quitter (abandonner)",
+      "confirm": "Appliquer le brouillon",
+      "edgeKind": "Type de nouvelle arête",
+      "removed": "{{n}} arête(s) à retirer"
+    },
+    "failure": {
+      "streak": "{n} tours échoués d'affilée",
+      "lastKind": "dernière cause",
+      "since": "depuis"
+    },
+    "turnDetail": {
+      "stalled": "Bloqué sur {tool} pendant {wait}s",
+      "budget": "Budget épuisé ({n} appels d'outil)",
+      "degradedTo": "Dégradé vers",
+      "skipped": "Ce tour a été ignoré par la plateforme (disjoncteur du couloir de modèle ouvert) — pas un échec, la cadence est inchangée"
+    },
+    "configBar": {
+      "models": "Modèles",
+      "effort": "Profondeur",
+      "budget": "Budget contextuel",
+      "traffic": "Trafic des liens (24h)",
+      "unset": "non défini",
+      "noTraffic": "aucun lien déclaré",
+      "trafficNone": "aucun trafic en 24h",
+      "turnsSuffix": "tours",
+      "budgetHint": "Usage du dernier tour réel en proportion du budget déclaré ; les postes sans budget sont exclus",
+      "budgetNoData": "sans usage",
+      "budgetNoDataHint": "Le dernier tour réel n'a pas rapporté d'usage : c'est une absence, pas un quota respecté",
+      "effortLevel": {
+        "low": "basse",
+        "medium": "moyenne",
+        "high": "haute"
+      },
+      "trafficHint": "Coloré selon le trafic des arêtes sur 24 h : vert = taux de réussite ≥90 %, rouge = inférieur, gris = aucun trafic (arêtes déclarées uniquement)"
+    },
+    "miniSpan": {
+      "failed": "échec",
+      "errorKind": "échec : {{kind}}",
+      "source": "ouvrir la trace"
+    },
+    "board": {
+      "billingError": "Échec de lecture de la facturation : {{error}}",
+      "billingTitle": "Dépenses (niveau compte, approximatif)",
+      "billingUnlinked": "Aucun compte sub2api lié — liez-le dans le panneau pour voir le relevé.",
+      "cellLastTraffic": "dernier trafic {{at}}",
+      "memoryTitle": "Niveau mémoire",
+      "memoryUsageLine": "{{pct}}% de {{limitMb}} Mo utilisés",
+      "memoryHeadroom": "marge {{pct}}%",
+      "memoryCellLine": "{{mb}} Mo · {{count}} processus",
+      "memoryLow": "marge sous le seuil ({{pct}}% < {{thresholdPct}}%)",
+      "memoryUnavailable": "métriques mémoire indisponibles",
+      "memoryUngrouped": "non regroupé {{mb}} Mo",
+      "memoryBrowserLane": "service de navigateur partagé {{mb}} Mo",
+      "memoryBrowserLaneDown": "service injoignable",
+      "cellSleeping": "en veille (placeholder)",
+      "deltaUnknown": "—",
+      "digestDaily": "Quotidien",
+      "digestWeekly": "Hebdomadaire",
+      "failingBadge": "en échec {{count}}",
+      "iterationsBtn": "Itérations",
+      "loadError": "Échec du tableau : {{error}}",
+      "marketSpend": "marché {{amount}}",
+      "newVersion": "nouvelle v{{version}}",
+      "onDutyLine": "en poste {{on}}/{{total}}",
+      "proposalEmpty": "Les modifications ne peuvent pas être vides",
+      "proposalInvalidJson": "Les modifications ne sont pas un JSON valide",
+      "proposalPlaceholder": "Doc de modifications (JSON, ex. {\"cadenceDaily\":\"0 10 * * *\"})",
+      "proposalQueued": "En file pour validation — une fois approuvée, une nouvelle version est publiée sur le marché",
+      "proposalSubmit": "Soumettre à la file",
+      "proposeIteration": "Proposer une itération",
+      "retry": "Réessayer",
+      "title": "Mes équipes",
+      "turnsLine": "{{turns}} tours·{{runs}} exécutions"
+    },
+    "sourceBlueprint": "Document source"
+  },
+  "facetCurate": {
+    "title": "Panneau de curation",
+    "subtitle": "La catégorie et la mise en avant relèvent de la présentation (visibilité, versions et installabilité inchangées) ; l'usage provient de l'agrégat de la plateforme (7 derniers jours).",
+    "loading": "Chargement du panneau…",
+    "empty": "Le tableau est vide pour l'instant — les agents publiés apparaîtront ici.",
+    "errorLoad": "Échec du listage : {{message}}",
+    "saved": "Enregistré : {{name}}",
+    "saveFailed": "Échec de l'enregistrement : {{name}} — {{message}}",
+    "usageDegraded": "Source d'usage indisponible (la curation n'est pas affectée) : {{message}}",
+    "unlisted": "délisté",
+    "private": "privé",
+    "usage": "{{users}} actifs hebdo / {{turns}} tours",
+    "categoryPlaceholder": "slug de catégorie (ex. legal)",
+    "setCategory": "Définir la catégorie",
+    "feature": "Mettre en avant",
+    "unfeature": "Retirer la mise en avant",
+    "allPacks": "Tous",
+    "onlyUnclassified": "Uniquement non classés",
+    "unclassified": "Non classé",
+    "unclassifiedCount": "Non classés {{count}} / {{total}}",
+    "lineResolved": "Ligne : {{line}}",
+    "domainsLabel": "Domaines",
+    "saveDomains": "Enregistrer les domaines",
+    "vocabUnavailable": "Vocabulaire indisponible",
+    "onlyGaps": "Lacunes anglais seules",
+    "coverageBadge": "en {{covered}}/{{total}}"
+  },
+  "facetMine": {
+    "title": "Mes agents",
+    "subtitle": "Gérez ici ce que vous publiez : versions, listage et visibilité. L'installation dans un environnement reste une fonction de 壹座 (Réglages → Agents → Mes agents). Les agents publics avec contrat de service alimentent le catalogue 万星 — les déployeurs externes les exécutent avec des tours mesurés et votre part s'accumule automatiquement.",
+    "loading": "Chargement de vos agents…",
+    "empty": "Rien de publié pour l'instant — utilisez la zone de publication ci-dessous.",
+    "emptyGuide": "Première fois ? Le guide de création couvre les manifestes, les contrats de service et la discipline de version :",
+    "errorLoad": "Échec du chargement : {{message}}",
+    "public": "public",
+    "private": "privé",
+    "unlisted": "délisté",
+    "unpublish": "Dépublier",
+    "unpublishNote": "La restauration n'est pas disponible ; publier une nouvelle version rétablit le listage",
+    "makePublic": "Rendre public",
+    "makePrivate": "Rendre privé",
+    "done": "{{label}} — terminé",
+    "failed": "{{label}} — échec : {{message}}",
+    "publishTitle": "Publier depuis un manifeste",
+    "publishHint": "Collez ou modifiez un manifeste JSON d'agent (sortie de facet-agent-builder). ",
+    "publishCliHint": "Publié sur votre propre instance ? Ramenez-le au marché officiel avec la CLI — un appairage unique par code, puis des connexions silencieuses.",
+    "publishIdPlaceholder": "id de l'agent (facultatif, pour une nouvelle version)",
+    "publishing": "Publication…",
+    "publish": "Publier",
+    "publishedResult": "Publié : {{id}} v{{version}}",
+    "publishFailed": "Échec de la publication : {{message}}",
+    "notJson": "JSON invalide",
+    "packIdWord": "id de l'agent",
+    "visibility": "Visibilité"
+  },
+  "zhiyu": {
+    "title": "Zhiyu · Salons",
+    "unavailable": "Zhiyu n'est pas activé sur ce déploiement ({{error}})",
+    "createRoom": "Nouveau salon",
+    "rooms": {
+      "meta": "{{status}} · plafond {{cap}} · {{at}}",
+      "empty": "Aucun salon pour l'instant — ouvrez-en un et réunissez humains, mandataires et agents."
+    },
+    "status": {
+      "active": "En cours",
+      "ended": "Terminé"
+    },
+    "kind": {
+      "user": "Membre",
+      "facade": "Mandataire",
+      "agent": "Agent"
+    },
+    "invites": {
+      "title": "Invitations en attente",
+      "accept": "Accepter",
+      "decline": "Refuser",
+      "from": "invité par {{by}}"
+    },
+    "notices": {
+      "title": "Activité",
+      "call": "{{from}} vous a appelé dans « {{room}} »",
+      "minutes": "« {{room}} » est terminée — le compte rendu est prêt",
+      "invite": "Vous avez été invité dans « {{room}} »"
+    },
+    "form": {
+      "title": "Nom du salon",
+      "titlePlaceholder": "ex. revue du T3",
+      "replyCap": "Plafond de réponses",
+      "replyCapPlaceholder": "vide = défaut du déploiement",
+      "budget": "Budget quotidien",
+      "budgetPlaceholder": "vide = illimité",
+      "submit": "Créer"
+    },
+    "room": {
+      "back": "Retour à Zhiyu",
+      "headerMeta": "Plafond {{cap}} · {{status}}",
+      "roster": "Présents ({{count}})",
+      "call": "Appeler",
+      "takeOver": "Je parle",
+      "handBack": "Rendre",
+      "remove": "Retirer",
+      "invite": "Inviter",
+      "settings": "Réglages",
+      "privateWindow": "Fenêtre privée",
+      "privateEmpty": "Votre canal privé avec votre mandataire (visible par vous deux seulement).",
+      "privatePlaceholder": "Donne un ordre à ton jumeau ici…",
+      "composerPlaceholder": "Dites quelque chose… @nom pour viser un agent",
+      "send": "Envoyer",
+      "answering": "répond",
+      "hatchedSender": "(historique repris)",
+      "memberFallback": "membre",
+      "agentFallback": "agent",
+      "systemLabel": "système",
+      "facadeLabel": "{{name}} (pour {{owner}})",
+      "presence": {
+        "active": "présent",
+        "away": "absent",
+        "on_duty": "de garde",
+        "listening": "à l'écoute",
+        "seated": "assis"
+      },
+      "memory": {
+        "title": "Ce dont cette salle se souvient",
+        "empty": "Les souvenirs des tours de la salle se déposeront ici",
+        "off": "Le service de mémoire est indisponible pour le moment — impossible de lire les souvenirs de la salle",
+        "turnBadge": "Capture de tour"
+      },
+      "loadEarlier": "Charger les messages précédents",
+      "loadingEarlier": "Chargement…"
+    },
+    "invite": {
+      "title": "Inviter dans le salon",
+      "refUser": "E-mail du membre",
+      "refAgent": "Réf. de déploiement (agent:agent)",
+      "onBehalfOf": "E-mail du titulaire",
+      "display": "Nom affiché",
+      "displayPlaceholder": "Comment iel apparaît dans le salon",
+      "historyGrant": "Accès à l'historique",
+      "grant": {
+        "join_from": "Depuis l'arrivée",
+        "full": "Tout l'historique"
+      },
+      "submit": "Envoyer l'invitation"
+    },
+    "settings": {
+      "title": "Réglages du salon",
+      "billingMode": "Mode de facturation",
+      "billingModeBilled": "Régler via la clé de facturation du siège (par défaut)",
+      "billingModeShowcase": "Mode démonstration (gratuit par conception ; non facturé attendu)",
+      "billingModeHint": "En mode démonstration, un siège sans clé de facturation répond quand même et est enregistré comme non facturé attendu ; le budget quotidien et le plafond de réponses restent appliqués.",
+      "cap": "Plafond de réponses",
+      "budget": "Budget quotidien",
+      "budgetPlaceholder": "vide = illimité",
+      "save": "Enregistrer",
+      "end": "Terminer le salon",
+      "endConfirm": "Le salon deviendra en lecture seule et le compte rendu ira aux membres. Terminer ?"
+    },
+    "hatch": {
+      "menuItem": "Transformer en salon…",
+      "title": "Transformer en salon",
+      "hint": "Porter cette session vers un salon Zhiyu. La session est lue seulement, jamais modifiée.",
+      "none": "Sans historique",
+      "last20": "Les 20 derniers",
+      "all": "Tout l'historique"
+    },
+    "widget": {
+      "title": "Intégration web",
+      "publicClosed": "La voie publique d'intégration est fermée au niveau du déploiement (ZHIYU_WIDGET) — préconfigurable; s'applique à l'ouverture.",
+      "statusOn": "Intégration activée (empreinte {{fp}})",
+      "statusOff": "Intégration désactivée — ajoutez des domaines ci-dessous (un par ligne), puis activez.",
+      "allowlist": "Liste blanche de sites (un domaine par ligne, *.example.com accepté)",
+      "enable": "Activer l'intégration",
+      "saveAllowlist": "Enregistrer la liste blanche",
+      "copySnippet": "Copier le snippet",
+      "rotate": "Rotation du secret du site",
+      "revoke": "Révoquer l'intégration",
+      "makeLink": "Créer le lien d'accès",
+      "onceOnly": "Affiché une seule fois — copiez et conservez :"
+    },
+    "event": {
+      "member_joined": "{{name}} est entré dans le salon",
+      "member_left": "{{name}} a quitté le salon",
+      "member_removed": "{{name}} a été retiré du salon",
+      "invite_sent": "Invitation envoyée à {{name}}",
+      "invite_accepted": "{{name}} a accepté l'invitation",
+      "invite_declined": "{{name}} a refusé l'invitation",
+      "invite_auto_declined": "L'invitation de {{name}} a été refusée par sa politique",
+      "room_ended": "Le salon est terminé",
+      "room_hatched": "Transformé depuis une session de chat",
+      "reply_cap_changed": "Plafond de réponses réglé à {{value}}",
+      "budget_changed": "Budget quotidien modifié ({{value}})",
+      "reply_cap_hit": "Plafond atteint ({{value}}); les autres agents se taisent",
+      "budget_exhausted": "Budget quotidien épuisé ({{value}}); agents en pause",
+      "agent_busy": "{{name}} répond ; réessayez plus tard",
+      "settle_unbilled": "{{name}} a répondu sans facturation — ce siège n'a pas de clé de facturation (défaut de configuration)",
+      "settle_unbilled_expected": "{{name}} a répondu sans facturation (salle de démonstration, attendu)",
+      "agent_failed_retryable": "{{name}} est occupé (limitation/instabilité amont) — réessayez bientôt",
+      "agent_failed": "{{name}} n'a pas pu répondre",
+      "agent_declined_insolvent": "{{name}} a décliné — clé de facturation insolvable",
+      "pass": "{{name}} a passé",
+      "all_passed": "Aucun agent n'a répondu à ce tour",
+      "needs_you": "On a besoin de vous ici",
+      "take_over": "{{name}} a pris la parole",
+      "hand_back": "{{name}} a rendu la parole au mandataire",
+      "owner_transferred": "Titularité transférée à {{name}}",
+      "room_renamed": "Salon renommé",
+      "guest_joined": "Un visiteur est entré dans le salon",
+      "guest_identified": "Identité du visiteur confirmée",
+      "guest_greeting": "Bienvenue — les sièges de garde sont là pour vos questions"
+    },
+    "fleet": {
+      "title": "Abonnements d'équipes",
+      "none": "Aucune équipe abonnée",
+      "unsubscribe": "désabonner",
+      "fleetIdPlaceholder": "Id d'équipe (copiez-le du cockpit)",
+      "preview": "Aperçu invitable",
+      "summon": "Invoquer",
+      "cockpitOnly": "{title} : pas de face de service — voir/agir dans le cockpit"
+    }
+  },
+  "plugins": {
+    "title": "Extensions",
+    "description": "Agents d’extensions dsh fournis par ce déploiement. Consultez leur état et activez-les ou désactivez-les ici ; les agents sont fournis par le déploiement et ne peuvent être ni installés ni supprimés depuis ce panneau.",
+    "suppliedHint": "Les agents sont fournis par le déploiement (intégrés à l’image + déclarés dans le manifeste). Ce panneau ne fait que les activer ou les désactiver — rien n’est installé.",
+    "unavailable": "L’agent est encore en cours d’initialisation ; la liste des extensions n’est pas encore disponible.",
+    "empty": "Ce déploiement ne fournit encore aucun paquet d’extensions dsh.",
+    "protected": "Requis par la gestion",
+    "failed": "Échec du chargement du paquet : {{reason}}",
+    "applying": "Application…",
+    "toggleLabel": "Basculer {{name}}",
+    "applyHint": "L’activation ou la désactivation est enregistrée dans cet espace de travail. Elle s’applique immédiatement lorsque l’agent est inactif (recomposition à chaud, ou redémarrage qui reprend les sessions) ; le changement est refusé pendant une réponse.",
+    "busyHint": "L’agent répond ; les interrupteurs se débloquent à la fin du tour."
+  },
+  "memory": {
+    "promotions": {
+      "title": "Promotions à confirmer",
+      "accept": "Accepter",
+      "ignore": "Ignorer"
+    },
+    "title": "Mémoire",
+    "funnel": {
+      "title": "Entonnoir de distillation",
+      "segTitle": "{{layer}} · {{count}} éléments · {{pct}}%"
+    },
+    "subtitle": "Tout ce que vos agents retiennent",
+    "all": "Tout",
+    "layerLabel": "Couche",
+    "tierLabel": "Niveau",
+    "scopePlaceholder": "Filtrer par projet",
+    "loading": "Lecture de la mémoire…",
+    "empty": "Pas encore de mémoire. Dites « retiens ceci » dans le chat.",
+    "degraded": {
+      "unavailable": "Ce déploiement n'a pas encore de service de mémoire."
+    },
+    "openInLibrary": "Ouvrir dans la bibliothèque",
+    "projects": "Projets",
+    "standalonePortalHint": "Un Yongyi déployé seul ou via un autre harness embarque son propre portail humain : lancez `yongyi serve` puis ouvrez `/portal`.",
+    "deployer": {
+      "open": "Mémoire",
+      "openHint": "Voir la mémoire de ce poste",
+      "title": "Mémoire du poste (vue déployeur)",
+      "close": "Fermer",
+      "empty": "Pas encore de mémoire pour ce poste.",
+      "noPack": "Cette équipe d'agents n'a pas de coordonnée d'agent."
+    }
+  },
+  "blueprints": {
+    "title": "Studio de plans",
+    "fromCollectionSeeded": "Source de données préremplie depuis cette collection — complétez le plan, puis validez et approuvez.",
+    "new": "Nouveau",
+    "untitled": "Scène sans titre",
+    "list": {
+      "empty": "Pas encore de plans : créez-en un pour esquisser un agent vertical.",
+      "version": "v{{version}}"
+    },
+    "status": {
+      "draft": "Brouillon",
+      "approved": "Approuvé",
+      "cast": "Forgé"
+    },
+    "approved": {
+      "by": "Approuvé par {{who}} · {{when}}"
+    },
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "validate": "Valider",
+    "validating": "Validation…",
+    "approve": "Approuver",
+    "approving": "Approbation…",
+    "cast": "Forger",
+    "casting": "Forge…",
+    "notice": {
+      "created": "Brouillon créé.",
+      "saved": "Enregistré en v{{version}}.",
+      "validated": "Validation au vert.",
+      "invalid": "Validation échouée : voir les problèmes ci-dessous.",
+      "approved": "Approuvé : la forge est déverrouillée.",
+      "cast": "Forgé vers le marché (agent {{packId}}).",
+      "conflict": "Conflit de version : rechargez le plan pour continuer.",
+      "trialGreen": "L'essai est vert — signez le rapport, puis publiez à nouveau pour l'intégrer au pack.",
+      "trialNotGreen": "L'essai n'est pas vert — chaque assertion est listée dans le rapport ; corrigez la preuve ou le critère.",
+      "trialFailed": "L'essai ne s'est pas exécuté (canal ou sandbox en panne) — aucun rapport écrit ; relancez."
+    },
+    "editor": {
+      "pick": "Choisissez un plan à gauche, ou créez-en un.",
+      "unsaved": "Modifications non enregistrées",
+      "synced": "Synchronisé"
+    },
+    "tabs": {
+      "form": "Formulaire",
+      "json": "JSON",
+      "draft": "Esquisse"
+    },
+    "fields": {
+      "name": "Nom de la scène",
+      "oneLine": "Objet en une ligne",
+      "outOfScope": "Hors périmètre",
+      "jsonHint": "Les postes, la cadence, les emplacements de KPI, les assertions d'acceptation et le tableau vivent dans la piste JSON."
+    },
+    "sources": {
+      "title": "Sources de données",
+      "add": "Ajouter",
+      "hint": "Uniquement des noms de serveurs du registre ou des noms logiques de la bibliothèque interne : ni endpoints ni identifiants.",
+      "placeholder": "p. ex. policy-feed",
+      "pickCollection": "Choisir une collection…",
+      "remove": "Retirer"
+    },
+    "json": {
+      "apply": "Appliquer le JSON",
+      "notObject": "Le JSON doit être un objet."
+    },
+    "verify": {
+      "title": "Validation",
+      "notRun": "Pas encore validé.",
+      "ok": "Toutes les vérifications au vert.",
+      "fail": "{{count}} problème(s) : ci-dessous les textes du validateur existant.",
+      "stale": "Le brouillon a changé depuis la dernière validation."
+    },
+    "error": {
+      "entry": "[{{entry}}]"
+    },
+    "diff": {
+      "title": "Diff de la dernière édition",
+      "none": "Aucun diff enregistré."
+    },
+    "trial": {
+      "title": "Rapport d'essai",
+      "load": "Charger",
+      "none": "Aucun rapport pour l'instant.",
+      "green": "Au vert",
+      "notGreen": "Pas au vert",
+      "pass": "Conforme",
+      "fail": "Non conforme",
+      "ranAt": "exécuté {{when}}",
+      "judgedCount": "{{count}} évaluées par le modèle",
+      "run": "Lancer l'essai",
+      "running": "Essai en cours — les postes sont réellement créés et le premier tour réellement déclenché"
+    },
+    "castPack": "agent {{packId}}",
+    "draft": {
+      "hint": "Confiez le prompt à un architecte de blueprints dans le chat et recollez le JSON — même bassin, même chaîne. Sur les cellules équipées du pack officiel Blueprint Architect, il peut rédiger et déposer directement dans la conversation.",
+      "copy": "Copier le prompt",
+      "copied": "Copié",
+      "copyFailed": "Presse-papiers indisponible : sélectionnez le prompt et copiez-le à la main.",
+      "promptIntro": "Tu es constructeur de plans. Rédige un plan vertical pour la scène « {{name}} » et renvoie UN SEUL objet JSON (sans prose, sans balises de code), de forme exacte :",
+      "constraints": "Contraintes : les sources de données sont uniquement des noms de serveurs du registre ou des noms logiques de la bibliothèque interne (ni endpoints ni identifiants) ; gardez le packId des membres agent-preset tel quel (le marqueur PACK_ID du squelette) et pointez presetId vers un id déclaré dans agents ; une dépendance de paquet de discipline utilise le marqueur de dépendance {{dep}}.",
+      "pastePlaceholder": "Collez ici le JSON renvoyé…",
+      "apply": "Charger l'esquisse",
+      "applied": "Esquisse chargée dans le même brouillon.",
+      "invalid": "Ce JSON n'est pas un objet de plan."
+    },
+    "delete": {
+      "label": "Supprimer",
+      "castLocked": "Un plan forgé ne peut pas être supprimé : l'agent du marché fait foi"
+    },
+    "judge": {
+      "audit": "Journal du jugement",
+      "verdict": {
+        "pass": "Modèle : conforme",
+        "fail": "Modèle : non conforme",
+        "insufficient-evidence": "Modèle : preuves insuffisantes",
+        "laneError": "Modèle : non exécuté (canal indisponible)"
+      },
+      "model": {
+        "label": "Modèle évaluateur",
+        "followDefault": "Suivre la valeur par défaut",
+        "hint": "Quel modèle juge les assertions llm-judged de ce plan. Il doit différer des modèles de vos postes : un modèle ne peut pas noter son propre travail.",
+        "sameAsProducer": "identique à un poste — sera refusé",
+        "notInRoster": "absent du catalogue de ce déploiement",
+        "used": "Évalué par {{model}}",
+        "source": {
+          "blueprint": "choisi par ce plan",
+          "deployment": "valeur par défaut",
+          "fallback": "repli"
+        },
+        "followDefaultResolves": "Suivre la valeur par défaut du déploiement — résout en {{model}}",
+        "followDefaultUnknown": "Suivre la valeur par défaut du déploiement — aucun canal d'évaluation n'est configuré ; l'essai signalerait des preuves insuffisantes"
+      }
+    },
+    "signoff": {
+      "sign": "Signer le rapport",
+      "signed": "Rapport signé.",
+      "by": "Signé par {{who}} · {{when}}",
+      "clear": "Retirer",
+      "cleared": "Signature retirée."
+    },
+    "recast": "Republier (rapport vert)",
+    "recastRepair": "Reconstruire (le pack publié n'existe plus)"
+  },
+  "machines": {
+    "title": "Machines",
+    "adminView": "Vue administrateur",
+    "empty": "Aucune machine appairée pour l'instant — générez un code d'appairage ci-dessous et terminez l'appairage dans l'application de bureau ; la machine apparaîtra ici.",
+    "rosterError": "Annuaire indisponible (non connecté ou service désactivé)",
+    "health": {
+      "online": "En ligne",
+      "silent": "Silencieuse",
+      "neverReported": "Jamais signalée"
+    },
+    "alerts": {
+      "silent": "Silence prolongé",
+      "divergence": "L'état souhaité diverge du réel",
+      "crashLoop": "Garde anti-crash",
+      "pullFailures": "Échecs répétés de récupération",
+      "mergeRejects": "Fusion refusée",
+      "other": "Anormale"
+    },
+    "summary": {
+      "fleets": "{{n}} équipes d'agents",
+      "members": "{{n}} membres",
+      "deployments": "{{n}} déploiements"
+    },
+    "age": {
+      "seconds": "il y a {{n}} s",
+      "minutes": "il y a {{n}} min",
+      "hours": "il y a {{n}} h"
+    },
+    "detailLoading": "Chargement…",
+    "detail": {
+      "deployments": "Déploiements",
+      "noDeployments": "Aucun déploiement sur cette machine",
+      "agents": "État des agents",
+      "noAgents": "Runner inactif",
+      "mergeRejects": "Fusions refusées",
+      "neverReported": "Cette machine n'a jamais signalé de détails",
+      "fresh": "Détails à jour",
+      "stale": "Détails obsolètes",
+      "close": "Fermer"
+    },
+    "source": {
+      "cloud": "Souhaité (cloud)",
+      "manual": "Manuel local"
+    },
+    "diverged": "Divergence",
+    "state": {
+      "enabled": "Actif",
+      "disabled": "Arrêté"
+    },
+    "desired": {
+      "title": "Ensemble souhaité (cloud)",
+      "hint": "Les modifications ne touchent que l'ensemble souhaité côté cloud ; la machine le récupère et converge à son rythme. Le manuel local gagne toujours.",
+      "empty": "Aucune entrée souhaitée — ajoutez-en une depuis les déploiements ci-dessous.",
+      "enabled": "Souhaité : actif",
+      "disabled": "Souhaité : inactif",
+      "enable": "Activer",
+      "disable": "Désactiver",
+      "remove": "Retirer",
+      "saveError": "Échec de l'enregistrement — réessayez"
+    },
+    "system": {
+      "unknown": "Informations système non remontées",
+      "boundAt": "Appairée {{time}}"
+    },
+    "pair": {
+      "add": "Ajouter une machine",
+      "emptyCta": "Appairer une machine",
+      "title": "Appairer une machine",
+      "hint": "Saisissez le code à 6 chiffres ci-dessous dans la page d'appairage de l'application de bureau (ou Réglages → Intendant en arrière-plan), ou scannez le QR à droite.",
+      "signedOut": "Connectez-vous d'abord à la console : les codes d'appairage exigent une session ouverte.",
+      "unavailable": "Cette version du serveur est plus ancienne et ne propose pas encore l'appairage d'appareils.",
+      "error": "Impossible de générer un code d'appairage. Réessayez.",
+      "retry": "Réessayer",
+      "minting": "Génération d'un code d'appairage…",
+      "waiting": "Code prêt — en attente du premier rapport de la machine (environ une minute). Elle apparaîtra dans la liste dès son rapport.",
+      "expired": "Code expiré",
+      "expiresIn": "Expire dans {{time}}",
+      "typeHint": "Pas de caméra ? Saisissez les mêmes 6 chiffres dans l'application de bureau.",
+      "waitStart": "Je l'ai saisi — attendre la machine",
+      "close": "Fermer",
+      "refresh": "Actualiser le code"
+    },
+    "converge": {
+      "synced": "Synchronisée",
+      "converging": "En convergence",
+      "awaiting": "En attente de récupération",
+      "diverged": "Divergente",
+      "unknown": "Inconnu",
+      "stale": "Instantané obsolète",
+      "syncedHint": "La machine a consommé le souhaité v{{version}}",
+      "convergingHint": "La machine le récupérera à son prochain battement (≤60 s)",
+      "awaitingHint": "L'attente est enregistrée ; elle s'appliquera dès le retour en ligne. Si la machine ne vient pas, vérifiez l'intendant local.",
+      "staleHint": "Aucun instantané depuis plusieurs battements — état inconnu. Vérifiez si l'intendant de cette machine tourne.",
+      "unknownHint": "La machine n'a pas signalé de version consommée",
+      "divergedHint": "La version correspond, mais une entrée attendue manque localement"
+    },
+    "history": {
+      "title": "Historique de la machine",
+      "loading": "Chargement…",
+      "empty": "Aucun événement pour l'instant. Les bascules d'état, les modifications d'attentes et les résultats de convergence seront consignés ici.",
+      "expand": "Voir les {{n}}",
+      "collapse": "Réduire",
+      "presenceFlip": "{{from}} → {{to}}",
+      "desiredChange": "{{who}} a modifié les attentes v{{version}} (+{{added}} / −{{removed}} / basculées {{toggled}})",
+      "mergeAdvance": "Souhaité consommé v{{from}} → v{{to}}",
+      "rejectsOpen": "{{count}} rejet(s) de fusion",
+      "rejectsClear": "Rejets de fusion à zéro",
+      "divergenceOpen": "Divergence commencée",
+      "divergenceClose": "Divergence terminée",
+      "unbound": "{{who}} a dissocié la machine",
+      "other": "{{kind}}"
+    },
+    "unbind": {
+      "title": "Dissocier",
+      "hint": "Après dissociation, la machine perd immédiatement le rapport et l'accès à la récupération, et l'attente côté cloud est effacée ; l'historique est conservé 30 jours. La machine continue de fonctionner localement — elle cesse seulement d'obéir.",
+      "confirmText": "Dissocier cette machine ?",
+      "confirm": "Dissocier",
+      "cancel": "Annuler",
+      "error": "Échec de la dissociation. Réessayez."
+    }
+  },
+  "agentTeams": {
+    "views": {
+      "overview": "Vue d'ensemble",
+      "manage": "Gérer",
+      "owner": "Opérations"
+    },
+    "overview": {
+      "summaryTitle": "Toutes les équipes d'agents",
+      "total": "{{count}} équipes",
+      "running": "{{count}} en marche",
+      "abnormal": "{{count}} anormales",
+      "abnormalUnknown": "stats d'anomalies indisponibles",
+      "decisions": "{{count}} pour vous",
+      "runs24h": "tours 24h {{count}}",
+      "members": "{{count}} postes",
+      "lastActivity": "dernière activité {{time}}",
+      "onDuty": "en poste {{count}}",
+      "state": {
+        "missing": "perdus {{count}}",
+        "vacant": "vacants {{count}}",
+        "failing": "en échec {{count}}"
+      },
+      "empty": "Aucune équipe d'agents — provisionnez-en une depuis l'étagère de gabarits ou créez-en une.",
+      "viewMode": {
+        "cards": "Cartes",
+        "formation": "Formation"
+      },
+      "formationEmpty": "Formation vide",
+      "formationTruncated": "{{count}} postes · vignette",
+      "formationUnavailable": "Données de formation indisponibles",
+      "sourceUnavailable": "source indisponible",
+      "retry": "réessayer",
+      "loading": "chargement…",
+      "builderPointer": "Ou laissez l'architecte de flottes monter une équipe dans le chat, ou l'architecte de blueprints transformer un scénario en gabarit publiable.",
+      "xlineTitle": "Dépenses inter-lignes",
+      "xlineUnconnected": "Non connecté ({{reason}})",
+      "xlineNoData": "Aucune donnée exportable",
+      "xlineConnect": "Connecter",
+      "xlineBoard": "Tableau",
+      "xline": {
+        "fleet": "Comptage de tours",
+        "market": "Achats marché",
+        "wanxing": "Règlements Wanxing",
+        "lex": "Usage Lex",
+        "wire": "Consommation Wire",
+        "balance": "Capture de solde"
+      },
+      "xlineCalibre": {
+        "fleet": "projection de faits",
+        "market": "registre d'achats",
+        "wanxing": "lecture via identifiants de service",
+        "lex": "lecture directe",
+        "wire": "lecture directe",
+        "balance": "attribution grossière"
+      },
+      "xlineReason": {
+        "expired": "session expirée",
+        "not_connected": "non autorisé"
+      }
+    },
+    "manage": {
+      "colName": "Équipe",
+      "colState": "État",
+      "colModel": "Modèle par défaut",
+      "colMembers": "Postes",
+      "colDecisions": "En attente",
+      "colActions": "Actions",
+      "batchPause": "Mettre en pause",
+      "batchResume": "Reprendre",
+      "batchArchive": "Archiver",
+      "selected": "{{count}} sélectionnées",
+      "receipt": "{{ok}} réussies / {{failed}} échouées",
+      "confirmArchive": "L'archivage est définitif. Archiver les équipes sélectionnées ?",
+      "editName": "Cliquer pour renommer",
+      "modelInherit": "Hériter",
+      "openCockpit": "Ouvrir le cockpit",
+      "selectRow": "Sélectionner {{name}}",
+      "scopeNote": "Modifiable en ligne : nom, modèle par défaut, état. Les edges d'orchestration et l'effort/budget se règlent dans le cockpit."
+    }
+  },
+  "loginHero": {
+    "official": {
+      "title": "Actifs officiels",
+      "kindTemplate": "Gabarit d'équipe",
+      "kindFeatured": "Sélection officielle",
+      "hint": "Connectez-vous pour vous abonner et installer — bouton de connexion ci-dessus."
+    }
+  },
+  "skillEvo": {
+    "title": "Candidats de compétences (proposés par l'IA)",
+    "subtitle": "Des chemins réutilisables proposés après les tours — porte A/B anonyme ; seule votre acceptation les active. Un échec d'éval n'est pas un passage.",
+    "evidence": "Preuve : {source} (résolu : {solved})",
+    "verdict": "Aveugle : {best} gagne",
+    "evaluate": "Lancer l'éval",
+    "promote": "Accepter & activer",
+    "reject": "Rejeter",
+    "status": {
+      "candidate": "en attente",
+      "evaluated": "évaluée, à confirmer",
+      "promoted": "active",
+      "rejected": "rejetée"
+    }
+  },
+  "agents": {
+    "tab": {
+      "build": "Construire",
+      "supply": "Catalogue",
+      "creations": "Mes créations",
+      "tuning": "Ajustement",
+      "apps": "Apps",
+      "market": "Marché",
+      "mine": "Les miens",
+      "agents": "Agents",
+      "tools": "Outils",
+      "skills": "Compétences",
+      "plugins": "Plugins"
+    },
+    "market": {
+      "subtitle": "Acquérir et gérer des capacités : agents, outils, compétences, plugins",
+      "openStudio": "Ouvrir Studio",
+      "installed": "Packs installés sur cette machine"
+    }
+  },
+  "hub": {
+    "build": {
+      "title": "Constructeur visuel",
+      "desc": "Composez un agent à partir de trois compartiments — persona, compétences, outils — ou agencez une équipe sur le canevas ; éditable avec validation en direct et émission vers les presets et brouillons du marché.",
+      "new": "Nouveau document",
+      "workspace": "Ouvrir l'espace de travail",
+      "recent": "Documents récents"
+    },
+    "supply": {
+      "packs": "Place des Matériaux d'Agents",
+      "skills": "Compétences",
+      "mcp": "MCP"
+    },
+    "tuning": {
+      "personaTitle": "Révisions de persona",
+      "personaEmpty": "L'auto-ajustement de la persona est en préparation : propositions de révision → évaluation A/B → révision finale humaine. Atterrira ici."
+    }
+  },
+  "tuning": {
+    "title": "Réglage",
+    "subtitle": "Revue des candidatures de compétences et amendements de persona (skill-self-evolution)",
+    "skillCandidates": "Candidatures de compétences",
+    "personaAmendments": "Amendements de persona"
+  },
+  "memoryRecall": {
+    "title": "Je me souviens",
+    "viewInPanel": "Consulter et corriger dans le panneau de mémoire"
+  },
+  "memoryWeekly": {
+    "title": "Rythme de la semaine",
+    "capture": "Captures cette semaine",
+    "note": "Notes cette semaine",
+    "correction": "Corrections cette semaine",
+    "pending": "En attente de promotion",
+    "week": "Cette semaine",
+    "segTitle": "{{n}} entrées · cliquer pour filtrer la liste de la semaine",
+    "pendingHint": "Les promotions en attente se traitent dans l'encadré ci-dessus",
+    "degraded": "Le rythme hebdomadaire est momentanément illisible."
+  },
+  "memoryTimeline": {
+    "tabBrowse": "Par couche",
+    "tabTimeline": "Chronologie",
+    "fromHarness": "de {{harness}}"
+  },
+  "market": {
+    "plugins": {
+      "state": {
+        "available": "Disponible",
+        "enabled": "Activé",
+        "unsupplied": "Non fourni"
+      },
+      "request": "Demander la fourniture",
+      "requested": "Fourniture demandée : {{name}}",
+      "requestPending": "Demandé — en attente du prochain approvisionnement",
+      "refresh": "Actualiser le catalogue",
+      "emptyTitle": "Ce déploiement ne fournit aucun plugin",
+      "emptyBody": "Le catalogue de plugins est fourni avec le déploiement ; celui-ci n'en contient pas encore.",
+      "rosterUnavailable": "La liste des plugins est indisponible",
+      "errorTitle": "Lecture du catalogue impossible"
+    },
+    "agents": {
+      "unavailableTitle": "Ce déploiement n'a pas de marché d'agents",
+      "unavailableBody": "Aucun marché n'est branché ici. Les paquets déjà installés restent sous « Les miens » et fonctionnent comme avant."
+    }
+  }
+}

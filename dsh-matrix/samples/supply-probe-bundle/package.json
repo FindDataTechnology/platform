@@ -1,0 +1,22 @@
+{
+  "name": "@platform/supply-probe-bundle",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Sample dsh bundle proving the platform plugin-supply chain: matrix bake -> template bundle declaration -> profile composition -> Plugins roster row -> persisted toggle. Activation is intentionally inert.",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/*.js",
+    "cordis.patch.yml"
+  ],
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

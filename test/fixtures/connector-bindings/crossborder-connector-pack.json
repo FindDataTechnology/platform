@@ -1,0 +1,152 @@
+{
+ "schema": "erp-vertical-connector-pack/v1",
+ "name": "跨境电商对账连接器包",
+ "version": "1.1.0",
+ "description": "跨境电商对账模板·连接器 pack：Shopify 店铺读取（复用已采纳 a1-x-tech/mcp-shopify-admin 的读面：订单/收款 payouts/库存流）+ 国内平台只读（mcp-cn-commerce，支持面以实测为准：淘宝/天猫/京东；拼多多上游 schema 缺失当前不提供）。凭证 BYOK 环境变量注入（ERP_BYOK_SHOPIFY_TOKEN / ERP_BYOK_CN_COMMERCE_TOKEN）零落库零日志。只读滩头：对外部系统零写入；真实店读写沿 crm-board 2026-10-30 裁决暂缓，待商家自带凭证逐店上线。运行时形态 = fd-erp-vertical-templates Python 包（对账驱动 sidecar），本包为市场分发与 pack v2 兼容清单。",
+ "tags": [
+  "ERP",
+  "跨境电商",
+  "对账",
+  "连接器",
+  "BYOK"
+ ],
+ "visibility": "public",
+ "category": "facet",
+ "connectors": {
+  "shopify": {
+   "adopted_from": "a1-x-tech/mcp-shopify-admin",
+   "flows": [
+    "orders",
+    "payments(payouts)",
+    "inventory"
+   ],
+   "credential_env": "ERP_BYOK_SHOPIFY_TOKEN",
+   "writes_external": false,
+   "real_store_writes": "暂缓（crm-board 2026-10-30 裁决）"
+  },
+  "cn_commerce": {
+   "server": "mcp-cn-commerce",
+   "support_surface": {
+    "taobao": {
+     "flows": [
+      "orders",
+      "payments"
+     ],
+     "measured_at": "2026-11-06"
+    },
+    "tmall": {
+     "flows": [
+      "orders",
+      "payments"
+     ],
+     "measured_at": "2026-11-06"
+    },
+    "jd": {
+     "flows": [
+      "orders",
+      "payments"
+     ],
+     "measured_at": "2026-11-06"
+    },
+    "pinduoduo": {
+     "flows": [],
+     "note": "上游接口 schema 缺失，当前不提供（如实守界）"
+    }
+   },
+   "credential_env": "ERP_BYOK_CN_COMMERCE_TOKEN",
+   "writes_external": false
+  },
+  "woocommerce": {
+   "status": "不接入：出现合格开源 MCP server 前不接入（spec 如实守界）"
+  }
+ },
+ "connector_bindings": [
+  {
+   "key": "shopify-store",
+   "external_system": "Shopify 店铺",
+   "surface": "订单 + 收款 payouts + 库存流只读",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_SHOPIFY_TOKEN（凭证不出库）",
+   "note": "复用已采纳的 mcp-shopify-admin 读面；真实店读写沿 crm-board 2026-10-30 裁决暂缓，商家自带凭证逐店上线。",
+   "provider": "shopify",
+   "allowOperations": [
+    "read"
+   ],
+   "connectionHint": "Shopify 店铺",
+   "optional": true
+  },
+  {
+   "key": "cn-commerce-store",
+   "external_system": "国内电商店铺（淘宝/天猫/京东）",
+   "surface": "订单 + 收款流水只读（支持面以实测为准）",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_CN_COMMERCE_TOKEN",
+   "note": "客户在连接器卡片选定自己实际在用的平台及其账号。拼多多的上游接口 schema 目前缺失，故不声明——声明了就是一条永远关不上的缺口。",
+   "provider": "cn-commerce",
+   "providerRole": true,
+   "allowOperations": [
+    "read"
+   ],
+   "optional": true
+  }
+ ],
+ "skills": [
+  {
+   "name": "erp-crossborder-recon-discipline",
+   "description": "跨境电商对账纪律卡：三方流对齐、差异四类双侧引用、多币种原币对账+出处汇率、费用独立维度、平台侧零写入、如实守界。",
+   "content": "---\nname: erp-crossborder-recon-discipline\ndescription: 跨境电商对账纪律卡：三方流逐笔对齐、四类差异双侧引用、原币对账+出处汇率折算、payouts/佣金/手续费独立维度、平台侧零写入、未支持平台如实报出。\n---\n\n# 跨境电商对账纪律卡\n\n本卡是跨境电商对账模板岗位（巡检/核对/拍板）的纪律底座。\n\n## 一、三方流逐笔对齐\n- 以店铺为单位：订单流（Shopify orders）、收款流（Shopify Payments payouts）、库存流三方对齐；多店铺逐店出账，互不混账。\n- 差异四类：缺失（missing_in_right）/ 多余（extra_in_right）/ 金额不符（amount_mismatch）/ 状态不符（status_mismatch）；每条差异必须含双侧原始引用（平台单号 + 收款流水引用 + 原始记录快照）。\n- 对账阶段对平台侧零写入：连接器只有 read 面，绝不写平台数据；不要求商家更换既有经营系统。\n\n## 二、多币种与汇率\n- 跨币种订单以原币金额对账为准；本位币折算仅作呈现口径。\n- 折算汇率必须带出处（ecb-exr 观测流；汇率 + as_of + source 三件齐）；无出处的汇率不参与折算——如实标注 fx_unsourced，绝不静默换算。\n- 落账折算由内核二次把关（fx_facts 登记 + FX_UNSOURCED 拒绝）。\n\n## 三、平台费用独立维度\n- payouts、平台佣金、支付手续费是独立对账维度，不与销售流水混算。\n- 费用差异按平台费率配置解释；费率配置必须带出处，无出处如实报 unexplained。\n\n## 四、物流与合规联动\n- 在途/签收类差异不自行判定物流因果：打 needs_explanation 槽，引用物流舰观测证据解释；供给/通报类引用合规舰证据。对账层不重造物流/合规判定。\n\n## 五、如实守界\n- 拼多多店铺接入：当前不提供（上游接口 schema 缺失），如实回答，不预设接入日期。\n- WooCommerce：合格开源 MCP server 出现前不接入。\n- 真实店读写暂缓（crm-board 2026-10-30 裁决）：待商家自带凭证逐店上线；当前只有读面与测试店合成数据。\n- 未支持面一律 NOT_WIRED 如实报出，不伪造自动接入。\n\n## 六、回写车道\n- 对账核对结论回写只走内核 proposal 车道（submit_proposal，pending 待确认）；落账必须经拍板席确认门（confirm_proposal）；核对岗不持确认门。\n- 回写科目限白名单（应收/在途/收入/费用），资金类分录（现金/权益）禁入机器车道；分账执行类语义直接拒绝（二清红线）。",
+   "en": "Cross-border recon discipline: three-flow per-store alignment, four diff classes with bilateral references, original-currency matching with sourced FX conversion, payouts/commission/fees as separate dimensions, zero writes to platforms, honest unsupported-platform answers, writeback only via kernel proposal lane with fund entries banned.",
+   "ja": "越境EC対照規律：三フロー対店照合、四類差異・双方参照、原通貨照合と出所付き換算、手数料は独立次元、プラットフォーム書込ゼロ、未対応プラットフォームは正直回答、書戻しは kernel proposal レーンのみ（資金仕訳禁止）。",
+   "es": "Disciplina de conciliación transfronteriza: alineación por tienda de tres flujos, cuatro clases de diferencia con referencias bilaterales, conciliación en moneda original con conversión con fuente, comisiones/tasas como dimensión independiente, cero escrituras en plataformas, respuestas honestas sobre plataformas no soportadas, reescritura solo por el carril de propuestas del kernel (asientos de fondos prohibidos).",
+   "fr": "Discipline de réconciliation transfrontalière : alignement par boutique de trois flux, quatre classes de différences avec références bilatérales, rapprochement en devise d'origine avec conversion sourcée, commissions/frais comme dimension indépendante, zéro écriture sur les plateformes, réponses honnêtes sur les plateformes non prises en charge, réécriture uniquement via le canal de propositions du noyau (écritures de fonds interdites)."
+  }
+ ],
+ "mcpServers": [
+  {
+   "registryName": "fd-erp-ledger-mcp",
+   "allowTools": [
+    "run_reconciliation",
+    "get_recon_report",
+    "query_balance",
+    "query_entries",
+    "list_proposals",
+    "submit_proposal"
+   ]
+  }
+ ],
+ "fleet": {
+  "name": "跨境电商对账连接器包（供给包）",
+  "members": [
+   {
+    "ref": "xb-recon-operator",
+    "title": "对账产出位",
+    "parentRef": null,
+    "target": {
+     "kind": "pack-preset",
+     "packId": "Mo3_aWe7tF2eFVzkqFT9mA",
+     "presetId": "erp-ledger-board-post"
+    },
+    "kpiSlots": [
+     {
+      "key": "stores_reconciled",
+      "label": "已对店铺"
+     },
+     {
+      "key": "diffs_found",
+      "label": "差异条目"
+     }
+    ]
+   }
+  ],
+  "orchestration": {
+   "mode": "supervisor",
+   "edges": []
+  }
+ },
+ "_casting": {
+  "packDependencies": {
+   "fleet-board-contribution": "Mo3_aWe7tF2eFVzkqFT9mA"
+  },
+  "note": "连接器 pack 为 pack v2 形状且免自指（fleet target 指向在册 fleet-board-contribution 真实 packId）。对账舰队蓝图见 recon-fleet/template.json（本包随四件套清单分发）。publish-ready：谦面市场上架为独立部署步骤（挂账）。"
+ }
+}

@@ -1,0 +1,361 @@
+{
+  "_meta": {
+    "as_of": "2026-11-04T15:01:54.367Z",
+    "source": "supply-catalog",
+    "base": "https://facet.finddatatech.cloud"
+  },
+  "mcpServers": [
+    {
+      "name": "airegistry-tools",
+      "displayName": "AI Registry tools",
+      "description": "Provides tools to discover and list servers, agents, and skills in the AI Registry. Includes intelligent tool finder which uses semantic search to discover the most relevant tools across all registered services.",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/airegistry-tools/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "eco-mcp-fetch",
+      "displayName": "eco-mcp-fetch",
+      "description": "[生态] modelcontextprotocol 官方参考实现（MIT）",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/eco-mcp-fetch/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "eco-mcp-time",
+      "displayName": "eco-mcp-time",
+      "description": "[生态] modelcontextprotocol 官方参考实现（MIT）",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/eco-mcp-time/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "facet-market-mcp",
+      "displayName": "facet-market-mcp",
+      "description": "谦面市场操作 MCP（C1.1-A）：发布/浏览/版本/可见性/策展，facet /api/packs* 六工具，用户委托鉴权（市场 app token）",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/facet-market-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "facet-ops-mcp",
+      "displayName": "facet-ops-mcp",
+      "description": "谦面市场操作 MCP（五线 AI 操作面 C1）：目录/详情/发布/更新/上下架/查重，用户委托鉴权",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/facet-ops-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-health-config",
+      "displayName": "fd-health-config",
+      "description": "finddata 中央库健康巡检配置(总闸/限流)只读 MCP — fd_open_data.public.health_config",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-health-config/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-info",
+      "displayName": "fd-info",
+      "description": "柏讯信息流索引 MCP：list_since/get_item/search_info/locate_evidence/stream_health 五工具（公告/部委/SSE互动三源）",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-info/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-legal-search-mcp",
+      "displayName": "fd-legal-search-mcp",
+      "description": "识律法律检索 MCP（lex-platform-v1）：法条检索与条级引用解析（law_db 全目录 + Qdrant law_chunks_v2 语义检索）、类案检索（wenshu_db 裁判文书，RustFS zstd 块正文）、指导案例检索、五源法律语料——每个结果携带 provenance 三件套（source/stable_id/as_of），未命中如实返回。识律平台 lex.finddatatech.cloud 对外数据入口，行/次双单位计量。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-legal-search-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-paper-trading",
+      "displayName": "fd-paper-trading",
+      "description": "柏讯模拟交易 MCP（paper-only）：多租户账户/订单/持仓 + 行情（概念族可配） + 策略双轨与回测。调用者身份逐请求委托（进站 Authorization 转发）。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-paper-trading/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-quant",
+      "displayName": "fd-quant",
+      "description": "fd-quant deterministic compute plane + decision ledger (50 commercial tools",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-quant/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-sentiment",
+      "displayName": "fd-sentiment",
+      "description": "柏讯文档情绪打分 MCP：8 工具/5 组全 commercial。evidence_spans 必填且 quote 为原文逐字子串；幂等键 (doc_id, content_hash, prompt_version, model)；聚合视图明确非情绪指数；金标评测含置信度校准。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-sentiment/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-zhengxin-reference",
+      "displayName": "fd-zhengxin-reference",
+      "description": "政心参照系 MCP（lex 第四模块）：政体指标时序（V-Dem v2x_* 聚合指数，国家×年，附口径与 provenance）、思潮坐标（Wikidata+MARPOR 立场）、政治概念（SEP 只链不抄+中国线）、思想关系边、六源状态台账。全只读；空结果必带 reason，逐结果溯源。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-zhengxin-reference/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "lex-ops-mcp",
+      "displayName": "lex-ops-mcp",
+      "description": "识律线操作 MCP（C4）：线全景导览（self-describing）+账户视图（me/usage/billing/quota）+检索凭据生命周期（list/mint/revoke，owner-only 上游判定）；Logto ID token 原样转发",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/lex-ops-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "vaas-wanxing",
+      "displayName": "vaas-wanxing",
+      "description": "VAAS generation plane (Wanxing pilot): voice/image/video/cover generation, asset store, registry discovery. Multi-tenant; assets owner-scoped; publish plane excluded.",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/vaas-wanxing/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "wanxing-ops-mcp",
+      "displayName": "wanxing-ops-mcp",
+      "description": "萬星舰队操作 MCP（C2）：公开目录/AgentCard/允许清单/启停 7 调用型（平台令牌用户委托）+A2A 回合（caller key 计费门）；回执不冒充结果",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/wanxing-ops-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "wire-build-mcp",
+      "displayName": "wire-build-mcp",
+      "description": "柏讯产物构建 MCP：form（录入表单）与 record-view（单记录扫码页）的创建/更新/发布，看板（dashboard）与正文文档（doc）创建，产物与版本读取，数据集列事实与按需建集。写入默认落草稿、发布必须独立显式调用；spec 引用不存在的列时错误文案带该数据集真实列名清单。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/wire-build-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "wire-ops-mcp",
+      "displayName": "wire-ops-mcp",
+      "description": "柏讯客户面操作 MCP（C3）：需求单/数据面读/市场订阅十工具，双轨鉴权透传（Logto ID token / wdk_ key），viewer 只读与合规门上游判定",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/wire-ops-mcp/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "edu-catalog",
+      "displayName": "启材目录",
+      "description": "启材线（教育）目录查询/订阅 MCP：跨论文/播客/课程检索、条目详情（卡层明示未取正文）、许可层概况、订阅盯梢（唯一写面=订阅两工具，只碰订阅表）。空结果与通道故障严格区分（reason 枚举）。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/edu-catalog/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "infra-telemetry",
+      "displayName": "基础设施遥测",
+      "description": "基础设施只读遥测 MCP：五工具闭集（GitOps 漂移/工作负载健康/服务存活/爬取汇总/成本），每返回带 as-of 与逐通道状态，零写面零凭据。",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/infra-telemetry/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-wire-cell-drillcust001",
+      "displayName": "柏讯 cell · drillcust001",
+      "description": "fd-wire cell entry (managed by cell-manager)",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-wire-cell-drillcust001/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-wire-cell-pgauto001",
+      "displayName": "柏讯 cell · pgauto001",
+      "description": "fd-wire cell entry (managed by cell-manager)",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-wire-cell-pgauto001/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    },
+    {
+      "name": "fd-wire-cell-wiretester2",
+      "displayName": "柏讯 cell · wiretester2",
+      "description": "fd-wire cell entry (managed by cell-manager)",
+      "category": "Catalog",
+      "icon": "box",
+      "configTemplate": {
+        "url": "https://mcp.finddatatech.cloud/fd-wire-cell-wiretester2/mcp",
+        "headers": {
+          "Authorization": "Bearer <your_token>"
+        }
+      },
+      "installInstructions": "Served through your MCP gateway. Fill in your gateway access token.",
+      "origin": "facet-catalog",
+      "groups": []
+    }
+  ]
+}

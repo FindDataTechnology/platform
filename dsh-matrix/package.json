@@ -1,0 +1,12 @@
+{
+  "name": "dsh-matrix",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Intent-level declaration of the dsh runtime install matrix (see dsh-matrix/README.md and ADR-0007/0023). The full package closure is resolved once and frozen in package-lock.json — never hand-edit the lock. Since 0.2.0 the whole dsh family ships as exact-pinned hard dependencies of one lockstep version, so intent rows are composition facts only (what the platform's profile scaffold directly composes: the dsh CLI, the dsh-base bundle, the inserted sdk-jsonrpc-server plugin) — no overrides, no generation unification needed.",
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-base": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-sdk-jsonrpc-server": "0.2.0-rc.2",
+    "@platform/supply-probe-bundle": "file:./samples/supply-probe-bundle"
+  }
+}

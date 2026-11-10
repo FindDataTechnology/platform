@@ -1,0 +1,13 @@
+import { chromium } from "@playwright/test";
+import fs from "node:fs";
+const SESSION = fs.readFileSync("/tmp/wt-session.txt", "utf8").trim();
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ storageState: { cookies: [{ name: "paas_session", value: SESSION, domain: "platform.finddatatech.cloud", path: "/", httpOnly: true, secure: true, sameSite: "Lax" }] }, ignoreHTTPSErrors: true });
+const p = await ctx.newPage();
+await p.goto("https://platform.finddatatech.cloud/agents?tab=market", { waitUntil: "domcontentloaded" });
+await p.getByTestId("pack-card-EMGW14N8voa1b36LSuTxxw").click({ timeout: 20000 });
+await p.getByTestId("pack-detail").waitFor({ timeout: 20000 });
+await p.waitForTimeout(2000);
+const ids = await p.getByTestId("pack-detail").evaluate((el) => [...el.querySelectorAll("[data-testid]")].map((n) => n.getAttribute("data-testid")).filter((t) => t && (t.startsWith("pack-") || t.startsWith("gallery-"))));
+console.log([...new Set(ids)].join("\n"));
+await browser.close();

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Platform Preferences</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #0d1117;
+      color: #f0f6fc;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #30363d;
+    }
+    .tab {
+      padding: 8px 16px;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      color: #8b949e;
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      color: #f0f6fc;
+      border-bottom-color: #2f81f7;
+      background: #21262d;
+    }
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      color: #c9d1d9;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      background: #0d1117;
+      color: #f0f6fc;
+      font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    textarea {
+      min-height: 300px;
+      resize: vertical;
+    }
+    button {
+      background: #238636;
+      color: white;
+      border: 1px solid rgba(240, 246, 252, 0.1);
+      border-radius: 6px;
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #2ea043;
+    }
+    button.secondary {
+      background: #30363d;
+      color: #f0f6fc;
+    }
+    button.secondary:hover {
+      background: #444c56;
+    }
+    .error {
+      color: #f85149;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border: 1px solid #f8514940;
+      border-radius: 6px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #3fb950;
+      margin-top: 8px;
+      padding: 8px 12px;
+      border: 1px solid #3fb95040;
+      border-radius: 6px;
+    }
+    .readonly {
+      background: #21262d !important;
+      color: #8b949e;
+    }
+    .actions {
+      margin-top: 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .hint {
+      color: #8b949e;
+      font-size: 12px;
+      margin: 6px 0 0;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="tabs">
+    <div class="tab active" data-tab="general">General</div>
+    <div class="tab" data-tab="wanxing">Wanxing Fleet</div>
+    <div class="tab" data-tab="steward">后台管家</div>
+    <div class="tab" data-tab="update">更新</div>
+  </div>
+
+  <div class="tab-panel active" data-panel="general">
+    <div class="form-group">
+      <label for="llmApiKey">LLM API Key</label>
+      <input type="text" id="llmApiKey" name="llmApiKey">
+    </div>
+    <div class="form-group">
+      <label for="llmBaseUrl">LLM Base URL</label>
+      <input type="text" id="llmBaseUrl" name="llmBaseUrl" placeholder="http://your-gateway:port">
+    </div>
+    <div class="form-group">
+      <label for="defaultModel">Default Model</label>
+      <input type="text" id="defaultModel" name="defaultModel">
+    </div>
+    <div class="actions">
+      <button id="saveGeneral">Save & Restart Server</button>
+      <span id="generalStatus"></span>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="wanxing">
+    <div class="form-group">
+      <label for="wanxingEnabled" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="wanxingEnabled" name="wanxingEnabled" style="width:auto">
+        Enable the Wanxing fleet runner on this computer
+      </label>
+      <p class="hint">Turning the runner into a Wanxing seat takes effect after restarting the app. Registry changes apply with a runner restart only.</p>
+    </div>
+    <div class="form-group">
+      <label for="wanxingRegistryUrl">Serving registry URL</label>
+      <input type="text" id="wanxingRegistryUrl" name="wanxingRegistryUrl" placeholder="https://registry.example.com">
+    </div>
+    <div class="form-group">
+      <label for="wanxingRegistryToken">Serving registry token</label>
+      <input type="password" id="wanxingRegistryToken" name="wanxingRegistryToken" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label for="wanxingRunnerPort">Runner ops port (advanced)</label>
+      <input type="text" id="wanxingRunnerPort" name="wanxingRunnerPort" placeholder="8790">
+    </div>
+    <div class="form-group">
+      <label for="wanxingFleetUrl">Fleet board uplink URL (optional)</label>
+      <input type="text" id="wanxingFleetUrl" name="wanxingFleetUrl" placeholder="https://fleet.example.test">
+    </div>
+    <div class="form-group">
+      <label for="wanxingFleetToken">Fleet uplink token</label>
+      <input type="password" id="wanxingFleetToken" name="wanxingFleetToken" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Pair with the Wanxing console</label>
+      <p class="hint">Mint a pairing code in the console's device panel, paste it here — the uplink URL and token are fetched and saved automatically.</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="wanxingPairCode" placeholder="6-digit code" style="width:120px" autocomplete="off">
+        <input type="text" id="wanxingPairName" placeholder="machine name" style="flex:1;min-width:140px">
+        <button id="wanxingPairBtn" class="secondary">Pair</button>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="saveWanxing">Save Wanxing Settings</button>
+      <span id="wanxingStatus"></span>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="steward">
+    <div class="form-group">
+      <label>常驻后台管家（Resident steward）</label>
+      <p class="hint">装上后，退出应用窗口舰队与定时任务也继续运行；在「用户自己的机器上跑无人值守舰队」的本机车道（add-cell-lifecycle）。</p>
+      <pre id="stewardConsent" style="white-space:pre-wrap;font-size:12px;background:#1118;padding:10px;border-radius:8px;line-height:1.6"></pre>
+      <pre id="fleetDetailNotice" style="display:none;white-space:pre-wrap;font-size:12px;background:#2a1a00;padding:10px;border-radius:8px;line-height:1.6;border:1px solid #a06000"></pre>
+    </div>
+    <div class="form-group">
+      <label>状态</label>
+      <p id="stewardStatusText" class="hint">查询中…</p>
+    </div>
+    <div class="form-group" id="stewardPairGroup" style="display:none">
+      <label>配对上行（可选，默认关）</label>
+      <p class="hint">完成配对后，本台管家向平台上报——在线状态、OS 与版本、舰队/岗位/任务计数与名称标签；prompt、会话内容、工具参数永不上行。配对码从 console 你的账号里出。</p>
+      <div class="field-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="stewardPairCode" placeholder="6 位配对码" maxlength="6" style="width:110px" inputmode="numeric">
+        <input id="stewardPairLabel" placeholder="这台机器叫什么（如：客厅 Mac mini）" maxlength="40" style="flex:1;min-width:180px">
+        <button id="stewardPairBtn">配对并开启上报</button>
+      </div>
+    </div>
+    <div class="form-group" id="stewardPairedGroup" style="display:none">
+      <label>已配对</label>
+      <p id="stewardPairedText" class="hint"></p>
+      <button id="stewardUnpairBtn" class="secondary">解除配对（立即停上报）</button>
+    </div>
+    <div class="actions">
+      <button id="stewardInstallBtn">同意并安装后台管家</button>
+      <button id="stewardUninstallBtn" class="secondary" style="display:none">卸载后台管家</button>
+      <button id="stewardRepairBtn" class="secondary" style="display:none">重新注册自启</button>
+      <span id="stewardStatus"></span>
+    </div>
+  </div>
+
+  <div class="tab-panel" data-panel="update">
+    <div class="form-group">
+      <label>当前版本</label>
+      <p id="updateVersionText" class="hint">查询中…</p>
+    </div>
+    <div class="form-group">
+      <label>更新状态</label>
+      <p id="updateStateText" class="hint">未检查</p>
+      <p id="updateDegradeText" class="hint" style="display:none;color:#a06000">当前构建未签名，macOS 仅提示新版本不自动安装（Gatekeeper 约束）——点「打开下载页」手动获取安装包。</p>
+    </div>
+    <div class="form-group">
+      <label>更新通道（发布道 URL）</label>
+      <div class="field-row" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="updateChannelInput" placeholder="留空用内置默认道" style="flex:1;min-width:240px">
+        <button id="updateChannelSaveBtn">保存</button>
+      </div>
+      <p class="hint">留空 = 内置默认发布道；改动后下一次检查生效（无需重启）。</p>
+    </div>
+    <div class="actions">
+      <button id="updateCheckBtn">检查更新</button>
+      <button id="updateQuitInstallBtn" style="display:none">退出并安装</button>
+      <button id="updateOpenDownloadBtn" class="secondary" style="display:none">打开下载页</button>
+      <span id="updateActionStatus"></span>
+    </div>
+  </div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

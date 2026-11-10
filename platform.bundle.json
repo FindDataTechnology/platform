@@ -1,0 +1,93 @@
+{
+  "mcpServers": {
+    "chatwoot": {
+      "command": "node",
+      "args": [
+        "node_modules/@fazer-ai/mcp-chatwoot/dist/index.js"
+      ],
+      "_comment": "CRM 客服台（add-crm-desk-bridge/add-crm-desk-pack-embed）：npm dist 即上游官方 bun --target node 单文件 bundle，node 直跑零本地构建。双凭据形态：部署 env（requiresEnv+envRefs，机器 owner/寻数 A 租户）或逐用户 BYOK（credentialEnv→chatwoot ref，已认证用户须自连凭据否则条目省略，见 dsh-profile toMcpClientEntry）。工具面上界（98 标准面）见 lib/operator-tool-face.js。",
+      "requiresEnv": [
+        "CHATWOOT_BASE_URL",
+        "CHATWOOT_API_TOKEN"
+      ],
+      "envRefs": [
+        "CHATWOOT_BASE_URL",
+        "CHATWOOT_API_TOKEN"
+      ],
+      "credentialEnv": {
+        "CHATWOOT_API_TOKEN": "chatwoot"
+      }
+    },
+    "websearch": {
+      "command": "node",
+      "args": [
+        "server/websearch-mcp.js"
+      ],
+      "_comment": "envRefs name (never hold) the relay env pair — dsh's subprocess scrub strips TOKEN-shaped names from MCP children, so the pair is forwarded explicitly at patch-write time. Both unset ⇒ web_search degrades to an explicit not-configured error. SEARCH_USER_KEY (add-search-byok) is the user's OWN key: optional by design — its absence is the normal state, not a degradation.",
+      "envRefs": [
+        "SEARCH_RELAY_URL",
+        "SEARCH_RELAY_TOKEN"
+      ],
+      "envRefsOptional": [
+        "SEARCH_USER_KEY"
+      ]
+    },
+    "fleet-architect": {
+      "command": "node",
+      "args": [
+        "server/fleet-architect-mcp.js"
+      ],
+      "_comment": "团队架构师工具面(agent-fleet-architect):读态/草稿/落地三段五工具,bundled 种子自激活,loopback 桥身份=cell owner"
+    },
+    "blueprint-author": {
+      "command": "node",
+      "args": [
+        "server/blueprint-author-mcp.js"
+      ],
+      "_comment": "蓝图构造师工具面(add-builder-team-templates):list/validate/save 三工具,bundled 种子自激活,loopback 桥身份=cell owner;无 approve/cast/trial"
+    },
+    "pack-author": {
+      "command": "node",
+      "args": [
+        "server/pack-author-mcp.js"
+      ],
+      "_comment": "智能体作者工具面(add-builder-team-templates):drafts/market-servers/validate/save 四工具,bundled 种子自激活,loopback 桥身份=cell owner;无 publish/pricing/deploy"
+    },
+    "skill-evolution": {
+      "command": "node",
+      "args": [
+        "server/skill-evolution-mcp.js"
+      ],
+      "_comment": "技能自进化提议面(add-skill-self-evolution):单工具 skill_propose 落候选,bundled 自激活,loopback 桥;评测/晋升/拒绝是主人 REST 面,无工具"
+    },
+    "persona-evolution": {
+      "command": "node",
+      "args": [
+        "server/persona-evolution-mcp.js"
+      ],
+      "_comment": "角色桶自进化提议面(add-persona-self-evolution):单工具 persona_amend 落候选,bundled 自激活,loopback 桥;评测/晋升(预设物化|pack fork)/拒绝是主人 REST 面,无工具"
+    },
+    "playwright": {
+      "command": "node",
+      "args": [
+        "server/browser-mcp.js"
+      ],
+      "_comment": "浏览器操作车道（add-browser-use-lane）：first-party 薄启动器拉起钉版 @playwright/mcp（headless；BROWSER_CDP_ENDPOINT 时 attach 远程浏览器）。laneGate=browser 供给门在 patch 生成期裁决：无本地 runtime（BROWSER_RUNTIME_PATH 不存在）且无远程端点、或 BROWSER_LANE=off ⇒ 整条省略（requiresEnv 省略同族，info 日志）。工具名 mcp__playwright__*，走既有 tool 渲染链。",
+      "laneGate": "browser"
+    },
+    "actions-mcp": {
+      "command": "node",
+      "args": [
+        "server/actions-mcp.js"
+      ],
+      "_comment": "跨面动作提案面(add-line-boards-and-action-gate):propose_action 单工具,写面唯一入口=提案→拍板→已批准执行;loopback 桥身份=cell owner,提案人由 ACTIONS_MCP_PROPOSER_EMAIL 注入"
+    }
+  },
+  "skills": [
+    "computer-file-system",
+    "computer-process",
+    "computer-shell",
+    "example-skill"
+  ],
+  "permissions": {}
+}
