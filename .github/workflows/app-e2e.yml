@@ -1,0 +1,317 @@
+name: app-e2e
+
+# The mobile client's Maestro gate (add-mobile-app 6.1/6.2). Android is the
+# Lint/typecheck/unit run on every push (ubuntu, ~10 min — the budget gate).
+# ALL heavy legs (APK build ~25-40m, Maestro android emulator ~30m, Maestro
+# iOS on macOS 10x billing) are MANUAL-DISPATCH ONLY since the nonweb-CI
+# revival (2026-10-27): nightly macOS cron + heavy legs firing on every
+# packages/core change is the structural quota-killer combo that took the
+# private CI down mid-Oct (revive-nonweb-ci channel division: private repo =
+# ubuntu budget gates; heavy legs on demand or pool-side, measured minutes
+# in docs/registry-maintenance.md §「非 web 端通道」).
+#
+# The android lane is split in two jobs because gradle and the emulator
+# cannot share a runner: assembleDebug ran 42m next to the idling emulator
+# and the emulator was dead by `adb install` (run 38134202330 — OOM/starved
+# by the build). The `apk` job builds the RELEASE app (JS bundled inside,
+# debug-signed per Expo's template) with only the emulator's ABI; the
+# `android` job then boots the emulator against a finished artifact — no
+# gradle, no Metro, no `adb reverse` in the test phase at all.
+#
+# The test phase boots a MOCK instance (repo server.js, forward_auth +
+# MP_TOKEN_SECRET) and drives all four flows IN THIS ORDER: pairing first —
+# the tab shell gates on a connected instance, so tabs/language/chat are
+# only reachable after a successful bind — then tabs, language-switch,
+# chat-stream (dead LLM: a prompt must surface the server's error and leave
+# the composer usable). The emulator reaches the host through 10.0.2.2 (its
+# alias for 127.0.0.1); app.json sets android.usesCleartextTraffic because
+# the release manifest otherwise blocks the plain-http mock (and, outside
+# CI, plain-http self-hosted instances users may point at).
+#
+# Two hard-won details: the bind code lives 5 minutes (BIND_CODE_TTL_MS), so
+# it is minted right before the flows, never earlier; and the pairing token
+# persists in AsyncStorage (zustand persist), which is what lets pairing.yaml
+# hand a paired store to the three flows after it.
+
+on:
+  pull_request:
+    paths: ["app/**", "packages/core/**", ".github/workflows/app-e2e.yml"]
+  push:
+    branches: [main]
+    paths: ["app/**", "packages/core/**", ".github/workflows/app-e2e.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: app-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: app lint → typecheck → unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            package-lock.json
+      # The unit suite includes the integration smoke, which boots the REAL
+      # repo server.js — that needs the ROOT dependency tree (express/ws/…),
+      # not just app/. Skipping this step left the smoke waiting 30s for a
+      # server that could never start (run 38075371998).
+      - name: Install root dependencies (the integration smoke boots server.js)
+        run: npm ci
+      - name: Install app dependencies (+ linked core)
+        run: |
+          npm --prefix app ci
+          npm --prefix app install --no-audit --no-fund
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../app/node_modules/zustand packages/core/node_modules/zustand
+
+      - name: Lint (Biome, repo-pinned; covers shared core)
+        run: npx biome check app/ packages/core/
+      - name: Typecheck
+        run: npm --prefix app run typecheck
+      - name: Unit tests (incl. integration smoke + i18n CJK gate)
+        working-directory: app
+        run: npm run test:unit
+
+  apk:
+    name: android APK (release, bundled JS)
+    # 重腿改手动挂载（revive-nonweb-ci）：本档与模拟器档全腿实测 80-170 分钟，
+    # paths 触发 × 每日 core 变更 = 私仓额度第二出血口（第一是已删的 iOS
+    # nightly cron）。日常门禁由 gates 三棒承担；真腿需要时 dispatch。
+    if: github.event_name == 'workflow_dispatch'
+    needs: gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install app dependencies (+ linked core)
+        run: |
+          npm --prefix app ci
+          npm --prefix app install --no-audit --no-fund
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          # @platform/core resolves zustand through packages/core/node_modules
+          # (the consumer provides it). CI only installs app/, so link app's
+          # copy into core's lookup path.
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../app/node_modules/zustand packages/core/node_modules/zustand
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('app/package-lock.json', 'app/app.json') }}-${{ github.sha }}
+          restore-keys: |
+            gradle-${{ runner.os }}-${{ hashFiles('app/package-lock.json', 'app/app.json') }}-
+      - name: Android SDK components
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_HOME || '/usr/local/lib/android/sdk' }}
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -name sdkmanager | head -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+      - name: Prebuild native project
+        working-directory: app
+        run: npx expo prebuild --platform android --no-install
+      # Emulator-only artifact: x86_64 alone (all-ABI compiles the NDK C++
+      # four times and died on disk, run 38130545504). The shippable
+      # universal APK is app-build.yml's business, not this lane's.
+      - name: Gradle assembleRelease (x86_64 only)
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yizuo-e2e-apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 7
+
+  android:
+    name: Maestro (android emulator)
+    if: github.event_name == 'workflow_dispatch' # 同 apk 档口径（见上注）
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: package-lock.json
+      # Only for the MOCK instance (repo server.js); the app itself arrives
+      # as a finished release APK from the apk job.
+      - name: Install root dependencies (mock instance boots server.js)
+        run: npm ci
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - uses: actions/download-artifact@v4
+        with:
+          name: yizuo-e2e-apk
+          path: e2e-apk
+      # THE load-bearing step: the runner user is not in the kvm group, so
+      # the emulator silently ran `-accel off` — pure software emulation,
+      # 6-minute boots, 4-minute installs, and system_server ANR dialogs over
+      # the app (38152561602's ProbeKVM line is the smoking gun). This udev
+      # rule (the android-emulator-runner README's own recipe) opens /dev/kvm.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Install APK, boot mock, run flows
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          # API 30, not 34: the Android-11 system is far lighter — on the
+          # software-rendered CI runner the 34 image bogged the whole emulator
+          # into a system_server ANR before the app's first frame (run
+          # 38149987574's screenshot shows the "Process system isn't
+          # responding" dialog over the app).
+          api-level: 30
+          arch: x86_64
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -memory 3072 -cores 2
+          # NOTE: this action runs each line as its own `sh -c` — no line
+          # continuations, no exported state across lines. Every line below
+          # is therefore self-contained (its own cd / env / absolute paths).
+          script: |
+            # 1) The release APK carries its JS bundle — install and it runs.
+            adb install -r e2e-apk/app-release.apk
+            # 2) Mock instance + a FRESH bind code (TTL is 5 minutes, so it
+            #    is minted right before the flows, never earlier).
+            mkdir -p /tmp/app-mock/data
+            (PORT=9411 HOST=0.0.0.0 PLATFORM_DATA_DIR=/tmp/app-mock/data DSH_HOME=/tmp/app-mock/dsh MCP_CONFIG_PATH=/tmp/app-mock/data/mcp.json LLM_API_KEY="" AUTH_MODE=forward_auth MP_TOKEN_SECRET=app-mock-secret nohup node server.js > /tmp/app-mock/server.log 2>&1 &)
+            for i in $(seq 1 60); do curl -sf -m 2 -H "x-forwarded-email: mobile@corp.com" -H "x-forwarded-groups: users" -H "accept: application/json" http://127.0.0.1:9411/api/mp/bindcode -o /tmp/app-mock/code.json && break; sleep 1; done
+            cat /tmp/app-mock/code.json
+            # 3) Flows in dependency order: pairing FIRST (the tab shell gates
+            #    on a connected instance), then the three that need it. The
+            #    pairing token persists in AsyncStorage, so each flow's
+            #    launchApp lands already paired. MAESTRO_DRIVER_STARTUP_TIMEOUT:
+            #    the software-rendered emulator boots its uiautomator driver
+            #    slowly — the 2-minute default died (38146016215).
+            (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test -e OUTPUT_INSTANCE=http://10.0.2.2:9411 -e PAIRING_CODE=$(python3 -c 'import json;print(json.load(open("/tmp/app-mock/code.json"))["code"])') .maestro/pairing.yaml) || { adb logcat -d > /tmp/app-mock/logcat.txt; exit 1; }
+            (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test .maestro/tabs.yaml) || { adb logcat -d > /tmp/app-mock/logcat.txt; exit 1; }
+            (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test .maestro/language-switch.yaml) || { adb logcat -d > /tmp/app-mock/logcat.txt; exit 1; }
+            (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test .maestro/chat-stream.yaml) || { adb logcat -d > /tmp/app-mock/logcat.txt; exit 1; }
+            # 4) Charts lane (automate-nonweb-acceptance): a chaos LLM that
+            #    answers ```echarts fences + a SECOND mock pointed at it. The
+            #    9411 instance above keeps its dead-LLM contract — the two
+            #    expectations are mutually exclusive, hence two instances.
+            (CHAOS_LLM_PORT=3288 nohup node e2e/chaos-llm.js > /tmp/app-mock/chaos.log 2>&1 &)
+            for i in $(seq 1 30); do curl -sf -m 2 -X POST http://127.0.0.1:3288/__chaos/control -H 'content-type: application/json' -d '{"mode":"chart"}' -o /dev/null && break; sleep 1; done
+            mkdir -p /tmp/app-mock2/data
+            (PORT=9412 HOST=0.0.0.0 PLATFORM_DATA_DIR=/tmp/app-mock2/data DSH_HOME=/tmp/app-mock2/dsh MCP_CONFIG_PATH=/tmp/app-mock2/data/mcp.json LLM_API_KEY=chaos LLM_BASE_URL=http://127.0.0.1:3288/v1 AUTH_MODE=forward_auth MP_TOKEN_SECRET=app-mock-secret nohup node server.js > /tmp/app-mock2/server.log 2>&1 &)
+            # The bind code answers before the dsh agent finishes booting; a
+            # turn sent too early dies silently (first charts run, 2026-10-27).
+            for i in $(seq 1 120); do curl -sf -m 2 -o /dev/null http://127.0.0.1:9412/api/ready && break; sleep 1; done
+            for i in $(seq 1 60); do curl -sf -m 2 -H "x-forwarded-email: mobile@corp.com" -H "x-forwarded-groups: users" -H "accept: application/json" http://127.0.0.1:9412/api/mp/bindcode -o /tmp/app-mock2/code.json && break; sleep 1; done
+            cat /tmp/app-mock2/code.json
+            (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test -e CHARTS_INSTANCE=http://10.0.2.2:9412 -e CHARTS_CODE=$(python3 -c 'import json;print(json.load(open("/tmp/app-mock2/code.json"))["code"])') .maestro/charts.yaml) || { adb exec-out screencap -p > /tmp/app-mock/charts-fail.png; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml /tmp/app-mock/charts-ui.xml >/dev/null 2>&1; curl -s http://127.0.0.1:3288/__chaos/requests -o /tmp/app-mock/chaos-requests.json; adb logcat -d > /tmp/app-mock/charts-logcat.txt; exit 1; }
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lane-logs
+          path: |
+            /tmp/app-mock/server.log
+            /tmp/app-mock/code.json
+            /tmp/app-mock/logcat.txt
+            /tmp/app-mock/charts-logcat.txt
+            /tmp/app-mock/charts-fail.png
+            /tmp/app-mock/charts-ui.xml
+            /tmp/app-mock/chaos-requests.json
+            /tmp/app-mock/chaos.log
+            /tmp/app-mock2/server.log
+            /tmp/app-mock2/code.json
+            /home/runner/.maestro/tests/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  ios-nightly:
+    name: Maestro (iOS simulator, manual dispatch)
+    if: github.event_name == 'workflow_dispatch'
+    needs: gates
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            package-lock.json
+      - name: Install root dependencies
+        run: npm ci
+      - name: Install app dependencies (+ linked core)
+        run: |
+          npm --prefix app ci
+          npm --prefix app install --no-audit --no-fund
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../app/node_modules/zustand packages/core/node_modules/zustand
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Build + run flows on the simulator
+        run: |
+          set -e
+          # Build the app for the simulator (the app-build.yml recipe, proven
+          # green): prebuild in app/, pod install, unsigned Release build.
+          (cd app && npx expo prebuild --platform ios --no-install)
+          (cd app/ios && pod install)
+          (cd app/ios && \
+            WS=$(find . -maxdepth 1 -name "*.xcworkspace" | head -1) && \
+            SCHEME=$(basename "$WS" .xcworkspace) && \
+            xcodebuild -workspace "$SCHEME.xcworkspace" -scheme "$SCHEME" \
+              -configuration Release -sdk iphonesimulator -derivedDataPath build \
+              CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+              build | tail -20)
+          APP=$(find app/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name "*.app" | head -1)
+          echo "app bundle: $APP"
+          xcrun simctl boot "iPhone 16" || true
+          xcrun simctl install booted "$APP"
+          # Mock instance + fresh bind code (5-minute TTL). The Release build
+          # bundles its JS — no Metro needed; the simulator reaches the host
+          # through plain localhost.
+          mkdir -p /tmp/app-mock/data
+          PORT=9411 HOST=0.0.0.0 PLATFORM_DATA_DIR=/tmp/app-mock/data \
+            DSH_HOME=/tmp/app-mock/dsh MCP_CONFIG_PATH=/tmp/app-mock/data/mcp.json \
+            LLM_API_KEY="" AUTH_MODE=forward_auth MP_TOKEN_SECRET=app-mock-secret \
+            node server.js > /tmp/app-mock/server.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf -m 2 -H "x-forwarded-email: mobile@corp.com" -H "x-forwarded-groups: users" \
+                 -H "accept: application/json" http://127.0.0.1:9411/api/mp/bindcode -o /tmp/app-mock/code.json; then
+              break
+            fi
+            sleep 1
+          done
+          CODE=$(python3 -c 'import json;print(json.load(open("/tmp/app-mock/code.json"))["code"])')
+          export PATH="$HOME/.maestro/bin:$PATH"
+          cd app
+          maestro test -e OUTPUT_INSTANCE=http://127.0.0.1:9411 -e PAIRING_CODE="$CODE" .maestro/pairing.yaml
+          maestro test .maestro/tabs.yaml
+          maestro test .maestro/language-switch.yaml

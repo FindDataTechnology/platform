@@ -1,0 +1,9 @@
+# @platform/supply-probe-bundle patch layer.
+#
+# A bundle's cordis patch is applied as one layer in the profile composition,
+# in the order the profile's `dsh.profile.bundles` list declares. This sample
+# ships exactly one inert row; a real whitelisted bundle carries whatever rows
+# it needs here.
+- insert:
+    - id: supply-probe
+      name: '@platform/supply-probe-bundle'

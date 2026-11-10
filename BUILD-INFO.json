@@ -1,0 +1,6 @@
+{
+  "baseRef": "gitee/release/cell-session-persona",
+  "baseCommit": "5aa55dc31dc74464b1f55305877947b4e20d388e",
+  "snapshotCommit": "filled in by the publish repo's own commit",
+  "builtAt": "2026-11-10T15:49:47.767Z"
+}

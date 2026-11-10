@@ -1,0 +1,135 @@
+{
+  "tabs": {
+    "chat": "对话",
+    "cron": "定时任务",
+    "resources": "资源库"
+  },
+  "pair": {
+    "title": "连接你的壹座",
+    "subtitle": "在网页端 设置 → 已配对设备 生成绑定码，扫码或输入即可把这台设备与账号绑定。",
+    "scan": "扫码绑定",
+    "scanHint": "二维码同时携带服务器地址与绑定码，无需手填。",
+    "cameraDenied": "相机权限未开启，可手动输入服务器地址与 6 位绑定码。",
+    "serverLabel": "服务器地址",
+    "serverPlaceholder": "https://your-yizuo.example.com",
+    "codeLabel": "6 位绑定码",
+    "codePlaceholder": "000000",
+    "submit": "绑定",
+    "submitting": "绑定中…",
+    "errCode": "绑定码无效或已过期，请刷新后重试。",
+    "errNetwork": "连不上服务器，请检查地址与网络。",
+    "errOldServer": "该服务器版本较旧，尚不支持设备配对，升级壹座后即可使用。",
+    "errUnknown": "配对失败，请稍后重试。"
+  },
+  "gate": {
+    "connecting": "正在连接…",
+    "rebind": "此设备的绑定已被撤销，请重新配对。"
+  },
+  "chat": {
+    "placeholderTitle": "对话",
+    "placeholderBody": "聊天主链随 3.x 任务就位。",
+    "disconnected": "未连接",
+    "reconnect": "重连",
+    "placeholder": "输入消息…",
+    "gatedPlaceholder": "回答上方的问题后继续…",
+    "stop": "停止",
+    "attach": "附件",
+    "regenerate": "重新生成",
+    "fileDefault": "文件"
+  },
+  "cron": {
+    "placeholderTitle": "定时任务",
+    "placeholderBody": "任务列表随 4.3 任务就位。",
+    "empty": "还没有定时任务",
+    "pause": "暂停",
+    "resume": "恢复",
+    "state": {
+      "scheduled": "已排期",
+      "running": "运行中",
+      "paused": "已暂停",
+      "completed": "已完成",
+      "expired": "已过期",
+      "error": "出错",
+      "manual": "手动"
+    }
+  },
+  "resources": {
+    "placeholderTitle": "资源库",
+    "placeholderBody": "资源列表随 4.3 任务就位。",
+    "search": "搜索资源…",
+    "empty": "库还是空的——对话中的图表与文件会出现在这里",
+    "type": {
+      "all": "全部",
+      "chart": "图表",
+      "file": "文件"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "instance": "服务器",
+    "reachability": "可达",
+    "unreachable": "不可达",
+    "language": "语言",
+    "unbind": "解绑此设备",
+    "unbindConfirm": "解绑后将清除本机配对并回到配对页，确定？",
+    "confirm": "确定",
+    "cancel": "取消",
+    "about": "关于",
+    "version": "版本",
+    "lang": {
+      "zh": "简体中文",
+      "en": "English"
+    }
+  },
+  "share": {
+    "title": "分享会话",
+    "tokenLabel": "分享令牌",
+    "open": "打开",
+    "unavailable": "分享不存在或已失效。"
+  },
+  "common": {
+    "loading": "加载中…",
+    "retry": "重试",
+    "error": "出错了"
+  },
+  "history": {
+    "title": "历史会话",
+    "newSession": "＋ 新会话",
+    "untitled": "未命名会话",
+    "empty": "还没有会话"
+  },
+  "panel": {
+    "models": "模型",
+    "agents": "角色",
+    "locked": "回合进行中，选择将在回合结束后生效…",
+    "empty": "列表为空"
+  },
+  "ask": {
+    "optional": "补充说明（可选）",
+    "answerHere": "输入你的回答",
+    "skip": "跳过",
+    "submit": "提交回答"
+  },
+  "artifact": {
+    "save": "存入",
+    "saving": "存入中…",
+    "saved": "已入藏",
+    "saveFailed": "存入失败"
+  },
+  "turn": {
+    "steps": "{{name}} · {{count}} 步",
+    "activity": "活动 · {{count}} 步",
+    "thinking": "思考中… {{text}}",
+    "cronCard": "定时任务",
+    "delegationCard": "委派任务",
+    "copy": "复制"
+  },
+  "welcome": {
+    "skills": "发现技能",
+    "skillsText": "列出当前可用的技能，并说明各自的用途",
+    "verify": "查证问题",
+    "verifyText": "帮我查证一个技术问题，并给出信息来源",
+    "write": "整理写作",
+    "writeText": "帮我把下面的要点整理成一份简洁的周报：\n- 要点一\n- 要点二"
+  }
+}

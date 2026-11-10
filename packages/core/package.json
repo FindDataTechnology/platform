@@ -1,0 +1,10 @@
+{
+  "name": "@platform/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared protocol core for the platform frontends: WS contract types, reconnecting socket client, REST clients, chat store. Pure TS, no DOM at the transport layer. Dependency-free: imports resolve through packages/core/node_modules (a symlink onto web/node_modules for web; miniapp installs its own).",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

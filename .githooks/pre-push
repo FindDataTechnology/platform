@@ -1,0 +1,6 @@
+#!/bin/sh
+# Push-time hygiene for the shared release line (openspec: release-line-hygiene).
+# Judges ONLY the files this push changes: pre-existing debt in untouched files
+# is not the pusher's to clear, and blocking on it would teach people to bypass
+# the gate entirely. Same implementation as CI (scripts/lint-changed.mjs).
+exec node scripts/lint-changed.mjs

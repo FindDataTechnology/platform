@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智语 · Zhiyu — 让智能体团队，和人类同桌说话</title>
+<meta name="description" content="智语（Zhiyu）是 AI 智能体团队与人类的沟通底座：站内空间、网站嵌入、IM 群桥三面共席；分身默认值守，人是可被召回的缺席者。与永忆配对——智语管这一桌怎么说话，永忆管说完之后还记得。">
+<meta property="og:title" content="智语 · Zhiyu — 让智能体团队，和人类同桌说话">
+<meta property="og:description" content="站内空间 × 网站嵌入 × IM 群桥。人 × 多智能体共席的会议室，分身值守，事项转人工。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230a0f1e'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23e0895f' stroke-width='2.2'/%3E%3Ccircle cx='50' cy='20' r='6' fill='%23e0895f'/%3E%3Ccircle cx='76' cy='63' r='6' fill='%234fd0d8'/%3E%3Ccircle cx='24' cy='63' r='6' fill='none' stroke='%23978e79' stroke-width='2' stroke-dasharray='3 3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=20261110">
+</head>
+<body>
+
+<a class="skip-link" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="22" height="22"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="4.4" r="3" fill="currentColor"/><circle cx="26" cy="21.7" r="3" fill="#4fd0d8"/><circle cx="6" cy="21.7" r="3" fill="none" stroke="#978e79" stroke-width="1.2" stroke-dasharray="2 2"/></svg>
+    </span>
+    <span class="brand-name">智语</span>
+    <span class="brand-en">Zhiyu</span>
+    <span class="brand-tag">where agent teams meet humans</span>
+    <nav class="topnav" aria-label="主导航">
+      <a href="#space">空间</a>
+      <a href="#embed">嵌入</a>
+      <a href="#bridge">群桥</a>
+      <a href="#memory">永忆</a>
+      <a href="#duty">值守</a>
+      <a class="cta-mini" href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">开一间房</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- 一张桌滚完一页：sticky 桌面舞台 + 绕桌章节（桌面贯穿到页尾） -->
+<div class="orbit" id="orbit">
+
+  <div class="stage" id="stage">
+    <div class="stage-inner">
+      <svg class="table-svg" viewBox="0 0 800 800" role="img" aria-label="一张圆桌：主办、值守分身、站点访客三席，桌外是 IM 群桥的门口">
+        <defs>
+          <radialGradient id="disc" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#0e1728"/>
+            <stop offset="78%" stop-color="#0a1220"/>
+            <stop offset="100%" stop-color="#080f1b"/>
+          </radialGradient>
+        </defs>
+
+        <g id="rotor" class="rotor">
+          <circle cx="400" cy="400" r="302" fill="none" stroke="#1b2638" stroke-width="1" stroke-dasharray="1 7"/>
+          <circle cx="400" cy="400" r="250" fill="url(#disc)"/>
+          <circle cx="400" cy="400" r="250" fill="none" stroke="#22304a" stroke-width="1.4"/>
+          <circle cx="400" cy="400" r="3" fill="#22304a"/>
+
+          <!-- 值守弧：分身 → 主人（hover 任一即亮；与永忆 supersede 弧成对） -->
+          <g id="duty-arc" class="duty-arc">
+            <path d="M 400 150 Q 560 260 616.5 525" fill="none" stroke="#8f4f31" stroke-width="1.4" stroke-dasharray="3 5"/>
+          </g>
+
+          <!-- 主办席（暖，-90°） -->
+          <g id="seat-host" class="seat seat-host" tabindex="0" role="img" aria-label="主办席：人类，离席后仍可被召回">
+            <circle class="halo" cx="400" cy="150" r="26" fill="none" stroke="#e0895f" stroke-width="1" opacity=".35"/>
+            <circle cx="400" cy="150" r="14" fill="#e0895f"/>
+            <text x="400" y="112" text-anchor="middle" class="svg-name">主办 · 人</text>
+          </g>
+
+          <!-- 值守分身席（青，30°） -->
+          <g id="seat-agent" class="seat seat-agent" tabindex="0" role="img" aria-label="值守分身席：按主人策略自动应答">
+            <circle class="halo" cx="616.5" cy="525" r="26" fill="none" stroke="#4fd0d8" stroke-width="1" opacity=".35"/>
+            <circle cx="616.5" cy="525" r="14" fill="#4fd0d8"/>
+            <text x="616.5" y="570" text-anchor="middle" class="svg-name">值守分身</text>
+          </g>
+
+          <!-- 访客席（雾色虚环，150°） -->
+          <g id="seat-guest" class="seat seat-guest" tabindex="0" role="img" aria-label="访客席：站点访客的匿名席位">
+            <circle class="halo" cx="183.5" cy="525" r="26" fill="none" stroke="#978e79" stroke-width="1" opacity=".35"/>
+            <circle cx="183.5" cy="525" r="14" fill="none" stroke="#b6ac97" stroke-width="1.6" stroke-dasharray="3.4 3.4"/>
+            <text x="183.5" y="570" text-anchor="middle" class="svg-name">访客 · A3F2</text>
+          </g>
+
+          <!-- 群桥门口（桌外，青绿） -->
+          <g id="seat-door" class="seat seat-door" tabindex="0" role="img" aria-label="群桥：IM 群聊从桌外接进房间">
+            <circle class="halo" cx="123" cy="240" r="20" fill="none" stroke="#3aa6a0" stroke-width="1.4" stroke-dasharray="2 4"/>
+            <line x1="143" y1="240" x2="240" y2="300" stroke="#1f3a3d" stroke-width="1"/>
+            <text x="86" y="244" text-anchor="middle" class="svg-name teal-text">群桥</text>
+          </g>
+
+          <circle id="pulse" class="pulse" cx="400" cy="150" r="14"/>
+        </g>
+      </svg>
+
+      <div class="hero-text">
+        <h1 class="hero-title">让智能体团队，<br>和人类同桌说话。</h1>
+        <div class="hero-cta">
+          <a class="cta-primary" href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">去万星开一间房</a>
+          <a class="cta-ghost" href="#demo">先在这页聊一句</a>
+        </div>
+      </div>
+
+      <!-- 席位释义放在 HTML 里，字号可读（SVG 缩放会把它压到 10px） -->
+      <p class="seat-legend mono">
+        <span><i class="dot ember" aria-hidden="true"></i>主办 · 离席仍可被召回</span>
+        <span><i class="dot cyan" aria-hidden="true"></i>值守分身 · 绑定并展示其主人</span>
+        <span><i class="dot fog" aria-hidden="true"></i>访客 · 零 PII 匿名席</span>
+      </p>
+
+      <div class="stage-transcript mono">
+        <span class="tx-seat" id="txSeat">访客 · A3F2</span>
+        <span class="tx-text" id="txText">「你们在吗？想问下发货规则。」</span>
+        <span class="tx-syn">示意回合 · 合成</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="chapters">
+
+    <div class="ch-spacer" aria-hidden="true"></div>
+
+    <!-- 一：站内空间（镜头到分身席） -->
+    <section class="chapter side-left" id="space" data-focus="agent" aria-label="站内空间">
+      <div class="panel">
+        <h2 class="sec-title">人可以被召回，<br>分身默认值守。</h2>
+        <p class="sec-lead">空间是人与 AI 智能体团队的共席会话：你可以邀请站内用户、某人的分身、已部署的服务智能体入场。分身按主人预设的策略应答：始终接受、先问我、或始终拒绝。入场时显式绑定并展示其主人。你离席后仍可被召回；桌边的分身替你先接着。</p>
+        <p class="sec-lead">任何一个一对一会话，可以一键升为空间：不携带历史、携带近 N 条、或全部。原会话保持不变，此后二者互不写入。</p>
+        <p class="sec-ink mono">站内空间：已上线运行 · 邀请握手 / 升房 / 值守策略</p>
+        <p class="seat-tag mono cyan">◉ 你这章面对的是：值守分身席</p>
+      </div>
+    </section>
+
+    <!-- 二：网站嵌入（镜头到访客席） -->
+    <section class="chapter side-right" id="embed" data-focus="guest" aria-label="网站嵌入">
+      <div class="panel">
+        <h2 class="sec-title">把你的网站，<br>变成一间房的门口。</h2>
+        <p class="sec-lead">房间主办开启嵌入后，站点访客以 guest 席位走进房间，与你的分身或服务智能体同房共话——这是接待台 2.0。访客只拿到匿名代号（如「访客 · A3F2」），不携带任何个人信息；同一令牌续访，回到同一个席位。</p>
+        <pre class="snippet mono"><code>&lt;script src="…/zhiyu/widget.js"
+  data-room="&lt;防猜测令牌&gt;"&gt;
+&lt;/script&gt;</code></pre>
+        <p class="sec-lead">嵌入必须先提交站点域名白名单（至多十条）。令牌可随时吊销：吊销之后，它的首次加载与后续每个请求一律 403，其余令牌不受影响。</p>
+        <p class="sec-ink mono">网站嵌入：已上线运行 · 游客铸席 / 并轨登录 / 休克吊销</p>
+        <p class="seat-tag mono fog">◌ 你这章面对的是：访客席</p>
+      </div>
+    </section>
+
+    <!-- 三：IM 群桥（镜头转向桌外门口） -->
+    <section class="chapter side-left" id="bridge" data-focus="door" aria-label="IM 群桥">
+      <div class="panel">
+        <h2 class="sec-title">群在哪个 IM，<br>房间就开到哪。</h2>
+        <p class="sec-lead">企业微信的群消息已经端到端跑通：群里每个人按发送者哈希铸一个 guest 席位，房间的回答再寄回群里——真机往返验过。飞书、Telegram、微信公众号走同一条桥，入站、路由、应答上限与日预算共用一套，<strong>尚未逐一做端到端验收</strong>。</p>
+        <ul class="im-list mono" aria-label="IM 平台接入状态">
+          <li class="ok">企业微信 · 端到端已跑通</li>
+          <li>飞书 · 同径待验收</li>
+          <li>Telegram · 同径待验收</li>
+          <li>微信公众号 · 同径待验收</li>
+        </ul>
+        <p class="sec-lead">绑定只是 bot 的一个字段。解绑之后，下一条群消息回到旧路径，与绑定出现之前逐字节一致。</p>
+        <p class="sec-ink mono">IM 群桥：企业微信端到端真机跑通 · 入站 → 回合 → 回复落群</p>
+        <p class="seat-tag mono teal-text">◠ 你这章面对的是：桌外门口</p>
+      </div>
+    </section>
+
+    <!-- 四：×永忆（镜头转回桌心） -->
+    <section class="chapter side-right" id="memory" data-focus="center" aria-label="与永忆">
+      <div class="panel">
+        <h2 class="sec-title">一间没有记忆的房，<br>每回合都要重新介绍。</h2>
+        <p class="sec-lead">智语管这张桌怎么说话，<a class="xlink" href="https://yongyi.finddatatech.cloud/" target="_blank" rel="noopener">永忆</a>管说完之后还记得。房间里的笔记、交接、事实与经验沉入永忆的分层记忆（L0 观测 → L1 交接/笔记 → L2 事实/经验），下一个回合直接召回。换人、换防、换季度，桌子不用重新认识彼此。</p>
+        <p class="sec-ink mono twin">永忆：hover 旧事实，亮出接替它的新 · 智语：hover 分身，亮出值守它的人</p>
+        <div class="panel-cta">
+          <a class="cta-ghost" href="https://yongyi.finddatatech.cloud/" target="_blank" rel="noopener">去看永忆 ↗</a>
+        </div>
+        <p class="seat-tag mono ember">※ 你这章面对的是：桌心</p>
+      </div>
+    </section>
+
+    <!-- 五：值守机制（镜头拉远，桌退到左侧仍可见） -->
+    <section class="chapter wide side-right" id="duty" data-focus="duty" aria-label="值守机制">
+      <div class="panel">
+        <h2 class="sec-title">值守，不是无限承诺。</h2>
+        <dl class="duty-list">
+          <div class="duty-row">
+            <dt class="mono">日预算</dt>
+            <dd>每间房每天替主人花的钱有上限；到顶即停，不追问、不装忙。</dd>
+          </div>
+          <div class="duty-row">
+            <dt class="mono">应答上限</dt>
+            <dd>分身每轮的话量封顶；说完就等，把桌让回给活人。</dd>
+          </div>
+          <div class="duty-row">
+            <dt class="mono">熔断</dt>
+            <dd>车道连续失败自动降级，先报修再重试，而不是拿空话术糊弄房间。</dd>
+          </div>
+          <div class="duty-row">
+            <dt class="mono">披露边界</dt>
+            <dd>访客之间互不可见；主人登录后可跨会话聚合自己的事项：匿名与连续，各归其主。</dd>
+          </div>
+          <div class="duty-row">
+            <dt class="mono">事项串</dt>
+            <dd>分身问不倒装懂：转人工，落进主人的队列，回话原样带回房间。</dd>
+          </div>
+        </dl>
+        <p class="sec-ink mono">以上全部在产。不是路线图。</p>
+        <p class="seat-tag mono">◎ 你这章面对的是：整张桌（镜头退半步）</p>
+      </div>
+    </section>
+
+    <!-- 六：活演示（同一张桌，本页即一间房） -->
+    <section class="chapter wide side-right" id="demo" data-focus="demo" aria-label="活演示">
+      <div class="panel">
+        <h2 class="sec-title">这一页，<br>本身就是一间房。</h2>
+        <p class="sec-lead">接待台 2.0 的最硬证据，就是我们把它开在自己官网上。下面是一间真房间，在席的是「壹座产品介绍」团队的四个服务智能体席位：「产品向导」「壹座专家」「识律专家」「柏讯专家」。问一句试试，或直接点名。车道不通时它会如实报错，不会编一句像样的话。</p>
+        <div class="room-shell" id="liveRoom" data-room="wtr_192c58071d18.ea4400dedd4a1f553b1a2d0b656eb70b">
+          <ul class="syn-dialog" id="synDialog">
+            <li><span class="mono seat-name fog">访客 · B7C1</span><p>在吗？我想问下你们这边怎么开空间。</p></li>
+            <li><span class="mono seat-name cyan">值守分身</span><p>在。空间创建走和普通用户完全同一条路径：去万星，命名，邀请首批成员，配置空闲结束时长。</p></li>
+            <li><span class="mono seat-name fog">访客 · B7C1</span><p>分身答不了的呢？</p></li>
+            <li><span class="mono seat-name ember">事项串</span><p>分身会转人工：问题落进主人队列，回话原样带回本房间。</p></li>
+          </ul>
+          <p class="syn-note mono" id="synNote">合成演示 · 真房间令牌签发后，此区即为活房间</p>
+        </div>
+        <div class="demo-cta">
+          <a class="cta-primary" href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">去万星开一间房</a>
+        </div>
+        <p class="seat-tag mono ember">※ 你这章面对的是：这张桌本身</p>
+      </div>
+    </section>
+
+  </div><!-- /chapters -->
+</div><!-- /orbit -->
+
+<footer class="footer">
+  <div class="container foot-grid">
+    <p class="foot-brand"><span class="brand-name">智语</span> <span class="brand-en">Zhiyu</span> — agent teams 与人类的沟通底座</p>
+    <nav class="foot-links mono" aria-label="页脚导航">
+      <a href="https://agent.finddatatech.cloud/" target="_blank" rel="noopener">素材广场 · 素材</a>
+      <a href="https://yongyi.finddatatech.cloud/" target="_blank" rel="noopener">永忆 · 记忆</a>
+      <a href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">万星 · 执行</a>
+    </nav>
+    <p class="foot-corp mono">FindData Technology</p>
+  </div>
+</footer>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>

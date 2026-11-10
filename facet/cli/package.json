@@ -1,0 +1,34 @@
+{
+  "name": "@finddatatechnology/facet",
+  "version": "0.4.0",
+  "description": "谦面 Facet CLI — list/search the market, install packs (skills) into editor targets, connect MCP references with a caller key, and return self-hosted packs to the official market (publish).",
+  "type": "module",
+  "bin": {
+    "facet": "facet.js"
+  },
+  "files": [
+    "facet.js",
+    "README.md",
+    "mcp-auth-capability.js"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FindDataTechnology/platform.git",
+    "directory": "facet/cli"
+  },
+  "keywords": [
+    "skills",
+    "mcp",
+    "claude-code",
+    "cursor",
+    "agent",
+    "marketplace"
+  ]
+}

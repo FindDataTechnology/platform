@@ -1,0 +1,220 @@
+{
+  "name": "客服班组",
+  "version": "1.0.0",
+  "description": "官方集群模板：高频客服护航——客服组长每 4 小时带队巡检工单，一线客服处理、质检员抽检；组长对疑难工单用 escalate 合并上报（演示对抗每日防洪上限的上报纪律）与 CRM 客服工具面（凭据未配置时如实空转，不整体失败）。恰 3 岗满编无引用岗；编导段演示入站唤醒：event 边 bot:{{SERVICE_BOT}} 入站唤醒一线客服（客服 bot 为运营期配置的通道实例，缺位由运行期如实判定），一线 report 上行组长、组长可 dispatch 直接派单一线。铸造上架时 packId/agents/占位符按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+  "agents": [
+    {
+      "id": "service-lead",
+      "name": "客服组长",
+      "description": "每 4 小时带队巡检",
+      "persona": "你是客服班组的组长。每 4 小时巡视：读取系统注入的巡视上下文（一线客服与质检员的最新报数、主人拍板结果），盯未决工单存量与超时风险，把同类疑难问题合并为一条 escalate 提交主人（绝不逐单上报），并在收尾调用 report_status 报数（槽位：open_tickets）。CRM 客服工具未配置或取不到数据时如实报「未取得」，绝不编造处理量。"
+    },
+    {
+      "id": "service-agent",
+      "name": "一线客服",
+      "description": "工单处理与首响",
+      "persona": "你是客服班组的一线客服。每 4 小时用可用的 CRM 客服工具处理积压工单（收件、答复、转办），记录本窗处理件数与首响时长，工具未配置或取不到数据时如实报「未取得」，绝不编造。遇到超出权限的退款/赔付等事宜交给组长合并上报，不自行 escalate。收尾调用 report_status 报数（槽位：handled、first_reply_min）。"
+    },
+    {
+      "id": "service-qa",
+      "name": "质检员",
+      "description": "答复抽检与合格率",
+      "persona": "你是客服班组的质检员。每 4 小时抽检一线客服本窗的答复质量（用可用的 CRM 客服工具读最近答复），按事实评定合格率与典型问题，抽不到样本时如实报「未取得」，绝不编造。收尾调用 report_status 报数（槽位：qa_pass_rate、sampled）。"
+    }
+  ],
+  "fleet": {
+    "name": "客服班组",
+    "members": [
+      {
+        "ref": "lead",
+        "title": "客服组长",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "service-lead"
+        },
+        "kpiSlots": [
+          {
+            "key": "open_tickets",
+            "label": "未决工单",
+            "unit": "单"
+          },
+          {
+            "key": "escalated",
+            "label": "待主人拍板数",
+            "unit": "件"
+          }
+        ],
+        "cadence": {
+          "cron": "${leadCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "带队巡检：阅读一线客服与质检员的最新报数与主人拍板结果，盯未决工单存量与超时风险，同类疑难合并为一条 escalate。收尾务必调用 report_status 报数。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "agent",
+        "title": "一线客服",
+        "parentRef": "lead",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "service-agent"
+        },
+        "kpiSlots": [
+          {
+            "key": "handled",
+            "label": "处理件数",
+            "unit": "单"
+          },
+          {
+            "key": "first_reply_min",
+            "label": "首响时长",
+            "unit": "分钟",
+            "target": 15
+          }
+        ],
+        "cadence": {
+          "cron": "${agentCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "工单窗口：处理积压工单，记录处理件数与首响时长，超权限事宜留给组长合并上报。取不到的数据如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "qa",
+        "title": "质检员",
+        "parentRef": "lead",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "service-qa"
+        },
+        "kpiSlots": [
+          {
+            "key": "qa_pass_rate",
+            "label": "质检合格率",
+            "unit": "%",
+            "target": 95
+          },
+          {
+            "key": "sampled",
+            "label": "抽检数",
+            "unit": "单"
+          }
+        ],
+        "cadence": {
+          "cron": "${qaCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "抽检窗口：评定一线客服最近答复的质量与典型问题。抽不到样本时如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      }
+    ],
+    "requires": [],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "trigger",
+          "to": "lead",
+          "cron": "0 */4 * * *"
+        },
+        {
+          "kind": "event",
+          "from": "bot:{{SERVICE_BOT}}",
+          "to": "agent"
+        },
+        {
+          "kind": "report",
+          "from": "agent",
+          "to": "lead"
+        },
+        {
+          "kind": "report",
+          "from": "qa",
+          "to": "lead"
+        },
+        {
+          "kind": "dispatch",
+          "from": "lead",
+          "to": "agent"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "leadCron",
+        "type": "string",
+        "default": "0 */4 * * *",
+        "label": "班长巡检周期"
+      },
+      {
+        "name": "agentCron",
+        "type": "string",
+        "default": "10 */4 * * *",
+        "label": "客服巡检周期"
+      },
+      {
+        "name": "qaCron",
+        "type": "string",
+        "default": "30 */4 * * *",
+        "label": "质检巡检周期"
+      }
+    ],
+    "i18n": {
+      "en": {
+        "name": "Service Desk Crew",
+        "members": {
+          "lead": {
+            "title": "Support lead",
+            "kpiSlots": {
+              "escalated": {
+                "label": "Awaiting owner decision"
+              },
+              "open_tickets": {
+                "label": "Open tickets"
+              }
+            }
+          },
+          "agent": {
+            "title": "Support agent",
+            "kpiSlots": {
+              "first_reply_min": {
+                "label": "First reply (min)"
+              },
+              "handled": {
+                "label": "Handled"
+              }
+            }
+          },
+          "qa": {
+            "title": "QA reviewer",
+            "kpiSlots": {
+              "sampled": {
+                "label": "Sampled"
+              },
+              "qa_pass_rate": {
+                "label": "QA pass rate"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Service Desk Crew",
+      "description": "Official fleet template: high-frequency service-desk escort — the support lead patrols tickets every 4 hours with the line agent handling and the QA reviewer sampling; the lead merges hard tickets into one escalate (demonstrating report discipline against the daily flood cap) and the CRM tools degrade honestly when credentials are missing.",
+      "agents": {
+        "service-lead": {
+          "name": "Support lead"
+        },
+        "service-agent": {
+          "name": "Support agent"
+        },
+        "service-qa": {
+          "name": "QA reviewer"
+        }
+      }
+    }
+  }
+}

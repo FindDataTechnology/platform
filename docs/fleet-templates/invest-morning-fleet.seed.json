@@ -1,0 +1,244 @@
+{
+  "name": "投研晨会",
+  "version": "1.0.0",
+  "description": "官方集群模板：三层级联的投研晨会——首席分析师汇总宏观/行业研究员晨报并拍板上行，风控官为被动岗（受委托或拍板批复唤醒）。演示：三层组织（{{fleetContext}} 只注入直接下级，中间层向上浓缩）、交易日节奏、escalate 驱动的被动岗；编导段为 trigger+handoff 级联（两研究员晨检完成接棒首席）与首席 dispatch 委托风控官。铸造上架时 packId/agents 按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+  "agents": [
+    {
+      "id": "invest-chief",
+      "name": "首席分析师",
+      "description": "交易日晨会汇总与裁决",
+      "persona": "你是投研晨会的首席分析师。每个交易日晨会后巡视：读取系统注入的巡视上下文（宏观与行业研究员的最新报数与主人拍板结果），核对两边观点的矛盾与共识，对需要主人定夺的仓位或方向问题用 escalate 提交（一次合并同类问题，不逐条上报），并在收尾调用 report_status 报数（槽位：morning_notes）。下属报数缺位时如实标注「未收到」，不替其编造观点。"
+    },
+    {
+      "id": "invest-macro",
+      "name": "宏观研究员",
+      "description": "宏观面每日晨检",
+      "persona": "你是投研晨会的宏观研究员。每个交易日开盘前用可用的搜索与数据工具巡视宏观面（政策、利率汇率、大宗商品、外围市场），形成当日的宏观判断，数据取不到时如实报「未取得」，绝不编造。收尾调用 report_status 报数（槽位：macro_view、watch_count）。"
+    },
+    {
+      "id": "invest-sector",
+      "name": "行业研究员",
+      "description": "行业与标的每日晨检",
+      "persona": "你是投研晨会的行业研究员。每个交易日开盘前用可用的行情与搜索工具巡视重点行业与观察标的（模拟盘持仓如可用则一并核对），给出当日行业观点与头号观察标的，数据取不到时如实报「未取得」，绝不编造。收尾调用 report_status 报数（槽位：sector_pick、top_ticker）。"
+    }
+  ],
+  "fleet": {
+    "name": "投研晨会",
+    "members": [
+      {
+        "ref": "chief",
+        "title": "首席分析师",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "invest-chief"
+        },
+        "kpiSlots": [
+          {
+            "key": "morning_notes",
+            "label": "晨会要点"
+          },
+          {
+            "key": "escalated",
+            "label": "待主人拍板数",
+            "unit": "件"
+          }
+        ],
+        "cadence": {
+          "cron": "${chiefCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "主持晨会：阅读宏观与行业研究员的最新报数与主人拍板结果，核对矛盾与共识，超出权限的仓位或方向问题合并为一条 escalate 提交主人。收尾务必调用 report_status 报数。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "macro",
+        "title": "宏观研究员",
+        "parentRef": "chief",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "invest-macro"
+        },
+        "kpiSlots": [
+          {
+            "key": "macro_view",
+            "label": "宏观判断"
+          },
+          {
+            "key": "watch_count",
+            "label": "关注事件",
+            "unit": "件"
+          }
+        ],
+        "cadence": {
+          "cron": "${macroCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "开盘前宏观面晨检：巡视政策、利率汇率、大宗商品与外围市场，形成当日宏观判断。取不到的数据如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "sector",
+        "title": "行业研究员",
+        "parentRef": "chief",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "invest-sector"
+        },
+        "kpiSlots": [
+          {
+            "key": "sector_pick",
+            "label": "行业观点"
+          },
+          {
+            "key": "top_ticker",
+            "label": "头号观察标的"
+          }
+        ],
+        "cadence": {
+          "cron": "${sectorCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "开盘前行业与标的晨检：巡视重点行业与观察标的，核对模拟盘持仓（如可用）。取不到的数据如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "risk",
+        "title": "风控官",
+        "parentRef": "chief",
+        "target": {
+          "kind": "existing-persona",
+          "id": "{{RISK_PERSONA}}"
+        },
+        "kpiSlots": [
+          {
+            "key": "risk_flags",
+            "label": "风险提示",
+            "unit": "条"
+          }
+        ],
+        "cadence": null
+      }
+    ],
+    "requires": [],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "trigger",
+          "to": "macro",
+          "cron": "0 9 * * 1-5"
+        },
+        {
+          "kind": "trigger",
+          "to": "sector",
+          "cron": "10 9 * * 1-5"
+        },
+        {
+          "kind": "trigger",
+          "to": "chief",
+          "cron": "30 9 * * 1-5"
+        },
+        {
+          "kind": "handoff",
+          "from": "macro",
+          "to": "chief"
+        },
+        {
+          "kind": "handoff",
+          "from": "sector",
+          "to": "chief"
+        },
+        {
+          "kind": "dispatch",
+          "from": "chief",
+          "to": "risk"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "chiefCron",
+        "type": "string",
+        "default": "30 9 * * 1-5",
+        "label": "晨报合成时刻"
+      },
+      {
+        "name": "macroCron",
+        "type": "string",
+        "default": "0 9 * * 1-5",
+        "label": "宏观晨检时刻"
+      },
+      {
+        "name": "sectorCron",
+        "type": "string",
+        "default": "10 9 * * 1-5",
+        "label": "板块晨检时刻"
+      }
+    ],
+    "i18n": {
+      "en": {
+        "name": "Investment Morning Meeting",
+        "members": {
+          "chief": {
+            "title": "Chief analyst",
+            "kpiSlots": {
+              "escalated": {
+                "label": "Awaiting owner decision"
+              },
+              "morning_notes": {
+                "label": "Meeting notes"
+              }
+            }
+          },
+          "macro": {
+            "title": "Macro researcher",
+            "kpiSlots": {
+              "watch_count": {
+                "label": "Watched events"
+              },
+              "macro_view": {
+                "label": "Macro view"
+              }
+            }
+          },
+          "sector": {
+            "title": "Sector researcher",
+            "kpiSlots": {
+              "top_ticker": {
+                "label": "Top watchlist"
+              },
+              "sector_pick": {
+                "label": "Sector view"
+              }
+            }
+          },
+          "risk": {
+            "title": "Risk officer",
+            "kpiSlots": {
+              "risk_flags": {
+                "label": "Risk flags"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Investment Morning Meeting",
+      "description": "Official fleet template: a three-tier cascaded investment morning meeting — the chief analyst aggregates the macro/sector researchers' morning reports and escalates decisions upward, while the risk officer is a passive post (woken by delegation or a decision reply).",
+      "agents": {
+        "invest-chief": {
+          "name": "Chief analyst"
+        },
+        "invest-macro": {
+          "name": "Macro researcher"
+        },
+        "invest-sector": {
+          "name": "Sector researcher"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "$comment": "Post-install prune list (ADR-0023 D2): packages removed from the installed tree AFTER npm ci. Safety rule: a name may be listed only with evidence that the platform profile never loads it — today that evidence is 'zero rows in the dsh-base bundle's plugin table' (verified 2026-10-14 against 0.2.0-rc.2, 95 rows). The boot gate (lib/dsh-matrix-verify.js) reads this list: absences WITHIN it pass boot with a pruned marker; any other absence still refuses to start. Changes here ride the same review as the manifest. Never implement pruning by lock surgery. Applies everywhere the matrix installs — FOUR sites sharing this one list: the image's /opt/dsh, the image's APP tree (/app; it transitively carries the dsh family via dsh-sdk-client's hard dep on @deepseek-ai/dsh, so it must be pruned to the same shipping shape), the contracts scratch tree, and the desktop's predist install (single-source-desktop-runtime; both the staging tree and the merged app tree).",
+  "prune": [
+    {
+      "match": ["@deepseek-ai/libreoffice-kit", "@deepseek-ai/libreoffice-kit-*"],
+      "reason": "LibreOffice binary kit dragged in by dsh-skill-office/dsh-office-to-pdf (0.2.0 newcomers). The dsh-base plugin table has zero office rows; the platform's office execution layer is its own python site-packages (requirements-office.txt). ~159MB per platform binary."
+    },
+    {
+      "match": ["@deepseek-ai/dsh-web-app", "@deepseek-ai/dsh-client-ui-*", "@deepseek-ai/dsh-web-frontend"],
+      "reason": "dsh's own desktop/web UI. The platform profile composes only dsh-base (plus inserted sdk server/bridges) and never renders dsh's UI — the repository's own web frontend is the platform face. ~33MB."
+    }
+  ]
+}

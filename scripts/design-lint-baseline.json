@@ -1,0 +1,114 @@
+{
+  "web/src/pages/TasksPage.tsx": {
+    "named-color": 4
+  },
+  "web/src/pages/TracePage.tsx": {
+    "named-color": 4
+  },
+  "web/src/pages/ZhiyuRoomPage.tsx": {
+    "named-color": 5
+  },
+  "web/src/components/ActionCard.tsx": {
+    "named-color": 15,
+    "side-tab-border": 1
+  },
+  "web/src/components/AssistantTurn.tsx": {
+    "named-color": 4
+  },
+  "web/src/components/CronToolCard.tsx": {
+    "side-tab-border": 1
+  },
+  "web/src/components/EChart.tsx": {
+    "hex-color": 11
+  },
+  "web/src/components/FleetGraph.tsx": {
+    "hex-color": 23
+  },
+  "web/src/components/Markdown.tsx": {
+    "tw-arbitrary-color": 1,
+    "side-tab-border": 1
+  },
+  "web/src/components/PlanPanel.tsx": {
+    "side-tab-border": 1
+  },
+  "web/src/components/QuestionCard.tsx": {
+    "side-tab-border": 2
+  },
+  "web/src/components/SessionToPresetDialog.tsx": {
+    "named-color": 1
+  },
+  "web/src/components/TaskCard.tsx": {
+    "side-tab-border": 1
+  },
+  "web/src/components/ToolBlock.tsx": {
+    "side-tab-border": 1
+  },
+  "web/src/components/UserTurn.tsx": {
+    "side-tab-border": 1
+  },
+  "web/src/components/bots/BotPlatformIcons.tsx": {
+    "hex-color": 14
+  },
+  "web/src/components/clusters/ClusterComposerModal.tsx": {
+    "named-color": 3
+  },
+  "web/src/components/extensions/ExternalInstallDialog.tsx": {
+    "named-color": 17
+  },
+  "web/src/components/extensions/ExternalSourceTab.tsx": {
+    "named-color": 11
+  },
+  "web/src/components/extensions/ExternalUpdateDialog.tsx": {
+    "named-color": 19
+  },
+  "web/src/components/extensions/SkillPackageDialog.tsx": {
+    "named-color": 8
+  },
+  "web/src/components/fleet/FleetCanvas.tsx": {
+    "hex-color": 17,
+    "named-color": 5
+  },
+  "web/src/components/fleet/FleetConfigBar.tsx": {
+    "hex-color": 6
+  },
+  "web/src/components/fleet/InspectorDrawer.tsx": {
+    "named-color": 12
+  },
+  "web/src/components/fleet/MemoryDrawer.tsx": {
+    "named-color": 3
+  },
+  "web/src/components/fleet/MiniSpan.tsx": {
+    "named-color": 1
+  },
+  "web/src/components/fleet/RunTimeline.tsx": {
+    "hex-color": 2,
+    "named-color": 13
+  },
+  "web/src/components/llm/ProviderCard.tsx": {
+    "named-color": 3
+  },
+  "web/src/components/packs/FleetTemplateWizard.tsx": {
+    "named-color": 1
+  },
+  "web/src/components/packs/PackDraftsView.tsx": {
+    "named-color": 2
+  },
+  "web/src/components/packs/PresetPublishFlow.tsx": {
+    "named-color": 4
+  },
+  "web/src/components/packs/VendorEarningsPanel.tsx": {
+    "named-color": 2
+  },
+  "web/src/components/persona/PersonaAmendmentsView.tsx": {
+    "named-color": 2
+  },
+  "web/src/components/preview/PreviewDrawer.tsx": {
+    "hex-color": 3
+  },
+  "web/src/components/settings/SearchServiceCard.tsx": {
+    "named-color": 3
+  },
+  "web/src/components/skills/SkillCandidatesView.tsx": {
+    "named-color": 2
+  }
+}

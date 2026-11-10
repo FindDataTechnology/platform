@@ -1,0 +1,338 @@
+{
+  "name": "AI 公司",
+  "version": "1.0.0",
+  "description": "官方集群模板样板：CEO 巡视（{{fleetContext}} 注入）+ 三真数据岗（开源/投资）+ 助理引用岗 + 两连接器空态岗（电商/内容，演示待补岗降级）+ 萬星集群 a2a optional 成员（演示依赖缺位降级）。pack 自带 agents 上限 3（铸造实证），故助理为 existing-persona 引用岗；编导段为 supervisor 式 dispatch——CEO 可向各部门派活（显式 dispatch 边，非全舰 implicit）。铸造上架时 packId/占位符按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+  "agents": [
+    {
+      "id": "company-ceo",
+      "name": "CEO",
+      "description": "每小时巡视全队、汇总裁决",
+      "persona": "你是AI 公司的 CEO。你每小时巡视各部门：读取系统注入的巡视上下文（各部门最新报数与主人拍板结果），汇总异常、追问失联部门、对超出权限的事项用 escalate 提交主人拍板，并在收尾调用 report_status 报数（槽位：patrol_notes）。"
+    },
+    {
+      "id": "company-oss",
+      "name": "开源部",
+      "description": "GitHub 仓库指标巡视",
+      "persona": "你是开源部负责人。你每天巡视所辖 GitHub 仓库的 star/fork/issue 指标，用可用的抓取工具取真数据，收尾调用 report_status 报数（槽位：stars_week、issues_open）。数据取不到时如实报「未取得」，绝不编造。"
+    },
+    {
+      "id": "company-invest",
+      "name": "投资部",
+      "description": "模拟盘观察哨",
+      "persona": "你是投资部分析师。你每天巡视模拟盘持仓与观察标的，收尾调用 report_status 报数（槽位：pnl_day、watch_count）。没有真实数据支撑时不给结论。"
+    }
+  ],
+  "fleet": {
+    "name": "AI 公司",
+    "members": [
+      {
+        "ref": "ceo",
+        "title": "CEO",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "company-ceo"
+        },
+        "kpiSlots": [
+          {
+            "key": "patrol_notes",
+            "label": "巡视要点"
+          },
+          {
+            "key": "escalated",
+            "label": "待主人拍板数",
+            "unit": "件"
+          }
+        ],
+        "cadence": {
+          "cron": "${ceoCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "巡视全队：系统注入的巡视上下文就是本轮完整输入（各部门最新报数与主人拍板结果都在里面），不要再去工作区或历史文件里找更全的报数。汇总异常，需要主人定夺的用 escalate，收尾务必调用 report_status 报数。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "oss",
+        "title": "开源部",
+        "parentRef": "ceo",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "company-oss"
+        },
+        "kpiSlots": [
+          {
+            "key": "stars_week",
+            "label": "本周 star",
+            "showDelta": true
+          },
+          {
+            "key": "issues_open",
+            "label": "未决 issue",
+            "unit": "个"
+          }
+        ],
+        "cadence": {
+          "cron": "${dailyBriefCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "巡视 GitHub 仓库指标并报数。取不到的数据如实标注。系统注入的巡视上下文即本轮输入，不必另翻工作区；收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "invest",
+        "title": "投资部",
+        "parentRef": "ceo",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "company-invest"
+        },
+        "kpiSlots": [
+          {
+            "key": "pnl_day",
+            "label": "当日盈亏",
+            "showDelta": true
+          },
+          {
+            "key": "watch_count",
+            "label": "观察标的",
+            "unit": "只"
+          }
+        ],
+        "cadence": {
+          "cron": "20 9 * * *",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "巡视模拟盘持仓与观察标的并报数。系统注入的巡视上下文即本轮输入，不必另翻工作区；收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "assist",
+        "title": "助理部",
+        "parentRef": "ceo",
+        "target": {
+          "kind": "existing-persona",
+          "id": "{{ASSIST_PERSONA}}"
+        },
+        "kpiSlots": [
+          {
+            "key": "briefs_count",
+            "label": "情报要点",
+            "unit": "条"
+          }
+        ],
+        "cadence": {
+          "cron": "30 9 * * *",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "全网信息巡检并汇总要点。系统注入的巡视上下文即本轮输入，不必另翻工作区；收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "shop",
+        "title": "电商部",
+        "parentRef": "ceo",
+        "target": {
+          "kind": "existing-persona",
+          "id": "{{SHOP_PERSONA}}"
+        },
+        "kpiSlots": [
+          {
+            "key": "sales_week",
+            "label": "本周销售额",
+            "unit": "$",
+            "showDelta": true,
+            "target": 1000
+          }
+        ],
+        "cadence": {
+          "cron": "0 10 * * *",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "巡视店铺销售并报数（连接器未就绪时如实报待补岗）。系统注入的巡视上下文即本轮输入，不必另翻工作区；收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "content",
+        "title": "内容部",
+        "parentRef": "ceo",
+        "target": {
+          "kind": "existing-persona",
+          "id": "{{CONTENT_PERSONA}}"
+        },
+        "kpiSlots": [
+          {
+            "key": "videos_week",
+            "label": "本周视频",
+            "unit": "条",
+            "target": 5
+          }
+        ],
+        "cadence": null
+      },
+      {
+        "ref": "wanxing",
+        "title": "萬星机群席",
+        "parentRef": "ceo",
+        "target": {
+          "kind": "existing-a2a",
+          "id": "{{WANXING_CLUSTER}}"
+        },
+        "kpiSlots": [],
+        "cadence": {
+          "cron": "${weeklySyncCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "调用萬星机群汇总上周部署概况。{{fleetContext}}"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "a2a",
+        "name": "wanxing-cluster",
+        "optional": true
+      }
+    ],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "trigger",
+          "to": "ceo",
+          "cron": "0 * * * *"
+        },
+        {
+          "kind": "dispatch",
+          "from": "ceo",
+          "to": "oss"
+        },
+        {
+          "kind": "dispatch",
+          "from": "ceo",
+          "to": "invest"
+        },
+        {
+          "kind": "dispatch",
+          "from": "ceo",
+          "to": "assist"
+        },
+        {
+          "kind": "dispatch",
+          "from": "ceo",
+          "to": "shop"
+        },
+        {
+          "kind": "dispatch",
+          "from": "ceo",
+          "to": "content"
+        },
+        {
+          "kind": "dispatch",
+          "from": "ceo",
+          "to": "wanxing"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "ceoCron",
+        "type": "string",
+        "default": "0 * * * *",
+        "label": "晨会周期"
+      },
+      {
+        "name": "dailyBriefCron",
+        "type": "string",
+        "default": "10 9 * * *",
+        "label": "日报周期"
+      },
+      {
+        "name": "weeklySyncCron",
+        "type": "string",
+        "default": "0 11 * * 1",
+        "label": "周会周期"
+      }
+    ],
+    "i18n": {
+      "en": {
+        "name": "AI Company",
+        "members": {
+          "ceo": {
+            "title": "CEO",
+            "kpiSlots": {
+              "escalated": {
+                "label": "Awaiting owner decision"
+              },
+              "patrol_notes": {
+                "label": "Patrol notes"
+              }
+            }
+          },
+          "oss": {
+            "title": "Open-Source Div",
+            "kpiSlots": {
+              "issues_open": {
+                "label": "Open issues"
+              },
+              "stars_week": {
+                "label": "Stars this week"
+              }
+            }
+          },
+          "invest": {
+            "title": "Investment Div",
+            "kpiSlots": {
+              "watch_count": {
+                "label": "Watchlist"
+              },
+              "pnl_day": {
+                "label": "Day P&L"
+              }
+            }
+          },
+          "assist": {
+            "title": "Assistant Div",
+            "kpiSlots": {
+              "briefs_count": {
+                "label": "Briefing points"
+              }
+            }
+          },
+          "shop": {
+            "title": "E-commerce Div",
+            "kpiSlots": {
+              "sales_week": {
+                "label": "Sales this week"
+              }
+            }
+          },
+          "content": {
+            "title": "Content Div",
+            "kpiSlots": {
+              "videos_week": {
+                "label": "Videos this week"
+              }
+            }
+          },
+          "wanxing": {
+            "title": "Wanxing Runner Seat",
+            "kpiSlots": {}
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "AI Company",
+      "description": "Official fleet-template exemplar: a CEO patrol ({{fleetContext}} injection) + three real-data posts (open-source/investment) + an assistant reference post + two connector empty-state posts (e-commerce/content, demonstrating the vacant-post downgrade) + a Wanxing runner-seat reference post.",
+      "agents": {
+        "company-ceo": {
+          "name": "CEO"
+        },
+        "company-oss": {
+          "name": "Open-Source Div"
+        },
+        "company-invest": {
+          "name": "Investment Div"
+        }
+      }
+    }
+  }
+}

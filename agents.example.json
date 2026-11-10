@@ -1,0 +1,76 @@
+{
+  "agents": [
+    {
+      "id": "junior",
+      "type": "agent-remote",
+      "mode": "chat",
+      "name": "Junior Dev",
+      "description": "A specialized AI assistant for junior developer tasks and code review",
+      "icon": "bot",
+      "baseUrl": "https://newapi.example.com/v1",
+      "model": "gpt-5",
+      "apiKeyEnv": "JUNIOR_API_KEY",
+      "tags": ["development", "code-review"],
+      "version": "1.2.0",
+      "featured": true
+    },
+    {
+      "id": "openclaw",
+      "type": "agent-remote",
+      "mode": "link",
+      "name": "OpenClaw",
+      "description": "External AI assistant platform",
+      "icon": "external-link",
+      "url": "https://claw.example.com",
+      "tags": ["external"],
+      "version": "0.8.0",
+      "roles": ["admin"]
+    }
+  ],
+  "apps": [
+    {
+      "id": "newapi",
+      "type": "app",
+      "kind": "external-service",
+      "name": "New API Dashboard",
+      "description": "Central admin hub for monitoring, configuration, and analytics",
+      "icon": "layout-dashboard",
+      "url": "https://newapi.example.com",
+      "features": [
+        "Real-time monitoring",
+        "Configuration management",
+        "Usage analytics",
+        "User management"
+      ],
+      "embedded": true,
+      "tags": ["admin", "monitoring"],
+      "featured": true,
+      "version": "2.0.0"
+    },
+    {
+      "id": "connect",
+      "type": "app",
+      "kind": "nango-connect",
+      "name": "Bound Apps",
+      "description": "Connect and manage third-party integrations",
+      "icon": "plug",
+      "nangoUrl": "http://localhost:3003",
+      "connectUiUrl": "https://connect.example.com",
+      "apiUrl": "https://nango.example.com",
+      "tags": ["integration"],
+      "version": "1.0.0"
+    },
+    {
+      "id": "kkfileview",
+      "type": "app",
+      "kind": "external-service",
+      "name": "File Preview Service",
+      "description": "Optional: renders file types the built-in preview drawer cannot (legacy Office, media, archives)",
+      "icon": "file-eye",
+      "url": "http://localhost:8012",
+      "embedded": true,
+      "tags": ["file-preview"],
+      "version": "1.0.0"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+.git
+.github
+node_modules
+**/node_modules
+dist
+web/dist
+.env
+.env.*
+mcp.json
+.mcp.json
+documents-store
+chat-history-store
+collections-store
+cron-store
+sessions-store
+knowledge-store
+platform-data
+*.log
+.DS_Store
+.claude
+.pi
+electron
+openspec
+e2e
+playwright-report
+test-results
+# Built bundled-resource payloads are platform-specific (mac/win/linux binaries).
+# They must NOT leak from the host into the Docker context — the image builds
+# its own Linux payloads via `npm run predist`, and the build scripts skip-if-built,
+# so a stale mac payload would ship mac binaries in a linux image. Only the
+# bundled Node remains as a resource.
+resources/node
+# Leftover build archives (resources/node/*.tar.gz) are created then deleted
+# by the build scripts; exclude any that linger from an interrupted host build.
+resources/**/*.tar.gz
+resources/**/*.tgz
+resources/**/*.tar.xz
+facet/web/dist

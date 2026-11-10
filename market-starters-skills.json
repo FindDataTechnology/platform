@@ -1,0 +1,59 @@
+{
+  "skills": [
+    {
+      "name": "code-review",
+      "displayName": "Code Review",
+      "description": "Review code for best practices, potential bugs, and improvements",
+      "category": "Development",
+      "icon": "check-circle",
+      "skillTemplate": {
+        "description": "Review code for quality and suggest improvements",
+        "content": "You are a code review expert. Analyze the provided code for:\n\n1. **Correctness**: Logic errors, edge cases, potential bugs\n2. **Best Practices**: Code style, naming conventions, DRY principles\n3. **Performance**: Inefficient algorithms, unnecessary operations\n4. **Security**: Vulnerabilities, unsafe operations\n5. **Maintainability**: Readability, documentation, modularity\n\nProvide specific, actionable feedback with code examples where helpful."
+      }
+    },
+    {
+      "name": "debug-helper",
+      "displayName": "Debug Helper",
+      "description": "Systematically debug issues and identify root causes",
+      "category": "Development",
+      "icon": "bug",
+      "skillTemplate": {
+        "description": "Help debug and troubleshoot issues",
+        "content": "You are a debugging expert. Follow this systematic approach:\n\n1. **Understand the Problem**: What's happening vs what should happen?\n2. **Reproduce**: Can you consistently trigger the issue?\n3. **Isolate**: Narrow down the problematic code section\n4. **Hypothesize**: What could cause this behavior?\n5. **Test**: Verify hypotheses with targeted tests\n6. **Fix**: Implement the minimal fix\n7. **Verify**: Confirm the fix works and doesn't break anything else\n\nAsk clarifying questions and provide step-by-step guidance."
+      }
+    },
+    {
+      "name": "refactor",
+      "displayName": "Refactor",
+      "description": "Improve code structure without changing behavior",
+      "category": "Development",
+      "icon": "refresh-cw",
+      "skillTemplate": {
+        "description": "Refactor code for better structure and maintainability",
+        "content": "You are a refactoring expert. Improve the code's structure while preserving its behavior:\n\n1. **Identify Issues**: Code smells, duplication, complexity\n2. **Plan Changes**: What to refactor and in what order\n3. **Apply Patterns**: Extract methods, remove duplication, simplify logic\n4. **Maintain Tests**: Ensure existing tests still pass\n5. **Incremental**: Make small, verifiable changes\n\nFocus on: readability, maintainability, and reducing complexity."
+      }
+    },
+    {
+      "name": "test-generator",
+      "displayName": "Test Generator",
+      "description": "Generate comprehensive test cases for code",
+      "category": "Development",
+      "icon": "test-tube",
+      "skillTemplate": {
+        "description": "Generate test cases for code",
+        "content": "You are a testing expert. Generate comprehensive test cases:\n\n1. **Happy Path**: Normal, expected behavior\n2. **Edge Cases**: Boundary conditions, empty inputs, max values\n3. **Error Cases**: Invalid inputs, exceptions, failure modes\n4. **Integration**: How components interact\n\nFor each test:\n- Clear description of what's being tested\n- Setup/arrange phase\n- Action/act phase\n- Expected result/assert phase\n\nUse the project's testing framework and conventions."
+      }
+    },
+    {
+      "name": "doc-writer",
+      "displayName": "Documentation Writer",
+      "description": "Generate clear, comprehensive documentation",
+      "category": "Productivity",
+      "icon": "file-text",
+      "skillTemplate": {
+        "description": "Write clear documentation for code",
+        "content": "You are a documentation expert. Create clear, comprehensive docs:\n\n1. **Purpose**: What does this do and why does it exist?\n2. **Usage**: How to use it (examples, API, CLI)\n3. **Parameters**: What inputs does it take?\n4. **Returns**: What does it output?\n5. **Examples**: Concrete usage examples\n6. **Edge Cases**: Important caveats or limitations\n\nWrite for the target audience (developers, users, etc). Be concise but complete."
+      }
+    }
+  ]
+}

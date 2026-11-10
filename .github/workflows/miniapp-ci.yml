@@ -1,0 +1,52 @@
+name: miniapp-ci
+
+# The WeChat mini-program client gate (revive-nonweb-ci): until 2026-10-27 the
+# miniapp/ tree had NO CI gate at all while sharing @platform/core with web and
+# the mobile app. Ubuntu-only, budget-grade: Biome lint (repo-pinned via npx),
+# typecheck, and the markdown unit tests. Full weapp builds stay out of CI on
+# purpose (no upload consumer, design D6).
+
+on:
+  pull_request:
+    paths: ["miniapp/**", "packages/core/**", ".github/workflows/miniapp-ci.yml"]
+  push:
+    branches: [main]
+    paths: ["miniapp/**", "packages/core/**", ".github/workflows/miniapp-ci.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: miniapp-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gates:
+    name: miniapp lint → typecheck → markdown tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: miniapp/package-lock.json
+
+      - name: Install miniapp dependencies (+ linked core)
+        run: |
+          npm --prefix miniapp ci
+          npm --prefix miniapp install --no-audit --no-fund
+
+      - name: Link core's runtime deps (repo convention)
+        run: |
+          mkdir -p packages/core/node_modules
+          ln -sfn ../../../miniapp/node_modules/zustand packages/core/node_modules/zustand
+
+      - name: Lint (Biome, repo-pinned version via npx)
+        run: npx --yes @biomejs/biome@2.5.11 check miniapp/ packages/core/
+
+      - name: Typecheck
+        run: npm --prefix miniapp run typecheck
+
+      - name: Markdown unit tests
+        run: npm --prefix miniapp run test:markdown

@@ -1,0 +1,247 @@
+{
+  "name": "内容流水线",
+  "version": "1.0.0",
+  "description": "官方集群模板：周流水线内容工厂——主编周一主持选题会，选题策划立项、撰稿人周二至四成稿，审校为被动岗（受委托唤醒，演示成员间横向协作的唯一通道 delegation）。演示：周节奏流水线、被动岗受委托唤醒、文档工具面；编导段为 trigger(周一)→handoff 流水线（主编→策划→撰稿）+ 撰稿 dispatch 委托审校、审校 report 上行主编。铸造上架时 packId/agents 按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+  "agents": [
+    {
+      "id": "content-editor",
+      "name": "主编",
+      "description": "周一选题会主持",
+      "persona": "你是内容流水线的主编。每周一主持选题会：读取系统注入的巡视上下文（选题策划与撰稿人的最新报数、审校完成情况、主人拍板结果），定本周刊物要点与优先级，对需要主人定夺的方向（如换赛道、接商单）用 escalate 提交，并在收尾调用 report_status 报数（槽位：brief_notes）。下游报数缺位时如实标注「未收到」，不替其编造进度。"
+    },
+    {
+      "id": "content-planner",
+      "name": "选题策划",
+      "description": "选题池维护与立项",
+      "persona": "你是内容流水线的选题策划。每周一用可用的搜索工具巡视热点与竞品动态，维护选题池并挑出本周立项选题，信息取不到时如实报「未取得」，绝不编造。收尾调用 report_status 报数（槽位：topics_pool、picked）。"
+    },
+    {
+      "id": "content-writer",
+      "name": "撰稿人",
+      "description": "按立项成稿",
+      "persona": "你是内容流水线的撰稿人。周二至周四按选题策划的立项报数逐篇成稿（用可用的文档与搜索工具），材料取不到时如实报「未取得」，绝不编造。完稿后如需第三方审校，可提议主人用委托把稿件交给审校岗。收尾调用 report_status 报数（槽位：drafts_done、words_week）。"
+    }
+  ],
+  "fleet": {
+    "name": "内容流水线",
+    "members": [
+      {
+        "ref": "editor",
+        "title": "主编",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "content-editor"
+        },
+        "kpiSlots": [
+          {
+            "key": "brief_notes",
+            "label": "本周刊要点"
+          },
+          {
+            "key": "escalated",
+            "label": "待主人拍板数",
+            "unit": "件"
+          }
+        ],
+        "cadence": {
+          "cron": "${editorCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "主持选题会：阅读选题策划与撰稿人的最新报数、审校完成情况与主人拍板结果，定本周要点与优先级，需主人定夺的合并为一条 escalate。收尾务必调用 report_status 报数。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "planner",
+        "title": "选题策划",
+        "parentRef": "editor",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "content-planner"
+        },
+        "kpiSlots": [
+          {
+            "key": "topics_pool",
+            "label": "选题池",
+            "unit": "条"
+          },
+          {
+            "key": "picked",
+            "label": "本周立项",
+            "unit": "个"
+          }
+        ],
+        "cadence": {
+          "cron": "${plannerCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "选题巡视：扫热点与竞品动态，维护选题池并挑出本周立项选题。取不到的信息如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "writer",
+        "title": "撰稿人",
+        "parentRef": "planner",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "content-writer"
+        },
+        "kpiSlots": [
+          {
+            "key": "drafts_done",
+            "label": "成稿数",
+            "unit": "篇"
+          },
+          {
+            "key": "words_week",
+            "label": "本周字数",
+            "showDelta": true
+          }
+        ],
+        "cadence": {
+          "cron": "${writerCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "按立项成稿：逐篇写作并记录进度，材料缺口如实标注，需要审校时提议主人委托审校岗。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "reviewer",
+        "title": "审校",
+        "parentRef": "editor",
+        "target": {
+          "kind": "existing-persona",
+          "id": "{{REVIEWER_PERSONA}}"
+        },
+        "kpiSlots": [
+          {
+            "key": "reviews_done",
+            "label": "审校完成",
+            "unit": "篇"
+          }
+        ],
+        "cadence": null
+      }
+    ],
+    "requires": [],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "trigger",
+          "to": "editor",
+          "cron": "0 9 * * 1"
+        },
+        {
+          "kind": "trigger",
+          "to": "planner",
+          "cron": "0 10 * * 1"
+        },
+        {
+          "kind": "handoff",
+          "from": "editor",
+          "to": "planner"
+        },
+        {
+          "kind": "handoff",
+          "from": "planner",
+          "to": "writer"
+        },
+        {
+          "kind": "dispatch",
+          "from": "writer",
+          "to": "reviewer"
+        },
+        {
+          "kind": "report",
+          "from": "reviewer",
+          "to": "editor"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "editorCron",
+        "type": "string",
+        "default": "0 9 * * 1",
+        "label": "主编合成周期"
+      },
+      {
+        "name": "plannerCron",
+        "type": "string",
+        "default": "0 10 * * 1",
+        "label": "选题产出周期"
+      },
+      {
+        "name": "writerCron",
+        "type": "string",
+        "default": "0 10 * * 2-4",
+        "label": "写作产出周期"
+      }
+    ],
+    "i18n": {
+      "en": {
+        "name": "Content Pipeline",
+        "members": {
+          "editor": {
+            "title": "Editor-in-chief",
+            "kpiSlots": {
+              "escalated": {
+                "label": "Awaiting owner decision"
+              },
+              "brief_notes": {
+                "label": "Weekly notes"
+              }
+            }
+          },
+          "planner": {
+            "title": "Topic planner",
+            "kpiSlots": {
+              "picked": {
+                "label": "Greenlit this week"
+              },
+              "topics_pool": {
+                "label": "Topic pool"
+              }
+            }
+          },
+          "writer": {
+            "title": "Writer",
+            "kpiSlots": {
+              "words_week": {
+                "label": "Words this week"
+              },
+              "drafts_done": {
+                "label": "Drafts done"
+              }
+            }
+          },
+          "reviewer": {
+            "title": "Reviewer",
+            "kpiSlots": {
+              "reviews_done": {
+                "label": "Reviews done"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Content Pipeline",
+      "description": "Official fleet template: a weekly content-factory pipeline — the editor-in-chief runs Monday's topic meeting, the topic planner greenlights pieces, the writer drafts Tuesday–Thursday, and the reviewer is a passive post (woken by delegation, demonstrating the only lateral member-to-member collaboration channel).",
+      "agents": {
+        "content-editor": {
+          "name": "Editor-in-chief"
+        },
+        "content-planner": {
+          "name": "Topic planner"
+        },
+        "content-writer": {
+          "name": "Writer"
+        }
+      }
+    }
+  }
+}

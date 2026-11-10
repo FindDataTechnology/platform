@@ -1,0 +1,156 @@
+{
+ "schema": "erp-vertical-connector-pack/v1",
+ "name": "仓配分销连接器包",
+ "version": "1.1.0",
+ "description": "仓配分销模板·连接器 pack：外部系统对接全部经萬星连接器载体（多租户、凭证不出库）。金蝶云星空用目录 provider（接通验证归任务 3.1）；客户 WMS、供应商门户、承运商门户按连接器角色绑定声明——包说需要哪一类系统，客户在自己的连接器里选定实际品牌，不需要目录存在同名 provider；支付渠道走商户侧连接器（只读流水+回调记录）；模板层只留推送/回流指令记录，零外部写入。本包以机器字段声明每条连接契约（provider/角色 + 读/写单元），客户未选定或目录覆盖不到的自有系统由状态面如实报待选系统/能力缺口，不内嵌 provider 实现",
+ "tags": [
+  "ERP",
+  "仓配分销",
+  "连接器",
+  "只读滩头"
+ ],
+ "notes": "publish-ready 源清单（未上架，packId 未铸造）：只声明外部系统绑定契约与连接器纪律卡，无 MCP 工具面（运行时账务面在 fd-erp-ledger-mcp）；provider 实现归萬星连接器目录（open-connector-mt 独立 openspec 根）；BYOK 凭证经环境变量注入、零落库零日志；未接通 provider 如实 NOT_WIRED。",
+ "visibility": "public",
+ "category": "facet",
+ "connector_bindings": [
+  {
+   "key": "kingdee-cloud",
+   "external_system": "金蝶云星空",
+   "surface": "凭证/往来推送、日终双边对账、发票开具回写",
+   "direction": "push-via-connector + read-back",
+   "credential": "BYOK：ERP_BYOK_KINGDEE_*（凭证不出库）",
+   "note": "对外付款 = 核对指令输出给金蝶/持牌通道；平台零资金执行面",
+   "provider": "kingdee",
+   "allowOperations": [
+    {
+     "operationType": "read"
+    },
+    {
+     "operationType": "write"
+    }
+   ],
+   "connectionHint": "金蝶云星空账套",
+   "optional": false
+  },
+  {
+   "key": "wms-snapshot",
+   "external_system": "客户 WMS（品牌待定）",
+   "surface": "库存快照只读（日终账实对账）+ 出入库事件回传",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_WMS_*",
+   "note": "编排层零写 WMS；台账单向同步（中台→WMS 由客户既有链路承担）。客户在连接器卡片选定自己实际在用的 WMS（角色绑定：包声明 wms，客户选系统）；选定前按「待选系统」如实标注，不冒充已接通。",
+   "provider": "wms",
+   "providerRole": true,
+   "allowOperations": [
+    "read"
+   ],
+   "optional": true
+  },
+  {
+   "key": "payments-merchant",
+   "external_system": "支付渠道（微信支付/支付宝/银联）",
+   "surface": "商户侧只读流水 + 回调记录 + 日终渠道对账差异清单",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_PAY_*",
+   "note": "在线支付只读+回调记录；平台零资金池（二清红线）",
+   "provider": "wechatpay",
+   "allowOperations": [
+    "read"
+   ],
+   "alternativeProviders": [
+    "alipay"
+   ],
+   "optional": false
+  },
+  {
+   "key": "supplier-portal",
+   "external_system": "供应商门户/SP 页面集",
+   "surface": "采购订单推送、直发指令、发货反馈/到货预告回流",
+   "direction": "push-via-connector + read-back",
+   "credential": "BYOK：ERP_BYOK_SUPPLIER_PORTAL_*",
+   "note": "模板层只留推送指令记录（留痕），实际推送经连接器。客户在连接器卡片选定自己的供应商门户系统（角色绑定：包声明 supplier-portal，客户选系统）。",
+   "provider": "supplier-portal",
+   "providerRole": true,
+   "allowOperations": [
+    "read",
+    "write"
+   ],
+   "optional": true
+  },
+  {
+   "key": "carrier-portal",
+   "external_system": "承运商门户/CP 页面集",
+   "surface": "运单轨迹、电子回单、签收回流（月台预约/提货打卡/签收上报）",
+   "direction": "read-only + page-set-writeback",
+   "credential": "BYOK：ERP_BYOK_CARRIER_*",
+   "note": "签收回流为应收账龄起算口径之一；模板层零外部写入。承运商是多个厂商的集合，按角色绑定由客户选定自己的承运商门户。",
+   "provider": "carrier-portal",
+   "providerRole": true,
+   "allowOperations": [
+    "read"
+   ],
+   "optional": true
+  }
+ ],
+ "skills": [
+  {
+   "name": "erp-supply-connector-discipline",
+   "description": "连接器纪律卡（仓配分销）：载体唯一（萬星连接器）、BYOK 凭证不出库、编排层只读外部系统、推送只留痕、未接通如实 NOT_WIRED。",
+   "content": "---\nname: erp-supply-connector-discipline\ndescription: 连接器纪律卡（仓配分销）：全部外部对接经萬星连接器载体；模板层零外部写入；未接通如实报 NOT_WIRED 不伪造。\n---\n\n# 连接器纪律卡（仓配分销）\n\n## 一、载体唯一\n- 金蝶/WMS/支付/门户对接全部经萬星连接器（多租户、凭证不出库）；ERP 线不建连接器框架、不直连凭据。\n- WMS 无目录 provider 时按连接器 SDK 新增，在 open-connector-mt 独立 openspec 根立项；本仓只消费契约。\n\n## 二、零外部写入（编排层）\n- 模板编排层对 WMS/门户零写入：推送动作只落「推送指令记录」留痕，实际推送由连接器执行；WMS 只有只读快照面。\n- 作业执行在外部（WMS/PDA/门户/金蝶）；中台编排，执行器在外。\n\n## 三、如实守界\n- 未接通的 provider（WMS 品牌/支付渠道目录）如实 NOT_WIRED + 替代路径说明；不以人工补录冒充自动接入。\n- BYOK：凭证只经环境变量注入（ERP_BYOK_*），零落库零日志。\n",
+   "en": "Connector discipline (warehousing & distribution): single carrier (open-connector), BYOK credentials never persisted, orchestration layer zero external writes, push actions trace-only, un-wired providers honestly reported.",
+   "ja": "コネクタ規律（倉配流通）：キャリア唯一（open-connector）、BYOK 認証情報は永続化しない、オーケストレーション層は外部書き込みゼロ、push は記録のみ、未接続は NOT_WIRED で如实報告。",
+   "es": "Disciplina de conectores (almacenaje y distribución): transportista único (open-connector), credenciales BYOK nunca persistidas, capa de orquestación sin escritura externa, acciones de envío solo trazadas, proveedores no conectados informados honestamente.",
+   "fr": "Discipline des connecteurs (entreposage et distribution) : transporteur unique (open-connector), identifiants BYOK jamais persistés, couche d'orchestration sans écriture externe, actions d'envoi tracées uniquement, fournisseurs non connectés signalés honnêtement."
+  }
+ ],
+ "mcpServers": [],
+ "fleet": {
+  "name": "仓配分销连接器包（供给包）",
+  "members": [
+   {
+    "ref": "sc-connector-operator",
+    "title": "连接器产出位",
+    "parentRef": null,
+    "target": {
+     "kind": "pack-preset",
+     "packId": "Mo3_aWe7tF2eFVzkqFT9mA",
+     "presetId": "erp-ledger-board-post"
+    },
+    "kpiSlots": [
+     {
+      "key": "providers_wired",
+      "label": "已接通 provider"
+     }
+    ]
+   }
+  ],
+  "orchestration": {
+   "mode": "supervisor",
+   "edges": []
+  }
+ },
+ "_casting": {
+  "packDependencies": {
+   "fleet-board-contribution": "Mo3_aWe7tF2eFVzkqFT9mA"
+  },
+  "note": "连接器包只声明外部系统绑定契约（connector_bindings）与纪律卡；provider 实现归萬星连接器目录（open-connector-mt 独立 openspec 根）。无 MCP 工具面（模板运行时账务面在 fd-erp-ledger-mcp）。publish-ready：上架挂账。"
+ },
+ "i18n": {
+  "en": {
+   "name": "Warehousing & distribution connector pack",
+   "description": "Connector pack for the warehousing & distribution template: every external integration goes through the open-connector carrier (multi-tenant, credentials never leave its vault). Kingdee Cloud Galaxy uses the directory provider (live verification pending); the customer's WMS, supplier portal and carrier portal are declared as connector roles — the pack names the kind of system it needs and the customer picks the actual vendor in their own connector, so no same-named directory provider is required; payment channels use merchant-side connectors (read-only statements plus callback records); the template keeps push/return instructions only, with zero external writes. This pack declares the binding contract and read-only boundaries; an unchosen role or an uncovered surface is reported as such by the status face, and no provider implementation is embedded.",
+   "notes": "Publish-ready source (not yet published; packId not minted). Declares external-system bindings and the connector discipline card only; no MCP tool face (the runtime ledger face lives in fd-erp-ledger-mcp). Provider implementations belong to the open-connector directory. BYOK credentials are injected via environment variables and never persisted.",
+   "tags": [
+    "ERP",
+    "warehousing & distribution",
+    "connector",
+    "read-only"
+   ],
+   "skills": {
+    "erp-supply-connector-discipline": {
+     "description": "Connector discipline (warehousing & distribution): single carrier (open-connector), BYOK credentials never persisted, orchestration layer zero external writes, push actions trace-only, un-wired providers honestly reported."
+    }
+   }
+  }
+ }
+}

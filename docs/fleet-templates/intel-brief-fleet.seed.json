@@ -1,0 +1,241 @@
+{
+  "name": "晨报情报站",
+  "version": "1.0.0",
+  "description": "官方集群模板：每日晨报情报站——科技与市场情报员每日清晨分头巡检，情报主编 8 点合成晨报；另含集群引用岗（existing-cluster，每周一做深度聚合，演示集群 fan-out 引用与派生报数）。演示：双情报源并行、晨报流、cluster 引用岗（公司种子只演示了 a2a）；编导段为 trigger+handoff 链（两情报员巡检完成接棒主编合成）与集群 report 上行。铸造上架时 packId/agents 按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+  "agents": [
+    {
+      "id": "intel-chief",
+      "name": "情报主编",
+      "description": "每日晨报合成",
+      "persona": "你是晨报情报站的主编。每天 8 点合成晨报：读取系统注入的巡视上下文（科技与市场情报员的最新报数、集群深度聚合、主人拍板结果），交叉核对两源重叠条目并给出当日要点清单，对需要主人定夺的情报（如重大风险信号）用 escalate 提交，并在收尾调用 report_status 报数（槽位：brief_digest、sources_covered）。情报源报数缺位时如实标注「未收到」，不替其编造。"
+    },
+    {
+      "id": "intel-tech",
+      "name": "科技情报员",
+      "description": "科技面每日巡检",
+      "persona": "你是晨报情报站的科技情报员。每天清晨用可用的搜索工具巡检科技面（产品发布、融资、政策、技术动态），挑出值得进晨报的条目并点名头条，信息取不到时如实报「未取得」，绝不编造。收尾调用 report_status 报数（槽位：tech_hits、top_story）。"
+    },
+    {
+      "id": "intel-market",
+      "name": "市场情报员",
+      "description": "行情异动每日巡检",
+      "persona": "你是晨报情报站的市场情报员。每天清晨用可用的行情与搜索工具巡检市场异动（指数、板块、要闻、预警信号），挑出异动条目与预警，信息取不到时如实报「未取得」，绝不编造。收尾调用 report_status 报数（槽位：market_moves、watch_alerts）。"
+    }
+  ],
+  "fleet": {
+    "name": "晨报情报站",
+    "members": [
+      {
+        "ref": "chief",
+        "title": "情报主编",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "intel-chief"
+        },
+        "kpiSlots": [
+          {
+            "key": "brief_digest",
+            "label": "晨报要点"
+          },
+          {
+            "key": "sources_covered",
+            "label": "覆盖源数",
+            "unit": "个"
+          }
+        ],
+        "cadence": {
+          "cron": "${chiefCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "合成晨报：交叉核对科技与市场情报员的最新报数与集群深度聚合，给出当日要点清单，重大风险信号 escalate 主人。收尾务必调用 report_status 报数。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "tech",
+        "title": "科技情报员",
+        "parentRef": "chief",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "intel-tech"
+        },
+        "kpiSlots": [
+          {
+            "key": "tech_hits",
+            "label": "科技情报",
+            "unit": "条"
+          },
+          {
+            "key": "top_story",
+            "label": "头条"
+          }
+        ],
+        "cadence": {
+          "cron": "${techCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "科技面晨检：巡检产品发布、融资、政策与技术动态，挑出晨报条目并点名头条。取不到的信息如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "market",
+        "title": "市场情报员",
+        "parentRef": "chief",
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "intel-market"
+        },
+        "kpiSlots": [
+          {
+            "key": "market_moves",
+            "label": "行情异动",
+            "unit": "条"
+          },
+          {
+            "key": "watch_alerts",
+            "label": "预警信号",
+            "unit": "条",
+            "showDelta": true
+          }
+        ],
+        "cadence": {
+          "cron": "${marketCron}",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "市场面晨检：巡检指数、板块、要闻与预警信号，挑出异动条目。取不到的信息如实标注。收尾调用 report_status。{{fleetContext}}"
+        }
+      },
+      {
+        "ref": "cluster",
+        "title": "集群深度席",
+        "parentRef": "chief",
+        "target": {
+          "kind": "existing-cluster",
+          "id": "{{INTEL_CLUSTER}}"
+        },
+        "kpiSlots": [],
+        "cadence": {
+          "cron": "0 9 * * 1",
+          "tz": "Asia/Shanghai",
+          "promptTemplate": "集群深度聚合：汇总上周各成员面观察，产出深度周报供主编采编。{{fleetContext}}"
+        }
+      }
+    ],
+    "requires": [],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "trigger",
+          "to": "tech",
+          "cron": "30 7 * * *"
+        },
+        {
+          "kind": "trigger",
+          "to": "market",
+          "cron": "40 7 * * *"
+        },
+        {
+          "kind": "trigger",
+          "to": "chief",
+          "cron": "0 8 * * *"
+        },
+        {
+          "kind": "handoff",
+          "from": "tech",
+          "to": "chief"
+        },
+        {
+          "kind": "handoff",
+          "from": "market",
+          "to": "chief"
+        },
+        {
+          "kind": "report",
+          "from": "cluster",
+          "to": "chief"
+        }
+      ]
+    },
+    "params": [
+      {
+        "name": "chiefCron",
+        "type": "string",
+        "default": "0 8 * * *",
+        "label": "晨报生产时刻"
+      },
+      {
+        "name": "techCron",
+        "type": "string",
+        "default": "30 7 * * *",
+        "label": "科技面晨检时刻"
+      },
+      {
+        "name": "marketCron",
+        "type": "string",
+        "default": "40 7 * * *",
+        "label": "市场面晨检时刻"
+      }
+    ],
+    "i18n": {
+      "en": {
+        "name": "Morning Brief Station",
+        "members": {
+          "chief": {
+            "title": "Briefing editor",
+            "kpiSlots": {
+              "sources_covered": {
+                "label": "Sources covered"
+              },
+              "brief_digest": {
+                "label": "Brief highlights"
+              }
+            }
+          },
+          "tech": {
+            "title": "Tech scout",
+            "kpiSlots": {
+              "top_story": {
+                "label": "Top story"
+              },
+              "tech_hits": {
+                "label": "Tech intel"
+              }
+            }
+          },
+          "market": {
+            "title": "Market scout",
+            "kpiSlots": {
+              "watch_alerts": {
+                "label": "Alert signals"
+              },
+              "market_moves": {
+                "label": "Market moves"
+              }
+            }
+          },
+          "cluster": {
+            "title": "Deep-dive Seat",
+            "kpiSlots": {}
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Morning Brief Station",
+      "description": "Official fleet template: a daily morning-brief intel station — the tech and market scouts patrol separately every early morning, and the briefing editor synthesizes the morning brief at 8; plus a cluster-reference post (existing-cluster, weekly deep aggregation, demonstrating cluster fan-out).",
+      "agents": {
+        "intel-chief": {
+          "name": "Briefing editor"
+        },
+        "intel-tech": {
+          "name": "Tech scout"
+        },
+        "intel-market": {
+          "name": "Market scout"
+        }
+      }
+    }
+  }
+}
