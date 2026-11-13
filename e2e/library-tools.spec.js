@@ -90,7 +90,12 @@ test.describe("library index + tools", () => {
       name: "search_library",
       arguments: { query: "京都" },
     });
-    expect(none.result.content[0].text).toMatch(/^No matches/);
+    // The answer opens with the rung header on purpose (library-semantic-rung
+    // R3): an empty result and an empty result BECAUSE the semantic lane was
+    // down must not read the same. So assert both halves instead of anchoring
+    // "No matches" to the first character — the header precedes it.
+    expect(none.result.content[0].text).toMatch(/^\(rung: keyword/);
+    expect(none.result.content[0].text).toContain("No matches");
 
     const page = await mcp.call("tools/call", {
       name: "read_document",
@@ -153,7 +158,9 @@ test.describe("library index + tools", () => {
       name: "search_library",
       arguments: { query: "riverbank" },
     });
-    expect(hit.result.content[0].text).toMatch(/^No matches/);
+    // Same header contract as above: the rung line opens every answer.
+    expect(hit.result.content[0].text).toMatch(/^\(rung: keyword/);
+    expect(hit.result.content[0].text).toContain("No matches");
     await mcp.stop();
   });
 

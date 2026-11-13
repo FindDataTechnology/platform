@@ -16,12 +16,18 @@
 //   - no back door: the import surface treats these exactly like a user-picked
 //     file (same endpoint, same gates) — this step only puts bytes on disk.
 
+import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readBundle } from "../server/offline-bundle.js";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// `--root` exists for two callers: the drift test (a fixture tree) and an
+// operator checking a built snapshot. Default is unchanged — the repo root.
+const rootArg = process.argv.indexOf("--root");
+const root = rootArg >= 0 && process.argv[rootArg + 1]
+  ? path.resolve(process.argv[rootArg + 1])
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const listPath = path.join(root, "bundles", "manifest.json");
 const destDir = path.join(root, "resources", "bundles");
 
@@ -59,6 +65,22 @@ for (const entry of entries) {
   const name = path.basename(src);
   if (seen.has(name)) fail(`two listed bundles share the file name ${name}`);
   seen.add(name);
+
+  // Generated-list discipline (add-pack-bundle-projection 4.2): the digest is
+  // written by scripts/project-pack-bundles.mjs from the SAME bytes it wrote.
+  // A missing digest means someone hand-added an entry (the projection never
+  // produced it); a wrong one means the file moved without re-projecting. Both
+  // must stop the build — a hand-added bundle is exactly the "one manifest,
+  // three lists" drift this replaces.
+  const digest = createHash("sha256").update(readFileSync(src)).digest("hex");
+  if (!entry.sha256) {
+    fail(
+      `list entry ${rel} carries no sha256 — bundles/manifest.json is GENERATED; declare the pack in packs/projections.json and run scripts/project-pack-bundles.mjs instead of editing the list`,
+    );
+  }
+  if (entry.sha256 !== digest) {
+    fail(`listed bundle ${rel} does not match its recorded digest (list ${entry.sha256}, file ${digest}) — regenerate with scripts/project-pack-bundles.mjs`);
+  }
 
   // Full integrity re-check before it can reach an installer.
   const bytes = readFileSync(src);

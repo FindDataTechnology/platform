@@ -10,6 +10,10 @@ export default defineAppConfig({
     // UE 订货台页面集（add-erp-miniapp-pagesets P1；docs/pageset-base-v1.md
     // §4 静态注册模式：页面随包编译，授权可见性落在入口渲染 + PagesetGate
     // 路由守卫，永不动态装载。路径 = registry pages/ue/* 一一对应）。
+    // 智语房间（openspec: add-zhiyu-mobile-clients 3.1）：两页静态注册，
+    // 与 web 同一批端点、同一套游标语义；重交互不在移动端实现，改为一次性链接。
+    "pages/zhiyu/list/index",
+    "pages/zhiyu/room/index",
     "pages/ue/home",
     "pages/ue/product-search",
     "pages/ue/product-detail",

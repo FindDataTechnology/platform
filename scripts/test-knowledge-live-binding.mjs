@@ -3,46 +3,76 @@
 //
 // The pure half (normalize/effective/patch stamping) is covered by
 // test-knowledge-profile.mjs and test-member-mcp-patch.mjs. This file drives
-// the actual tool server (server/library-mcp.js) as a child process over the
-// stdio MCP protocol, against a seeded temp DB, and asserts the three spec
-// clauses:
+// the actual tool server (server/library-mcp.js) against a seeded temp DB and
+// asserts the three spec clauses:
 //   1. a collection outside LIBRARY_COLLECTIONS answers "does not exist"
 //      (existence leak forbidden — the spec's explicit error wording);
-//   2. REMOVING a collection from the member's set (restart the child with a
-//      narrower env — the same effect a PUT /knowledge-profile patch-cache
-//      invalidation has on the next composed member env) makes previously
-//      visible documents invisible;
+//   2. REMOVING a collection from the member's set (restart with a narrower env
+//      — the same effect a PUT /knowledge-profile patch-cache invalidation has
+//      on the next composed member env) makes previously visible documents
+//      invisible;
 //   3. ADDING a collection makes its documents visible immediately (list +
 //      search + read all honor the new boundary).
 //
-// library-mcp.js connects to ../db.js at import time and mounts stdio at the
-// bottom of the module — hence the child-process harness (env isolation is
-// the point: LIBRARY_COLLECTIONS IS the member boundary).
+// Transport: streamable-http (LIBRARY_MCP_HTTP_PORT), NOT stdio.
+//
+// Why the change (2026-11-10): the original stdio harness was quarantined for
+// hanging, and its recorded cause ("child teardown") proved wrong. Re-measured
+// here and each ruled out: teardown completeness, env inheritance (empty /
+// PATH-only / full), `using` scoping, frame framing (2184B, one newline), WAL
+// residue, and the seeded DB state (journal_mode=wal, integrity ok). The child
+// answers `tools/list` with 4 tools in a plain node process, and the identical
+// seed + child combination works there too — inside `node --test`, frames
+// written to the child's stdin never get an answer, same binary and bytes.
+// Rather than keep chasing a test-runner/stdio interaction, this harness starts
+// the child in HTTP mode and speaks JSON-RPC over POST /mcp. Verified under
+// `node --test`: status 200, tools listed.
+//
+// The child process is still the unit under test: LIBRARY_COLLECTIONS IS the
+// member boundary, so it has to live in the child's env, not in this process.
+// Only the way calls travel changed.
 
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { test as baseTest } from "node:test";
-
-// QUARANTINED (2026-11-06, release train add-supply-store-unification):
-// this harness hangs CI nondeterministically — the spawned library-mcp child
-// answers the wire (initialize/tools/list verified by hand) but the harness
-// promise never settles, so `node --test` sits silent at this file until the
-// runner is cancelled (2 CI runs lost 20+ min each at Unit tests). Reproduces
-// locally too (85-99s, then "Promise resolution is still pending but the
-// event loop has already resolved"). Owner line: add-member-knowledge-profile
-// (26/29 — 8.2 真机冒烟 pending). Restore by removing this guard once the
-// harness gains child teardown (kill+unref on all settle paths, or an
-// after() hook that reaps the child).
-const test = (name, options, fn) =>
-  baseTest(name, { ...(options ?? {}), skip: "harness hang: child-process stdio MCP never settles (owner: add-member-knowledge-profile 8.x)" }, fn);
+import { after, test as baseTest } from "node:test";
 
 const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
-function startLibraryMcp(collections, seed) {
-  const dataDir = seed;
+// A child left running keeps the runner alive; reap them all on teardown.
+const liveChildren = new Set();
+let reapArmed = false;
+function reap(child) {
+  liveChildren.delete(child);
+  try { child.kill("SIGKILL"); } catch {}
+  try { child.unref(); } catch {}
+}
+function armReapHook() {
+  if (reapArmed) return;
+  reapArmed = true;
+  // Registered lazily (not at module top level) so it cannot interfere with
+  // test() registration.
+  after(() => { for (const child of [...liveChildren]) reap(child); });
+}
+
+async function freePort() {
+  const net = await import("node:net");
+  return new Promise((resolve, reject) => {
+    const srv = net.createServer();
+    srv.once("error", reject);
+    srv.listen(0, "127.0.0.1", () => {
+      const { port } = srv.address();
+      srv.close(() => resolve(port));
+    });
+  });
+}
+
+// Start library-mcp in HTTP mode for one member boundary and wait until it
+// answers. `collections` is the member's LIBRARY_COLLECTIONS — the whole point.
+async function startLibraryMcp(collections, dataDir) {
+  const port = await freePort();
   const child = spawn(
     process.execPath,
     [path.join(ROOT, "server", "library-mcp.js")],
@@ -52,66 +82,65 @@ function startLibraryMcp(collections, seed) {
         DB_PATH: path.join(dataDir, "library.sqlite"),
         PLATFORM_DATA_DIR: dataDir,
         LIBRARY_COLLECTIONS: collections,
+        LIBRARY_MCP_HTTP_PORT: String(port),
       },
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "pipe"],
     },
   );
-  const frames = [];
-  let buf = "";
-  const pending = new Map();
-  child.stdout.on("data", (chunk) => {
-    buf += chunk.toString();
-    let idx = buf.indexOf("\n");
-    while (idx >= 0) {
-      const line = buf.slice(0, idx);
-      buf = buf.slice(idx + 1);
-      if (!line.trim()) continue;
-      let msg;
-      try {
-        msg = JSON.parse(line);
-      } catch {
-        continue;
-      }
-      if (msg.id != null && pending.has(msg.id)) {
-        pending.get(msg.id)(msg);
-        pending.delete(msg.id);
-      } else {
-        frames.push(msg);
-      }
-    }
-  });
-  child.stderr.on("data", () => {}); // server logs; not part of the protocol
+  liveChildren.add(child);
+  armReapHook();
+  const base = `http://127.0.0.1:${port}/mcp`;
   let reqId = 0;
-  const call = (method, params) =>
-    new Promise((resolve, reject) => {
-      const id = ++reqId;
-      const timer = setTimeout(() => {
-        pending.delete(id);
-        reject(new Error(`timeout waiting for ${method}`));
-      }, 15000);
-      pending.set(id, (msg) => {
-        clearTimeout(timer);
-        resolve(msg);
+
+  // Streamable-http answers JSON-RPC frames as an SSE `event: message` payload.
+  const parse = (body, ct) => {
+    if (/text\/event-stream/i.test(ct ?? "")) {
+      const line = body.split("\n").find((l) => l.startsWith("data:"));
+      return line ? JSON.parse(line.slice(5).trim()) : null;
+    }
+    try { return JSON.parse(body); } catch { return null; }
+  };
+
+  const rpc = async (method, params, timeoutMs = 8000) => {
+    const id = ++reqId;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      const res = await fetch(base, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id, method, params }),
+        signal: ctrl.signal,
       });
-      child.stdin.write(JSON.stringify({ jsonrpc: "2.0", id, method, params }) + "\n");
-    });
+      const msg = parse(await res.text(), res.headers.get("content-type"));
+      if (!msg) throw new Error(`${method}: unparseable response`);
+      return msg;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
   const tool = async (name, args) => {
-    const res = await call("tools/call", { name, arguments: args ?? {} });
+    const res = await rpc("tools/call", { name, arguments: args ?? {} });
     return res?.result;
   };
-  const ready = (async () => {
-    for (let i = 0; i < 40; i++) {
-      try {
-        const r = await call("tools/list", {});
-        if (r?.result?.tools?.length) return;
-      } catch {
-        /* child not up yet */
-      }
-      await new Promise((r) => setTimeout(r, 250));
-    }
-    throw new Error("library-mcp child never answered tools/list");
-  })();
-  return { child, call, tool, ready, [Symbol.dispose]() { child.kill("SIGKILL"); } };
+
+  // Total budget, not "timeout per attempt × N": a slow boot must not outlast CI.
+  const deadline = Date.now() + 20000;
+  let ready = false;
+  while (Date.now() < deadline) {
+    try {
+      const r = await rpc("tools/list", {}, 3000);
+      if (r?.result?.tools?.length) { ready = true; break; }
+    } catch { /* not up yet */ }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  if (!ready) throw new Error("library-mcp never answered tools/list within 20s");
+
+  return { child, tool, dispose: () => reap(child) };
 }
 
 async function seedLibrary(dir) {
@@ -149,66 +178,78 @@ async function seedLibrary(dir) {
   });
 }
 
+const text = (res) => String(res?.content?.[0]?.text ?? "");
+
+const test = (name, options, fn) => baseTest(name, options ?? {}, fn);
+
 test("member library boundary: out-of-bound collection reads answer 'does not exist'", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "kprofile-boundary-"));
   await seedLibrary(dir);
-  using mcp = startLibraryMcp("col-a", dir);
-  await mcp.ready;
+  const mcp = await startLibraryMcp("col-a", dir);
+  try {
+    // In-bound: col-a documents are reachable.
+    const inList = await mcp.tool("list_library", { collection: "col-a" });
+    assert.match(text(inList), /Alpha Doc/);
 
-  // In-bound: col-a documents are reachable.
-  const inList = await mcp.tool("list_library", { collection: "col-a" });
-  assert.match(String(inList?.content?.[0]?.text ?? ""), /Alpha Doc/);
+    // Out-of-bound collection: "does not exist" — the spec's no-existence-leak
+    // wording, even though col-b exists in the DB.
+    const outList = await mcp.tool("list_library", { collection: "col-b" });
+    assert.match(text(outList), /does not exist/);
 
-  // Out-of-bound collection: "does not exist" — the spec's no-existence-leak
-  // wording, even though col-b exists in the DB.
-  const outList = await mcp.tool("list_library", { collection: "col-b" });
-  assert.match(String(outList?.content?.[0]?.text ?? ""), /does not exist/);
-
-  // Out-of-bound document (through search post-filter and direct read).
-  const search = await mcp.tool("search_library", { query: "beta" });
-  assert.match(String(search?.content?.[0]?.text ?? ""), /No matches/);
-  const read = await mcp.tool("read_document", { doc_id: "doc-2" });
-  assert.match(String(read?.content?.[0]?.text ?? ""), /does not exist/);
+    // Out-of-bound document (through search post-filter and direct read).
+    const search = await mcp.tool("search_library", { query: "beta" });
+    assert.match(text(search), /No matches/);
+    const read = await mcp.tool("read_document", { doc_id: "doc-2" });
+    assert.match(text(read), /does not exist/);
+  } finally {
+    mcp.dispose();
+  }
 });
 
 test("removing a collection from the member's env makes its documents invisible (next-turn effect)", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "kprofile-remove-"));
   await seedLibrary(dir);
   // "Before": col-a+col-b stamped — doc-2 visible.
-  {
-    using mcp = startLibraryMcp("col-a,col-b", dir);
-    await mcp.ready;
-    const read = await mcp.tool("read_document", { doc_id: "doc-2" });
-    assert.doesNotMatch(String(read?.content?.[0]?.text ?? ""), /does not exist/);
-    mcp.child.kill("SIGKILL");
+  const before = await startLibraryMcp("col-a,col-b", dir);
+  try {
+    const read = await before.tool("read_document", { doc_id: "doc-2" });
+    assert.doesNotMatch(text(read), /does not exist/);
+  } finally {
+    before.dispose();
   }
-  // "After" (the profile write invalidated the patch; the next turn composes
-  // a member env without col-b): doc-2 gone — invisible, not forbidden.
-  {
-    using mcp = startLibraryMcp("col-a", dir);
-    await mcp.ready;
-    const read = await mcp.tool("read_document", { doc_id: "doc-2" });
-    assert.match(String(read?.content?.[0]?.text ?? ""), /does not exist/);
-    const list = await mcp.tool("list_library", { collection: "col-b" });
-    assert.match(String(list?.content?.[0]?.text ?? ""), /does not exist/);
+  // "After" (the profile write invalidated the patch; the next turn composes a
+  // member env without col-b): doc-2 gone — invisible, not forbidden.
+  const narrowed = await startLibraryMcp("col-a", dir);
+  try {
+    const read = await narrowed.tool("read_document", { doc_id: "doc-2" });
+    assert.match(text(read), /does not exist/);
+    const list = await narrowed.tool("list_library", { collection: "col-b" });
+    assert.match(text(list), /does not exist/);
+  } finally {
+    narrowed.dispose();
   }
 });
 
 test("adding a collection takes effect immediately on the next composition", async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "kprofile-add-"));
   await seedLibrary(dir);
-  using mcp = startLibraryMcp("col-a", dir);
-  await mcp.ready;
-  const before = await mcp.tool("search_library", { query: "beta" });
-  assert.match(String(before?.content?.[0]?.text ?? ""), /No matches/);
-  mcp.child.kill("SIGKILL");
+  const before = await startLibraryMcp("col-a", dir);
+  try {
+    const res = await before.tool("search_library", { query: "beta" });
+    assert.match(text(res), /No matches/);
+  } finally {
+    before.dispose();
+  }
 
-  // The PUT /knowledge-profile → invalidateMemberPatchCache → next-turn
-  // compose chain lands here as a restarted member env including col-b.
-  using mcp2 = startLibraryMcp("col-a,col-b", dir);
-  await mcp2.ready;
-  const after = await mcp2.tool("search_library", { query: "beta" });
-  assert.match(String(after?.content?.[0]?.text ?? ""), /Beta Doc/);
-  const read = await mcp2.tool("read_document", { doc_id: "doc-2" });
-  assert.doesNotMatch(String(read?.content?.[0]?.text ?? ""), /does not exist/);
+  // The PUT /knowledge-profile → invalidateMemberPatchCache → next-turn compose
+  // chain lands here as a restarted member env including col-b.
+  const wide = await startLibraryMcp("col-a,col-b", dir);
+  try {
+    const res = await wide.tool("search_library", { query: "beta" });
+    assert.match(text(res), /Beta Doc/);
+    const read = await wide.tool("read_document", { doc_id: "doc-2" });
+    assert.doesNotMatch(text(read), /does not exist/);
+  } finally {
+    wide.dispose();
+  }
 });

@@ -66,7 +66,7 @@ function tokensOf(usage) {
   if (Number.isFinite(input) && Number.isFinite(output)) return input + output;
   return null;
 }
-import { agentKeyFor, materializeAgentHome, materializePackHome, mcpEntry, connectorBindingEntries, packPodEligibility, podKeyFor, applyBillingKey, applyDeploymentSecrets, billingKeyFromHome, workspaceChildEnv } from "./compose.js";
+import { agentKeyFor, materializeAgentHome, materializePackHome, mcpEntry, connectorBindingEntries, packPodEligibility, podKeyFor, applyBillingKey, applyDeploymentSecrets, workspaceChildEnv } from "./compose.js";
 import { materializeAcpWorkspace, acpMcpServers, acpCredentialEnv, acpSecretsRefusal } from "./compose-acp.js";
 import { MemoryCapture, compactJsonText } from "./memory-capture.js";
 import { MEMORY_DISCIPLINE, dshMemoryMount, acpMemoryMount, memoryNamespaceFor, podMemoryNamespace } from "@finddatatechnology/yongyi-client";
@@ -89,11 +89,6 @@ import { createNotifier } from "./notify.js";
 import { createMatters } from "./matters.js";
 import { maskSecretRef, resolveAgentPort } from "../lib/agent-serving.js";
 import { createAgentApp } from "./a2a.js";
-
-// Never print a credential, but do make two of them distinguishable in a log:
-// a fixed prefix plus the length is enough to tell "same key" from "different
-// key" without leaking either.
-const maskKeyPrefix = (v) => (typeof v === "string" && v ? `${v.slice(0, 6)}…(${v.length})` : "none");
 
 // Per-session reap window (add-caller-preferences): minimal copy of the
 // facade's parseReapWindow (fd-wanxing wanxing-facade a2a.js) — one
@@ -140,7 +135,6 @@ export class ChildManager {
   #billingPins = new Map();
   #probeInFlight = new Set(); // `${baseUrl}|${keyValue}` → a probe is running (per-key guard)
   #probeLastAt = new Map(); // `${baseUrl}|${keyValue}` → ts of the last probe (60 s floor)
-  #keyMismatchWarned = new Set(); // key → the home/record divergence was already said once
 
   constructor({ config, registryClient, clientFactory, log = console, now = () => Date.now(), notifyFetchImpl, probeFetchImpl, events = null, harnessRegistry = null, mandateVerdictClient = null }) {
     // Fleet memory (add-fleet-memory-v1 D6): null unless enabled+configured —
@@ -842,7 +836,7 @@ export class ChildManager {
         // keep sessions FLAT (`sessions/srv-wx-…`); current dsh nests them
         // under a workspace-group dir (`sessions/--data-…--/srv-wx-…`). Scan
         // both — a one-level walk left every nested wx session unreaped
-        // (observed in production: three stale wx dirs from probes).
+        // (accumulated evidence on cheap-1: three stale wx dirs from probes).
         const candidates = [];
         for (const ent of entries) {
           const tail = externalContextTail(ent.name);
@@ -1065,9 +1059,12 @@ export class ChildManager {
         // NOT here — that verdict belongs to the probe, which is
         // fire-and-forget and lands on the billing_parked event afterwards.
         // Absent rather than null when no form applies (same discipline as
-        // session/tokens). The derivation is a pure export so every branch is
-        // table-testable without driving a child through each failure shape.
-        const errorKind = turnErrorKind(e, { budgetKilled });
+        // session/tokens).
+        const errorKind = budgetKilled ? "timeout"
+          : e?.code === -32002 ? "child_exit"
+          : e?.code === -32003 ? "llm_failed"
+          : this.constructor.isBillingRejectionShape(e) ? "billing_unconfirmed"
+          : undefined;
         this.#fleetEmit("turn_ended", entry, {
           turn_kind: kind,
           session: sessionId,
@@ -1253,17 +1250,12 @@ export class ChildManager {
   // PARK itself clears only on re-materialization (reconcile's identity
   // pass) — a same-identity re-warm (budget demotion, a pod sibling's touch)
   // must keep a rejected key parked.
-  //
-  // `home` is the private home whose credentials file the child reads. It is
-  // carried, not read here: the probe resolves the key lazily so that whatever
-  // the file holds at failure time is what gets judged (a re-materialization
-  // that pins a new key does not have to re-record it).
-  async #recordBillingPin(key, pinnedValue, home = null) {
+  async #recordBillingPin(key, pinnedValue) {
     if (this.config.billingParkEnabled === false) return;
     const route = await this.#resolveProviderRoute();
     const keyValue = pinnedValue ?? route?.fallbackKey ?? null;
     if (route?.baseUrl && keyValue) {
-      this.#billingPins.set(key, { keyValue, baseUrl: route.baseUrl, providerType: route.providerType, home });
+      this.#billingPins.set(key, { keyValue, baseUrl: route.baseUrl, providerType: route.providerType });
     } else {
       // Unprobeable (unknown route, no key): no record → no probe → no park;
       // the role keeps exactly its pre-change failure behavior — but it now
@@ -1287,26 +1279,14 @@ export class ChildManager {
     const pin = this.#billingPins.get(key);
     if (!pin) return { outcome: "undecided", why: "no billing pin recorded for this key (spawn never captured one)" };
     if (pin.providerType !== "openai-completions") return { outcome: "undecided", why: `providerType ${pin.providerType ?? "null"} is not probeable` };
-    // The child bills with the key in its private home. Probing the record's
-    // key instead only proves things about a credential the child may not be
-    // using — that gap let a 403ing agent probe green for weeks (§8/§9).
-    const homeKey = pin.home ? billingKeyFromHome(pin.home) : null;
-    const keyValue = homeKey ?? pin.keyValue;
-    if (homeKey && homeKey !== pin.keyValue && !this.#keyMismatchWarned.has(key)) {
-      this.#keyMismatchWarned.add(key);
-      this.log.warn(
-        `[agent-runner] ${key}: the private home holds a different key than this spawn pinned ` +
-        `(${maskKeyPrefix(homeKey)} vs ${maskKeyPrefix(pin.keyValue)}) — probing the home's, because that is what the child bills with`,
-      );
-    }
-    const guard = `${pin.baseUrl}|${keyValue}`;
+    const guard = `${pin.baseUrl}|${pin.keyValue}`;
     if (this.#probeInFlight.has(guard)) return { outcome: "undecided", why: "another probe for this key is in flight" };
     if (this.now() - (this.#probeLastAt.get(guard) ?? 0) < 60_000) return { outcome: "undecided", why: "probe cooldown (60s)" };
     this.#probeInFlight.add(guard);
     try {
       this.#probeLastAt.set(guard, this.now());
       const res = await (this.probeFetchImpl ?? fetch)(`${pin.baseUrl.replace(/\/+$/, "")}/models`, {
-        headers: { Authorization: `Bearer ${keyValue}`, Accept: "application/json" },
+        headers: { Authorization: `Bearer ${pin.keyValue}`, Accept: "application/json" },
         signal: AbortSignal.timeout(10_000),
       });
       if (res.ok) return { outcome: "pass" }; // 2xx: the gate accepted the key
@@ -1315,12 +1295,6 @@ export class ChildManager {
         const code = doc?.code ?? null;
         if (code === "INVALID_API_KEY") return { outcome: "rejected", reason: "key-invalid", detail: "INVALID_API_KEY" };
         if (res.status === 403 && code === "INSUFFICIENT_BALANCE") return { outcome: "rejected", reason: "insufficient-balance", detail: "INSUFFICIENT_BALANCE" };
-        // No active subscription for the key's group: billing-side and terminal
-        // until a human fixes it, which is exactly what parking is for. It was
-        // the code the live 403 actually carried (2026-11-10) — the vocabulary
-        // matched neither it nor the child's key, so the probe could not have
-        // parked even with the right credential.
-        if (res.status === 403 && code === "SUBSCRIPTION_NOT_FOUND") return { outcome: "rejected", reason: "no-subscription", detail: "SUBSCRIPTION_NOT_FOUND" };
       }
       return { outcome: "undecided", why: `gate answered ${res.status} without a billing code` };
     } catch (e) {
@@ -1496,9 +1470,7 @@ export class ChildManager {
     }
     // Billing-gate pin record (add-billing-failure-parking D3): captured at
     // the pin point itself, runner-level fallback when nothing was pinned.
-    // The home rides along: it is where the child's credential actually lives,
-    // so the probe must judge that file, not this spawn's bookkeeping.
-    await this.#recordBillingPin(key, pinnedBillingKey, spec.home);
+    await this.#recordBillingPin(key, pinnedBillingKey);
     if (Object.keys(secretValues).length > 0) {
       applyDeploymentSecrets(spec.home, secretValues);
       this.log.log(`[agent-runner] ${key} pinned ${Object.keys(secretValues).length} deployment secret(s): ${Object.entries(secretRefs).map(([n, ref]) => `${n} ${maskSecretRef(ref, secretValues[n])}`).join(", ")}`);
@@ -1671,10 +1643,7 @@ export class ChildManager {
         this.log.warn(`[agent-runner] billing key fetch failed for ${key} — falling back to the runner-level key: ${e.message}`);
       }
     }
-    // Billing-gate pin record, same discipline as the dsh path (D3). No home
-    // here: the ACP lane hands the key to the child through the credential
-    // ENV, so `pinnedBillingKey` (or the route's standing key) is exactly what
-    // the child bills with — the dsh home-file divergence cannot arise.
+    // Billing-gate pin record, same discipline as the dsh path (D3).
     await this.#recordBillingPin(key, pinnedBillingKey);
     const budgetMinutes = Number(descriptor.effective_budget_minutes);
     const hasBudget = Number.isFinite(budgetMinutes) && budgetMinutes > 0;
@@ -1841,6 +1810,9 @@ export class ChildManager {
       }
     }
     if (billingKeyValue != null) memberSpecs[0].billingKeyValue = billingKeyValue;
+    // Billing-gate pin record per member (D3): one shared key, N member
+    // records — each member's park state is its own.
+    for (const memberKey of members.keys()) await this.#recordBillingPin(memberKey, billingKeyValue);
     // materializePackHome takes merged secrets as ONE set on the first spec.
     if (secretValues.size) memberSpecs[0].secrets = Object.fromEntries(secretValues);
 
@@ -1862,11 +1834,6 @@ export class ChildManager {
       seedHome: config.seedHome,
     });
     for (const [key, face] of faces) face.presetId = spec.presetIds.get(key) ?? null;
-    // Billing-gate pin record per member (D3): one shared key, N member
-    // records — each member's park state is its own. Recorded AFTER the pod
-    // home exists, so the probe can judge the credential the members actually
-    // bill with (all members share this one home).
-    for (const memberKey of members.keys()) await this.#recordBillingPin(memberKey, billingKeyValue, spec.home);
     // The notify binding (eligibility: one shared channel or none) — the
     // audit identity is the pod (bot_notify carries no session identity on
     // this wire, so member attribution is structurally unavailable).
@@ -1960,16 +1927,3 @@ export class ChildManager {
 // Module-scope alias so tests (and other modules) can import the pure predicate
 // without constructing a ChildManager.
 export const isBillingRejectionShape = ChildManager.isBillingRejectionShape;
-
-// The `error_kind` a failed turn can name at emit time (classify-out-of-band
-// billing-rejection 3.x). Pure and exported so all five branches are
-// table-testable; the confirmed-rejection verdict is deliberately absent —
-// it arrives later, on the park event. `undefined` means "no form applies", and
-// the emitter omits the field rather than sending null.
-export function turnErrorKind(e, { budgetKilled = false } = {}) {
-  if (budgetKilled) return "timeout";
-  if (e?.code === -32002) return "child_exit";
-  if (e?.code === -32003) return "llm_failed";
-  if (isBillingRejectionShape(e)) return "billing_unconfirmed";
-  return undefined;
-}

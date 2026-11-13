@@ -1768,14 +1768,17 @@
     }
   },
   "facetShell": {
-    "tabs": {
+    "entries": {
       "intro": "Intro",
-      "packs": "Agents",
-      "mcp": "MCP services",
-      "mine": "My agents",
-      "curate": "Curation",
-      "docs": "Docs",
-      "studio": "Studio"
+      "packs": "Agent market",
+      "mcp": "MCP & skills",
+      "docs": "Guide",
+      "studio": "Creator studio"
+    },
+    "account": {
+      "menuLabel": "Account",
+      "mine": "My packs",
+      "curate": "Content ops"
     },
     "langLabel": "Language",
     "packsFootnote": "Anonymous browsing; sign in to publish and subscribe. CLI usage:",
@@ -1786,17 +1789,17 @@
       "retry": "Retry sign-in",
       "dismiss": "Dismiss"
     },
-    "loggedInAs": "Signed in as {{email}}",
-    "studioTitle": "Studio"
+    "loggedInAs": "Signed in as {{email}}"
   },
   "facetDocs": {
-    "title": "Documentation",
+    "title": "Guide",
     "subtitle": "Everything from an agent id to a working setup — install, connect, and create.",
     "packageNote": "Published CLI package:",
     "nav": {
       "install": "Install",
-      "mcp": "MCP access",
-      "create": "Create"
+      "mcp": "Connect",
+      "create": "Create",
+      "site": "Site map"
     },
     "install": {
       "title": "Install an agent",
@@ -1820,23 +1823,39 @@
     "clients": {
       "claude-code": {
         "label": "Claude Code",
-        "body": "Skills install as a version snapshot; once a caller key is stored, the agent's MCP references can be written into the native MCP configuration."
+        "body": "Skills install as a version snapshot; once a caller key is stored, the agent's MCP references can be written into the native MCP configuration.",
+        "pitfall1": "User level writes ~/.claude.json; only --project writes the project-level .mcp.json — the two do not see each other.",
+        "pitfall2": "An MCP entry applies to new sessions only; a session already open keeps the old configuration."
       },
       "cursor": {
         "label": "Cursor",
-        "body": "Skills land in Cursor's skills directory; MCP entries are written into Cursor's own configuration file."
+        "body": "Skills land in Cursor's skills directory; MCP entries are written into Cursor's own configuration file.",
+        "pitfall1": "Cursor must be restarted before it rescans the skills directory.",
+        "pitfall2": "~/.cursor/mcp.json and the project-level .cursor/mcp.json are separate files; a user-level install is not a project-level one."
       },
       "zcode": {
         "label": "ZCode",
-        "body": "Skills land in ZCode's skills directory; MCP entries are written into ZCode's CLI configuration."
+        "body": "Skills land in ZCode's skills directory; MCP entries are written into ZCode's CLI configuration.",
+        "pitfall1": "The entry lives under mcp.servers in ~/.zcode/cli/config.json — not at a top-level mcpServers.",
+        "pitfall2": "New skills are discovered by the next session; the current one will not see them."
       },
       "codex": {
         "label": "Codex CLI",
-        "body": "Skills land in Codex's skills directory; MCP entries are written as TOML into Codex's configuration."
+        "body": "Skills land in Codex's skills directory; MCP entries are written as TOML into Codex's configuration.",
+        "pitfall1": "The MCP entry is TOML (~/.codex/config.toml), not JSON.",
+        "pitfall2": "Writing [mcp_servers.<name>] in JSON syntax breaks the whole config file."
       },
       "gemini-cli": {
         "label": "Gemini CLI",
-        "body": "Skills land in Gemini CLI's skills directory; MCP entries use its httpUrl shape."
+        "body": "Skills land in Gemini CLI's skills directory; MCP entries use its httpUrl shape.",
+        "pitfall1": "The field is httpUrl, not url; a wrong key fails silently as an empty tool list.",
+        "pitfall2": "Restart Gemini CLI after the change or the new configuration is not loaded."
+      },
+      "workbuddy": {
+        "label": "WorkBuddy",
+        "body": "Skills land in WorkBuddy's skills directory; the MCP entry goes into its own mcp.json.",
+        "pitfall1": "The user-level mcp.json only honours header keys (a wgk- caller key); without one there is no silent re-login.",
+        "pitfall2": "Both skills and MCP live under ~/.workbuddy — not ~/.codebuddy."
       }
     },
     "mcp": {
@@ -1865,7 +1884,7 @@
       "routesTitle": "Three authoring routes",
       "route1": "In 壹座: Settings → Agents → New agent — compose skills, MCP references, and personas as a draft.",
       "route2": "One-click conversion: turn a custom preset into an agent draft (Settings → Custom presets → Publish), with a report of what was carried and what needs replacing.",
-      "route3": "From the creator console (#/mine): submit an agent manifest directly to the publish endpoint; validation errors surface verbatim.",
+      "route3": "From My packs (#/mine): submit an agent manifest directly to the publish endpoint; validation errors surface verbatim.",
       "disciplineTitle": "Publishing discipline",
       "versions": "Every publish appends an immutable version; each version may carry a short note (≤500 characters).",
       "subscribe": "Subscribe and install are two acts: a subscription is recorded in the market; installing takes a definite version snapshot.",
@@ -1883,6 +1902,35 @@
       "verified": "Real-env verification",
       "note": "Every cell traces to a code fact or a recorded walkthrough.",
       "deepDoc": "Full matrix with per-cell sources →"
+    },
+    "searchPlaceholder": "Search this guide",
+    "searchEmpty": "Nothing matches",
+    "searchResults": "{{count}} matches",
+    "intentTitle": "Where do I start",
+    "intent": {
+      "install": "Just want to install one agent",
+      "publish": "I want to publish",
+      "mcp": "I want to connect MCP",
+      "site": "Tell me how this site works"
+    },
+    "site": {
+      "title": "Site map",
+      "lead": "What each entry is for and which path to take — this section is about the site itself, not about a client.",
+      "entries": {
+        "intro": "What the product does, why subscribing and installing are two acts, and the one-line quick start.",
+        "packs": "Browse and search agents, read the full inventory, subscribe or take one.",
+        "mcp": "The platform's MCP services and skills catalog, each with its own tool surface.",
+        "docs": "This page: install, connect, create, and where things live.",
+        "studio": "Appears after sign-in: assemble a draft (skills / MCP references / roles), validate, then publish.",
+        "mine": "In the account menu: manage the agents you published — versions, visibility, unpublish.",
+        "curate": "In the account menu (admins only): category, domains, featured, and the English-coverage patrol."
+      }
+    },
+    "client": {
+      "configTitle": "What the native config looks like",
+      "configNote": "Replace <server-name> and the caller key with your own; the CLI writes this block for you — hand-editing is for troubleshooting.",
+      "afterInstall": "Restart the client after installing: a session already open will not load new skills.",
+      "pitfallsTitle": "Common mistakes"
     }
   },
   "facetIntro": {
@@ -3501,19 +3549,16 @@
     "sourceBlueprint": "Source blueprint"
   },
   "facetCurate": {
-    "title": "Curation board",
+    "title": "Content ops",
     "subtitle": "Category & featured are presentation-level (visibility, versions, and installability are untouched); usage reads the platform aggregate (last 7 days).",
-    "loading": "Loading the board…",
     "empty": "No agents on the board yet — published agents appear here.",
     "errorLoad": "Listing failed: {{message}}",
     "saved": "Saved: {{name}}",
     "saveFailed": "Save failed: {{name}} — {{message}}",
-    "usageDegraded": "Usage source unavailable (curation unaffected): {{message}}",
+    "usageDegraded": "Usage source unavailable (content ops unaffected): {{message}}",
     "unlisted": "unlisted",
     "private": "private",
     "usage": "{{users}} weekly actives / {{turns}} turns",
-    "categoryPlaceholder": "category slug (e.g. legal)",
-    "setCategory": "Set category",
     "feature": "Feature",
     "unfeature": "Unfeature",
     "allPacks": "All",
@@ -3522,13 +3567,29 @@
     "unclassifiedCount": "Unclassified {{count}} / {{total}}",
     "lineResolved": "Line: {{line}}",
     "domainsLabel": "Domains",
-    "saveDomains": "Save domains",
     "vocabUnavailable": "Vocabulary unavailable",
     "onlyGaps": "Only en gaps",
-    "coverageBadge": "en {{covered}}/{{total}}"
+    "coverageBadge": "en {{covered}}/{{total}}",
+    "searchPlaceholder": "Search by name",
+    "loadMore": "Load {{remaining}} more",
+    "loadingMore": "Loading…",
+    "loadMoreFailed": "Could not load more: {{message}}",
+    "loadedOf": "loaded {{loaded}} / {{total}}",
+    "gapCount": "{{count}} gaps",
+    "selectHint": "Pick an agent on the left to edit its category, domains, and featured state here.",
+    "categoryLabel": "Category",
+    "categoryNone": "Uncategorized",
+    "categoryLegacy": "Stored: {{value}}",
+    "featuredLabel": "Featured",
+    "coverageLabel": "English coverage",
+    "coverageFull": "English coverage complete",
+    "usageNone": "No usage recorded in the last 7 days",
+    "dirty": "Unsaved changes",
+    "save": "Save",
+    "saving": "Saving…"
   },
   "facetMine": {
-    "title": "My agents",
+    "title": "My packs",
     "subtitle": "Manage what you publish here: versions, listing, and visibility. Installing into a runtime stays a 壹座 surface (Settings → Agents → Mine). Public agents with a serving contract flow into the 萬星 catalog — external deployers run them with metered turns, and your share accrues automatically.",
     "loading": "Loading your agents…",
     "empty": "Nothing published yet — use the publish box below.",
@@ -3686,7 +3747,23 @@
       "room_renamed": "Room renamed",
       "guest_joined": "A visitor joined the room",
       "guest_identified": "Visitor identity confirmed",
-      "guest_greeting": "Welcome — the duty seats are here for your questions"
+      "guest_greeting": "Welcome — the duty seats are here for your questions",
+      "route_decision": {
+        "mention": "Routed: named explicitly, sent to {{to}}",
+        "attribution": "Routed: sent to the speaker's own team ({{to}})",
+        "intent": "Routed by topic to {{to}} ({{n}} candidates)",
+        "needs_confirmation": "Not routed: the speaker is unclear, queued for confirmation",
+        "broadcast": "Solicited: no name, no attribution, asked {{to}}",
+        "fallback": "Routed to {{to}}"
+      },
+      "route_cancelled": "Dispatch stopped: {{n}} seat(s) never started, nothing billed",
+      "route_reassigned": "Reassigned to {{to}}",
+      "route_action": {
+        "cancel": "Stop dispatch",
+        "reassign": "Reassign",
+        "pickTarget": "Pick a seat…",
+        "reassignReason": "Reassigned manually by the room owner"
+      }
     },
     "hatch": {
       "menuItem": "Hatch into a room…",
@@ -3764,6 +3841,19 @@
       "close": "Close",
       "empty": "No memory distilled for this post yet.",
       "noPack": "This team has no blueprint agent coordinate; cannot locate its memory root."
+    },
+    "policy": {
+      "title": "Memory declaration (pack root)",
+      "degraded": "Memory service unavailable — declaration not readable",
+      "scope": "Scope: {{root}} — every team landed from this pack shares this one",
+      "col": {
+        "key": "Key",
+        "declared": "Declared",
+        "inherited": "Inherited from",
+        "effective": "In effect"
+      },
+      "unset": "not set",
+      "notExecuted": "not executed"
     }
   },
   "blueprints": {
@@ -4034,7 +4124,8 @@
     "views": {
       "overview": "Overview",
       "manage": "Manage",
-      "owner": "Operations"
+      "owner": "Operations",
+      "directory": "Directory"
     },
     "overview": {
       "summaryTitle": "All agent teams",
@@ -4149,7 +4240,7 @@
     },
     "market": {
       "subtitle": "Acquire and manage capability: agents, tools, skills, plugins",
-      "openStudio": "Open Studio",
+      "openStudio": "Open Creator studio",
       "installed": "Installed packs on this machine"
     }
   },
@@ -4204,6 +4295,12 @@
         "enabled": "Enabled",
         "unsupplied": "Not supplied"
       },
+      "evidence": {
+        "complete": "Reviewed",
+        "stale": "Re-review due",
+        "missing": "Not reviewed",
+        "until": "reviewed until {{date}}"
+      },
       "request": "Request supply",
       "requested": "Supply requested: {{name}}",
       "requestPending": "Requested — waiting for the next supply",
@@ -4216,6 +4313,384 @@
     "agents": {
       "unavailableTitle": "This deployment has no agent marketplace",
       "unavailableBody": "No market is wired up here. Packs you already installed are still under Mine, and they work as before."
+    }
+  },
+  "inputInbox": {
+    "title": "Forms to fill",
+    "count": "{{count}}",
+    "empty": "Nothing waiting",
+    "refresh": "Refresh",
+    "error": "Failed to load: {{message}}"
+  },
+  "inputRequest": {
+    "title": "Input needed",
+    "waitingHint": "The conversation continues after you submit",
+    "submit": "Submit",
+    "cancel": "Cancel request",
+    "answered": "Submitted",
+    "cancelled": "Cancelled",
+    "expired": "Expired (no answer)",
+    "escalated": "Escalated for review",
+    "expiresIn": "{{minutes}} min left",
+    "fillRequired": "Please fill in: {{fields}}",
+    "filePlaceholder": "Resource reference or link",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "teamDirectory": {
+    "title": "Team directory",
+    "refresh": "Refresh",
+    "searchPlaceholder": "Search teams, posts, or handles",
+    "openOnly": "Directly callable only",
+    "sampled": "Sampled {{at}} · {{cells}} spaces answered, {{degraded}} unreachable",
+    "stale": "The directory cache is refreshing; these are last round's results.",
+    "degraded": "{{n}} space(s) did not answer this round; their teams are not listed.",
+    "truncated": "More than the limit — showing the first 200 teams.",
+    "unavailable": "The directory is unreadable right now ({{error}})",
+    "noMatch": "No matching teams",
+    "empty": "No team is published to the directory yet",
+    "emptyHint": "Open a team's cockpit, choose \"Publish to directory\", pick a visibility, and save.",
+    "emptyAction": "Go to teams",
+    "clearFilters": "Clear filters",
+    "availability": {
+      "accepting": "Accepting",
+      "paused": "Paused",
+      "unavailable": "Unavailable"
+    },
+    "pricing": {
+      "title": "Daily limits",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "usd": "Spend (USD)",
+      "billedTo": "Calls are billed to the team owner's deployment key.",
+      "compact": "{{calls}} calls/day · ${{usd}}"
+    },
+    "posts": {
+      "title": "Posts that can take work",
+      "empty": "No callable post yet — this team cannot be called",
+      "truncated": "Showing the first 20 posts; open the card for all of them"
+    },
+    "trust": "Space {{cell}} · published {{at}}",
+    "callDoorNotHere": "The directory is discovery only. Calling is a separate capability — nothing here starts a conversation, delegation, or charge.",
+    "backToTeams": "Back to teams",
+    "callOpenHint": "Directly callable: allow-listed callers need no approval.",
+    "callListedHint": "Visible but gated: the owner must approve a caller."
+  },
+  "teamCard": {
+    "open": "Publish to directory",
+    "title": "Publish to the team directory",
+    "subtitle": "Other people can see this card; calling is a separate door.",
+    "loadFailed": "Could not read the publication state: {{error}}",
+    "receipt": {
+      "saved": "Saved. You can see it at once; everyone else sees it within 60 seconds.",
+      "withdrawn": "Withdrawn from the directory. The team, its posts, and its data are untouched."
+    },
+    "fields": {
+      "handle": "Handle",
+      "handleHint": "Lowercase letters, digits and dashes; it cannot change after publishing.",
+      "name": "Public name",
+      "description": "One-line description",
+      "descriptionPlaceholder": "What this team takes on, and how"
+    },
+    "visibility": {
+      "title": "Who can see it",
+      "private": {
+        "label": "Not published",
+        "hint": "Same as unpublished — absent from every read surface"
+      },
+      "listed": {
+        "label": "Visible",
+        "hint": "Findable, but every call waits for your approval"
+      },
+      "open": {
+        "label": "Directly callable",
+        "hint": "Whitelisted callers skip approval, billed to you"
+      }
+    },
+    "openGate": {
+      "hint": "Choosing \"directly callable\" means whitelisted people can call without your approval, and the spend lands on your deployment key.",
+      "acknowledge": "I understand and confirm"
+    },
+    "quota": {
+      "title": "Daily limits",
+      "calls": "Calls",
+      "tokens": "Tokens",
+      "usd": "Spend (USD)",
+      "hint": "Leave blank for the system defaults (200 calls / 2M tokens / $5). \"Unlimited\" is not offered.",
+      "fallback": "{{field}} cannot be unlimited; fell back to {{value}}"
+    },
+    "callers": {
+      "title": "Caller allow-list",
+      "hint": "One email per line. Only affects \"directly callable\" — under \"visible\", everyone still needs your approval."
+    },
+    "preview": {
+      "title": "Card preview (nothing is written before you confirm)",
+      "loading": "Building the preview…",
+      "invalid": "These values are not valid yet: {{error}}"
+    },
+    "actions": {
+      "withdraw": "Withdraw from directory",
+      "close": "Close",
+      "saving": "Saving…",
+      "update": "Save changes",
+      "publish": "Publish"
+    },
+    "withdraw": {
+      "title": "Withdraw this card from the directory?",
+      "description": "It stops appearing from the directory's next read; the team, its posts, and its history are untouched.",
+      "confirm": "Withdraw"
+    }
+  },
+  "teamCall": {
+    "open": "Call",
+    "title": "Call {{name}}",
+    "subtitle": "One entry point: which posts take it and how it is assembled stays inside the team.",
+    "quota": "Daily limit {{calls}} calls ({{usedCalls}} used) · ${{usd}} ({{usedUsd}} used) · resets {{reset}}",
+    "needApproval": "This team is visible but gated: the owner must approve a caller first.",
+    "requestApproval": "Request approval",
+    "requesting": "Requesting…",
+    "approvalState": {
+      "none": "Not requested yet",
+      "pending": "Requested — waiting for the owner",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "expired": "Approval expired",
+      "unknown": "State unknown"
+    },
+    "taskLabel": "Task for the team",
+    "taskPlaceholder": "Say what you need and what shape the answer should take",
+    "send": "Call the team",
+    "calling": "Calling…",
+    "close": "Close",
+    "answerTitle": "Team reply",
+    "errorTitle": "The call did not go through",
+    "blockedUntilApproved": "The button unlocks once the owner approves.",
+    "errors": {
+      "unauthorized": "Your identity could not be resolved — sign in again and retry.",
+      "not_found": "This team does not exist or was withdrawn.",
+      "not_listed": "You are not on this team's allow-list, and it does not take requests.",
+      "needs_approval": "The team owner must approve you first.",
+      "quota_exceeded": "This team's daily quota is spent; it resets tomorrow.",
+      "depth_exceeded": "The call chain is too deep and was refused.",
+      "no_reception": "This team has no post that takes calls yet.",
+      "team_paused": "This team is paused and not accepting work.",
+      "not_serving": "This deployment cannot serve team calls yet.",
+      "incomplete": "The reply did not finish; please retry.",
+      "internal_error": "The call failed; please retry shortly."
+    }
+  },
+  "teamApprovals": {
+    "open": "Call approvals",
+    "title": "Pending calls for {{name}}",
+    "subtitle": "For a visible team, callers ask here and you decide.",
+    "grantFor": "Grant for",
+    "duration": {
+      "oneoff": "One-off (standing)",
+      "24h": "24 hours",
+      "7d": "7 days",
+      "30d": "30 days"
+    },
+    "pending": "Awaiting approval",
+    "empty": "No pending requests right now.",
+    "requestedAt": "requested {{at}}",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approvedTitle": "Approved",
+    "approvedEmpty": "No approved callers yet.",
+    "standing": "standing",
+    "rejectTitle": "Reject this caller?",
+    "rejectDescription": "{{caller}} will not be able to call this team; they can ask again."
+  },
+  "voiceCapture": {
+    "open": "Voice capture",
+    "title": "Voice capture",
+    "subtitle": "Record a whole meeting: transcribe as you go, then correct, export, or send it to a room.",
+    "defaultTitle": "Meeting capture {{time}}",
+    "start": "Start recording",
+    "starting": "Starting…",
+    "restart": "New capture",
+    "stop": "Stop recording",
+    "finish": "Finish and merge",
+    "finishing": "Merging…",
+    "elapsed": "{{at}} recorded · {{planned}} slices planned",
+    "finishHint": "Stop recording before finishing the merge.",
+    "waitUploads": "{{n}} slice(s) still uploading or transcribing; finish once they settle.",
+    "progressTitle": "Slice progress",
+    "progressSummary": "{{done}}/{{total}} slices · {{pct}}%",
+    "transcribed": "{{minutes}} minutes transcribed",
+    "recordingSlice": "Slice {{seq}} · recording",
+    "rowLabel": "Slice {{seq}}",
+    "state": {
+      "pending": "Queued",
+      "transcribing": "Transcribing",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "retry": "Retry",
+    "retrying": "Retrying…",
+    "retryGaveUp": "Retry limit reached",
+    "retryClosed": "Capture ended — this slice cannot be retried",
+    "mergedTitle": "Merged text",
+    "mergedHint": "Edit before saving; correction is allowed once, and the machine merge is kept",
+    "save": "Save correction",
+    "saving": "Saving…",
+    "saved": "Correction saved",
+    "correctionSpent": "Correction saved — it cannot be changed again",
+    "export": "Export plain text",
+    "segmentsTitle": "Segments",
+    "roomLabel": "Target room ID",
+    "roomPlaceholder": "Session ID of the Zhiyu room",
+    "toRoom": "Send to room",
+    "roomNeedId": "Enter a room ID first.",
+    "roomConfirmTitle": "Send this meeting note to the room?",
+    "roomConfirmDescription": "One system message is written to the room. No agent is woken and no turn quota is used.",
+    "roomConfirm": "Send",
+    "roomSent": "Sent to room {{sessionId}}",
+    "roomAlready": "This room already has this capture ({{sessionId}})",
+    "abandon": "Abandon capture",
+    "abandonTitle": "Abandon this capture?",
+    "abandonDescription": "Transcribed text and buffered audio are deleted and cannot be recovered.",
+    "abandonConfirm": "Abandon",
+    "abandoned": "Capture abandoned",
+    "close": "Close",
+    "micDenied": "Microphone unavailable ({{error}}). Check the browser permission.",
+    "micUnsupported": "This browser cannot record (MediaRecorder and a secure origin are required).",
+    "unavailable": {
+      "title": "Voice capture unavailable",
+      "disabled": "Voice is disabled.",
+      "no_key": "No voice credential is configured.",
+      "generic": "The voice service is temporarily unavailable."
+    },
+    "stoppedTitle": "Budget ceiling reached",
+    "stopped": {
+      "minutes": "The minute ceiling was reached; later slices are not transcribed.",
+      "usd": "The cost ceiling was reached; later slices are not transcribed.",
+      "buffered": "Audio after the ceiling is buffered but not transcribed; it can be transcribed after the ceiling is raised."
+    },
+    "errors": {
+      "network": "Network unavailable — the request never reached the server.",
+      "internal_error": "The action failed. Try again later.",
+      "voice_disabled": "Voice is disabled.",
+      "voice_not_configured": "No voice credential is configured.",
+      "not_found": "Capture not found or not yours.",
+      "capture_not_recording": "The capture has ended and accepts no more slices.",
+      "chunk_busy": "This slice is being transcribed; wait a moment.",
+      "chunk_retry_exhausted": "This slice reached its retry limit.",
+      "chunk_exists": "This slice already exists and is treated as done.",
+      "timeline_conflict": "The slice time conflicts with an existing slice.",
+      "chunk_audio_gone": "This slice's audio was cleaned up; upload it again.",
+      "chunk_too_large": "The slice exceeds the size limit.",
+      "bad_seq": "Invalid slice number.",
+      "bad_start_ms": "Invalid slice start time.",
+      "bad_duration_ms": "Invalid slice duration.",
+      "missing_audio": "The audio file is missing.",
+      "bad_upload": "Invalid upload format.",
+      "not_finished": "The capture has not finished.",
+      "already_corrected": "This capture was already corrected once.",
+      "empty_capture": "The capture has no text to send.",
+      "confirmation_required": "Sending to a room needs confirmation.",
+      "forbidden": "You do not have access to this room.",
+      "bad_text": "The correction text is invalid.",
+      "bad_session": "Invalid room ID.",
+      "chat_history_unavailable": "Conversation history is unavailable."
+    }
+  },
+  "speakerAttribution": {
+    "title": "Speaker attribution",
+    "summary": "{{total}} slices · {{named}} resolved · {{pending}} awaiting confirmation",
+    "separation": {
+      "none": "Not separated: the upstream returns no speaker information, so every slice is marked unresolved.",
+      "partial": "Partially separated: the first part was separated, the rest came back as plain text. Unseparated slices are never given a guessed owner.",
+      "full": "Separated: slices are grouped by anonymous cluster. Clusters nobody has named stay unresolved.",
+      "not_needed": "Recorded alone on a personal device: every slice belongs to the recorder, so no separation is needed."
+    },
+    "unset": "Unresolved",
+    "sliceCount": "{{n}} slices",
+    "name": "Name this speaker",
+    "unbind": "Remove name",
+    "noCandidates": "No present members to choose from",
+    "overridden": "Attributed by session identity",
+    "conflictNotice": "{{n}} slice(s) disagreed with the session identity. The session identity won and the disagreement was recorded.",
+    "pendingHint": "Unresolved slices are never dispatched automatically. Their confirmations live in the existing todo list; answering one applies here.",
+    "trail": "Change history ({{n}})",
+    "empty": "Nothing to attribute yet (still recording, or not finished).",
+    "op": {
+      "bind": "named",
+      "rebind": "renamed",
+      "unbind": "unnamed"
+    },
+    "errors": {
+      "loadFailed": "Could not load attribution. Please try again.",
+      "memberRequired": "Choose a member first.",
+      "member_not_present": "That member was not present in this capture.",
+      "bad_binding": "The cluster or member is not valid.",
+      "not_bound": "That cluster has no name yet.",
+      "internal_error": "Something went wrong. Please try again."
+    }
+  },
+  "console": {
+    "title": "Team console",
+    "block": {
+      "team": "Posts",
+      "stream": "Latest reports",
+      "kpi": "KPIs",
+      "decisions": "Open decisions",
+      "spend": "Spend",
+      "orchestration": "Structure",
+      "unknown": "Unavailable block",
+      "needsNewerClient": "This block needs a newer version of the app."
+    },
+    "absent": {
+      "no_members": "No posts yet — add the first one in the cockpit.",
+      "no_reports": "No reports yet. Posts report on their first round.",
+      "no_reported_kpis": "No KPI has been reported yet.",
+      "no_open_decisions": "Nothing is waiting for a decision.",
+      "no_run_records": "No rounds have been recorded yet.",
+      "not_declared": "This team declares no structure.",
+      "declaration_unreadable": "The structure declaration could not be read.",
+      "unknown_block": "This block is not available here.",
+      "unknown": "Nothing to show."
+    },
+    "states": {
+      "forbidden": "You do not have access to this team console.",
+      "notPublished": "This console is not published.",
+      "unavailable": "The console is temporarily unavailable."
+    },
+    "team": {
+      "lastReport": "Last report"
+    },
+    "stream": {
+      "noSummary": "This report carries no summary."
+    },
+    "decisions": {
+      "untitled": "Untitled item",
+      "expires": "due",
+      "severity": {
+        "high": "High",
+        "normal": "Normal",
+        "low": "Low"
+      }
+    },
+    "spend": {
+      "rounds": "Rounds",
+      "turns": "Turns",
+      "cost": "Cost",
+      "pricedTurns": "Priced turns"
+    },
+    "orchestration": {
+      "summary": "{{declared}} declared · {{total}} in effect",
+      "derived": "derived"
+    },
+    "page": {
+      "subtitle": "What this team declared to show"
+    },
+    "publish": {
+      "published": "Published",
+      "private": "Not published",
+      "privateHint": "Publish to give this console a public link. The address is generated, not chosen.",
+      "action": "Publish console",
+      "unpublish": "Withdraw",
+      "failed": "Could not change the publication state."
     }
   }
 }

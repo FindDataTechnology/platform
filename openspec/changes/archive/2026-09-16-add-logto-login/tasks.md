@@ -1,0 +1,28 @@
+## 1. Session primitives
+
+- [x] 1.1 Create `server/session.js`: HMAC-SHA256 signed cookie codec (`signSession`/`verifySessionCookie`, base64url payload `{email, groups, exp}`), secret resolution (`SESSION_SECRET` env, else auto-generate + persist 0600 under `PLATFORM_DATA_DIR/auth/session-secret`), and `parseCookies(header)` helper. Verify: unit test — sign→verify round-trip; tampered payload/signature rejected; expired rejected; secret persists across simulated restart.
+
+## 2. Logto OIDC module
+
+- [x] 2.1 Create `server/logto-auth.js`: discovery cache from `LOGTO_ENDPOINT` (`/oidc/.well-known/openid-configuration`, fail-fast at boot when `AUTH_MODE=logto`), `GET /auth/login` (build authorize URL with state+nonce stored in a 10-min signed `paas_oauth_state` cookie, redirect), `GET /auth/callback` (validate state, code exchange, ID-token verify via JWKS + node:crypto, groups mapping from `organizations`/`organization_roles`, set `paas_session`, redirect `/`), `POST|GET /api/auth/logout` (clear cookie, optional `LOGTO_END_SESSION` chain). Verify: unit tests with a stubbed discovery+token endpoint — happy path sets a verifiable session; mismatched state → `?auth_error=state`; token error → `?auth_error=token`, no cookie set.
+- [x] 2.2 Add the `logto` branch to the gate in `server/auth.js`: public paths pass through; valid cookie attaches `req.user`; otherwise HTML requests redirect to `/auth/login` and JSON/API requests get 401. `forward_auth` and auth-disabled (+ optional SSO overlay) paths byte-for-byte unchanged. Verify: unit test — forged `X-Forwarded-Email` under `logto` mode is ignored; `forward_auth` assertions from the existing suite still pass.
+
+## 3. Server wiring
+
+- [x] 3.1 Mode wiring in `server.js`/`server/context.js` (`authMode`: `forward_auth` | `logto` | off; install logto routes; fail fast on discovery error). WS upgrade gate in `server/ws.js`: under `logto` mode verify the session cookie and set `ws.user`; reject otherwise. Verify: unit test — upgrade with valid cookie yields `ws.user`; without → rejected; boot with `AUTH_MODE=logto` + unreachable Logto fails with a clear error.
+- [x] 3.2 `/api/auth/me` in `server/routes/misc.js` becomes mode-aware: under `logto` report `mode: "logto"`, `authenticated` from the cookie, `loginUrl: "/auth/login"`, `logoutUrl: "/api/auth/logout"`. Verify: curl assertions — anonymous (`authenticated:false`), with seeded cookie (email/groups + URLs).
+
+## 4. Web verification (reuse only)
+
+- [x] 4.1 Verify the shipped `/login` page and Settings → Account sign-out under `AUTH_MODE=logto` with a stubbed/manual Logto round: login page button navigates to `/auth/login`; after a manually seeded session cookie the shell renders, account shows the Logto email, sign-out clears state. File gaps as follow-ups; no new surfaces unless something is actually broken. Verify: Playwright test with a seeded `paas_session` cookie asserts the authenticated shell + account email.
+
+## 5. Desktop (Electron) integration
+
+- [x] 5.1 Public-client PKCE branch in `server/logto-auth.js`: `LOGTO_CLIENT_TYPE=public` adds S256 `code_challenge` to the authorize URL (verifier sealed in `paas_oauth_state`) and omits `client_secret` at exchange. Verify: unit tests — authorize URL carries `code_challenge`/`code_challenge_method=S256`; exchange succeeds without a secret; confidential path unchanged (still sends the secret, no PKCE params).
+- [x] 5.2 Supervisor fixed port + auth env: when `DESKTOP_SERVER_PORT` is set, `server-js` binds it exclusively (bind failure = visible startup error, no random fallback); packaged settings inject `AUTH_MODE=logto`, `LOGTO_ENDPOINT`, public `LOGTO_APP_ID`, `LOGTO_CLIENT_TYPE=public`, `SESSION_TTL_HRS=720` into the child env. Verify: unit test — fixed port honored, conflict surfaces an error; unset variable keeps today's random-port behavior.
+- [x] 5.3 Sliding session renewal in the auth middleware: re-sign `paas_session` when remaining TTL < 50%. Verify: unit test — near-expiry cookie on a request yields a refreshed `Set-Cookie`; fresh cookie untouched.
+- [x] 5.4 Desktop end-to-end (dev packaging run against the real tenant, desktop redirect URI registered): window redirects to Logto in-app, sign-in completes, session survives an app restart within TTL, sign-out returns to the login redirect. **Verified 2026-09-16** against the real tenant. Registered a **Native (public/PKCE) app** in the Logto console — App ID `11v69sj00ev1tz98fptuw`, redirect URIs `http://localhost:47600/auth/callback` **and** `http://127.0.0.1:47600/auth/callback` (the runtime derives the callback from the Host header, and the Electron window loads `localhost`, so both spellings are needed), post-logout equivalents. Dev run needs `PLATFORM_NODE_BIN=/abs/path/to/node` (supervisor `fs.existsSync(cmd)` rejects a bare `node`) and `PLATFORM_DATA_DIR` (dev defaults it to `""`). Observed: `/` → gate → `/login` → SSO → Logto → `/chat` `authenticated:true`; after a full app restart still `authenticated:true` with the same email; logout → `/login` `authenticated:false`.
+
+## 6. Docs and operator notes
+
+- [x] 6.1 `.env.example` (`AUTH_MODE=logto`, `PAAS_BASE_URL`, `SESSION_SECRET`, `SESSION_TTL_HRS`, `LOGTO_END_SESSION`, `LOGTO_CLIENT_TYPE`, `DESKTOP_SERVER_PORT`) and README operator section: Logto console steps for **both** applications — the traditional-web app (`https://<host>/auth/callback`) and the desktop public app (`http://127.0.0.1:47600/auth/callback`, PKCE), organizations scope/custom-claims enablement, group-naming convention matching catalog roles (`admin` for admin), desktop offline note, rollback note (unset `AUTH_MODE`). Verify: doc check — operator can enable login on web and desktop using only the README.

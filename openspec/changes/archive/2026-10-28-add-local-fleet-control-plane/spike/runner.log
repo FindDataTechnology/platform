@@ -1,0 +1,25 @@
+[agent-runner] no install root at /nonexistent-spike — skipping dsh tree verification
+[agent-runner] listening on :8790 (home: /tmp/spike-runner-home, registry: http://127.0.0.1:8795, model: deepseek-official/deepseek-v4-flash, cap: 2)
+[agent-runner] serving packs-spike-demo-agent-1 on :8816 (registry path packs/spike-demo/agent-1)
+[agent-runner] serving packs-spike-demo-agent-2 on :8817 (registry path packs/spike-demo/agent-2)
+[agent-runner] poll: 2 served agent(s), 0 child(ren)
+[agent-runner] AGENT_RUNNER_BACKEND_TOKEN unset — accepting unauthenticated requests (dev mode)
+[dsh-profile] wrote preset overlay (registry default: srv-spike-demo-agent-1, 2 preset row(s)) → /tmp/spike-runner-home/packs-spike-demo-agent-1/profiles/platform/presets.patch.yml
+[dsh-profile] wrote notify bridge patch → /tmp/spike-runner-home/packs-spike-demo-agent-1/profiles/platform/notify.patch.yml
+[dsh-profile] wrote serving questions bridge patch → /tmp/spike-runner-home/packs-spike-demo-agent-1/profiles/platform/serving-questions.patch.yml
+[dsh-profile] wrote finddata route(s), 15 model(s) → /tmp/spike-runner-home/packs-spike-demo-agent-1/profiles/platform/cordis.patch.yml
+[dsh-profile] wrote credentials store (LLM_PROVIDER_KEY_FINDDATA) → /tmp/spike-runner-home/packs-spike-demo-agent-1/.credentials.yaml
+[agent-runner] cold-starting packs-spike-demo-agent-1 (v1, harness=dsh, 0 MCP, 1 skills)
+[agent-runner:packs-spike-demo-agent-1] child exited unexpectedly
+file:///Users/chengsishi/paas/agent-runner/harness/dsh.js:406
+          return settle(false, Object.assign(new Error("agent runtime exited mid-turn"), { code: -32002 }));
+                                             ^
+
+Error: agent runtime exited mid-turn
+    at file:///Users/chengsishi/paas/agent-runner/harness/dsh.js:406:46
+    at #pump (file:///Users/chengsishi/paas/agent-runner/harness/dsh.js:203:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  code: -32002
+}
+
+Node.js v26.3.0

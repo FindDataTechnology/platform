@@ -721,22 +721,20 @@ function identityCtx(resolveFleetIdentity) {
     onRuntimeIdle: () => {},
     reserveRuntime: () => () => {},
     switchPresetTo: async () => ({ ok: true }),
-    // Fleet-tagged jobs MUST carry a model plan (113233eb / ledger E28): a round
-    // that cannot resolve its post's model is a FAILED round, not a licence to
-    // run on whatever is live. Without these two seams the cadence rounds below
-    // died inside normalizeModelForJob — the identity resolver was never called
-    // (`seen.length 0 !== 2`), so the case read as a broken per-round turn
-    // segment. Same minimal shape as test-empty-turn-billing.mjs.
-    resolveFleetModel: async () => ({
+    // A job carrying a fleet tag may NOT skip model normalization: with no plan
+    // the round is refused ("post model resolution unavailable", cron-runner
+    // 872-878) because three live rounds once settled `ok` with `model=null`
+    // after the catalog fetch failed (ledger E28). The harness predates that
+    // rule, so it supplies the minimum plan a member post really has.
+    resolveFleetModel: async (preset) => ({
       memberId: "m_1",
-      candidates: [{ model: "declared-model" }],
-      explicitChain: false,
+      preset,
+      candidates: [{ model: "harness-model" }],
       notices: [],
-      budgetBlocked: [],
-      effort: null,
-      contextBudget: null,
+      explicitChain: false,
     }),
     switchModelTo: async () => ({ ok: true }),
+    recordFleetModelNotices: () => {},
     resolveFleetIdentity,
     prompts: [],
     dshBridge: {

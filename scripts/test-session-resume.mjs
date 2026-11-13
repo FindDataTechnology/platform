@@ -115,21 +115,11 @@ function childEnv(extra = {}) {
 
 const booted = new Set();
 
-// The file header tells you to point DSH_BIN at the matrix install — but this
-// function used to hardcode `command: "dsh"`, so it always ran whatever PATH
-// resolved (on a dev machine that is the GLOBAL homebrew dsh, 0.1.1-rc.2, while
-// the repo and dsh-matrix are pinned to 0.2.0-rc.2). That skew is not cosmetic:
-// the global build's healProfilesModuleFallback rejects the shared tree shape
-// this suite creates ("…/@deepseek-ai/dsh exists and is not a symlink"), so all
-// four cases failed on a machine where the documented remedy had been applied.
-// Honour DSH_BIN here the same way dsh-bridge.js does (explicit override wins).
-const DSH_COMMAND = process.env.DSH_BIN || "dsh";
-
 async function boot(extraPatches = [], extraEnv = {}) {
   const client = new HarnessClient(
     {},
     dshClientRuntime({
-      command: DSH_COMMAND,
+      command: "dsh",
       args: ["--profile", "platform", ...basePatches.flatMap((p) => ["--patch", p]), ...extraPatches.flatMap((p) => ["--patch", p])],
       cwd: ROOT,
       env: childEnv(extraEnv),
@@ -235,19 +225,9 @@ const inject = ["sessionPersistence"];
 function apply(ctx) {
   (async () => {
     const out = {};
-    const p = ctx.sessionPersistence;
     for (const id of String(process.env.PROBE_IDS || "").split(",").filter(Boolean)) {
-      // Probe the seam THIS dsh generation exposes, in the same order the
-      // product does (platform-preset-bridge.js isPersisted): 0.2.0 renamed
-      // the face -- loadStored is gone and stat(id) is the native existence
-      // probe. Probing the dead name degrades silently to "not persisted",
-      // which is exactly the collision this case exists to catch
-      // (docs/wanxing-multi-harness-runtime-explore.md section 4, fix 8c3a44b).
-      try {
-        if (typeof p.stat === "function") out[id] = (await p.stat(id)) !== undefined;
-        else if (typeof p.loadStored === "function") out[id] = (await p.loadStored(id)) !== undefined;
-        else out[id] = "ERR:no persistence probe on this dsh (neither stat nor loadStored)";
-      } catch (e) { out[id] = "ERR:" + (e?.message || e); }
+      try { out[id] = (await ctx.sessionPersistence.loadStored(id)) !== undefined; }
+      catch (e) { out[id] = "ERR:" + (e?.message || e); }
     }
     writeFileSync(process.env.PROBE_OUT, JSON.stringify(out));
   })();

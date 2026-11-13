@@ -10,6 +10,12 @@
 //   GET  /v1/models                (Bearer)          → 200 | 401
 //   POST /v1/audio/transcriptions  (Bearer, multipart) → {text} | 401 | 502
 //   POST /v1/audio/speech          (Bearer, JSON)    → audio/mpeg bytes | 502
+//   POST /v1/embeddings            (Bearer, JSON)    → {data:[{embedding}]} | 401 | 502
+//
+// The embeddings lane (add-library-semantic-rung) is exercised from the browser:
+// a deterministic vector per input, honouring the caller's `dimensions` — the
+// client contract is "the requested width is a promise", so the stub must be
+// able to violate it on demand (mode "drift") to prove the client rejects it.
 //
 // The minted key is constant so specs can assert it never shows up in the UI.
 // The speech bytes are a real 0.4 s mp3 (ffmpeg sine, 693 bytes) so the
@@ -24,7 +30,11 @@ const TINY_MP3 = Buffer.from(
   "base64",
 );
 
-const state = { login: "ok", keys: "ok", models: 200, asr: "ok", tts: "ok" };
+const state = { login: "ok", keys: "ok", models: 200, asr: "ok", tts: "ok", embeddings: "ok" };
+// Every embedding request seen (input count + requested dimensions), so a spec
+// can assert the platform sent `dimensions` explicitly rather than relying on
+// the provider default.
+const embedSeen = [];
 // Every voice request the stub saw (auth header + a few parsed facts), so a
 // spec can assert the platform forwarded with the right key and shape.
 const voiceSeen = [];
@@ -93,6 +103,35 @@ export function createCiyuanStub() {
         if (state.tts === "502") return json(502, { error: { code: "lane_upstream_unavailable" } });
         res.writeHead(200, { "content-type": "audio/mpeg", "content-length": TINY_MP3.length });
         return res.end(TINY_MP3);
+      }
+      if (req.method === "POST" && req.url === "/v1/embeddings") {
+        const inputs = Array.isArray(body?.input) ? body.input : [body?.input ?? ""];
+        const want = Number(body?.dimensions) || 8;
+        embedSeen.push({ count: inputs.length, dimensions: body?.dimensions ?? null, model: body?.model ?? null });
+        if (state.embeddings === "401") return json(401, { error: { code: "invalid_api_key" } });
+        if (state.embeddings === "502") return json(502, { error: { code: "lane_upstream_unavailable" } });
+        // mode "drift": answer a different width than asked — the client must reject it.
+        const dim = state.embeddings === "drift" ? want + 1 : want;
+        // Deterministic pseudo-vector: same text → same vector, different text →
+        // different bucket, so "semantic" ordering is reproducible in a walk-through.
+        const vec = (text) => {
+          let h = 0;
+          for (const ch of String(text)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+          const bucket = h % 3;
+          return Array.from({ length: dim }, (_, i) => (i === bucket ? 1 : 0));
+        };
+        return json(200, {
+          object: "list",
+          model: body?.model ?? "e2e-embed",
+          data: inputs.map((t, i) => ({ object: "embedding", index: i, embedding: vec(t) })),
+        });
+      }
+      if (req.method === "GET" && req.url === "/__embeddings-seen") {
+        return json(200, { seen: embedSeen });
+      }
+      if (req.method === "POST" && req.url === "/__embeddings-reset") {
+        embedSeen.length = 0;
+        return json(200, { ok: true });
       }
       json(404, { error: "nope" });
     });

@@ -169,8 +169,11 @@ function ServerDepth({ name, onBack }: { name: string; onBack: () => void }) {
       .catch((e) => setError((e as Error).message));
   }, [name, locale]);
 
+  // Width belongs to the shell's container (DESIGN.md §8): this view used to
+  // cap itself at max-w-6xl and centre, which made it a third width on a screen
+  // where every sibling view sits on one grid.
   return (
-    <div className="mx-auto max-w-6xl space-y-4" data-testid={`mcp-depth-${name}`}>
+    <div className="space-y-4" data-testid={`mcp-depth-${name}`}>
       <button type="button" onClick={onBack} className="text-sm text-primary hover:underline" data-testid="mcp-depth-back">
         ← {t("mcp.depth.back")}
       </button>

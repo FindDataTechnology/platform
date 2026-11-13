@@ -116,6 +116,33 @@ function okResponse(texts, dim = 1024) {
   assert.equal(clamped.next(), 2000, "必须被上限 clamp");
 }
 
+// ── 超时样本必须也进预算（否则永远学不到「慢」） ─────────────────────────
+{
+  const budget = createLatencyBudget({ window: 5, margin: 1.5, floorMs: 50, ceilingMs: 100 });
+  for (let i = 0; i < 4; i++) budget.record(60);
+  const tight = budget.next();
+  budget.record(100); // 超时样本（取的是当时的等待预算上限）
+  assert.ok(budget.samples().includes(100), "超时样本必须落库");
+  assert.ok(budget.next() >= tight, "加入慢样本后预算不得收紧");
+
+  // 端到端：真发一次超时请求，事后样本数要增加
+  const embedder = createEmbedder({
+    config: { ...CONFIG, budgetFloorMs: 40, budgetCeilingMs: 40 },
+    fetchImpl: async (url, init) => {
+      await new Promise((resolve, reject) => {
+        const t = setTimeout(resolve, 120);
+        init.signal?.addEventListener("abort", () => {
+          clearTimeout(t);
+          const e = new Error("aborted"); e.name = "AbortError"; reject(e);
+        });
+      });
+      return okResponse(["a"]);
+    },
+  });
+  await assert.rejects(() => embedder.embedBatch(["a"]));
+  assert.ok(embedder.budget.samples().length > 0, "一次超时之后预算必须至少有一个样本");
+}
+
 // ── 超预算算降级（可重试），不是崩溃 ───────────────────────────────────────
 {
   const embedder = createEmbedder({

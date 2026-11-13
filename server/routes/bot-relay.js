@@ -92,11 +92,9 @@ export function registerBotRelayRoutes(ctx) {
 
   // A body-parser failure on this prefix answers 400 (or 413 when over the
   // size cap) instead of the default 500: the caller is a machine and gets a
-  // decision it can act on. Everything else falls through — and the fourth
-  // parameter must be NAMED `next`, not `_`: the fall-through calls it, and `_`
-  // turned that into `ReferenceError: next is not defined`. (Express treats a
-  // 4-arity handler as an error handler by ARITY, so naming it costs nothing.)
-  app.use(RELAY_PREFIX, (err, _req, res, next) => {
+  // decision it can act on. Everything else falls through.
+  // biome-ignore lint/correctness/noUnusedFunctionParameters: express identifies an error handler by its 4-argument arity — the fourth parameter must be present and unused
+  app.use(RELAY_PREFIX, (err, req, res, _) => {
     if (!err) return next();
     res.status(err.status === 413 ? 413 : 400).json({ error: "Malformed request body" });
   });

@@ -27,7 +27,7 @@ const E2E_REGISTRY_TOKEN = process.env.E2E_REGISTRY_TOKEN || "e2e-registry-token
 // two sides must not drift.
 const E2E_FACET_URL = process.env.E2E_FACET_URL || `http://127.0.0.1:${E2E_FACET_PORT}`;
 const E2E_FACET_TOKEN = process.env.E2E_FACET_TOKEN || "e2e-facet-token";
-const LIVE_SERVICE_URL = process.env.LIVE_SERVICE_URL || "http://127.0.0.1:3000";
+const LIVE_SERVICE_URL = process.env.LIVE_SERVICE_URL || "http://23.144.68.246:30950";
 
 // Create throwaway store directories before the server boots so the suite never
 // touches the project's real chat-history-store/ or documents-store/. Skipped for
@@ -87,7 +87,7 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       grep: /@smoke/,
     },
-    // Live project - targets a deployed instance at http://127.0.0.1:3000
+    // Live project - targets deployed k3s NodePort at http://23.144.68.246:30950
     // (overridable via LIVE_SERVICE_URL env). Runs only `@live` tagged tests,
     // NEVER spawns a local server (PW_LIVE=1 skips the root webServer), NEVER
     // creates temp store dirs. `--proxy-server=direct://` forces direct
@@ -118,6 +118,18 @@ export default defineConfig({
           // The server listens FIRST and initializes the agent in the
           // background (listen-first boot) — readiness must gate on the
           // agent, not the port, or tests would race a half-booted server.
+          //
+          // NOTE — this probe watches the 壹座 server only. The facet shell
+          // (E2E_FACET_SHELL_PORT, default 3209) is a SEPARATE process that
+          // rebuilds facet/web BEFORE it listens (~20s cold), so on a fresh
+          // worktree or cold cache the first facet-shell tests can open 3209
+          // before anything is bound and fail with ERR_CONNECTION_REFUSED —
+          // the code is fine, the harness is early. Prebuild, then skip the
+          // in-server build:
+          //   (cd facet/web && npm run build)
+          //   FACET_SHELL_SKIP_BUILD=1 npx playwright test e2e/facet-shell.spec.js
+          // A fresh worktree also lacks the gitignored app bundle, so 壹座
+          // pages (e.g. market-card-relation) need `npm run web:build:e2e`.
           url: `http://127.0.0.1:${E2E_PORT}/api/ready`,
           // server.js listens only after dsh init completes; a cold first
           // spawn (fresh profile composition, e.g. on a CI runner) can

@@ -14,14 +14,14 @@
 # agent-runner.env + the token files' values over, and do NOT set
 # DSH_MATRIX_OVERRIDE — the image's /opt/dsh matches the frozen matrix.
 #
-#   REGISTRY_IMAGE        image reference (the platform image)
-#   AGENT_RUNNER_BIND_IP  host IP for the port span: the private-network IP in
+#   REGISTRY_IMAGE        image reference (ccr yizuo/platform:sha-<short>)
+#   AGENT_RUNNER_BIND_IP  host IP for the port span: the tailnet IP in
 #                         production, 127.0.0.1 for a local smoke
 #   docker compose up -d
 
 services:
   agent-runner:
-    image: ${REGISTRY_IMAGE:-platform:latest}
+    image: ${REGISTRY_IMAGE:-ccr.ccs.tencentyun.com/yizuo/platform:latest}
     command: node agent-runner/index.js
     # Run as the image's non-root `node` user (uid/gid 1000) — the shape
     # production has run since 2026-10-12 (fix-agent-serving-stability 3.2).

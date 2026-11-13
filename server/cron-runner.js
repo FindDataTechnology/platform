@@ -21,7 +21,6 @@ import { runA2aTurn, resolveGatewayCredential } from "./a2a-client.js";
 import { clusterMemoryFor, memoryInjectionFor } from "@finddatatechnology/yongyi-client";
 import { runToolTurn as runToolTurnDefault } from "./tool-turn.js";
 import { classifyErrorKind, normalizeUsage } from "./fleet-events.js";
-import { reportContractFor } from "./report-contract.js";
 import { breakerState, recordUpstreamFailure, recordUpstreamSuccess } from "./llm-lane.js";
 import { classifyPresetSetError } from "../dsh-bridge.js";
 import { getFleetDatabase } from "./routes/fleets-db.js";
@@ -1562,9 +1561,11 @@ export function buildClusterDigest({ clusterName, results, policy }) {
       lines.push(`- ${r.name}：${r.status === "skipped" ? `跳过——${r.reason}` : `失败——${r.error || "未知错误"}`}`);
     }
   }
-  // persona-only: `results` 是 runClusterTurn 自产的成员结果，`kind` 只取
-  // "skip"/"a2a"/"persona" 三档，永不可能是 "auditor"——审计官不是 cluster 的执行
-  // 档位，而是成员的 targetKind，解析后落到 persona 车道执行。
+  // 这里的 `kind` 是本函数**自己写进 results 的载体标签**（persona = 走本地共享
+  // 运行时，见下方 results.push），审计官成员也走这条载体、记的也是 "persona"。
+  // 换成 isPersonaBackedTargetKind 反而会错：results 里永远不会有 kind ===
+  // "auditor"，那会写成"我管了审计官"却一次也匹配不到。
+  // persona-only: results 的 kind 是载标签，auditor 也记成 persona
   if (policy?.allowParallel && results.some((r) => r.kind === "persona" && r.status === "ok")) {
     lines.push("", "（并行策略下本地 persona 成员仍按序执行——共享运行时一次只能承载一个 persona；仅远端 a2a 成员真正并行。）");
   }
@@ -1855,9 +1856,8 @@ export function attachCronRunner(ctx, { runPersona = null, runA2a = null, runToo
     // round leaves no run instance, no handoffs, no settle behind it. The
     // inner gate in runPersonaTurn stays as the race fallback (bridge flapping
     // between this pre-gate and the turn itself records failed, honestly).
-    // persona-only: `job.targetType` 取值域是 {persona, cluster, a2a, tool}，
-    // "auditor" 不是 targetType（是成员 targetKind，解析后落到 persona 车道），
-    // 用 isPersonaBackedTargetKind 会把判据放宽到本函数不存在的取值。
+    // persona-only: targetType 是载体判别（只有 cluster|a2a|tool|persona，
+    // 见 cron.js:646），审计官成员的 job 落在 persona 载体上，本比较已含它
     if (job.targetType === "persona" && job.sourceTag?.fleetId) {
       let ready;
       try {
@@ -1972,16 +1972,8 @@ export function attachCronRunner(ctx, { runPersona = null, runA2a = null, runToo
     // renewal, so it cannot see this restart. Wait here for the fresh child,
     // bounded by the same ladder the pre-gate uses — degrade open if it never
     // comes back (the inner gate still records the failure honestly).
-    // …but only for the kinds that actually prompt the child. A tool post is one
-    // deterministic MCP call and an a2a turn runs remotely: neither touches the
-    // dsh runtime, so waiting for it here buys nothing and costs the full
-    // RUNTIME_READY_WAIT_MS — measured 2026-11-10, test-tool-posts took 122s per
-    // run on a tool-only turn that finishes in milliseconds, and in production a
-    // tool post that lands during a runtime restart (or on a deployment with no
-    // bridge wired) was delayed by up to that bound plus the sticky grace.
-    const needsChild = job.targetType !== "tool" && job.targetType !== "a2a";
     try {
-      if (needsChild && (ctx.dshBridge?.isReady?.() !== true || ctx.dshBridge?.isRestarting?.() === true)) {
+      if (ctx.dshBridge?.isReady?.() !== true || ctx.dshBridge?.isRestarting?.() === true) {
         const again = await awaitRuntimeReadyForJob(ctx, job);
         if (!again.ok) {
           console.warn(`[cron] post-renewal runtime still not ready: ${again.error}`);
@@ -2065,14 +2057,7 @@ export function attachCronRunner(ctx, { runPersona = null, runA2a = null, runToo
         contextWindow: Number.isFinite(out?.contextWindow) ? out.contextWindow : null,
         inputTokens: Number.isFinite(out?.lastInputTokens) ? out.lastInputTokens : null,
       };
-      // Delivery contract (enforce-report-contract): does THIS post's persona
-      // say 「收尾必 report_status」? Resolved once per preset and cached — the
-      // settlement reads a fact, not a per-turn regex over 4KB of prose. An
-      // unresolvable persona yields null (= no contract), so an unknown post is
-      // never accused of skipping a duty it may not have declared.
-      const reportContract = reportContractFor(job?.preset);
       ctx.recordFleetTurnEvent?.(job, settled, {
-        reportContract,
         startedAt,
         endedAt: Date.now(),
         // The post's context budget (add-agent-config-dims): judged at

@@ -233,16 +233,19 @@ async function toolSearchLibrary({ query, collection, doc, limit } = {}) {
   // Post-filter hits that landed outside the boundary: search spans the whole
   // index, the boundary decides what this caller may see.
   const visible = allowed ? hits.filter((h) => isDocInBoundary(String(h.docId))) : hits;
-  if (!visible.length) return textOut(`No matches for ${JSON.stringify(String(query))}.`);
   // Which rung answered, stated rather than implied. This build has no semantic
-  // rung, so the rung is always `keyword`; `via` says whether that was the
+  // tier, so the rung is always `keyword`; `via` says whether that was the
   // ranked trigram/unicode61 path or the unranked LIKE escape hatch — an
   // unranked answer must not look like a ranked one.
-  const via = [...new Set(visible.map((h) => h.via || "fts"))];
-  const unranked = via.includes("like");
-  const header =
-    `(rung: keyword · via: ${via.join("+")}` +
-    `${unranked ? " · 未排序：LIKE 兜底，结果为插入顺序" : ""})`;
+  //
+  // The empty case keeps the label too (library-semantic-rung R3): "no matches"
+  // and "no matches BECAUSE the lane was down" must not read as the same thing.
+  // Dropping the header here made a degraded search indistinguishable from a
+  // clean one — the exact conflation the contract forbids.
+  const header = search.rungHeader(visible, semantic);
+  if (!visible.length) {
+    return textOut(`${header}\nNo matches for ${JSON.stringify(String(query))}.`);
+  }
   return textOut(
     [header]
       .concat(

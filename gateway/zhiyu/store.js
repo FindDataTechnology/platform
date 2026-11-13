@@ -137,6 +137,27 @@ export function createZhiyuStore({ file }) {
     created_at INTEGER NOT NULL
   )`);
 
+  // Mobile→web hand-off links (openspec: add-zhiyu-mobile-clients 5.1/5.2).
+  // The mobile clients do not implement private windows, invites or
+  // subscription management; they hand the user a link that opens the web
+  // surface. That link is a ONE-TIME permit: `used_at` is written by the redeem
+  // UPDATE itself, so two concurrent opens cannot both win (`changes === 1` is
+  // the whole check). Only the secret's hash is stored and the token carries
+  // nothing else — no email, no room id, no session — so a leaked URL reveals
+  // nothing and stops working the moment it is used.
+  db.exec(`CREATE TABLE IF NOT EXISTS zy_deeplinks (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL,
+    purpose TEXT NOT NULL,
+    sec_hash TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_at INTEGER,
+    used_by TEXT
+  )`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_zy_deeplinks_room ON zy_deeplinks(room_id, created_at)`);
+
   // Messages: seq is per-room monotonic (allocated max+1 inside the append
   // transaction) so the SSE replay contract (D-E) is trivially honorrable.
   // kind: human | agent | system | event — system/event rows are the stream
@@ -513,12 +534,32 @@ export function createZhiyuStore({ file }) {
       return nid;
     },
     notificationsFor(email, { unreadOnly = false, limit = 100 } = {}) {
-      const rows = db
+      const publicRow = (r) => ({
+        id: r.id,
+        type: r.type,
+        roomId: r.room_id,
+        payload: JSON.parse(r.payload),
+        readAt: r.read_at,
+        createdAt: r.created_at,
+      });
+      const base = db
         .prepare(
-          `SELECT * FROM zy_notifications WHERE email = ? ${unreadOnly ? "AND read_at IS NULL" : ""} ORDER BY created_at DESC LIMIT ?`,
+          `SELECT * FROM zy_notifications WHERE email = ? ${unreadOnly ? "AND read_at IS NULL" : ""} ORDER BY created_at DESC, id DESC LIMIT ?`,
         )
         .all(email, limit);
-      return rows.map((r) => ({ id: r.id, type: r.type, roomId: r.room_id, payload: JSON.parse(r.payload), readAt: r.read_at, createdAt: r.created_at }));
+      if (unreadOnly) return base.map(publicRow);
+      // …plus every unread row the newest-`limit` window missed
+      // (add-zhiyu-mobile-clients 6.2). Without this, a badge can point at
+      // nothing: 100 read rows newer than one old unread row put the unread row
+      // outside the page, so the panel shows a count with no entry to clear it.
+      const seen = new Set(base.map((r) => r.id));
+      const extra = db
+        .prepare(`SELECT * FROM zy_notifications WHERE email = ? AND read_at IS NULL ORDER BY created_at DESC, id DESC`)
+        .all(email)
+        .filter((r) => !seen.has(r.id));
+      return [...base, ...extra]
+        .sort((a, b) => b.created_at - a.created_at || (a.id < b.id ? 1 : -1))
+        .map(publicRow);
     },
     notificationUnreadCount(email) {
       return db.prepare(`SELECT COUNT(*) AS n FROM zy_notifications WHERE email = ? AND read_at IS NULL`).get(email).n;
@@ -600,6 +641,63 @@ export function createZhiyuStore({ file }) {
     },
     widgetNoncePurgeOlderThan(thresholdTs) {
       db.prepare(`DELETE FROM zy_widget_nonces WHERE created_at < ?`).run(thresholdTs);
+    },
+
+    // ── Mobile→web hand-off links (add-zhiyu-mobile-clients 5.1/5.2) ────────
+    deepLinkCreate({ id: did, roomId, purpose, secHash, createdBy, expiresAt }) {
+      db.prepare(
+        `INSERT INTO zy_deeplinks (id, room_id, purpose, sec_hash, created_by, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      ).run(did, roomId, purpose, secHash, createdBy, now(), expiresAt);
+      return this.deepLinkGet(did);
+    },
+    deepLinkGet(did) {
+      const r = db.prepare(`SELECT * FROM zy_deeplinks WHERE id = ?`).get(did);
+      return (
+        r && {
+          id: r.id,
+          roomId: r.room_id,
+          purpose: r.purpose,
+          secHash: r.sec_hash,
+          createdBy: r.created_by,
+          createdAt: r.created_at,
+          expiresAt: r.expires_at,
+          usedAt: r.used_at,
+          usedBy: r.used_by,
+        }
+      );
+    },
+    /**
+     * Burn the link and return its row — or null if it was already used or has
+     * expired.
+     *
+     * The single-use property is the UPDATE's own WHERE clause, not a read
+     * followed by a write: two opens racing on the same link produce exactly
+     * one `changes === 1` and one winner (5.2). A read-then-write would let both
+     * see `used_at IS NULL` and both proceed.
+     */
+    deepLinkRedeem(did, { usedBy = null } = {}) {
+      const row = this.deepLinkGet(did);
+      if (!row) return null;
+      const res = db
+        .prepare(`UPDATE zy_deeplinks SET used_at = ?, used_by = ? WHERE id = ? AND used_at IS NULL AND expires_at > ?`)
+        .run(now(), usedBy, did, now());
+      return res.changes === 1 ? row : null;
+    },
+    deepLinksForRoom(roomId) {
+      return db
+        .prepare(`SELECT * FROM zy_deeplinks WHERE room_id = ? ORDER BY created_at DESC`)
+        .all(roomId)
+        .map((r) => ({
+          id: r.id,
+          roomId: r.room_id,
+          purpose: r.purpose,
+          createdBy: r.created_by,
+          createdAt: r.created_at,
+          expiresAt: r.expires_at,
+          usedAt: r.used_at,
+          usedBy: r.used_by,
+        }));
     },
 
     // ── Fleet subscriptions (add-zhiyu-team-memory 刀B) ─────────────────────

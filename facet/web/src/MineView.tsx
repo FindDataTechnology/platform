@@ -1,4 +1,4 @@
-// 我的功集 — the facet creator console (add-facet-content-management):
+// 我的发布 — the facet creator console (add-facet-content-management):
 // the author surface for packs published from this viewer's identity —
 // list, version history, unpublish, visibility, and publish-from-manifest.
 // Version history renders through the shared PackVersionList (add-facet-
@@ -61,7 +61,9 @@ export function MineView() {
   return (
     <section data-testid="facet-mine-view" className="space-y-4">
       <header>
-        <h2 className="text-lg font-semibold">{t("facetMine.title")}</h2>
+        {/* The view's own page title is the h1 (one per view); everything below
+            it — including the publish panel's heading — nests under it. */}
+        <h1 className="text-2xl font-semibold tracking-tight">{t("facetMine.title")}</h1>
         <p className="text-xs text-muted-foreground mt-1">{t("facetMine.subtitle")}</p>
       </header>
 
@@ -89,7 +91,12 @@ export function MineView() {
         </div>
       )}
 
-      <div className="grid gap-3">
+      {/* Tiles, not one full-width column (facet-platform: listing surfaces
+          use the responsive ladder instead of one full-width column). It stops
+          at two columns, unlike the market's sm:2/lg:3/xl:4: an author row
+          carries an expandable version table and two controls, so a third
+          column would squeeze the nested table into a card too narrow to read. */}
+      <div className="grid gap-3 sm:grid-cols-2">
         {packs.map((p) => (
           <div key={p.id} data-testid={`facet-mine-row-${p.id}`} className="border border-border rounded-lg p-4 space-y-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -139,20 +146,24 @@ function MineSkeleton() {
   return (
     <section className="space-y-4" data-testid="facet-mine-skeleton">
       <div className="h-6 w-36 animate-pulse rounded bg-muted" />
-      {[0, 1].map((i) => (
-        <div key={i} className="border border-border rounded-lg p-4 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="h-4 w-32 animate-pulse rounded bg-muted" />
-            <div className="h-4 w-44 animate-pulse rounded bg-muted" />
+      {/* Same grid as the loaded list — a skeleton that stacks while the data
+          tiles makes the page jump when it lands (DESIGN.md §8). */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[0, 1].map((i) => (
+          <div key={i} className="border border-border rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+              <div className="h-4 w-44 animate-pulse rounded bg-muted" />
+            </div>
+            <div className="h-3 w-64 animate-pulse rounded bg-muted" />
+            <div className="flex gap-2">
+              <div className="h-7 w-20 animate-pulse rounded-md bg-muted" />
+              <div className="h-7 w-24 animate-pulse rounded-md bg-muted" />
+            </div>
+            <div className="h-8 w-full animate-pulse rounded bg-muted" />
           </div>
-          <div className="h-3 w-64 animate-pulse rounded bg-muted" />
-          <div className="flex gap-2">
-            <div className="h-7 w-20 animate-pulse rounded-md bg-muted" />
-            <div className="h-7 w-24 animate-pulse rounded-md bg-muted" />
-          </div>
-          <div className="h-8 w-full animate-pulse rounded bg-muted" />
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }

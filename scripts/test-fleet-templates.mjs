@@ -497,6 +497,16 @@ const SEED_ORCHESTRATION_NARRATIVE = {
   "invest-trading-fleet.seed.json": { trigger: 4, handoff: 2, dispatch: 1 },
   "service-desk-fleet.seed.json": { trigger: 1, event: 1 }, // inbound bot wake
   "product-intro-fleet.seed.json": { dispatch: 5 }, // receptionist star: guide→5 line experts (add-product-intro-team)
+  // add-personal-staff-fleet: 幕僚长分诊到三个执行岗（评审/侦查/书记）。审计官**不在**
+  // 任何边上——它不进工作图（auditor_not_orchestratable）：盯拍板队列里的判断，
+  // 裁决经 auditor_submit_verdict 回到主人，不靠编导边驱动。
+  //
+  // 该种子的表目要随种子一起落地，所以这里先不写：
+  // `personal-staff-fleet.seed.json`（连同 openspec/changes/add-personal-staff-fleet/）
+  // 目前只存在于 fix/fleet-attribution-admission 那条线上、尚未进本分支。
+  // 提前把表目写进来会让「表 == 盘上种子」这条断言对本分支永远红——而这句红话
+  // （"every official fleet seed has a narrative entry"）指向的是本分支根本没有的文件。
+  // 等那条线并进来时把这一行恢复即可：{ dispatch: 3 }（幕僚长→评审/侦查/书记）。
 };
 
 test("official seed library: every manifest passes the fleet-section gate", async () => {
@@ -523,11 +533,20 @@ test("official seed library: every manifest passes the fleet-section gate", asyn
     // raised 3 → 50 on 2026-10-30), not a hard-coded guess.
     assert.ok(Array.isArray(raw.agents) && raw.agents.length <= PACK_LIMITS.maxAgents, `${file}: pack agents must be at most ${PACK_LIMITS.maxAgents}, found ${raw.agents?.length}`);
 
-    // Every pack-preset post names a self-carried agent, and every self-carried
-    // agent is referenced by exactly one pack-preset post (1:1, no orphans).
-    const presetIds = parsed.template.members.filter((m) => m.target.kind === "pack-preset").map((m) => m.target.presetId);
+    // Every post that binds a self-carried preset names one, and every
+    // self-carried agent is referenced by exactly one such post (1:1, no
+    // orphans). Two target kinds bind a self-carried preset: `pack-preset`
+    // and `auditor`（审计官是有工具面约束的预设，不是另一种来源）——两者
+    // 合起来比，否则带审计官的种子会被这条 1:1 误判成「有孤儿预设」。
+    const boundPresetIds = parsed.template.members.flatMap((m) =>
+      m.target.kind === "pack-preset" ? [m.target.presetId] : m.target.kind === "auditor" ? [m.target.id] : [],
+    );
     const agentIds = (raw.agents ?? []).map((a) => a.id);
-    assert.deepEqual([...presetIds].sort(), [...agentIds].sort(), `${file}: agents[] and pack-preset posts must correspond 1:1`);
+    assert.deepEqual(
+      [...boundPresetIds].sort(),
+      [...agentIds].sort(),
+      `${file}: agents[] must correspond 1:1 with pack-preset/auditor posts`,
+    );
 
     // Orchestration conservation (add-mixed-fleet-packs 1.6): every seed
     // carries a section, it cleared the shared validator above (parse fails
@@ -982,4 +1001,54 @@ test("template: provisioning an auditor member yields targetKind=auditor, not pe
   assert.ok(aud, "审计官岗位应被创建");
   assert.equal(aud.targetKind, "auditor", "落地后必须仍是 auditor（回落 persona 等于静默丢掉职责）");
   assert.equal(aud.targetId, "preset-aud");
+});
+
+// ── pack memory policy lands with the fleet (add-pack-memory-declaration 4.1) ─
+//
+// Two things must be true at the call site, and neither is about the memory
+// service (which has its own tests): the landing tries, and a memory failure
+// never turns a successful provision into a failure. Both are asserted with the
+// `syncMemoryPolicy` seam so no network is involved.
+test("provisioning lands the pack's process axis, and reports it", async () => {
+  const seen = [];
+  const deps = {
+    ...provisionDeps({ catalogIds: new Set(["tpl-ceo", "tpl-shop", "user-assist"]) }),
+    syncMemoryPolicy: async (args) => {
+      seen.push(args);
+      return { ok: true, action: "written", rootKey: `d-${args.packId}` };
+    },
+  };
+  const out = await provisionFleetFromTemplate({
+    packId: "pack_mem",
+    version: "1.0.0",
+    manifest: { ...goodManifest(), memory: { process: { distill: "off" } } },
+    ownerEmail: "owner@test",
+    deps,
+  });
+  assert.equal(out.ok, true);
+  assert.equal(seen.length, 1, "landing must call the sync exactly once");
+  assert.equal(seen[0].packId, "pack_mem");
+  assert.deepEqual(seen[0].manifest.memory, { process: { distill: "off" } });
+  assert.equal(seen[0].liveFleets, 1, "at least this team is live");
+  assert.equal(out.memoryPolicy.action, "written", "the outcome is reported, not swallowed");
+});
+
+test("a memory failure never fails the provision", async () => {
+  const deps = {
+    ...provisionDeps({ catalogIds: new Set(["tpl-ceo", "tpl-shop", "user-assist"]) }),
+    syncMemoryPolicy: async () => {
+      throw new Error("memory service unreachable");
+    },
+  };
+  const out = await provisionFleetFromTemplate({
+    packId: "pack_memfail",
+    version: "1.0.0",
+    manifest: goodManifest(),
+    ownerEmail: "owner@test",
+    deps,
+  });
+  assert.equal(out.ok, true, "the team still lands");
+  assert.equal(out.memoryPolicy.ok, false);
+  assert.equal(out.memoryPolicy.action, "failed");
+  assert.match(out.memoryPolicy.reason, /unreachable/);
 });

@@ -193,7 +193,7 @@ export function registerWanxingRoutes(app, {
       return res.status(404).json({
         error: "no sub2api account for that email yet — the caller signs in once at the billing panel (Logto) to create it",
         code: "NO_SUB2API_ACCOUNT",
-        panelUrl: env.SUB2API_PANEL_URL || "https://your-billing-panel.example",
+        panelUrl: env.SUB2API_PANEL_URL || "https://token.finddatatech.cloud",
       });
     }
     store.allowlistAdd(slugFor(ctx.row.agentPath), account.userId, email);

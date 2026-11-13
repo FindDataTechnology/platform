@@ -1,0 +1,3931 @@
+{
+  "generatedAt": "2026-11-05",
+  "source": "https://facet.finddatatech.cloud",
+  "admission": "public+non-unlisted+curated (loadListedPacks mirror)",
+  "count": 82,
+  "stale": false,
+  "packs": [
+    {
+      "id": "nG61wKNe3Vg6vtDhfDC_UA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793800252532,
+      "version": 1,
+      "name": "跨境电商合规分流团队",
+      "description": "跨境电商合规分流团队模板：分流员消费政策日报/通报流/ePing 逐条出分流单（四字段，只分流不裁决）→合成位管队列三态→产出位落合规日报看板草稿。装包后经壹座「团队→从模板实例化」建队；纪律来自共用层三包+值守岗包 crossborder-watch-roles（同 cell 安装）。边界：政策巡检归政策盯梢舰，物流水位归物流值守舰。",
+      "tags": [
+        "团队",
+        "跨境电商",
+        "合规"
+      ],
+      "publishedAt": 1793800252533,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 1,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "xb-triage-queue-contract",
+            "description": "分流单四字段契约与升级三判据：缺字段标待补、监管代码单列、升级不自决定级。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "h4Hc53roTMdoSxyPgKXN3Q",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793800245330,
+      "version": 1,
+      "name": "跨境电商物流值守团队",
+      "description": "跨境电商物流值守团队模板：值守岗读 fd-open-data-mcp 口岸观测（port.calls 当日快照，四枢纽港逐港报水位）→合成位按三判据出物流日报（超阈/断更/政策面冲突 escalate）→产出位落看板草稿。装包后经壹座「团队→从模板实例化」建队；岗位纪律来自共用层三包+值守岗包 crossborder-watch-roles（同 cell 安装）。边界：政策公告面归政策盯梢舰，本舰只管口岸水位。",
+      "tags": [
+        "团队",
+        "跨境电商",
+        "物流"
+      ],
+      "publishedAt": 1793800245332,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 1,
+      "mcpCount": 3,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "xb-port-call-pressure-reading",
+            "description": "口岸水位读数纪律：port.calls 当日快照不回填，缺港按 series_state 双态归因，拥堵与吞吐分列不混算。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kyZNb-aDEEmpUfed1kp7TA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793787251442,
+      "version": 1,
+      "name": "启材盯梢",
+      "description": "启材线（教育）盯梢舰队模板：盯梢哨每回合对教育目录出逐条目增量清单（新资源/更新/撤回，类别/目标/观测值三栏机器可数），零增量照记台账，通道故障显式报因；写面=订阅两工具（唯一写面），Owner 授意的订阅变更走 escalate。单回合口径收窄防超时。",
+      "tags": [
+        "团队",
+        "启材",
+        "教育",
+        "盯梢"
+      ],
+      "publishedAt": 1793787251445,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "edu-watch-sentinel",
+            "description": "启材盯梢哨纪律：三步收窄工作流（概况盘点/订阅增量/撤回巡检），清单三栏机器可数，零增量照记。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "edu-catalog"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4zEIbg4APf6d7-KUtLrmRA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793758425717,
+      "version": 1,
+      "name": "跨境电商行业监测团队",
+      "description": "跨境电商行业监测团队模板：参谋岗每周扫外圈需求画像（观测面 TradeFlow 伙伴国分轴/FxRate/PolicyNotice 热度 + 柏讯 fd-info 需求信号定性参考）→合成位复跑验证出行业周报→产出位落看板草稿。装包后经壹座「团队→从模板实例化」建队；纪律来自共用层三包+值守岗包 crossborder-watch-roles（同 cell 安装）。边界：需求侧事实 only，内圈未授权标不可得。",
+      "tags": [
+        "团队",
+        "跨境电商",
+        "行业监测"
+      ],
+      "publishedAt": 1793758425719,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 1,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "xb-weekly-flow-scan",
+            "description": "外圈需求周扫纪律：TradeFlow 伙伴国分轴读、双态归因分开列、月计数注明未计入成员。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "0LVfedThOxtymbwlbdZtGw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793749036127,
+      "version": 2,
+      "name": "跨境电商值守岗包",
+      "description": "跨境电商行业线四大值守岗位：合规分流、关务单证要素、选品参谋、物流值守。三件套=职责边界/工作纪律/输出契约；mcpServers 仅引用在册三服务；allowTools ⊆ 试点同款清单。",
+      "tags": [
+        "跨境电商",
+        "值守",
+        "岗位包"
+      ],
+      "publishedAt": 1793751662002,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 4,
+      "skillCount": 4,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "crossborder-compliance-triage",
+            "description": "合规分流：新征/调口径/技贸壁垒/多源不一致三判据逐条分流、只分流不裁决、缺位如实标、escalate 走拍板通道。"
+          },
+          {
+            "name": "crossborder-customs-doc-elements",
+            "description": "关务单证要素：9610/1210/9710/9810 单列申报要素/单证/填报口径，要素只从原文/税则摘录，不确定标「原文未释」。"
+          },
+          {
+            "name": "crossborder-product-scout",
+            "description": "选品参谋：HS6×国别流向+汇率+技贸壁垒做需求画像；平台侧热销/店铺数据未授权即标「不可得（未授权）」，绝不臆测。"
+          },
+          {
+            "name": "crossborder-logistics-watch",
+            "description": "物流值守：portwatch/物流景气读水位、异常按口径升级、数值只引原文/原库、缺位如实标「未取得：<原因>」。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tkHe8IHE0BuDYYIg5LglUw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792725687670,
+      "version": 11,
+      "name": "内容流水线",
+      "description": "官方团队模板：周流水线内容工厂——主编周一主持选题会，选题策划立项、撰稿人周二至四成稿，审校为被动岗（受委托唤醒，演示成员间横向协作的唯一通道 delegation）。演示：周节奏流水线、被动岗受委托唤醒、文档工具面；编导段为 trigger(周一)→handoff 流水线（主编→策划→撰稿）+ 撰稿 dispatch 委托审校、审校 report 上行主编。铸造上架时 packId/agents 按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+      "tags": [],
+      "publishedAt": 1793705089243,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 3,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "topic-pitch-card",
+            "description": "选题策划提交立项候选的标准格式：一句话、读者、角度、形态、交稿日。"
+          },
+          {
+            "name": "writing-standards",
+            "description": "撰稿人的成稿纪律：钩子、段落结构、引用标注、完成度申报。"
+          },
+          {
+            "name": "review-checklist",
+            "description": "审校岗的退稿/通过标准：事实、结构、用词三层核查，输出逐条理由。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "qnhd7B3J1-HKDDKzZQ_fUQ",
+      "authorEmail": "doc-studio@finddatatech.cloud",
+      "createdAt": 1791471742283,
+      "version": 3,
+      "name": "文档工坊",
+      "description": "Office 文档生成与编辑：商务报告（docx）、数据工作簿（xlsx）、汇报演示（pptx）三场景成稿，配验证过的封面配方、中式设计系统与生成后质检 postcheck；支持编辑用户上传的原件（fetch_document_file 取原件）。回合内免费。",
+      "tags": [
+        "官方功能集",
+        "文档",
+        "Office",
+        "报告"
+      ],
+      "publishedAt": 1793684278932,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "doc-studio",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": true,
+      "agentCount": 1,
+      "skillCount": 1,
+      "facade": false,
+      "badge": "facade",
+      "official": false,
+      "contents": {
+        "skills": [
+          {
+            "name": "doc-studio",
+            "description": "文档工坊——Word/Excel/PPT 商务文档生成与编辑。当用户要求生成报告、表格、演示文稿、文档交付物，或要求编辑/转换上传的 docx/xlsx/pptx 文件时使用。产出符合中式商务版式的成稿，生成后自动质检。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "Aqag8Mky4ksoPmwRDMCVYw",
+      "authorEmail": "3106241601@qq.com",
+      "createdAt": 1791459976060,
+      "version": 3,
+      "name": "数据研究 · 生态版",
+      "description": "官方功能集（生态首发）：FindData 数据底座（fd-open-data-mcp 宏观/金融真数据）+ 官方 time/fetch 生态 server + 数据研究 persona。装上即可做可溯源的数据问答与网页取证。",
+      "tags": [
+        "官方功能集",
+        "生态",
+        "数据"
+      ],
+      "publishedAt": 1793684278897,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": true,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 3,
+      "facade": false,
+      "badge": "assistant",
+      "official": false,
+      "contents": {
+        "skills": [
+          {
+            "name": "eco-skill-creator",
+            "description": "[生态] 结构化创建新技能包（anthropics/skills，Apache-2.0）"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "eco-mcp-time"
+          },
+          {
+            "registryName": "eco-mcp-fetch"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4wLvBYP0iLhMjdDcpjAmMw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793666964380,
+      "version": 4,
+      "name": "走查部署链二",
+      "description": "cast 调试·重封验证 v2",
+      "tags": [],
+      "publishedAt": 1793684242895,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 1,
+      "mcpCount": 0,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "Bzz9r5rmYPIAitS8Ca33Lw",
+      "authorEmail": "chengsi@finddatatech.cloud",
+      "createdAt": 1791921727029,
+      "version": 5,
+      "name": "萬星 · 本地内容发布套件",
+      "description": "云端生成 + 本地发布的完整闭环：从 VAAS 托管实例拉取租户名下的生成产物（图/视频/图文），在本机完成平台适配、人工确认后经自己的浏览器登录态发布到 10 视频平台 + 11 图文平台。登录态只存本机、平台零保管（见包内 SECURITY-NOTES.md）。发布前必须人工确认。",
+      "tags": [
+        "wanxing",
+        "内容发布",
+        "图文",
+        "视频"
+      ],
+      "publishedAt": 1793684208119,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wanxing",
+      "line": "萬星 · 智能体连接",
+      "lineLabel": "萬星 · 智能体连接",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "assistant",
+      "official": false,
+      "contents": {
+        "skills": [
+          {
+            "name": "fd-vaas-pull-from-cloud",
+            "description": "从 VAAS 托管生成实例拉取租户名下的产物到本机发布目录。三种输入任选其一：谦面调用键（连网关按 owner 过滤）、签名下载 URL（生成响应里带的）、或直接给 asset id + 实例地址。产物自动落 downloads/ 标准目录并生成发布技能可直接消费的 task 目录（article.md + meta.json 骨架）。无凭据时输出获取指引。**本技能只拉内容，不碰任何登录态**（发布登录走 fd-vaas-login，在本机完成）。"
+          },
+          {
+            "name": "fd-vaas-login",
+            "description": "视频 + 图文平台登录管理页 — 查看各平台登录状态，触发扫码/窗口登录，轮询 QR 码。零依赖 Python stdlib HTTP Server。"
+          },
+          {
+            "name": "fd-vaas-publish-docs",
+            "description": "把一篇文章/图文一键分发到主流图文平台(知乎、微信公众号、小红书、抖音图文、快手图文、雪球、东方财富号、同花顺财经号、今日头条、百家号、微博)。**只做编排 -- 平台差异化文案/字数/标签/封面 + 内容适配 + 发布记录**。**上游优先原则**:vendored social-auto-upload(在 fd-vaas-publish-videos skill 里)有图文(Note)实现的平台(小红书、抖音图文、快手图文)走 `scripts/note_adapter.py` 复用上游,cookie 与视频发布共享;上游没有的平台才用自己的逻辑:**默认 ego-browser**(r…"
+          },
+          {
+            "name": "fd-vaas-publish-videos",
+            "description": ">"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "vaas-wanxing"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ev5E51eth7e5McvyDrl9Rg",
+      "authorEmail": "platform-test@findmail.com",
+      "createdAt": 1791826580527,
+      "version": 2,
+      "name": "市场快讯 · 一页速览",
+      "description": "把一段财经新闻、公告或行情评论收敛成一页速览：三行结论、五个要点、一处存疑。为需要在盘前/会前快速消化的读者而生。",
+      "tags": [
+        "market",
+        "briefing",
+        "速览"
+      ],
+      "publishedAt": 1793684042371,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "daas",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "facade": false,
+      "badge": "facade",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "market-flash-briefing",
+            "description": "把一段财经新闻/公告/评论收敛成一页速览：三行结论、五个要点、一处存疑，输出固定版式。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "0RdQE184anPUaMhIvFwndA",
+      "authorEmail": "platform-test@findmail.com",
+      "createdAt": 1791917280540,
+      "version": 2,
+      "name": "谦面市场助手",
+      "description": "用 AI 直接操作谦面市场与网关：浏览/检索功集与网关条目、发布新功集与新版本、上下架、切可见性、策展分类、发布前查重。装包即得 facet_market_* 与 facet_agent_* 十二个工具（凭据走壹座既有连接：registry + 谦面市场配对），配两份手册技能讲清『怎么写 manifest、怎么过发布门、怎么安全写操作』。",
+      "tags": [
+        "谦面",
+        "市场",
+        "发布",
+        "MCP",
+        "运维"
+      ],
+      "publishedAt": 1793684041332,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "facet",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 2,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "facet-market-publishing",
+            "description": "谦面功集发布实操手册：manifest 写法、校验门、工具声明门、配额与版本纪律，发布失败逐条排障。"
+          },
+          {
+            "name": "facet-gateway-ops",
+            "description": "谦面网关（registry）操作手册：AgentCard 目录浏览/登记/更新/启停/查重的安全用法与错误语义。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "facet-market-mcp"
+          },
+          {
+            "registryName": "facet-ops-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "oGURb41bdyAotVGOeBHZUA",
+      "authorEmail": "admin@finddatatech.cloud",
+      "createdAt": 1791238034201,
+      "version": 5,
+      "name": "数据 · 指标工坊",
+      "description": "谦面指标工坊创作五件套：规则驱动实体集、指标持久化、指标集策展、统一规则（json/script/position/llm）与单文件 HTML 看板——把业务口径沉淀为可复用的数据资产",
+      "tags": [
+        "数据",
+        "指标",
+        "创作",
+        "规则",
+        "DAAS"
+      ],
+      "publishedAt": 1793684040280,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 0,
+      "skillCount": 5,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fd-daas-entities-collection-creator",
+            "description": "创建规则驱动的实体集（自选股/组合）：声明式 JSON 规则，跨表/动态逻辑落 Python 规则脚本可重跑"
+          },
+          {
+            "name": "fd-daas-indicators-creator",
+            "description": "端到端建指标并持久化：扩展取数流程落 scraw_<slug> 存储表并把序列数据存进表（刷新为手动重跑）"
+          },
+          {
+            "name": "fd-daas-indicators-collection-creator",
+            "description": "策展指标集：把指标组成命名集合、按三级解析给出各成员 resolved score，导出机器可读 CSV + 人类可读简介"
+          },
+          {
+            "name": "fd-daas-rules-creator",
+            "description": "统一规则创作（json/script/position/llm 四型）：daas_create_rule 落库、daas_test_rule 试跑，可挂实体/指标集合并同步"
+          },
+          {
+            "name": "fd-daas-dashboard-creator",
+            "description": "把 daas 数据做成单文件独立 HTML 看板：ECharts + 实体/时间交互筛选，注册进 dashboards 表并迭代修改"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-daas-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "50Tp176hW0HYTTWXZbarKA",
+      "authorEmail": "admin@finddatatech.cloud",
+      "createdAt": 1791238027123,
+      "version": 5,
+      "name": "数据 · 自助分析",
+      "description": "谦面自助分析消费八件套：取数（工作流清单/AkShare）、实体与集合管理、指标查询、看板检视、PDF 语义检索、头脑风暴与一键研究——业务人自助完成数据消费全流程",
+      "tags": [
+        "数据",
+        "自助分析",
+        "取数",
+        "看板",
+        "DAAS"
+      ],
+      "publishedAt": 1793684039231,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 0,
+      "skillCount": 8,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fd-daas-based-data-fetch",
+            "description": "按 data-fetch 工作流清单取数：经 fd-open-data-mcp 解析实体并按日期读概念值，返回数据行与来源标识，可选落库"
+          },
+          {
+            "name": "fd-daas-fetch-data",
+            "description": "在 daas 注册表查实体、定位覆盖它的数据源，并在源数据上定义指标（daas_* 工具 + indicators 工作流清单）"
+          },
+          {
+            "name": "fd-datasource-akshare",
+            "description": "用 scraw-akshare 抓 A 股行情与财务数据：全部 spider 命令、CLI 参数、库表结构与已知坑位速查，跑任何抓取前先读它"
+          },
+          {
+            "name": "fd-daas-research",
+            "description": "跑完整研究管线（实体→指标→看板→报告）：经 research 工作流清单检索概念、落研究包并生成 markdown 报告"
+          },
+          {
+            "name": "fd-daas-brainstorm",
+            "description": "研究目标头脑风暴：把模糊想法聊成具体研究计划（可锚定名家投资方法论），只产出计划再交棒研究管线"
+          },
+          {
+            "name": "fd-daas-dashboard",
+            "description": "查找/打开/检视既有独立 HTML 看板：列出、按关键词搜索、看简介与数据血缘、浏览器打开并查询底层数据（只读）"
+          },
+          {
+            "name": "fd-daas-pdf",
+            "description": "PDF/文本本地向量化与语义检索：抽取分块、sentence-transformers 嵌入存 daas.db，KNN 问答带文档页码引用，不出网"
+          },
+          {
+            "name": "fd-daas-entities-collection",
+            "description": "实体与实体集日常管理：发现实体、集合增删改查、成员增删排序、审计历史与规则集合同步（不含新建规则）"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-daas-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5y0_Gislp_OgElqq4zPswA",
+      "authorEmail": "publisher@finddatatech.cloud",
+      "createdAt": 1793403759620,
+      "version": 5,
+      "name": "nano-pdf",
+      "description": "Edit PDFs with natural-language instructions using the nano-pdf CLI.",
+      "tags": [
+        "Productivity"
+      ],
+      "publishedAt": 1793683972468,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "text",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "facade": false,
+      "badge": "facade",
+      "adopted": true,
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "nano-pdf",
+            "description": "Edit PDFs with natural-language instructions using the nano-pdf CLI."
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "NoBBXkvxZnJNHlCrAwWp-w",
+      "authorEmail": "aloadtree@finddatatech.cloud",
+      "createdAt": 1792773430219,
+      "version": 7,
+      "name": "团队架构师",
+      "description": "壹座聊天内的团队自然语言编排面：把用户的话编译成团队结构草稿，经校验与成本预估呈 diff，用户批准后落地。管编制不管作战——不做运行时指挥。铸造上架时 packId/占位符按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 pack 清单校验。",
+      "tags": [],
+      "publishedAt": 1793683971973,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-authoring-flow",
+            "description": "团队编排流程卡：需求→草稿→diff 呈现→批准→落地。"
+          },
+          {
+            "name": "fleet-edge-vocabulary",
+            "description": "编边词汇卡：主管式/流水线/单边派发/草稿引用的编译对照。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "DydB2cal-M9l91IMJYHshA",
+      "authorEmail": "aloadtree@finddatatech.cloud",
+      "createdAt": 1791987983750,
+      "version": 6,
+      "name": "柏讯 · 模拟交易套件",
+      "description": "柏讯模拟交易（paper trading）三件套：对话操作（账户/持仓/下单/撤单）、策略工作流（模板与沙箱自定义代码、回测解读、纸面实盘）、行情检查（搜索/历史K线/覆盖边界诚实呈现）。paper-only：模拟盘、无真实资金；调用者身份逐请求鉴别，只操作自己的账户；行情覆盖由部署的概念族决定，技能以诚实呈现覆盖边界为第一纪律。",
+      "tags": [
+        "wire",
+        "交易",
+        "模拟盘",
+        "量化"
+      ],
+      "publishedAt": 1793683432679,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "paper-trading-conversation",
+            "description": "柏讯模拟交易（paper trading）对话操作。当用户要求查看纸面账户与余额、开新模拟账户、查持仓明细（数量/成本/浮盈亏）、下单买入或卖出（市价/限价）、撤单、查订单历史，或询问某标的当前价格时使用。走柏讯模拟交易服务（paper-only 模拟盘，无真实资金、无真实订单），调用者身份逐请求鉴别——只操作自己的账户。"
+          },
+          {
+            "name": "paper-trading-strategy",
+            "description": "柏讯模拟交易策略工作流。当用户要求创建量化策略（SMA 交叉/RSI 反转/布林突破/MACD 交叉/定投等模板，或自定义 on_bar 代码）、跑历史回测并解读权益曲线与统计（收益/回撤/夏普/胜率）、在模拟账户上启动或停止纸面实盘运行、查看运行历史时使用。paper-only：策略只在模拟盘上下单。"
+          },
+          {
+            "name": "paper-trading-market-inspection",
+            "description": "柏讯模拟交易行情检查。当用户要求搜索某个可交易标的（按代码或名称）、查看某标的的历史 K 线（OHLCV）、了解当前部署行情面覆盖哪些标的类型、或为下单/回测确认某标的数据是否可用时使用。行情来自柏讯模拟交易服务的行情面（概念族可配，默认基金净值），覆盖面有限——本稿核心职责是诚实呈现覆盖范围。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "wqpd5rPCFl3qIHg6oLDamg",
+      "authorEmail": "platform-test@findmail.com",
+      "createdAt": 1792224457717,
+      "version": 6,
+      "name": "柏讯 · 决策复盘套件",
+      "description": "把「当时的判定」变成可审计的历史：决策落账（追加式、幂等、修订留痕）→ 到期按基准结算真实 alpha → 提炼反思（只注入决策者，不广播）→ 持仓体检与最近判定的一致性核查。以账本为准，不美化历史；样本不足不下结论。与决策类 pack 的分工：决策 pack 产出 Rating/TargetWeights 实例，本套件负责统一落账与复盘（语义相同，不重复实现）。",
+      "tags": [
+        "wire",
+        "复盘",
+        "决策"
+      ],
+      "publishedAt": 1793683413987,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "decision-review-log",
+            "description": "柏讯决策落账纪律（复盘套件入口）。当用户要求把一条判定（Rating）或目标权重（TargetWeights）记入决策账本、要求\"再记一次\"、要求修改或\"更正\"已落账的判定、或需要查回某标的的历史判定与教训时使用。账本是追加式的：幂等键 (caller, as_of, symbol, pack, skill) 拒绝重复提交并返回既有 decision_id；记录按 caller 隔离，只看到自己的判定，修订产生新记录并以 revises 指向被修订记录，历史判定永不被就地改写。"
+          },
+          {
+            "name": "decision-review-settlement",
+            "description": "柏讯到期结算复盘。当用户要求结算某条已落账的判定、想知道某判定\"后来怎么样了\"、要求汇总待结算记录、或要看原始收益与相对基准 alpha 时使用。流程为待结算汇总 → 取结算窗序列（价格走本地 DAAS 通道 B）→ 触发账本结算 → 三段式输出（判定理由回顾 + 结算结果 + 对照评述）。持有期未满不强行结算；alpha 为负不等于判断错误。"
+          },
+          {
+            "name": "decision-review-reflection",
+            "description": "柏讯决策反思提炼。当用户要求为一条已结算（或已落账）的判定写复盘反思、要求\"总结这次教训\"、或询问为什么反思不该出现在其他角色的输出里时使用。反思固定 2–4 句，针对决策本身而非市场走势，区分\"判断错\"与\"运气差\"，并含可执行的改进项；反思由账本存储、只注入最终决策者的上下文，不得广播给其他角色，缺失反思不阻塞结算。"
+          },
+          {
+            "name": "decision-review-portfolio",
+            "description": "柏讯持仓体检。当用户要求体检当前模拟账户持仓、看集中度（HHI/前 N 权重）、期间回撤、行业暴露，或核查\"持仓是否偏离了最近一次判定\"时使用。持仓与账户取自柏讯模拟交易服务（paper-only，模拟盘，无真实资金），统计量一律交给 fd-quant 计算面，缺失数据如实标注，结论为研究参考、不含买卖建议。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "azkOwU4q6mmTmbw75Ow7yQ",
+      "authorEmail": "platform-test@findmail.com",
+      "createdAt": 1792224450097,
+      "version": 5,
+      "name": "柏讯 · 个股投研套件",
+      "description": "个股深度投研：从取数与口径、同行与竞争、财务建模、论点综合到 13 章报告装配的完整链条。五技能对齐 FinRobot 生产版 V2 的五个在跑角色（数据/分析/建模/综合/报告）。财务与披露走柏讯服务端通道 A，价格与市值走本地通道 B，估值与统计数字一律由 fd-quant 计算面产出（不自行计算）。与「估值套件」（单点估值）、「财务底盘」套件的分工：本套件是**全链报告**，估值套件是**单点深挖**，财务底盘是**通用财务分析**。方法分歧时点位可缺（null），评级必发。",
+      "tags": [
+        "wire",
+        "投研",
+        "个股"
+      ],
+      "publishedAt": 1793683413748,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 5,
+      "mcpCount": 6,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "equity-research-data",
+            "description": "个股投研的取数与口径纪律层。当用户要求为某家 A 股/港股公司取财务科目、公告披露、行业财务指标或公司面板变量，或需要交代某个数字的来源工具、数据期数、币种与单位时使用。财务与披露一律走柏讯服务端通道 A，价格与市值一律走本地 DAAS 通道 B，两条通道不混用、不互相替代；取不到的数值如实声明缺口，不得填补。"
+          },
+          {
+            "name": "equity-research-peers",
+            "description": "个股投研的同业与竞争层。当用户要求为某家 A 股/港股公司挑可比公司、给同业规模与增速带对照、做可比性说明或跑倍数对照表时使用。候选池用 GTA 公司面板按规模带与增速带筛选（通道 A），价格类输入与倍数只走本地 DAAS（通道 B）；同业之间的可比性差异必须逐项标注，不得抹平。"
+          },
+          {
+            "name": "equity-research-modeling",
+            "description": "个股投研的估值建模与计算层。当用户要求给某家 A 股/港股公司做 DCF、DDM、可比倍数、Monte Carlo 或敏感性分析，或要求算基本面比率、跑红旗检测、把多种估值方法合成目标价时使用。全部算术一律调 fd-quant 确定性计算面（通道 Q），本技能只组织输入、标注来源、原样转述返回；计算面不可用时顶部明示\"估值部分未完成\"，绝不自算顶替。财务科目走柏讯服务端通道 A，价格与市值类输入走本地 DAAS 通道 B。"
+          },
+          {
+            "name": "equity-research-thesis",
+            "description": "个股论点综合与方向判定（Rating 契约实例）。当用户要求给某只股票下方向结论、写投资论点、列催化剂与风险、给目标价，或把取数/同行/建模三段结果收敛成一个可入决策账本的判定时使用。产出 side / conviction / price_target（可 null）/ basis / evidence；方法分歧、价格通道不可用或输入不足时扣值不扣结论。财务与披露走柏讯服务端通道 A，本地库存读数走本地 DAAS 通道 B，估值与统计量走 fd-quant 计算面通道 Q。"
+          },
+          {
+            "name": "equity-research-report",
+            "description": "个股投研报告装配（本套件入口技能）。当用户要求\"给某只股票出一份完整研究报告\"\"写一份研报\"\"跑一遍个股投研流程\"时从这里进入。按固定 13 章装配报告、执行六项叙述审计自检、保留缺数据章并写明原因、末尾给数据期数汇总行。串起取数与口径、同行比较、财务建模叙述、论点综合四段子流程，产出 13 章报告与一个 Rating 契约实例。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "jwDL7dSYKjp7_NnQpk7DPA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793669278241,
+      "version": 3,
+      "name": "研发评审小队",
+      "description": "八个无触手的研发评审岗：代码评审、安全审计、架构评审、性能分析、质量策略、API 设计、故障诊断、API 文档。你把代码、diff、日志、设计文档或 OpenAPI 贴进对话，它读、判、说——给出按严重度分级、附证据的结论，需要运行才能确认的事如实标注「需你执行验证」。岗位改编自 VoltAgent/awesome-claude-code-subagents（MIT，钉版），动手类承诺已改写为顾问纪律。",
+      "tags": [
+        "研发",
+        "代码评审",
+        "架构",
+        "安全",
+        "性能",
+        "质量",
+        "API",
+        "文档",
+        "小队"
+      ],
+      "publishedAt": 1793683261176,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "cluster",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 8,
+      "facade": false,
+      "badge": "facade",
+      "adopted": true,
+      "official": true,
+      "contents": {
+        "skills": [],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "1HbpcL4LaB-csKpUQgN2Ew",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792884859081,
+      "version": 9,
+      "name": "识律政心监测团队",
+      "description": "识律政心监测团队模板：监视位分域巡检 V-Dem/MARPOR 真库（fd-zhengxin-reference 读面）→合成位周报交叉核对（重大异动 escalate）→产出位落图集草稿。装包后经壹座「团队→从模板实例化」建队；岗位纪律来自共用层智能体（需同 cell 安装）：fleet-data-qa/fleet-brief-report/fleet-board-contribution。",
+      "tags": [
+        "团队",
+        "lex",
+        "政心"
+      ],
+      "publishedAt": 1793678306511,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "zx-source-readiness-gate",
+            "description": "六源就绪门：source_status 判就绪/延迟/未就绪三档，未就绪整源跳过并如实记录。"
+          },
+          {
+            "name": "zx-timeseries-anomaly-card",
+            "description": "异动卡五栏：国家/指标/年份对/差值/快照版本，阈值来源必须可复核。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-zhengxin-reference"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3uOELnBMA6WiWSTQxrV93g",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791558885083,
+      "version": 8,
+      "name": "识律 · 诉讼文书套件",
+      "description": "民商事诉讼文书起草与立案材料整理：起诉状/答辩状/证据目录生成，配套证据卡片与材料清单整理；v2 新增**要素式格式转换**（传统文书→最高院 67 类示范文本，逐要素来源标注，事实保真）。法条锚定、效力校验、类案与指导案例参照全部走识律法律检索数据源，案号与条文一律来自真实检索返回。",
+      "tags": [
+        "lex",
+        "法律"
+      ],
+      "publishedAt": 1793678305938,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "litigation-drafting",
+            "description": "民商事诉讼文书起草（起诉状/答辩状/证据目录）。当用户提供案情或案件材料，要求写起诉状、答辩状、上诉状要点、证据目录或立案配套文书时使用。法条锚定与类案参照均走真实检索数据源，律师确认要点后才生成成稿。"
+          },
+          {
+            "name": "evidence-card-organizer",
+            "description": "证据卡片提取与材料清单整理（立案材料整理技能）。当用户提交一批案件材料（合同、转账记录、聊天记录、票据、送达回证等），要求提取证据、编证据目录、整理材料清单或做证据关系与矛盾排查时使用。输出双视图证据卡片库与待补强清单，供起诉状/答辩状起草直接引用。"
+          },
+          {
+            "name": "format-conversion-elementized",
+            "description": "要素式格式转换。当用户上传或粘贴一份传统式法律文书（起诉状、答辩状等），希望转换为法院推广的要素式示范文本格式时使用。识别案由并匹配最高院示范文本，逐要素从原文提取填充，逐要素标注来源（取自原文/原文缺失/需补充），原文事实保真不改写；案由无法识别或示范文本未收录时如实说明，不以自拟模板冒充示范文本。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5mqV0jhihj0AhdNPCpc1iw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791822681170,
+      "version": 7,
+      "name": "柏讯 · 区域经济套件",
+      "description": "区域经济比较：城市面板（209 变量 × 297 城 × 2000-2024）与统计年鉴（31 省）支撑的多维指标体系、横向排名分位、增长贡献结构分解、相似城市聚类与区域差距度量；配套统计检验方法。",
+      "tags": [
+        "wire",
+        "经济",
+        "金融"
+      ],
+      "publishedAt": 1793678305330,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 2,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "regional-economy-compare",
+            "description": "区域经济比较：对中国城市/省份做多维指标横向排名、分位定位、增长结构分解与相似城市聚类。当用户要比较两个或多个城市/省份的经济实力、产业结构、财政与居民收入，要某城市在全省或全国的排名与分位，要拆解经济总量增长的产业贡献与拉动点数，或要按结构找与目标城市可比的对照组时使用。数据走柏讯城市面板与统计年鉴。"
+          },
+          {
+            "name": "statistical-inference",
+            "description": "统计检验与探索性分析。当用户要求做描述统计与分布诊断、选假设检验（t/ANOVA/卡方/非参）、判断两组或城市间差异是否显著、做相关性与配对分析、诊断时序平稳性与单位根、做多重比较校正，或对已有的本地 CSV/表格做探索性分析时使用。走柏讯服务端序列取数，价格类序列走本地 DAAS。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "8edSwnv3lIXcuSAkzS9vvA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792760485035,
+      "version": 4,
+      "name": "柏讯 · 数据治理",
+      "description": "柏讯数据治理套件：读表单收上来的数据、改错一条记录、撤销改错、查改错历史、导出 CSV。写修正必须带来源标记（source）且不得代填；撤销只置回滚标记，原始行永不改写；导出带 truncated 字段，被行数闸截断时如实告知。失败原样转述，禁止以空列表冒充无数据。",
+      "tags": [
+        "wire",
+        "数据治理",
+        "台账"
+      ],
+      "publishedAt": 1793678304719,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "wire-data-steward",
+            "description": "柏讯数据治理。当用户要读表单收上来的数据、改错一条记录、撤销一次改错、查改错历史或导出 CSV 时使用。写修正必须带来源标记（source），不得代填；撤销只置回滚标记、原始行永不改写；导出结果带 truncated 字段，true 表示被上游行数闸截断而非全量——必须如实转述。任何工具失败原样转述，禁止以空列表冒充无数据。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "AlZiwYWeSfbs9hqRI4d-IA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791822676414,
+      "version": 8,
+      "name": "柏讯 · 估值套件",
+      "description": "股票估值与财报周期分析：DCF（五年预测 + WACC + 终值 + 敏感性表）+ 可比公司 + 三表联动三角验证；财报前瞻与复盘（科目定位与质量分析）。财务数据走柏讯服务端，股价与市值走本地数据平台通道。",
+      "tags": [
+        "wire",
+        "经济",
+        "金融"
+      ],
+      "publishedAt": 1793678304187,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "equity-valuation",
+            "description": "股票估值（DCF + 可比公司 + 三表联动）。当用户要求给某家 A 股/港股公司做内在价值或相对估值、算 WACC 与终值、跑敏感性与情景表、给目标价区间、做同业倍数对照与反推市场隐含预期时使用。财务数据走柏讯服务端通道 A，价格与市值走本地 DAAS 通道 B；通道 B 未连接时中止估值，不给目标价。"
+          },
+          {
+            "name": "earnings-cycle-analysis",
+            "description": "财报周期分析（前瞻 + 复盘）。当用户要求对一家公司做财报前瞻（本次披露类型与时间、该盯哪些科目、超预期/低于预期可能从哪来）、做财报复盘（实际 vs 上年同期、差异由哪个科目驱动、盈利质量如何、对后续季度意味着什么），或梳理连续数期经营动能变化时使用。基于柏讯财报与公告数据，不做技术分析。触发词：财报前瞻、业绩预告、财报复盘、业绩点评、超预期、低于预期、盈利质量、某某公司季报/半年报/年报分析。"
+          },
+          {
+            "name": "stock-research-workflow",
+            "description": "个股研究全流程工作流（数据-股票包入口技能）。当用户询问一只股票（A股或美股）的投资价值、要求个股分析、财报解读、估值判断或多空辩论时使用。驱动从行情基本面到估值结论的完整研究流程，调用行情工具、数据 MCP 与研究技能。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "BX0qjZe26KJU-waLQNVS-A",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792261654383,
+      "version": 6,
+      "name": "柏讯 · 事件驱动",
+      "description": "柏讯事件驱动四件套：事件识别（公告列表/分类/全文三路检索，六组事件类型映射，附公告标识与日期）、事件解读（读正文抽要素：金额/比例/期限/主体/生效条件，明确与需看条件二分，结论须引原文）、历史反应统计（多窗口收益分布 + 样本量 + 分位 + 必选的反例比例，明确是历史分布不是预测）、事件跟踪（按标的/类型筛选与统计，不含预测与推荐）。与柏讯舆情和投研套件的分工：舆情看文本倾向，投研做论点综合，本套件只处理结构化事件（公告/监管/业绩），不猜情绪也不给结论。核心纪律：不预测（不给涨跌预期、不说预计影响百分比）、正文支撑（标题与分类只是检索入口）、历史分布非预测（必须同时给反例比例）、预期已计入提示。公告是事实，解读是本套件的判断，两者分开呈现。不构成投资建议。",
+      "tags": [
+        "wire",
+        "经济"
+      ],
+      "publishedAt": 1793678303603,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "event-detection",
+            "description": "柏讯事件驱动 · 事件识别与分类。当用户要求\"这家公司最近有什么公告/大事\"\"近三个月事件梳理\"\"哪些公司发了业绩预告\"\"把公告按事件类型分一下\"时使用。三路检索（公告列表 / 分类字典 / 全文检索），把公告归入六组事件类型（业绩类、融资类、股权变动、监管类、经营类、互动类），逐条附公告标识、披露日期、上游分类与归类依据。只做识别与分类：不读正文下结论、不判断利好利空、不做反应统计（分别交给 event-reading 与 event-history）。"
+          },
+          {
+            "name": "event-reading",
+            "description": "柏讯事件驱动 · 事件解读。当用户要求\"这条公告到底说了什么\"\"这个定增/减持/业绩预告怎么看\"\"把公告关键条款摘出来\"时使用。读公告正文（get_filing），抽取金额、比例、期限、主体、生效条件五类要素，把结论分成\"正文要素直接支撑（明确）\"与\"需看条件\"两栏，每条结论引用原文并给出公告标识。硬约束：未读正文不结论，标题与分类只是检索入口。不做涨跌预测，不给买卖建议；对\"预期已计入\"只作事实呈现与一般性提示。"
+          },
+          {
+            "name": "event-history",
+            "description": "柏讯事件驱动 · 历史反应统计。当用户要求\"这类事件历史上发生后表现如何\"\"业绩预增公告后 20 天一般怎么走\"\"帮我看看这个事件类型的历史分布\"时使用。对同类事件做多窗口（默认 5/10/20 个交易日）的历史反应统计：样本量、分位数、均值与离散度，并强制给出反例比例与样本门槛。全部输出为描述性历史分布，不是预测；样本不足不下结论；口径（按分类或按关键词）随结果一并写出。不提供涨跌预期、不给买卖建议。"
+          },
+          {
+            "name": "event-watch",
+            "description": "柏讯事件驱动 · 事件跟踪。当用户要求\"帮我盯住这几家公司\"\"每天把公告按类型筛一遍\"\"按标的或事件类型给我一张事件跟踪表\"时使用。按标的与事件类型筛选公告流，输出事件清单、分类计数与期间对比（本周 vs 上周等），并明确标注检索口径与数据截至日期。不做预告、不做推荐、不预测影响；定时触发属宿主 cron 配置，本技能只提供被调用时的方法与输出形态，不实现调度。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "DNYnRrjjAWINzqR_ArmbjQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792703276995,
+      "version": 5,
+      "name": "柏讯 · 预期差",
+      "description": "柏讯预期差四件套：互动问答提取（info-stream 的 sse-interaction 条目结构化为「投资者问题 + 公司答复」，逐条带 item_id、逐字片段与正文状态分流）、预期线索解读（指引/确认/否认/回避/措辞变化五类线索，每条带可回原文的证据，措辞变化须双条并排，线索是公司口径不是事实）、与业绩预告对照（T_qa vs T_pre vs T_act 三段时间轴逐报告期对照，数值算术只走 fd-quant 计算面，预告区间三口径并列）、缺口陈述（已验证/未验证/不可评三档合成，每条带证据链与样本量，缺样本标注「不作依据」）。覆盖边界（上游实调 2026-10-23）：上证 e 互动可用、深交所互动易上游不可用（旧 API 405、新版面 SPA 化），本套件覆盖=SSE 上市公司，深市公司不在能力内，每次输出必须声明该缺口。核心纪律：引用任何问答前先查来源健康度；禁止模型记忆补问答；结论带样本量与时间窗；不评分、不排序、不推荐、不预测。与 info-shock 套件的分工：那边做信息条目的价格影响窗口，本套件只做公司口径与自身披露的对照，不涉及价格。不构成投资建议。",
+      "tags": [
+        "wire",
+        "预期差",
+        "互动问答"
+      ],
+      "publishedAt": 1793678302974,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "gap-qa-extraction",
+            "description": "柏讯预期差 · 互动问答提取。当用户要求\"这家公司在互动平台上被问了什么、怎么答的\"\"把某段时间的投资者问答整理出来\"\"公司在 e 互动上说过什么\"时使用。从 info-stream 拉 source=sse-interaction 的条目并结构化为\"投资者问题 + 公司答复\"问答对，逐条附 item_id、发布时间、逐字片段与正文状态。覆盖边界必须随输出声明：仅上交所（上证 e 互动）上市公司；深交所互动易上游不可用，深市公司问答不在覆盖内。只做提取：不判断答复口径强弱（交 gap-signal-reading）、不对照业绩预告（交 gap-forecast-check）。"
+          },
+          {
+            "name": "gap-signal-reading",
+            "description": "柏讯预期差 · 预期线索解读。当用户要求\"公司答复里有没有业绩指引\"\"口径跟以前比变没变\"\"哪些问题公司在回避\"\"公司在互动平台上确认过什么\"时使用。从互动问答的公司答复中抽取五类预期线索：指引类（业绩/订单/产能/时间表）、确认、否认、回避（问而不答或答非所问）、措辞变化（同一主题跨期答复对照）。每条线索必须附逐字片段与 item_id；措辞变化必须两条并排。只描述口径不判断好坏：不给\"预期差评分\"、不对照业绩预告（交 gap-forecast-check）、不合成结论（交 gap-statement）。"
+          },
+          {
+            "name": "gap-forecast-check",
+            "description": "柏讯预期差 · 与业绩预告对照。当用户要求\"公司在互动平台的说法和后来的业绩预告对得上吗\"\"问答是在预告前还是预告后\"\"公司答复口径与实际业绩差多少\"时使用。把问答时间点放到披露时间轴上：问答发布日 vs 业绩预告/快报披露日 vs 实际值披露日，三段时间轴逐报告期对照；数值对照（口径偏离、增速差）一律传值给 fd-quant 计算面，不得心算。每张对照表必附样本量与时间窗；问答覆盖仅 SSE，深市公司不参与对照。"
+          },
+          {
+            "name": "gap-statement",
+            "description": "柏讯预期差 · 缺口陈述。当用户要求\"这家公司的预期差结论\"\"问答口径和业绩对得上一句话怎么说\"\"给一份预期差摘要\"时使用。把前三技能的产出（问答清单、线索表、对照表）合成为限定性预期差陈述：每条陈述必须同时带证据链（问答 item_id + 逐字片段 + 披露锚点）、样本量与时间窗；已验证（有披露对照支撑）与未验证（仅有口径线索）严格分列；缺样本标注「不作依据」。不评分、不排序、不推荐、不预测。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "I5n-sRpbXuFu6WLbh6PfvQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792283504988,
+      "version": 6,
+      "name": "柏讯 · 投委会",
+      "description": "柏讯投委会三件套：把 TradingAgents/FinRobot 写好但未接线的公司层级辩论程序做成可安装的模式——多头立论（ic-bull-case，数字只能引用证据集 evidence_id、不自造不估算、不替对手立论、把己方理由说尽）、空头立论（ic-bear-case，对称规则 + 不扭曲多头已陈述证据）、裁决（ic-adjudication，入口技能：调度双方后按四纪律给出 Rating 契约实例——冲突不给 hold 须指强弱、证据不足给 review 不降级、裁决不引用任何数字、change_my_mind 必填），并落账至决策账本（结论可被 P5 结算——这是上游两家都缺失的闭环）。诚实定位：单 agent 分角色形态，三个角色由同一模型扮演，不构成独立视角；升级形态（萬星 A2A 三 persona 串行委派，深度 3 / 并发 1 / 分钟计费）已写入技能文本属产品演进。辩论不宣称提高预测准确率，是否更准由账本结算回答。裁决为研究参考，不构成投资建议。",
+      "tags": [
+        "wire",
+        "投委会",
+        "辩论"
+      ],
+      "publishedAt": 1793678302343,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "ic-adjudication",
+            "description": "柏讯投委会 · 裁决（入口技能）。当用户要求\"开投委会\"\"对某只股票做一次多空辩论并给结论\"\"裁决多头空头的分歧\"\"把辩论结论落账\"时使用。本技能是套件入口：调度 ic-bull-case 与 ic-bear-case 双方立论，然后按四条裁决纪律给出 Rating 契约实例（冲突不给 hold 须指强弱、证据不足给 review 不降级、裁决不引用任何数字、change_my_mind 必填），并完成落账（账本不可用时明示\"未落账\"）。单 agent 分角色形态，不构成独立视角。"
+          },
+          {
+            "name": "ic-bull-case",
+            "description": "柏讯投委会 · 多头立论。当用户要求对某只股票构建看多论证、写多头观点、准备投委会辩论的多方意见、把证据集收敛成\"为什么该买\"的最强论证，或作为 ic-adjudication 的立论阶段被调度时使用。本技能不取数、不计算、不裁决——数字只能引用证据集的 evidence_id，论证组织是唯一职责。与 ic-bear-case 对称，空头未发言时不得替对手立论。"
+          },
+          {
+            "name": "ic-bear-case",
+            "description": "柏讯投委会 · 空头立论（辩论三角色之一，与 ic-bull-case 完全对称）。当用户在投委会辩论流程中需要空头方论证、问「有什么理由不买」「多头论证哪里站不住」「估值凭什么下修」，或作为 ic-adjudication 的立论阶段被调度时使用。本技能不取数、不计算、不裁决——数字只能引用证据集的 evidence_id；不同意多头时只能提出新证据或指出其适用边界，不得改写数字。空头论证为空是合法产出，不得为对称而编造。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "IVCGxpg9itGnLpHxT1khWQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792876262217,
+      "version": 14,
+      "name": "情报舆情团队",
+      "description": "柏讯情报舆情团队模板：监视位→闸位双路并行→合成位交叉核对→产出位落看板草稿（trigger×3+handoff×3 编导）。装包后经壹座「团队→从模板实例化」建队；岗位纪律来自共用层四包（需同 cell 安装）：fleet-intel-gather/fleet-data-qa/fleet-brief-report/fleet-board-contribution。",
+      "tags": [
+        "团队",
+        "wire",
+        "情报"
+      ],
+      "publishedAt": 1793678301726,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 4,
+      "skillCount": 3,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "intel-item-five-elements",
+            "description": "情报条目五要素：原文标题、时间、来源、实体、可回溯 ID，缺一不立条。"
+          },
+          {
+            "name": "intel-source-health-triage",
+            "description": "源健康先行：stream_health 判红黄绿三档，坏源不硬取，失败按四分类上报。"
+          },
+          {
+            "name": "intel-sentiment-threshold-card",
+            "description": "情绪阈值卡：基线算法、窗宽、阈值来源与连续同向判据的可复核口径。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          },
+          {
+            "registryName": "fd-sentiment"
+          }
+        ]
+      }
+    },
+    {
+      "id": "SWPvacoFTftfVngMMFotwQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792785589563,
+      "version": 10,
+      "name": "柏讯 · 产物构建",
+      "description": "柏讯产物构建套件：用对话把数据变成控制台里看得见的东西——建数据录入表单、建单记录扫码页、改产物 spec、发布与归档。草稿优先、发布独立；列名先取事实，禁止编造；失败原样转述。附带一支三岗团队模板（巡线岗主动、内容岗与源岗被动），把「持续迭代内容」编成可安装的组织形态。",
+      "tags": [
+        "wire",
+        "产物",
+        "看板",
+        "表单"
+      ],
+      "publishedAt": 1793678301182,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 2,
+      "skillCount": 3,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "wire-artifact-build",
+            "description": "柏讯产物构建。当用户要用对话把数据变成柏讯里看得见的东西——建看板（dashboard）、建正文文档（doc）、建数据录入表单（form）、建单记录扫码页（record-view）、给已有产物改 spec、发布或归档产物——时使用。所有写入一律落草稿，发布必须是独立的第二次显式调用；spec 引用的列名必须先用工具取真实列清单核对，不得凭记忆编造；上游拒绝时原样转述错误，不伪造成功。"
+          },
+          {
+            "name": "fleet-signal-triage",
+            "description": "巡线信号五类归并与委派三要素：无信号是合法结论，写入工具零调用。"
+          },
+          {
+            "name": "fleet-artifact-draft-discipline",
+            "description": "产物草稿纪律：schema 预检、数值来源标注、草稿与发布分离、source_ref 身份三元组。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "UzMQPvaZqdmpluQsbY-eng",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791558884482,
+      "version": 6,
+      "name": "识律 · 刑事辩护套件",
+      "description": "刑事辩护套件：以总控流程技能为入口，串联认罪认罚/不起诉论证（审查起诉阶段）与庭审发问提纲（一审阶段），法条与指导案例走识律法律检索、法规效力走数据业务检索，类案与量刑参照走裁判文书检索。",
+      "tags": [
+        "lex",
+        "法律"
+      ],
+      "publishedAt": 1793678300630,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "criminal-defense-workflow",
+            "description": "刑事辩护全流程总控（识律刑事辩护套件入口技能）。当用户提出刑事案件材料（起诉意见书/起诉书/卷宗/判决书）、要求刑事阅卷分析、辩点梳理、辩护策略路径选择、定性或量刑方向判断时使用。按审查起诉—一审的阶段推进（侦查阶段不在本技能主流程内，见阶段 1 说明），调度套件内「认罪认罚/不起诉论证」与「庭审发问提纲」两个原子技能，并统一承担法条锚定、类案检索与红线校验。"
+          },
+          {
+            "name": "criminal-plea-and-nonprosecution",
+            "description": "认罪认罚与不起诉论证（识律刑事辩护套件原子技能）。审查起诉阶段使用：当用户问\"要不要认罪认罚\"\"认罪认罚协商\"\"量刑建议协商\"\"能不能不起诉\"\"法定/存疑/酌定不起诉\"或由 criminal-defense-workflow 调度时使用。输出证据态势、利弊权衡、量刑建议预测与协商三层条款、三种不起诉路径论证，并做当事人知情告知。"
+          },
+          {
+            "name": "criminal-trial-examination-outline",
+            "description": "庭审发问与举证质证提纲（识律刑事辩护套件原子技能）。一审阶段使用：当用户说\"庭前会议\"\"排非申请\"\"非法证据排除\"\"庭审发问\"\"发问提纲\"\"质证提纲\"\"举证质证\"\"交叉询问\"\"逐份质证\"\"辩方举证\"或由 criminal-defense-workflow 调度时使用。输出庭前会议议程应对、非法证据排除申请、公诉人发问预判与应对、辩护人对被告人/证人/鉴定人的发问提纲、辩方举证提纲与逐份质证意见（书面版 + 庭上口述版）。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "XozWSsRjsA8MxFPkHBJZbw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791822678807,
+      "version": 7,
+      "name": "柏讯 · 行业与企业套件",
+      "description": "行业景气与产业链传导 + 企业基本面与财务质量 + 面板计量方法：行业格局与上下游传导落到上市公司实证（GTA 面板 1,468 变量），企业端做杜邦分解与财务红旗项识别，计量侧支持固定效应、聚类稳健标准误与双重差分。",
+      "tags": [
+        "wire",
+        "经济",
+        "金融"
+      ],
+      "publishedAt": 1793678300022,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "industry-chain-analysis",
+            "description": "行业景气与产业链传导分析。当用户要判断一个行业处在景气周期的哪个位置、梳理上下游投入产出与成本价格传导路径、用上市公司财务面板实证行业判断、刻画行业格局（规模/增速/集中度/进入壁垒），或把研报观点与公司真实财务数据对照时使用。走柏讯服务端行业与公司财务数据，不涉及价格与市值分析。"
+          },
+          {
+            "name": "corporate-fundamental-analysis",
+            "description": "企业基本面与财务质量分析（柏讯线）。当用户要求给一家 A 股上市公司做三表速览、杜邦分解、现金流质量诊断、财务红旗项排查或同业分位对照时使用。走 GTA firm-year 财务面板 + 中国财报三表与附注，输出带来源与数据期数的可复核结论。本技能只做基本面质量判断，不做估值、不给目标价。"
+          },
+          {
+            "name": "panel-econometrics",
+            "description": "面板数据计量分析。当用户要在\"个体 × 时间\"二维结构上做推断时使用——固定效应/随机效应与 Hausman 检验、聚类稳健标准误、动态面板（滞后因变量）、双重差分 DID 与平行趋势/事件研究检验、断点回归概念。面板取自柏讯服务端三类源：GTA 上市公司（firm-year）、中国城市（city-year）、世界银行 WDI（country-year），宏观控制变量取柏讯宏观序列。不涉及股价与市值建模。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "Y99VUN6RdWs98ocK0ZAN8A",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792884875599,
+      "version": 9,
+      "name": "识律营销团队",
+      "description": "lex 营销内容团队模板（content-factory 变体）：采集位（客户场景与行业痛点）→合成位（量级话术，不用精确数字）→闸位（红线审读必设）→产出位（落官网/CMS 草稿，发布走动作闸提案不直发）。装包后经壹座「团队→从模板实例化」建队；纪律来自共用层四包（同 cell 装）：fleet-intel-gather/fleet-brief-report/fleet-data-qa/fleet-board-contribution。",
+      "tags": [
+        "团队",
+        "lex",
+        "营销"
+      ],
+      "publishedAt": 1793678299400,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 4,
+      "skillCount": 3,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "legal-marketing-magnitude-wording",
+            "description": "量级话术对照表：各类对外指标的合规模级表述与禁用精确数字清单。"
+          },
+          {
+            "name": "legal-product-claim-checklist",
+            "description": "识律产品能力表述清单：可写功能事实、禁写效果承诺与案件结论。"
+          },
+          {
+            "name": "lex-scenario-pitch-card",
+            "description": "选题卡模板：场景/痛点/产品面/成稿理由四栏，一题一卡。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "YT87-2Axuu49I123zVYyhA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793421265139,
+      "version": 8,
+      "name": "柏讯本体建设团队",
+      "description": "柏讯数据本体建设团队：对靶客户数据面持续盘账、建模、校验、经动作闸提议落库，让实体关系图谱有真实内容。五岗流水线：盘账员（只读画像：行列规模、候选主键、疑似外键）→建模师（实体/关系声明草案，业务名从列名直译禁臆造）→纪律校验闸（确定性规则放行或拦截，给列名级原因）→声明提案员（经 wire_action_propose 提议内置声明动作，即时返回即合规，写操作永不直调）→台账主编（三点实调抽样对账，缺位如实标注）。全链只读+提案制：本体声明经客户动作闸确认后落库，数据行零写回，实体与关系只建不改不删。",
+      "tags": [
+        "团队",
+        "wire",
+        "本体"
+      ],
+      "publishedAt": 1793678298857,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 5,
+      "skillCount": 3,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "ontology-readonly-profiling",
+            "description": "只读取证流程：数据集清单→表结构→逐列四证据（唯一性/空值率/值域样本/外键候选）。"
+          },
+          {
+            "name": "ontology-draft-deterministic-rules",
+            "description": "草案自洽五判据：主键⊆列快照、关系目标∈主键集合、四元组唯一、1:n 与 n:1 互斥、中间集值域。"
+          },
+          {
+            "name": "ontology-action-proposal-protocol",
+            "description": "声明提案协议：一件一单、全文件正文、不重试刷屏、未在册动作走 escalate。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-ops"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ZCot-b6HsnJRTTDKr_aunQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792884867354,
+      "version": 9,
+      "name": "法规追踪团队",
+      "description": "识律法规更新团队模板：监视位每日扫新颁/修订/废止（fd-legal-search-mcp 权威法规面，32,296 口径单一事实源）→合成位更新简报+生效影响标注（法条引用文号+条款定位可回查）→产出位落简报草稿；无更新日报空。装包后经壹座「团队→从模板实例化」建队；纪律来自共用层智能体（同 cell 装）：fleet-intel-gather/fleet-brief-report/fleet-board-contribution。",
+      "tags": [
+        "团队",
+        "lex",
+        "法规"
+      ],
+      "publishedAt": 1793678298312,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "statute-scan-status-taxonomy",
+            "description": "新颁/修订/废止三分类机械判据：题名关键词+状态字段，判据可复核。"
+          },
+          {
+            "name": "statute-reference-resolution",
+            "description": "条级定位解析：law_reference 解析「某法第 N 条」到文号+law_id+条号，失败标不可解。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "_FN7pti9TH5JMg3YnQut0w",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792230740323,
+      "version": 6,
+      "name": "柏讯 · 策略工坊",
+      "description": "柏讯策略工坊四件套：策略设计（权重语义与 universe 验证）、回测解读（五条要求与三条禁止项）、风控参数（含义/量级/局限）、模拟盘督导（运行事件/权重快照/数据缺口）。与柏讯模拟交易套件的分工：那边是操作面——开账户、下单、撤单、订单历史，由对话操作技能承接；本套件是思考面——想清楚权重怎么定、回测结果怎么读、风控参数意味着什么，一切成交仍走模拟交易服务。paper-only：无真实资金；回测与模拟盘不预示未来。",
+      "tags": [
+        "wire",
+        "量化",
+        "策略",
+        "回测"
+      ],
+      "publishedAt": 1793678297771,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 3,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "strategy-design",
+            "description": "柏讯策略工坊 · 策略设计。当用户想把一个投资想法变成可回测的多标的策略（universe + 目标权重 + 调仓频率）、想理解权重语义（和为 1、非负、余量现金）、想取舍调仓频率与换手、或想知道哪些表达不被支持（做空/杠杆/盘中调仓）时使用。产出：一份可创建的 weight 模式策略 spec。"
+          },
+          {
+            "name": "strategy-backtest-interpretation",
+            "description": "柏讯策略工坊 · 回测解读。当用户拿到一份回测结果（尤其 walk-forward 分窗、开启成本模型、带基准对比、参数扫描）想知道\"这个数字说明什么\"、要求解读权益曲线与统计、或问\"这能当作未来收益预期吗\"时使用。核心纪律：历史模拟不预示未来；单次回测不下有效结论；不忽略成本与基准。"
+          },
+          {
+            "name": "strategy-risk-controls",
+            "description": "柏讯策略工坊 · 风控参数。当用户问\"单票最多买多少\"\"止损设多少\"\"换手太高怎么办\"\"设了会自动执行吗\"——即想理解单票上限/集中度/换手/止损/冷却期这些风控参数的含义、量级参考、代价与局限时使用。核心纪律：风控参数是策略层参数，不是引擎保证。"
+          },
+          {
+            "name": "strategy-paper-supervision",
+            "description": "柏讯策略工坊 · 模拟盘督导。当用户已启动权重模式的纸面实盘（paper run），想知道\"为什么没下单\"\"权重怎么和目标对不上\"\"缩量是什么意思\"\"停了会平仓吗\"、需要查看运行事件与权重快照、或要区分信号未触发与数据缺口时使用。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "aMdkHzCbsc3fPsYiqMDUOA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792319753245,
+      "version": 7,
+      "name": "柏讯 · 舆情驱动",
+      "description": "柏讯舆情驱动三件套：把公告文本变成带原文引用、可核验、可追踪的观察维度——公告舆情审读（sentiment-document-review，逐篇打分必带引用与字符定位、多篇给分布而非平均情绪、服务拒答如实转述、低置信显式标注）、舆情转向追踪（sentiment-trend-watch，按公告发布日排布、转向点必须附对应文档、样本门槛单期 ≥3 篇且高置信 ≥2 篇、覆盖面与置信度固定两栏）、舆情与价格持仓的描述性对照（sentiment-signal-bridge，只陈述时间先后不断言因果、相关性陈述须 ≥12 对且走计算面、严禁给买卖建议与「信号」称谓）。与投研套件的分工：研报的催化剂章引用本套件分数，不重复打分（同一服务同一幂等键，重复调用命中缓存）；与策略工坊的分工：那边做信号与回测，本套件只做描述性对照不给信号。分数不预示价格、当前版本（gold-v10 / prompt v7）两轮复测置信桶单调递增、方向一致率 99.19%，但五档精档之间仍有相邻档误判，均如实标注。",
+      "tags": [
+        "wire",
+        "舆情",
+        "公告"
+      ],
+      "publishedAt": 1793678297216,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 6,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "sentiment-document-review",
+            "description": "柏讯舆情驱动 · 公告舆情审读。当用户要求\"看看这家公司最近的公告口径怎么样\"\"给这几篇公告做个舆情判断\"\"这些公告偏正面还是负面\"\"公告里有什么值得注意的表述\"时使用。取公告全文（巨潮面）→ 逐篇打分（fd-sentiment，分数必带原文引用）→ 呈现分数/band/置信度/引用片段与定位。多篇给分布而非平均情绪；拒答时如实转述；低置信显式标注。不做交易信号，不给情绪指数。"
+          },
+          {
+            "name": "sentiment-trend-watch",
+            "description": "柏讯舆情驱动 · 舆情转向追踪。当用户要求\"这家公司最近舆情是在变好还是变差\"\"这段时间公告口径有没有转向\"\"按月看公告情绪的分布变化\"\"找出情绪转折点对应的公告\"时使用。按公告发布日排布分数，给逐期分布与转向点（附对应文档），并强制报告覆盖面与置信度两栏。样本不足时明示不下转向结论。不给情绪指数、不给交易信号。"
+          },
+          {
+            "name": "sentiment-signal-bridge",
+            "description": "柏讯舆情驱动 · 舆情与价格/持仓的描述性对照。当用户要求\"舆情和股价是什么关系\"\"情绪是不是领先价格\"\"看看公告情绪和我持仓的对应\"\"舆情能不能当信号用\"时使用。做的是描述性对照：把分数分布的时间位置与价格/持仓的时间位置并排放，说清先后与是否同期，并强制标注样本是否足以做描述性陈述。严禁给买卖建议、严禁把舆情称为信号。价格通道或账本不可用时明示降级。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-sentiment"
+          },
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ceuUUWYFYH_HiYnJ6UYqSg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792703276515,
+      "version": 5,
+      "name": "柏讯 · 政策传导",
+      "description": "柏讯政策传导四件套：政策识别（部委条目 source_type=ministry，读正文抽发布机关/文号/政策工具/适用范围/生效时间/执行期限/量化目标七件套，每项要素附 item_id、as_of 与经 locate_evidence 核对的逐字片段）、行业映射（政策要素→受影响行业/区域→可检验变量三段映射，变量必须在年鉴/城市/公司面板真实检索到，两档置信度：政策明示/语义推断，无变量环节进未验证清单）、区域与企业传导（事件窗与政策强度序列两条路线逐环检验，相关系数、时滞扫描、样本量与窗口随行；结论三档——已验证/不显著/未验证环节，未验证环节必须显式标注，相关系数与样本量随每条结论输出；历史统计关系非因果证明）、政策跟踪（部委条目流计数与期间对比、健康度水位、已验证链路命中登记只转引不新增结论）。核心纪律：健康度前置（引用前先查 stream_health，lag 超阈值声明信息可能不完整）、区分已验证与未验证环节（无数据的一环明示未验证，绝不默认政策必然传导）、相关系数与样本量随结论输出、不因果表述不预测。不构成投资建议。",
+      "tags": [
+        "wire",
+        "经济",
+        "金融"
+      ],
+      "publishedAt": 1793678296635,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "policy-detection",
+            "description": "柏讯政策传导 · 政策识别。当用户要求\"最近有什么新政策\"\"把某部委近一月的发布理一下\"\"这条政策文件说了什么\"时使用。先查来源健康度，再取部委条目（source_type=ministry），读正文抽取政策要素（发布机关/文号/政策工具/适用对象与范围/生效时间/执行期限/量化目标），每项要素附 item_id、as_of 与经 locate_evidence 核对的原文逐字片段。只做识别与要素抽取，不做行业映射（交 policy-mapping）与传导检验（交 policy-transmission）。"
+          },
+          {
+            "name": "policy-mapping",
+            "description": "柏讯政策传导 · 行业映射。当用户要求\"这条政策影响哪些行业\"\"政策落到哪些可检验的指标上\"\"给我政策—行业—变量的映射表\"时使用。把政策要素映射到受影响行业/区域维度，并逐一检索真实在册的检验变量（年鉴/城市面板/公司面板），两档置信度（政策明示 / 语义推断）逐条标注。只做映射：不做统计检验（交 policy-transmission），不出投资候选。"
+          },
+          {
+            "name": "policy-transmission",
+            "description": "柏讯政策传导 · 区域与企业传导检验。当用户要求\"这条政策到底传没传到行业/区域数据\"\"政策发布后地方指标变了吗\"\"政策与公司科目有没有统计关系\"时使用。对映射交来的每条\"政策→变量\"假设逐环检验：相关系数、时滞扫描、样本量与窗口；结论三档——已验证 / 不显著 / 未验证环节，未验证环节必须显式标注，相关系数与样本量随每条结论输出。历史统计关系，不是因果证明，不预测。"
+          },
+          {
+            "name": "policy-watch",
+            "description": "柏讯政策传导 · 政策跟踪。当用户要求\"帮我盯着部委发布\"\"每旬把新政策理一遍\"\"跟踪表里标一下哪些撞上了已验证链路\"时使用。按部委来源与政策工具类型筛条目流，输出条目清单、来源计数、期间对比与健康度水位；对映射/传导已登记的政策标\"同一事项的新披露\"，对撞上已验证链路要素的新政策只做\"命中登记\"不新增结论。不预测、不推荐；定时属宿主 cron。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cjT2AW1QDGPGbvNIFmLgDg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791822646471,
+      "version": 8,
+      "name": "柏讯 · 宏观研究套件",
+      "description": "宏观周期与景气分析：六域指标框架（增长/通胀/货币信用/财政/外贸/地产消费）+ 周期定位（产出-通胀四象限）+ 领先-同步-滞后分层 + 传导链推演 + 拐点识别；配套统计检验方法做相关性与平稳性验证。数据经柏讯开放数据面与统计年鉴实时检索，每个数值标注来源与数据期数。",
+      "tags": [
+        "wire",
+        "经济",
+        "金融"
+      ],
+      "publishedAt": 1793678296022,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "macro-cycle-analysis",
+            "description": "宏观周期与景气分析。当用户要求判断当前经济周期位置（复苏/过热/滞胀/衰退）、做六域景气扫描（增长/通胀/货币信用/财政/外贸/地产消费）、做领先-同步-滞后指标分层、识别景气拐点、梳理宏观变量到其业务问题的传导链，或做省际补充与国际对比时使用。走柏讯服务端宏观数据，不含收益率曲线与互换分析。"
+          },
+          {
+            "name": "statistical-inference",
+            "description": "统计检验与探索性分析。当用户要求做描述统计与分布诊断、选假设检验（t/ANOVA/卡方/非参）、判断两组或城市间差异是否显著、做相关性与配对分析、诊断时序平稳性与单位根、做多重比较校正，或对已有的本地 CSV/表格做探索性分析时使用。走柏讯服务端序列取数，价格类序列走本地 DAAS。"
+          },
+          {
+            "name": "china-macro-brief-workflow",
+            "description": "中国宏观经济分析简报工作流（数据-中国经济包入口技能）。当用户询问中国宏观经济问题（GDP、通胀、货币、社融、地产、外贸、财政、行业景气），要求宏观数据查询、趋势分析、行业对照或宏观简报时使用。驱动从指标框架到图表简报的完整流程。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "dxT2HEZ1z8GibrjMAgFJJw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792261655382,
+      "version": 6,
+      "name": "柏讯 · 产业链联动",
+      "description": "柏讯产业链联动四件套：链条映射（上中下游环节可多级、代表标的与归属依据、每环关键变量与来源、两档映射置信度）、传导验证（逐环相关性 + 时滞扫描 + 样本量与窗口，未验证环节明示不默认成立，不显著如实呈现，频度差处理，非因果表述）、环节受益分析（基于已验证的传导结论给候选，逐候选项回指传导依据，未验证环节不作依据，不预测价格）、链条景气跟踪（按环节分组的变量走势 + 来源与最新期数 + 缺口标注，无预测无建议）。与既有「行业链分析」技能的关系：那是分析技能，本套件是它的可安装套件化 + 可执行出口版本（从产业链关系走到可回测的权重），不是重复实现。核心纪律：产业链叙事最容易滑向讲漂亮故事——上游涨价到中游承压再下游提价听起来总是对的，但时滞、幅度与是否发生都必须有数据支撑；无数据的那一环明示未验证。传导结论是历史统计关系不是因果证明，不构成投资建议。",
+      "tags": [
+        "wire",
+        "经济"
+      ],
+      "publishedAt": 1793678295443,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 6,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "chain-mapping",
+            "description": "柏讯产业链联动 · 链条映射。当用户要求\"把这个行业拆成上下游\"\"这几家公司分别在产业链哪一环\"\"这条链的结构和关键变量是什么\"时使用。产出：环节结构（上/中/下游，可多级）+ 代表标的（逐家给可解释的归属依据）+ 每环关键变量与来源 + 两档映射置信度（分类体系支持 / 公开资料推断）。只做结构映射，不做传导检验（交给 chain-transmission），不出候选（交给 chain-beneficiary）。"
+          },
+          {
+            "name": "chain-transmission",
+            "description": "柏讯产业链联动 · 传导验证。当用户说\"上游涨价能不能传到中游毛利\"\"这条链的滞后有多长\"\"这个传导到底成不成立\"时使用。产出：逐环传导检验表——每环给相关系数、时滞扫描、样本量与窗口；无数据的环节明示\"未验证\"，不显著的结果如实呈现，频度差显式处理。结论是历史统计关系，不是因果证明。"
+          },
+          {
+            "name": "chain-beneficiary",
+            "description": "柏讯产业链联动 · 环节受益分析。当用户说\"这条链里哪个环节该配\"\"毛利承压环节选哪几只\"\"把传导结论变成可回测的候选\"时使用。产出：可执行候选 universe 与目标权重（可进权重模式回测），每个候选回指某条已验证的传导结论；未验证环节不作依据。不预测价格、不给涨跌判断。"
+          },
+          {
+            "name": "chain-watch",
+            "description": "柏讯产业链联动 · 链条景气跟踪。当用户要求\"盯一下这条链最近怎么样\"\"按环节给我看关键变量的最新走势\"\"哪些数据好久没更新了\"时使用。产出：按环节分组的变量走势表（来源 + 最新期数 + 缺口标注 + 变化方向），不含预测、不含建议。宿主 cron 可定时触发（本技能只给方法与输出形态，不实现调度）。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "egaYyOaZVTf0FWlLvaGAQA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792593326824,
+      "version": 7,
+      "name": "柏讯 · 投研三镜头",
+      "description": "三员投研团队：宏观分析（环境）、估值分析（价值）、投委会多空质询（博弈）三个独立镜头审读同一问题。团队任务下扇出聚合；单聊可切换任一角色。舆情/风控等更多角色可入动态团队叠加。",
+      "tags": [
+        "wire",
+        "投研",
+        "团队"
+      ],
+      "publishedAt": 1793678294831,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "research",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 7,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "macro-cycle-analysis",
+            "description": "宏观周期与景气分析。当用户要求判断当前经济周期位置（复苏/过热/滞胀/衰退）、做六域景气扫描（增长/通胀/货币信用/财政/外贸/地产消费）、做领先-同步-滞后指标分层、识别景气拐点、梳理宏观变量到其业务问题的传导链，或做省际补充与国际对比时使用。走柏讯服务端宏观数据，不含收益率曲线与互换分析。"
+          },
+          {
+            "name": "statistical-inference",
+            "description": "统计检验与探索性分析。当用户要求做描述统计与分布诊断、选假设检验（t/ANOVA/卡方/非参）、判断两组或城市间差异是否显著、做相关性与配对分析、诊断时序平稳性与单位根、做多重比较校正，或对已有的本地 CSV/表格做探索性分析时使用。走柏讯服务端序列取数，价格类序列走本地 DAAS。"
+          },
+          {
+            "name": "equity-valuation",
+            "description": "股票估值（DCF + 可比公司 + 三表联动）。当用户要求给某家 A 股/港股公司做内在价值或相对估值、算 WACC 与终值、跑敏感性与情景表、给目标价区间、做同业倍数对照与反推市场隐含预期时使用。财务数据走柏讯服务端通道 A，价格与市值走本地 DAAS 通道 B；通道 B 未连接时中止估值，不给目标价。"
+          },
+          {
+            "name": "earnings-cycle-analysis",
+            "description": "财报周期分析（前瞻 + 复盘）。当用户要求对一家公司做财报前瞻（本次披露类型与时间、该盯哪些科目、超预期/低于预期可能从哪来）、做财报复盘（实际 vs 上年同期、差异由哪个科目驱动、盈利质量如何、对后续季度意味着什么），或梳理连续数期经营动能变化时使用。基于柏讯财报与公告数据，不做技术分析。触发词：财报前瞻、业绩预告、财报复盘、业绩点评、超预期、低于预期、盈利质量、某某公司季报/半年报/年报分析。"
+          },
+          {
+            "name": "ic-adjudication",
+            "description": "柏讯投委会 · 裁决（入口技能）。当用户要求\"开投委会\"\"对某只股票做一次多空辩论并给结论\"\"裁决多头空头的分歧\"\"把辩论结论落账\"时使用。本技能是套件入口：调度 ic-bull-case 与 ic-bear-case 双方立论，然后按四条裁决纪律给出 Rating 契约实例（冲突不给 hold 须指强弱、证据不足给 review 不降级、裁决不引用任何数字、change_my_mind 必填），并完成落账（账本不可用时明示\"未落账\"）。单 agent 分角色形态，不构成独立视角。"
+          },
+          {
+            "name": "ic-bull-case",
+            "description": "柏讯投委会 · 多头立论。当用户要求对某只股票构建看多论证、写多头观点、准备投委会辩论的多方意见、把证据集收敛成\"为什么该买\"的最强论证，或作为 ic-adjudication 的立论阶段被调度时使用。本技能不取数、不计算、不裁决——数字只能引用证据集的 evidence_id，论证组织是唯一职责。与 ic-bear-case 对称，空头未发言时不得替对手立论。"
+          },
+          {
+            "name": "ic-bear-case",
+            "description": "柏讯投委会 · 空头立论（辩论三角色之一，与 ic-bull-case 完全对称）。当用户在投委会辩论流程中需要空头方论证、问「有什么理由不买」「多头论证哪里站不住」「估值凭什么下修」，或作为 ic-adjudication 的立论阶段被调度时使用。本技能不取数、不计算、不裁决——数字只能引用证据集的 evidence_id；不同意多头时只能提出新证据或指出其适用边界，不得改写数字。空头论证为空是合法产出，不得为对称而编造。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kimcQr9qSyGmbXej3CmeDg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792261653896,
+      "version": 6,
+      "name": "柏讯 · 因子选股",
+      "description": "柏讯因子选股四件套：因子库与口径（52 因子九类清单、逐因子分子分母与报表期别、三个共线因子的剔除说明、数据可得性分档）、因子暴露与分层（走计算面，层数与极端值处理显式，IC 含 Pearson/Spearman，样本不足不作依据）、选股应用（多因子打分或条件筛选，产出候选 universe/目标权重，打分非预测）、无未来函数回测协议（财报用披露日而非报告期、universe 用当期成分、价格止于决策日、断言必须开启）。与自适应轮动套件的分工：轮动用价格类行业动量选组、本套件用基本面因子选股，两者可组合不重复；与个股投研套件的分工：那边做单只公司的深度报告，本套件做横截面的排序与筛选。因子值一律由计算面算出，不手算。回测为历史模拟，不构成投资建议。",
+      "tags": [
+        "wire",
+        "经济"
+      ],
+      "publishedAt": 1793678294158,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 6,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "factor-library",
+            "description": "柏讯因子选股 · 因子库与口径。当用户问\"有哪些基本面因子可用\"\"这个因子怎么算\"\"为什么这两个因子不能同时用\"\"某个因子在 A 股跑不跑得动\"时使用。收录 FinRL-X 的 52 个基本面因子（九类），逐因子给出分子、分母、所用报表、期别、取值来源、数据可得性档位与 A 股适配说明，并写明三个共线因子的剔除理由。本技能只定义因子、不计算因子值、不选股、不做因子择时。"
+          },
+          {
+            "name": "factor-exposure",
+            "description": "柏讯因子选股 · 因子暴露与分层。当用户要求\"算某只/某组标的的因子暴露\"\"按因子分层看收益差\"\"给我这个因子的 IC\"\"这个因子在横截面上有没有区分度\"时使用。暴露、分层、IC 与秩变换全部经 fd-quant 计算面完成，不在对话里手算；层数、极端值处理、样本门槛三处必须显式声明。产出：暴露表 + 分层收益表 + IC 数值与样本量。不做选股、不做因子择时。"
+          },
+          {
+            "name": "factor-screening",
+            "description": "柏讯因子选股 · 选股应用。当用户要求\"按这些因子筛一批股票\"\"多因子打分选前 N 只\"\"把因子结论变成可回测的持仓\"时使用。把 factor-exposure 的暴露与 IC 结果变成候选 universe 与目标权重，权重或规则显式写出，筛选条件逐条可解释，缺失因子按声明规则处理。产出可直接进入权重模式回测的候选名单/权重。因子打分不是预测。"
+          },
+          {
+            "name": "factor-backtest-protocol",
+            "description": "柏讯因子选股 · 无未来函数回测协议。当用户要把因子策略送进回测、要核对\"这次回测有没有偷看未来\"、要区分样本内与样本外、或要验某条未来数据会不会被拦住时使用。把四条点内纪律写成可核验的断言（财报按披露日、universe 用当期成分、价格止于决策日、断言必须开启），并用注入未来披露的夹具证明协议真的在拦。产出：回测口径卡 + 断言记录 + 夹具测试结果 + 样本内外分离的结论。不做因子择时、不给预期收益。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mFYxWUfp5oHsPcpRDhxAhw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792261654884,
+      "version": 6,
+      "name": "柏讯 · 组合风险",
+      "description": "柏讯组合风险四件套：风险预算（单票与板块上限 + 超限按比例重分配 + 迭代上限显式 + 未收敛如实报告，产出合规 TargetWeights）、回撤与波动体检（最大回撤起止/年化波动/HHI/前 N 占比/行业集中度/有效标的数 + 基准超额与跟踪误差，指标走计算面，体检不预测）、止损纪律（量级起点 -5%/-10%/20 日冷却 + 按标的波动重标 + 三处明示引擎不自动执行 + 触发检查只呈现状态不新增判断）、再平衡方案（逐标的差额/方向/股数 + 佣金印花税滑点分项成本 + 可送权重模式回测 + 不含择时）。与决策复盘套件的分工：复盘看现状（集中度/回撤/偏离），本套件定纪律（预算怎么分、止损怎么设、什么时候该动手），一静一动。与策略工坊的分工：工坊讲通用参数含义，本套件把纪律应用到用户的实际持仓上。paper-only：无真实资金；所有指标是历史与当前状态描述，不构成投资建议。",
+      "tags": [
+        "wire",
+        "经济"
+      ],
+      "publishedAt": 1793678293526,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "portfolio-budget",
+            "description": "柏讯组合风险 · 风险预算。当用户要求\"资金怎么分到这些标的/行业\"\"单票最多放多少\"\"按上限重新分配一遍\"时使用。产出：一份**生成即合规**的 TargetWeights 契约实例（单票上限 + 板块上限 + 迭代重分配，迭代上限显式，未收敛如实报告）+ 约束满足表。只管权重结构，不管\"该投多少钱\"；现金靠 Σweights < 1 留出，引擎不会替你扣。"
+          },
+          {
+            "name": "portfolio-drawdown-review",
+            "description": "柏讯组合风险 · 回撤与波动体检。当用户要求\"看看这个组合的回撤有多深\"\"波动多大\"\"是不是太集中了\"\"和沪深300比怎么样\"时使用。产出：组合级指标（最大回撤含峰谷日、年化波动、HHI、前 N 占比、板块集中度、有效标的数）+ 基准对比（超额与跟踪误差）。指标一律来自 fd-quant 计算面，不手算、不预测，缺失如实标注。"
+          },
+          {
+            "name": "portfolio-stop-discipline",
+            "description": "柏讯组合风险 · 止损纪律。当用户要求\"止损设多少\"\"移动止损怎么定\"\"止损设了会自动执行吗\"\"帮我看看哪些已经跌破线了\"时使用。产出：一份用户既定的止损规则（绝对止损 / 移动止损 / 冷却期，含量级起点与按波动重标的方法与依据）+ 触发检查的状态呈现（当前值 vs 阈值 + 冷却剩余）。**本技能必须首先声明：这些是用户的纪律设定，不是引擎保证——引擎不会自动执行止损，权重模式只消费 weights_series，契约的 constraints 只有单票与板块两个上限字段，没有任何止损字段。**"
+          },
+          {
+            "name": "portfolio-rebalance-plan",
+            "description": "柏讯组合风险 · 再平衡方案。当用户要求\"从现在的持仓调到这个目标权重，具体买什么卖什么\"\"每只调多少股\"\"调仓成本大概多少\"\"这套再平衡规则历史上表现如何\"时使用。产出：逐标的差额 / 方向 / 整数股数（向下取整，与权重模式引擎同口径）+ 成本预估（佣金 / 印花税 / 滑点分项，参数显式）+ 可送入权重模式回测的权重规则。**方案不含择时建议**；并明确引擎不自动执行止损、只消费 weights_series，cash_floor 只是权重上限校验而非独立持仓约束。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mfaIAXHRVFQJaXPXyiAzKQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791558884268,
+      "version": 7,
+      "name": "识律 · 合同审查套件",
+      "description": "中国法（大陆）合同审查：五张行业审查卡（劳动用工 / 借贷融资 / 保密NDA / 买卖供货 / 服务与SaaS）× 法条核验与效力锚定 × law-bench 条款装配与三重评审，产出双轴风险问题清单、审查备忘录与**修订对比表**（原条款/修订后条款/修订理由与核验依据三列，v2 新增交付形态）。",
+      "tags": [
+        "lex",
+        "法律"
+      ],
+      "publishedAt": 1793678292903,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 3,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "contract-review-cn",
+            "description": "中国法合同审查。判定合同适用中国大陆法后，加载通用原则与五张行业审查卡（劳动/借贷/保密/买卖/SaaS），逐条审查并产出双轴风险问题清单与审查备忘录；涉精确法条、阈值、生效日期时经法律数据工具核验。当用户要求审查/审阅/markup 合同、检查条款、问某条款在中国法下是否有效或如何修改时使用。仅覆盖中国大陆法，不含港澳台、不含刑事与行政、不含外国法规则包。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "law-bench"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ndVkyAg2NfIVXg7oSDAWxw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791558884677,
+      "version": 7,
+      "name": "识律 · 劳动法套件",
+      "description": "劳动争议全流程 + 双计算器（识律×柏讯双线合流）：劳动仲裁全流程（申请书/答辩书/证据目录/一裁终局判断/时限表，含裁判者分支）为入口技能，劳动补偿金计算器与人身损害赔偿计算器为两个原子技能。法律依据走识律条级引用解析与效力核验，赔偿/补偿的统计基数走柏讯分省分年统计读取并强制 provenance（计算公式 + 基数来源 + 年份），统计源不可用或概念码未定档时中止数值计算。",
+      "tags": [
+        "lex",
+        "法律"
+      ],
+      "publishedAt": 1793678292305,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "labor-arbitration-workflow",
+            "description": "劳动争议仲裁全流程（识律劳动法套件入口技能）。当用户描述劳动争议案情（违法解除/经济补偿/加班费/未签合同二倍工资/调岗降薪/工伤待遇）、要求仲裁申请书或答辩书、证据目录、一裁终局判断、仲裁时限表，或以裁判者身份要求争议焦点归纳与裁决说理时使用。按立场（申请人/被申请人/裁判者）推进八阶段流程，并按需点名套件内两个计算器技能。"
+          },
+          {
+            "name": "labor-compensation-calculator",
+            "description": "劳动补偿金与经济补偿金计算器（识律劳动法套件原子技能，双计算器之一）。当用户要求计算解除劳动合同经济补偿 N、违法解除赔偿金 2N、代通知金 N+1、未签书面劳动合同二倍工资差额、加班费、未休年休假工资报酬，或需要判断三倍封顶（社平工资三倍 × 12 年上限）时使用。法律依据走识律条级解析，数值基数走柏讯统计源，每个结果强制附公式与基数来源。"
+          },
+          {
+            "name": "personal-injury-calculator",
+            "description": "人身损害赔偿计算器（识律劳动法套件原子技能，双计算器之一）。当用户要求计算人身损害赔偿项目时使用——医疗费、误工费、护理费、交通费、住院伙食补助费、营养费、残疾赔偿金、残疾辅助器具费、丧葬费、死亡赔偿金、被扶养人生活费、精神损害抚慰金。法律依据走识律条级解析，残疾/死亡赔偿金等基数走柏讯统计源，每个结果强制附公式与基数来源。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "noL2XKaTZP2kiERrC_gtKA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792253778526,
+      "version": 7,
+      "name": "柏讯 · 自适应轮动套件",
+      "description": "自适应行业轮动：从市场状态判定（慢速趋势/回撤/波动率 Z + 快速冲击）到组强度排序（申万 L1 成分股合成的行业指数）、组内排序（残差动量 + 稳健 Z + 例外框架）、风险预算建仓（产出 TargetWeights 契约实例）与闭环运行（权重模式回测 + 模拟盘 + 快照解读）。对齐 FinRL-X 的七个策略模块，但输入已按 A 股适配：波动率用已实现波动率（QVIX/iVIX 在柏讯可及环境不可达），组用申万成分股合成（官方指数序列未采），参数按实测分位重标（原 Z≥3.0 → 采用 |Z|≥2.0，因实测 3.0 只占 0.47%）。价格走通道 B（本地 DAAS，需先播种 A 股），统计一律由 fd-quant 计算面产出。与「策略工坊」的分工：工坊给通用纪律（权重语义、回测解读、风控归属），本套件给**具体策略与参数**（选哪些组、组内选谁、预算怎么分）；督导不重复实现。终产物是可执行权重与运行记录，不是买入建议。",
+      "tags": [
+        "wire",
+        "轮动",
+        "策略"
+      ],
+      "publishedAt": 1793678291685,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "rotation-regime",
+            "description": "柏讯自适应轮动 · 市场状态判定（套件入口）。当用户要求判断当前 A 股市场处于进攻/中性/防守状态、要求给出轮动的择时前提、或问\"现在该不该加仓/降仓\"时使用。产出：带证据的 risk_on / neutral / risk_off 判定 + 波动率输入说明 + 参数重标表。本技能只做判定，不选股不建仓——排序与建仓交给 rotation-ranking / rotation-portfolio。"
+          },
+          {
+            "name": "rotation-ranking",
+            "description": "柏讯自适应轮动 · 组与组内排序。当用户要求\"哪些行业值得配\"\"组内选哪几只\"\"为什么这个组落选\"时使用。组 = 申万 L1（31 类）成分股合成的行业指数；组强度用信息比排序，组内用残差动量 + 稳健 Z。产出：组排序表 + 组内排序表 + 落选原因。不建仓（交给 rotation-portfolio）。"
+          },
+          {
+            "name": "rotation-portfolio",
+            "description": "柏讯自适应轮动 · 风险预算建仓与风控参数。当用户要求\"按排序结果给个仓位方案\"\"组之间怎么分配\"\"止损怎么设\"时使用。产出：TargetWeights 契约实例（组权重 → 资产权重）+ 风险预算依据 + 风控参数（并明确止损须在策略内表达、引擎不自动执行）。"
+          },
+          {
+            "name": "rotation-run",
+            "description": "柏讯自适应轮动 · 闭环运行与解读。当用户要\"把这份权重跑一下\"\"回测结果怎么看\"\"模拟盘为什么没成交/权重为什么偏了\"时使用。产出：权重模式回测结果（含成本与基准）+ 权重快照解读 + 偏离归因。终产物是可执行权重与运行记录，不是一段买入建议。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-paper-trading"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-cn-report"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rz-ebXHD5astVGcyqlhmqA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791558884025,
+      "version": 6,
+      "name": "识律 · 民事诉讼套件",
+      "description": "民商事案件全流程分析：固定诉讼请求（S1）→ 请求权基础（S2）→ 抗辩分析（S3）→ 要件拆解（S4）→ 主张检索（S5）→ 争点矩阵（S6）→ 举证责任分配（S7）→ 事实认定（S8）→ 裁判预测（S9）→ 幻觉检查（S10）。法条走识律语义检索与条级解析、效力状态走数据业务检索、类案与指导案例走裁判文书与指导案例库；S10 由原自检改为**用数据工具反查**引用真实性。",
+      "tags": [
+        "lex",
+        "法律"
+      ],
+      "publishedAt": 1793678291074,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "civil-nine-step-workflow",
+            "description": "民事案件九步法会话版（请求权基础 + 要件审判九步法 + 规范说）。当用户描述案情或提供起诉状/答辩状/证据/判决书，要求固定诉讼请求、找请求权基础、抗辩分析、要件拆解、类案检索、争点矩阵、举证责任分配、事实认定、裁判预测或法条/案号真实性核验时使用。输出为纯文本会话推演，不写文件系统、不调脚本。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tXQaAuRY2F-Kog-rb21bCw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792703276032,
+      "version": 5,
+      "name": "柏讯 · 信息冲击",
+      "description": "柏讯信息冲击四件套：冲击识别（先查来源健康度，游标拉取+检索补漏两路，按来源三型与七组冲击类型初筛，逐条附 item_id、发布时间与正文状态）、冲击解读（读正文抽金额/比例/期限/主体/生效条件五要素，结论分明确与需看条件两栏，每条结论附证据块：item_id + as_of + 经 locate_evidence 核对的原文逐字片段；强断言缺可定位证据时只作「据标题/摘要，正文未核实」弱表述）、影响窗口统计（前窗 5 日基准 + 后窗 5/10/20 日并列，样本量、分位、离散度与必选的反例比例随表输出，样本不足整表标注「不作依据」）、信息流跟踪（来源与类型计数、期间对比、健康度水位，滞后与不可用前置「信息可能不完整」）。与事件驱动套件的分工：事件驱动走 fd-cn-report 公告面，本套件走 info-stream 统一信息条目（公告+部委+互动），以 item_id 为引用锚点、以逐字证据为结论门槛。核心纪律：健康度前置（引用前先查 stream_health，lag 超阈值声明信息可能不完整，空结果不得写成没有事件）、不预测（不给涨跌预期）、正文支撑（标题只是检索入口）、历史分布非预测（样本量与反例比例强制随表）。不构成投资建议。",
+      "tags": [
+        "wire",
+        "经济",
+        "金融"
+      ],
+      "publishedAt": 1793678290505,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "wire",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 4,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "shock-detection",
+            "description": "柏讯信息冲击 · 冲击识别。当用户要求\"最近有什么新公告/新信息\"\"把今天的信息流筛一遍\"\"找出可能构成信息冲击的条目\"时使用。先查来源健康度，再按游标拉信息流（list_since），按来源三型（公告/部委/互动）与七组冲击类型做初筛，逐条附 item_id、发布时间、正文状态与初筛依据。只做识别与初筛：不读正文下结论（交 shock-reading）、不做窗口统计（交 shock-window）、不预测影响。"
+          },
+          {
+            "name": "shock-reading",
+            "description": "柏讯信息冲击 · 冲击解读。当用户要求\"这条公告/这条信息说了什么\"\"把关键条款摘出来\"\"这个消息的具体金额和条件\"时使用。读条目正文，抽取金额/比例/期限/主体/生效条件五类要素，结论分\"明确（正文要素直接支撑）\"与\"需看条件\"两栏；每条结论附证据块：item_id、as_of（发布时间）与经 locate_evidence 核对的原文逐字片段。硬约束：未读正文不结论；强断言缺可定位证据时只能弱表述\"据标题/摘要，正文未核实\"。不预测涨跌。"
+          },
+          {
+            "name": "shock-window",
+            "description": "柏讯信息冲击 · 影响窗口统计。当用户要求\"这类公告发布前后一般怎么走\"\"这条信息的历史前后窗口表现\"\"前后窗口指标偏离多大\"时使用。对同类信息冲击做多窗口（默认前窗 5 日基准 + 后窗 5/10/20 个交易日）的历史统计：样本量、分位、离散度与必选的反例比例；样本不足时整表标注\"不作依据\"。全部输出为描述性历史分布，不是预测；价格只走通道 B，计算只走通道 Q。"
+          },
+          {
+            "name": "shock-watch",
+            "description": "柏讯信息冲击 · 信息流跟踪。当用户要求\"帮我盯着信息流\"\"每天把新条目按来源和类型筛一遍\"\"给我一张信息流跟踪表\"时使用。按来源与冲击类型筛选条目流，输出条目清单、来源计数、期间对比与来源健康度水位；滞后与不可用如实标注\"信息可能不完整\"。不做预告、不预测影响、不做窗口统计；定时触发属宿主 cron，本技能只提供可重复执行的输入定义与输出形态。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "fd-quant"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "zxuH617BsFnj1QQk81QY-A",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791558884891,
+      "version": 6,
+      "name": "识律 · 法律检索套件",
+      "description": "法律检索研究五件套：法条与效力核查、类案检索报告、法律概念图解、五源语料检索与口径对照（规章/条约/纪检监察/案例库/党内法规）、法规效力生命周期追踪。数据来自识律 lex 线法规库（32,296 部）、裁判文书库（3,700 万篇）、指导案例库（278+15）与五源语料（47,261 篇），逐结果溯源。注：文书库不支持聚合统计，类案类产出为「检索式证据」口径而非统计结论。",
+      "tags": [
+        "lex",
+        "法律"
+      ],
+      "publishedAt": 1793678289872,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 5,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "statute-validity-check",
+            "description": "法条检索与效力核查。当用户要查某法条原文、核对某条文是否现行有效、确认条号是否因修订变动、查某法律问题的法律依据（\"能不能\"\"是否有效\"\"如何认定\"\"依据哪一条\"）时使用。语义召回候选条文后逐条锚定效力状态，输出带效力状态与 provenance 的法条清单；非\"有效\"版本明确标注不得作现行法。"
+          },
+          {
+            "name": "case-retrieval-report",
+            "description": "类案检索与裁判规则报告。当用户要检索类案、出案例检索报告、查某类纠纷的裁判规则或裁判倾向、做同案同判分析、找支持某主张的判例时使用。走裁判文书库 + 指导案例库多组关键词换搜，输出含真实案号、法院、裁判日期与 provenance 的检索报告。"
+          },
+          {
+            "name": "legal-concept-map",
+            "description": "法律概念结构化图解。当用户要解释某个法律概念/制度（\"什么是善意取得\"\"表见代理怎么认定\"\"情势变更的适用条件\"）、要拆构成要件与例外、要找关联条文与权威解读时使用。以条级引用解析锚定条文，以五源语料补权威解读，输出要件—例外—关联条文的结构化图解。"
+          },
+          {
+            "name": "legal-corpus-explorer",
+            "description": "五源法律语料检索与口径对照。当用户要查部门规章/地方规章、条约、纪检监察法规、人民法院案例库案例、党内法规，或要在多个语料源之间对照同一问题的规范口径、找某领域除法律外的细化规定（\"部门规章怎么规定的\"\"有没有条约\"\"党内法规怎么要求\"\"案例库里类似案件\"）时使用。按封闭词表指定 source 逐源检索，逐条带 provenance；不做跨源统计与\"权威解读占比\"类结论。"
+          },
+          {
+            "name": "statute-lifecycle-tracker",
+            "description": "法规效力生命周期追踪与所在层级查证。当用户要了解某部法规的效力状态（有效/已修改/已废止/尚未生效/未知）、核对一部法规是否被后续修法改动、盘点某一领域的现行有效法规存量、或要判断\"某个规定还有效吗\"\"这部法改过几版\"时使用。以效力状态为权威口径逐条核验；如实声明发布日期与失效日期字段不可用，不做趋势推断。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-legal-search-mcp"
+          },
+          {
+            "registryName": "fd-find-data-business-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "y2_QsuKxV8dZFr-39_0zRQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792875613650,
+      "version": 8,
+      "name": "数据问答",
+      "description": "团队共用智能体：数据问答/分析岗的只读纪律——数据集读面引用（列表/查询/聚合/行读），数字可溯源、口径注明、空结果如实、图表契约 v2 选型。只读，不含写面。",
+      "tags": [
+        "团队",
+        "共用层",
+        "数据",
+        "问答"
+      ],
+      "publishedAt": 1793677541258,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet-shared",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-data-qa",
+            "description": "数据问答纪律：先探后答、数字可溯源、口径注明、图表契约选型、只读。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-ops"
+          }
+        ]
+      }
+    },
+    {
+      "id": "v8rZ8F7E92MrssZ92ygnXQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793319118368,
+      "version": 7,
+      "name": "壹座产品介绍",
+      "description": "对外产品介绍团队：前台「产品向导」+ 五条产品线专家（寻数·壹座/识律/柏讯/谦面/萬星），编导为前台→各专家的 dispatch 星型（会话型团队，无 cron 节奏——装上即等访客提问）。知识来源：www.finddatatech.cloud 官网中文页 /zh/（原始抓取，抓取日期 2026-10-30）与本仓公开 README（github.com/FindDataTechnology/platform）；官网改版时人工同步本种子并重跑守恒与红线测试。结构注：六岗全部自载（maxAgents 50，2026-10-30 用户裁决放宽，75df6914）——包自带完整团队，外来安装者零预创建、无降级路径。KPI 槽位：会话型团队无运营语义，不设（kpiSlots: []）。预校验兼容性结论（2026-10-30 实证）：无 cadence/显式 cadence:null 的岗位直接通过 parseFleetTemplate——design D2 的值守 cron 回退方案无需启用。本包声明 publicFacing=true（对外团队）：其岗位运行时只挂公开工具面（fleet 桥 + 市场公开面），禁用工作区文件工具与名册枚举工具——内部车道名不得进入访客可见的回答。红线：全部 persona 只含公开信息，词表 v4（智能体团队/小组/智能体/智能体市场），禁内部运营信息——scripts/test-product-intro-seed.mjs 以文本断言钉住。五线名以官网中文页原文为准（寻数·壹座/识律/柏讯/谦面/萬星）。",
+      "tags": [],
+      "publishedAt": 1793677540568,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 6,
+      "skillCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "public-info-discipline",
+            "description": "对外介绍公开信息纪律：只官网与公开仓库口径，内部名零出现，不确定如实说。"
+          },
+          {
+            "name": "intro-triage-routing",
+            "description": "前台分诊路由卡：话题到专家的映射与转介话术。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "ujUI1A2caCUW7TG1Z1mlEg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792956888745,
+      "version": 9,
+      "name": "谦面运营团队",
+      "description": "谦面市场生态运营团队：监视位（周一深度盘点）+闸位（每日完整性日检，integrity 不可得如实降级）+合成位（每日简报+策写提案）。只读面巡检，策写一律提案+拍板（allowTools 工具面级排除）。",
+      "tags": [
+        "团队",
+        "运营"
+      ],
+      "publishedAt": 1793677539975,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "facet-visibility-inventory",
+            "description": "可见性盘点口径：按档位分计、同条重复标注、口径字段固定，保证跨轮可比。"
+          },
+          {
+            "name": "facet-integrity-evidence-ladder",
+            "description": "完整性证据阶梯：字段存在→字段可比→字段不一致三级，未暴露只报未取得。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "facet-market"
+          }
+        ]
+      }
+    },
+    {
+      "id": "tHd65-7SfBT_z0KfTvHGIw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791809668258,
+      "version": 2,
+      "name": "外部好货 · 简报快写",
+      "description": "M4③ 套装验收——第二件外作者绿地带货",
+      "tags": [
+        "文档"
+      ],
+      "publishedAt": 1793677538106,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "docs",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "facade": false,
+      "badge": "facade",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "brief-draft",
+            "description": "简报占位"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "qCEIutJzQd49jnDtV4qeqw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792512908841,
+      "version": 4,
+      "name": "谦面助手",
+      "description": "在壹座中操作谦面的专用助手——浏览包目录、读详情、发布前校验、建包向导。只读工具 + 提议通道，所有写操作需经动作闸确认。",
+      "tags": [
+        "assistant",
+        "facet",
+        "pack-authoring"
+      ],
+      "publishedAt": 1793677536809,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "authoring",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 6,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "facet-browse-guidance",
+            "description": "指导用户如何使用 facet-market-mcp 的 browse/read 工具搜索包"
+          },
+          {
+            "name": "facet-validate-guidance",
+            "description": "指导用户如何使用 validate 进行发布前预检"
+          },
+          {
+            "name": "facet-concepts",
+            "description": "回答 facet 概念问题：pack 是什么、订阅与安装是两件事、版本快照语义"
+          },
+          {
+            "name": "facet-recommend",
+            "description": "按用户需求推荐 pack：先问诊再检索，指向市场条目"
+          },
+          {
+            "name": "facet-permissions",
+            "description": "解释 pack 的 MCP 引用与工具面（allowTools）披露口径"
+          },
+          {
+            "name": "facet-install-guidance",
+            "description": "两条安装路径引导：壹座一键订阅安装 / CLI 安装到 Claude Code / Cursor"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "facet-market-mcp"
+          },
+          {
+            "registryName": "facet-ops-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "bQ-NlOBloZegGfkiczktDA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792330235042,
+      "version": 5,
+      "name": "星研·学院",
+      "description": "星研·学院首辑两课：①《壹座上手》——从零完成第一个可交付任务：文档库、功能集安装、真实工具调用、trace 自检、分享交付；②《萬星与谦面协作入门》——把技能与 MCP 组装成个人工作流，部署为可被程序调用的服务（A2A、访客页、控制台）。安装后你的助手兼任助教，按课逐步带你动手完成。",
+      "tags": [
+        "官方功能集",
+        "星研",
+        "学院",
+        "教程"
+      ],
+      "publishedAt": 1793677529778,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "facet",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 0,
+      "skillCount": 2,
+      "mcpCount": 0,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "xingyan-academy-yizuo",
+            "description": "星研·学院《壹座上手：从零完成第一个可交付任务》（use 层）伴学技能：用壹座完成第一个可交付任务：把自有资料喂进文档库、装上一个行业能力包、让它带真实工具调用产出结论，最后交出一条匿名可读的分享链接。全程在浏览器里完成，不需要装任何软件、不需要命令行。 当用户询问本课怎么开始、某一步怎么做、卡住怎么办时使用。"
+          },
+          {
+            "name": "xingyan-academy-wanxing-facet",
+            "description": "星研·学院《萬星与谦面协作入门：搭起你的第一个个人工作流》（build 层）伴学技能：把壹座里装好的技能与 MCP 组装成属于你的个人工作流（自建预设），把它部署到萬星成为一个可被程序调用的服务，并用一条 A2A 请求、一个访客对话页和控制台把这项服务管起来。 当用户询问本课怎么开始、某一步怎么做、卡住怎么办时使用。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "bKipx4urGfO5TE6GjJ9Ihg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793410616330,
+      "version": 5,
+      "name": "工厂集群",
+      "description": "工厂集群：Owner 自用的三岗运行编制——巡检岗按可计数阈值观测全部在册集群与基础设施并逐条目落异常清单；优化岗把已确认异常只经既有提案面转为配置/蓝图/技能/跨面提案并附条目依据；报班岗按周汇总异常台账、提案四态计数与成本走势，拍板件走 decision_queue 正式呈报。提案与批准分离：红线动作永远人工，批准前零写动作。 含集群模板 fleet 段（三岗编排：巡检→优化→报班；装包后经壹座「团队→从模板实例化」建队）。",
+      "tags": [
+        "团队",
+        "基础设施",
+        "巡检",
+        "优化",
+        "报班"
+      ],
+      "publishedAt": 1793677529196,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 3,
+      "mcpCount": 5,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "sentinel-discipline",
+            "description": "工厂集群巡检岗纪律：五类可计数阈值判据、逐条目异常清单格式、单回合口径收窄与收尾报数落 board。装配于工厂集群巡检岗。"
+          },
+          {
+            "name": "optimizer-discipline",
+            "description": "工厂集群优化岗纪律：异常→提案四通道映射、提案必附异常条目依据、幻觉源名防御、自动化政策线分级标注、批准前零写边界。装配于工厂集群优化岗。"
+          },
+          {
+            "name": "shiftlead-discipline",
+            "description": "工厂集群报班岗纪律：周报 digest 三段（异常台账/提案四态计数/成本走势）、拍板件走 decision_queue 正式呈报、禁私信替代。装配于工厂集群报班岗。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "infra-telemetry"
+          },
+          {
+            "registryName": "fleet-architect"
+          },
+          {
+            "registryName": "blueprint-author"
+          },
+          {
+            "registryName": "facet-market"
+          },
+          {
+            "registryName": "actions-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "aofNf6o2LR61lPK8IVVkJw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792705334891,
+      "version": 9,
+      "name": "AI 公司",
+      "description": "官方团队模板样板：CEO 巡视（{{fleetContext}} 注入）+ 三真数据岗（开源/投资）+ 助理引用岗 + 两连接器空态岗（电商/内容，演示待补岗降级）+ 萬星团队 a2a optional 成员（演示依赖缺位降级）。pack 自带 agents 上限 3（铸造实证），故助理为 existing-persona 引用岗；编导段为 supervisor 式 dispatch——CEO 可向各部门派活（显式 dispatch 边，非全舰 implicit）。铸造上架时 packId/占位符按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+      "tags": [],
+      "publishedAt": 1793677528482,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "cluster",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "dept-patrol-report-framework",
+            "description": "公司式舰队各部门向 CEO 汇报的标准框架：数字先行、异常归因、裁决事项。"
+          },
+          {
+            "name": "escalation-decision-card",
+            "description": "CEO 与各部门提交升级事项的标准格式：背景、事实、选项与代价、建议。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "_vcfZzuxPgkiRsj5poZIgg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792889680671,
+      "version": 8,
+      "name": "分身工坊",
+      "description": "和工坊助手聊几句，它把你的知识变成一个可发布的 AI 分身：采访你、整理语料、生成接待人设与 manifest.json，给出发布三步指引。造好的分身部署后，任何人从目录点「和这个分身聊」就能了解你——费用你出（hosted），访客免费。",
+      "tags": [
+        "分身",
+        "创作工具",
+        "引导"
+      ],
+      "publishedAt": 1793677526634,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "company",
+      "line": null,
+      "lineLabel": "",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 2,
+      "facade": true,
+      "badge": "facade",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "facade-builder-guide",
+            "description": "分身采访与生成流程：四步采访、素材整理纪律、manifest 组装规则、发布指引"
+          },
+          {
+            "name": "facade-manifest-template",
+            "description": "分身 manifest 骨架：可直填的完整结构，含分身配置块与语料/接待的最小示例"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "_Rl8i99CS5nwuARVbp0D5Q",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792875616945,
+      "version": 9,
+      "name": "评测哨",
+      "description": "团队共用智能体：评测岗的质量对拍纪律——按 gold 清单对拍目标岗产物（exact/方向/覆盖率），KPI 报数（hit_rate/direction_rate/coverage），漂移超阈值 escalate，评测报告落草稿。可选挂载岗。",
+      "tags": [
+        "团队",
+        "共用层",
+        "评测",
+        "质量"
+      ],
+      "publishedAt": 1793674372359,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet-shared",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-eval-sentinel",
+            "description": "评测哨纪律：gold 对拍、KPI 报数、漂移预警 escalate、评测报告落草稿。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "_B99vDq0CFBNQGvmfy5iSw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792159284647,
+      "version": 3,
+      "name": "谦面工坊",
+      "description": "生态创作者的铸包工坊：把一个想法做成可安装的功能集（pack）。①铸包——发现平台可用的 MCP 工具与技能、查重、组装 manifest、预校验、发布；②改编——用开源或外部技能打底时的许可证判定与署名（含降级路径与防编造约束）；③验收——发布后自查：装得上吗、工具真的被调用了吗、取不到时说得诚实吗。面向生态创作者；发布需创作者身份。",
+      "tags": [
+        "官方功能集",
+        "创作",
+        "指南"
+      ],
+      "publishedAt": 1793674371142,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "facet",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "facet-forge-assembly",
+            "description": "在谦面把想法铸成功能集（pack）：先发现可用的 MCP 工具与技能，再组装 manifest（内联技能 + MCP 引用 + 角色），预校验通过后发布。用户要「做一个功能集/预设套件/上架」「把某能力打包给用户装」「我有个想法想做成 AI 助手」时使用。"
+          },
+          {
+            "name": "facet-forge-adaptation",
+            "description": "把别人的技能（GitHub 开源技能、外部技能市场条目、谦面已上架 pack 里的技能）改编成自己的功能集内容时的合规与改编方法：许可证能不能用、怎么署名、怎么把数据环节换成平台工具。用户说\"照着这个开源项目做一个\"\"把这个技能抄过来改改\"\"参考某某套件\"时使用。"
+          },
+          {
+            "name": "facet-forge-acceptance",
+            "description": "功能集发布之后的自查清单：确认用户装得上、装上了能用、工具真的被调用过、工具说做不到时是否诚实。用户说\"我发布了这个功能集，接下来呢\"\"怎么知道它有没有用\"\"用户反馈装不上/用不了\"时使用。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "airegistry-tools"
+          },
+          {
+            "registryName": "facet-market-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "YMSt-hRNiNWXrlLYC8PSiA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792725671868,
+      "version": 9,
+      "name": "投研晨会",
+      "description": "官方团队模板：三层级联的投研晨会——首席分析师汇总宏观/行业研究员晨报并拍板上行，风控官为被动岗（受委托或拍板批复唤醒）。演示：三层组织（{{fleetContext}} 只注入直接下级，中间层向上浓缩）、交易日节奏、escalate 驱动的被动岗；编导段为 trigger+handoff 级联（两研究员晨检完成接棒首席）与首席 dispatch 委托风控官。铸造上架时 packId/agents 按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+      "tags": [],
+      "publishedAt": 1793674369314,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "invest-view-card",
+            "description": "研究员与首席的标准观点格式：观点、证据、反方、置信度四件套。"
+          },
+          {
+            "name": "morning-note-template",
+            "description": "首席合成晨会产出的标准模板：共识、分歧、待拍板、观察清单。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-daas-mcp"
+          },
+          {
+            "registryName": "fd-quant"
+          }
+        ]
+      }
+    },
+    {
+      "id": "Ut_bJMuW5KxAD83KImPmlg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792880393589,
+      "version": 6,
+      "name": "寻数分身",
+      "description": "寻数（FindData）的企业 AI 分身：想了解我们的企业、在做的项目、产品具备的能力，直接和分身聊。回答出自随版本冻结的策展语料，每条带语料截至时间；答不了的如实说答不了，并建议找人对的人。",
+      "tags": [
+        "分身",
+        "企业接待",
+        "寻数"
+      ],
+      "publishedAt": 1793674365973,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "company",
+      "line": null,
+      "lineLabel": "",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "facade": true,
+      "badge": "facade",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "corpus-company",
+            "description": "企业语料：寻数是谁、双星一底座的产品定位与核心概念"
+          },
+          {
+            "name": "corpus-projects",
+            "description": "项目语料：双星路线图里程碑状态、出口判据、在途变更"
+          },
+          {
+            "name": "corpus-capabilities",
+            "description": "能力语料：谦面在架垂类、萬星服务形态、能拿来做什么"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "UXWcHRYPeyNue1Z4qQl-Tw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791825586237,
+      "version": 4,
+      "name": "生意体检 · 零售信号包",
+      "description": "零售行业环境信号包（需与「生意体检 · 内核套件」叠加安装）：批发价参考（昆明国际花卉拍卖中心 kifa.net 日度拍卖价与行情分析，对花店/生鲜类是进货成本直接参考，不泛化为所有零售商品）、城市基本面（中国城市面板 209 变量 × 297 城 × 2000–2024，判断社区消费力与选址）、同业密度（工商登记，支持省份+城市+区县与行业小类颗粒度，可用 company_type 筛选个体工商户）、快递大盘景气（国家邮政局快递月报，36 期连续，兼营电商/社区团购的小店参考）。**硬边界**：工商数据最新批次 2023，滞后约 3 年，一律标注「历史格局、非实时」；数据源只有新增注册口径、无注销/吊销，「关了多少家」类问题明示做不了并给存量状态分布替代，禁止编造关店数量或估算退出率。",
+      "tags": [
+        "零售",
+        "个体户",
+        "同业密度",
+        "批发价",
+        "信号"
+      ],
+      "publishedAt": 1793670691612,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "business",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "mb-signal-retail",
+            "description": "零售行业环境信号包（谦面·生意体检姊妹件，需与内核套件 mb-core 叠加安装）。读四类信号：批发价参考（昆明花拍日度价，花店/生鲜进货直接参考）、城市基本面（中国城市面板 209 变量×297 城，判断社区消费力与选址）、同业密度（工商登记区县+行业小类，可筛个体工商户）、快递大盘景气（邮政局月报，兼营电商参考）。工商数据最新批次 2023、滞后约 3 年，一律标注「历史格局、非实时」；无注销口径，「关了多少家」明示做不了并给存量状态分布替代，禁止编造关店量。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "O30LA92kq1D5uuNIBGKsZQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792962805934,
+      "version": 10,
+      "name": "蓝图构造师",
+      "description": "蓝图构造间构造面：把自然语言垂直描述编译成蓝图草稿（板块边界/数据源/团队编制/看板骨架/监控/验收口径），复用既有校验器 dry-run，diff 呈现后停等主人批准——批准才铸造上架与实例化。只引用 fleet-architect 与 facet-market 既有工具面，蓝图格式以平台校验器为准。",
+      "tags": [
+        "团队",
+        "构造师",
+        "蓝图"
+      ],
+      "publishedAt": 1793670690404,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "harness-constructor",
+            "description": "垂直蓝图编制纪律：NL→草稿→既有校验器→diff→停等批准→批准后铸造；字段契约与八舰同源。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fleet-architect"
+          },
+          {
+            "registryName": "facet-market"
+          }
+        ]
+      }
+    },
+    {
+      "id": "Mo3_aWe7tF2eFVzkqFT9mA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792875607110,
+      "version": 9,
+      "name": "看板投稿",
+      "description": "团队共用智能体：投稿岗的产物写面纪律——wire-build 全套引用（建集/表单/记录视图/看板/文档/发布/治理），草稿优先、source_ref 三元组、列名预检、失败四分类。装配于任何板块的团队投稿岗。",
+      "tags": [
+        "团队",
+        "共用层",
+        "看板",
+        "投稿"
+      ],
+      "publishedAt": 1793670689764,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet-shared",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-board-contribution",
+            "description": "看板投稿纪律：草稿优先、source_ref 三元组、列名预检、失败四分类、零半写处理。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "MnViPe6mi-FBOUL1Z0tDTw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1793235782622,
+      "version": 15,
+      "name": "内容工厂",
+      "description": "选题→初稿→审校的流水线，只出草稿供人定稿；不自动发布",
+      "tags": [],
+      "publishedAt": 1793670689179,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 1,
+      "mcpCount": 0,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "MBcXTHtyyMOxDHmSUYvDdQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791824124311,
+      "version": 5,
+      "name": "生意体检 · 内核套件",
+      "description": "面向中国传统微型企业与个体户的经营体检内核：四段式工作流（问诊建档 → 单店算账 → 行业信号对照 → 行动清单）为入口技能，配套盈亏平衡、毛利结构、现金流账期三个计算器。所有金额与比率一律经计算器产出并附计算公式 + 输入基数 + 来源（来源名/地区/年份/口径时间），外部统计基数取不到时该项中止并明示「基数数据源未连接/未定码」，禁止用模型记忆的行业数字填充。未安装行业信号包时如实标注「未安装行业信号包」且不中断分析。单店生意档案可建立在 DAAS 实体模型上（一家店=一个实体，指标持久化 + 告警规则）。内核按小老板能听懂的标准书写，专业术语附日常解释；机构与政务渠道共用同一内核，仅外壳与推送方式不同。",
+      "tags": [
+        "个体户",
+        "微型企业",
+        "生意体检",
+        "盈亏平衡",
+        "经营决策"
+      ],
+      "publishedAt": 1793670688588,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "business",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "mb-business-checkup",
+            "description": "生意体检（谦面·面向个体户与微型企业的内核入口技能）。当小老板描述自己的店（餐馆/便利店/花店/网店）、或代账、银行普惠客户经理、园区运营要为商户做经营诊断时使用。四段式：问诊建档 → 单店算账（点名盈亏平衡/毛利结构/现金流账期三计算器）→ 行业信号对照 → 行动清单。数值只由计算器产出并附公式与来源；未装行业信号包时如实标注，不中断分析。"
+          },
+          {
+            "name": "mb-breakeven-calculator",
+            "description": "盈亏平衡计算器（谦面·面向个体户与微型企业的三个原子计算器之一）。当小老板或代账要算「一个月卖到多少才不亏」「每天要来多少客人/多少单才保本」「离保本线还有多远」「按现在的流水多少天能 cover 固定成本」时使用。产出月盈亏平衡流水、保本客流/单量、安全边际、保本天数，每个数字附计算公式、输入基数与来源标注。只做计算，不做问诊。"
+          },
+          {
+            "name": "mb-margin-structure-calculator",
+            "description": "毛利结构计算器（谦面·面向个体户与微型企业的三个原子计算器之一）。当小老板或代账要算「毛利有多少」「哪块成本占得最重」「房租人工占流水几成」「涨价能多赚多少」时使用。产出固定/变动成本拆分、各项成本占流水比、毛利率与边际贡献率、成本结构诊断。每个数字附计算公式、输入基数与来源标注；外部基数取不到即中止该项，禁止用模型记忆的行业数字填充。只做计算，不做问诊。"
+          },
+          {
+            "name": "mb-cashflow-terms-calculator",
+            "description": "现金流与账期计算器（谦面·面向个体户与微型企业的三个原子计算器之一）。当小老板或代账要算「手里要留多少周转金」「什么时候会缺钱」「供应商账期和客户账期对不上怎么办」「旺季备货钱够不够」时使用。产出最少周转金、现金流缺口时段与金额、账期占款、季节性缓冲建议。每个数字附计算公式、输入基数与来源标注；外部基数取不到即中止该项，禁止用模型记忆的行业数字填充。只做计算，不做问诊。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-daas-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "LjTJZWqSr2AOX7WEFTVlpg",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792910319212,
+      "version": 16,
+      "name": "官网内容团队",
+      "description": "营销线团队模板：选题→撰稿→审读→发布草稿四岗 handoff 链（错峰 cron ≥30min）+闸位岗独立对拍（gold 命中/覆盖，评测报告落草稿）。量级话术红线（禁精确数字）、审读放行唯一门、发布走提案不直发。装包后经壹座「从模板实例化」建队；纪律来自共用层四包（同 cell 装）。",
+      "tags": [
+        "团队",
+        "营销",
+        "官网"
+      ],
+      "publishedAt": 1793670687890,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 5,
+      "skillCount": 3,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "web-assertion-source-ledger",
+            "description": "断言溯源台账：数字/因果/承诺三类断言逐条落来源，写不出来源就降级或标待验证。"
+          },
+          {
+            "name": "web-machine-readable-sections",
+            "description": "机器可读五条自查：小节自足、术语唯一、结论先行、表格优先、标题即断言锚点。"
+          },
+          {
+            "name": "web-cadence-brief-contract",
+            "description": "四岗 handoff 契约：选题→成稿→放行→落稿的交接物清单与错峰门槛。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "INdsRWpgpp2Q03I0z3XoFA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792514365507,
+      "version": 4,
+      "name": "萬星机群助手",
+      "description": "在壹座中操作萬星机群的专用助手——浏览 agent 目录、读详情、查看部署状态。只读工具 + 提议通道，所有写操作需经动作闸确认。",
+      "tags": [
+        "assistant",
+        "wanxing",
+        "cluster-management"
+      ],
+      "publishedAt": 1793670686684,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "operations",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 2,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "wanxing-browse-guidance",
+            "description": "指导用户如何使用 wanxing-ops-mcp 的 browse/card 工具查看 agent"
+          },
+          {
+            "name": "deployment-precheck-guidance",
+            "description": "指导用户在部署前检查凭据和机位状态"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wanxing-ops-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "F8gbhNaEG6c2rDz468MwaA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792875545464,
+      "version": 8,
+      "name": "简报与报数",
+      "description": "团队共用智能体：合成位/主编岗的报数与简报纪律——report_status 槽位报数（与团队 KPI 槽位逐字对齐）、晨报/周报骨架、escalate 拍板规范、未取得不编造。装配于任何板块的团队合成位。",
+      "tags": [
+        "团队",
+        "共用层",
+        "简报",
+        "报数"
+      ],
+      "publishedAt": 1793667019964,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet-shared",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 0,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-brief-report",
+            "description": "舰队简报与报数纪律：槽位报数、晨报/周报骨架、escalate 规范、未取得不编造。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "EMGW14N8voa1b36LSuTxxw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792725688018,
+      "version": 10,
+      "name": "客服班组",
+      "description": "官方团队模板：高频客服护航——客服组长每 4 小时带队巡检工单，一线客服处理、质检员抽检；组长对疑难工单用 escalate 合并上报（演示对抗每日防洪上限的上报纪律）与 CRM 客服工具面（凭据未配置时如实空转，不整体失败）。恰 3 岗满编无引用岗；编导段演示入站唤醒：event 边 bot:{{SERVICE_BOT}} 入站唤醒一线客服（客服 bot 为运营期配置的通道实例，缺位由运行期如实判定），一线 report 上行组长、组长可 dispatch 直接派单一线。铸造上架时 packId/agents/占位符按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+      "tags": [],
+      "publishedAt": 1793667019381,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "ticket-triage-five-steps",
+            "description": "一线客服处理工单的标准分诊流程：读原文、分类、排序、答复、升级。"
+          },
+          {
+            "name": "cs-reply-etiquette",
+            "description": "客服答复与升级件的标准措辞纪律：确认、方案、时限三段式与禁止项。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "C8wx14-4h7zJ0N19-J4NwQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792964087305,
+      "version": 11,
+      "name": "跨境电商政策盯梢团队",
+      "description": "跨境电商政策面值守团队：监视位（海关/商务部/税务/口岸四路 fd-info 公告流）→合成位（政策日报+三判据 escalate）→产出位（看板草稿，发布走提案）。纪律来自共用层智能体（同 cell 装）；由蓝图构造间按自然语言需求建成，可溯源。",
+      "tags": [
+        "团队",
+        "跨境电商",
+        "政策"
+      ],
+      "publishedAt": 1793667018014,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 3,
+      "mcpCount": 3,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "crossborder-four-lane-patrol",
+            "description": "四路政策巡检配方：海关/商务/税务/口岸各自的检索式、水位与原文优先级。"
+          },
+          {
+            "name": "crossborder-regime-code-catalog",
+            "description": "监管代码目录：9610/1210/9710/9810 等代码的适用场景与单列纪律。"
+          },
+          {
+            "name": "crossborder-policy-conflict-triage",
+            "description": "三判据分流：新征/调口径、与昨日冲突、多源不一致，命中即 high escalate。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          },
+          {
+            "registryName": "wire-ops"
+          },
+          {
+            "registryName": "wire-build-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "BniA5thfDdb3oG-FT0CkJA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791824124644,
+      "version": 5,
+      "name": "生意体检 · 餐饮信号包",
+      "description": "餐饮行业环境信号包（需与「生意体检 · 内核套件」叠加安装）：食材成本趋势（大连商品交易所期货：生猪/豆粕/玉米/棕榈油，餐饮最大变动成本项的趋势预警，不等于菜市场现货价）、商圈活跃度代理（专资办电影票房日榜/周榜，2017 起可回溯，反映商圈消费活跃度而非本店客流）、堂食外卖切换代理（中央气象台天气，34 省 2529 站时级，结构性提示而非客流预测），并可选查同业密度（工商登记区县 + 行业小类）。每个信号均标注代理性质与局限；信号源不可用时标注「未连接」且不填模型记忆值。工商类信号带批次年份与「历史格局、非实时」标注，且明示无注销/吊销口径、不做关店量。",
+      "tags": [
+        "餐饮",
+        "个体户",
+        "食材成本",
+        "商圈",
+        "信号"
+      ],
+      "publishedAt": 1793667017414,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "business",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "mcpCount": 2,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "mb-signal-catering",
+            "description": "餐饮行业环境信号包（谦面·生意体检姊妹件，需与内核套件 mb-core 叠加安装）。读三类信号：食材成本趋势（大商所期货生猪/豆粕/玉米/棕榈油，餐饮最大变动成本项）、商圈活跃度代理（专资办电影票房日榜/周榜）、堂食外卖切换代理（中央气象台天气），并可选查同业密度（工商登记区县+行业小类）。每个信号标注代理性质与局限，源不可用即如实标注未连接，不填模型记忆值。工商类带批次年份与「历史格局、非实时」，且明示无注销口径、不做关店量。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-find-data-business-mcp"
+          },
+          {
+            "registryName": "fd-open-data-mcp"
+          }
+        ]
+      }
+    },
+    {
+      "id": "8wJVZZnk369wm0oFScdecA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792956889019,
+      "version": 9,
+      "name": "萬星机群运营团队",
+      "description": "萬星团队运行面运营团队：监视位（fleets.db 只读直查，连续失败点名到 member）+归账位（wanxing 只读盘点，凭据缺位如实降级）+合成位（每日简报+治理提案）。治理写操作一律提案+拍板（allowTools 工具面级排除）。",
+      "tags": [
+        "团队",
+        "运营"
+      ],
+      "publishedAt": 1793667015287,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-readonly-db-patrol",
+            "description": "fleets.db 只读巡检配方：表清单、成员态枚举、连续失败计数口径与 vacant 时长算法。"
+          },
+          {
+            "name": "fleet-governance-proposal-card",
+            "description": "治理提案卡：现象/证据/选项/影响面四栏，写面动作一律提案不自决。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "wanxing-ops"
+          }
+        ]
+      }
+    },
+    {
+      "id": "6kDsKgmb-3_86A81VZC6UA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791807589169,
+      "version": 2,
+      "name": "外部好货 · 数据速览",
+      "description": "M4② 绿地从目录部署验收——外作者的可部署 pack",
+      "tags": [
+        "数据"
+      ],
+      "publishedAt": 1793663469052,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "data",
+      "line": "柏讯 · 数据与情报",
+      "lineLabel": "柏讯 · 数据与情报",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 1,
+      "facade": false,
+      "badge": "facade",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "quick-look",
+            "description": "速览占位"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "56opYgliV9FYAmhmsDIJOw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792725688371,
+      "version": 10,
+      "name": "晨报情报站",
+      "description": "官方团队模板：每日晨报情报站——科技与市场情报员每日清晨分头巡检，情报主编 8 点合成晨报；另含团队引用岗（existing-cluster，每周一做深度聚合，演示团队 fan-out 引用与派生报数）。演示：双情报源并行、晨报流、cluster 引用岗（公司种子只演示了 a2a）；编导段为 trigger+handoff 链（两情报员巡检完成接棒主编合成）与团队 report 上行。铸造上架时 packId/agents 按铸造脚本补齐；本文件是清单真源，测试钉住其必须通过 fleet 段预校验。",
+      "tags": [],
+      "publishedAt": 1793663467536,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "agentCount": 3,
+      "skillCount": 2,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "blueprint",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "intel-item-five-elements",
+            "description": "情报员采集与初筛的标准格式：事实、信源、影响面、置信度、建议动作。"
+          },
+          {
+            "name": "brief-synthesis-template",
+            "description": "主编合成晨报的标准结构：头条、要点、风险预警、信源覆盖度。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          }
+        ]
+      }
+    },
+    {
+      "id": "4z4dMrtNbTn2WcE-45QPfw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792875610398,
+      "version": 8,
+      "name": "情报采集",
+      "description": "团队共用智能体：情报巡检岗的采集纪律——fd-info 检索面全套引用（list_since/get_item/search_info/locate_evidence/stream_health），按源清单巡检、原文先行、去重要点化、空结果带原因、未取得不编造。",
+      "tags": [
+        "团队",
+        "共用层",
+        "情报",
+        "巡检"
+      ],
+      "publishedAt": 1793663466724,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "fleet-shared",
+      "line": "壹座 · 智能体团队",
+      "lineLabel": "壹座 · 智能体团队",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "fleet-intel-gather",
+            "description": "情报采集纪律：按源清单巡检、原文先行、去重要点化、空结果带原因分类。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-info"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3LUWFBGS3RJe5BIV9MvBFw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791642969751,
+      "version": 5,
+      "name": "平台指南",
+      "description": "寻数平台操作与制作指南：①壹座与萬星使用手册——AI 助手工作台怎么用、功能集怎么装、Agent 服务怎么部署与调用（A2A）；②谦面功能集制作的**编排补篇**——批量套件的定义 schema、registry 侧技能注册、权限与计费四道闸全貌。（**想自己做一个功能集，请装《谦面工坊》**：它带发现与发布工具、覆盖完整创作流程；本包的制作技能只讲工坊不覆盖的平台内部细节。）平台官方维护，随平台演进更新。",
+      "tags": [
+        "官方功能集",
+        "指南",
+        "平台"
+      ],
+      "publishedAt": 1793663450030,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "facet",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 0,
+      "skillCount": 2,
+      "mcpCount": 0,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "yizuo-wanxing-guide",
+            "description": "壹座与萬星使用手册：壹座（AI 助手工作台）的界面地图、功能集安装动线、自建预设、常见操作；萬星（Agent 服务部署与运行平台）的服务目录、A2A 调用、部署者控制台、访客对话入口；含两平台分工关系与五分钟客户演示动线。当用户询问如何操作这两个平台、如何部署或调用 agent 服务、如何向客户演示时使用。"
+          },
+          {
+            "name": "facet-pack-builder",
+            "description": "谦面功能集（pack）制作的内部视角补篇：批量套件编排（套件定义 schema）、registry 侧技能注册、权限与计费四道闸的全貌。单包/首次制作请用《谦面工坊》功能集（它带发现与发布工具、覆盖完整创作流程）；本技能只讲工坊不覆盖的编排层与平台内部细节。当用户要批量生产一整条产品线的套件、要把技能注册进 registry 供各处复用、或要排查\"装不上/用不了\"的四道闸时使用。"
+          }
+        ],
+        "mcpServers": []
+      }
+    },
+    {
+      "id": "1mAJYooWE-SajhzqTNMhBw",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791712563742,
+      "version": 7,
+      "name": "文本引擎 · 剧本经典套件",
+      "description": "公版经典剧本的检索与研究：结构分析（幕场/折出骨架与情节推进）、角色检索（台词聚合与形象分析）、场景检索（按描述定位并细读整场）、相似段落（语义向量找近邻，跨用词差异找情境）。语料覆盖莎士比亚、希腊悲剧、元杂剧、明清传奇、现代话剧（老舍）、京剧，共 18 部；每个结果携带 provenance 三件套（source/stable_id/as_of）。检索走 fd-text-core 引擎的混合通道（关键词 CJK bigram + 繁简归一 ⊕ 语义向量 Qwen3-Embedding-8B）。",
+      "tags": [
+        "文本引擎",
+        "剧本",
+        "古典戏曲",
+        "公版经典",
+        "text"
+      ],
+      "publishedAt": 1793663350545,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "text",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "screenplay-structure-analysis",
+            "description": "剧本结构分析（文本引擎·剧本包入口技能）。当用户想了解一部戏剧/戏曲的幕场骨架、情节推进、折出结构，或要求梳理某剧的场次脉络、剧情大纲时使用。驱动从结构骨架到情节脉络的分析流程，数据经 fd-text-core 引擎的剧本语料实时检索。"
+          },
+          {
+            "name": "screenplay-character-search",
+            "description": "剧本角色检索与分析（文本引擎·剧本包）。当用户想查某个人物在某部剧里说了什么、出场段落、角色形象分析，或要求\"找出哈姆雷特的独白\"\"窦娥的唱词\"\"这个角色在全剧中的台词\"时使用。按角色名驱动台词级检索，数据经 fd-text-core 引擎实时取。"
+          },
+          {
+            "name": "screenplay-scene-search",
+            "description": "剧本场景检索与细读（文本引擎·剧本包）。当用户想查某部剧的某个具体场景（\"哈姆雷特的戏中戏\"\"窦娥临刑那场\"\"西厢记的送别\"）、某个情境段落、或要求细读某场戏的完整内容与调度时使用。按场景描述驱动检索，数据经 fd-text-core 引擎实时取。"
+          },
+          {
+            "name": "screenplay-similar-passages",
+            "description": "剧本相似段落检索与比较（文本引擎·剧本包）。当用户给出一段剧本文字想找\"类似的其他段落\"、要求跨剧对比相似情境（如\"还有哪些戏写了临刑发誓\"\"找和这段相似的独白\"）、或做母题/桥段溯源时使用。按参考文本的语义向量找近邻，数据经 fd-text-core 引擎实时取。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-text-core"
+          }
+        ]
+      }
+    },
+    {
+      "id": "1OQ93FLBzzVGcn2js31ADA",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1791721256348,
+      "version": 4,
+      "name": "文本引擎 · 论文研究套件",
+      "description": "学术论文的检索与研究：文献综述（方向定位与脉络梳理）、方法追踪（提出/变体/应用谱系）、相关工作（语义相似文献与对比矩阵）。语料覆盖 arXiv q-fin 与 cs.CL 等八个类目的千级样本（元数据 + 摘要，CC0 元数据）；外部开放检索（arXiv/OpenAlex/Semantic Scholar）编排补充。**版权红线**：只返回元数据、摘要、切块引用与指回 arXiv.org 的原文链接，本服务不提供也不外发论文全文。检索走 fd-text-core 引擎的混合通道（关键词 ⊕ 语义向量 Qwen3-Embedding-8B）。",
+      "tags": [
+        "文本引擎",
+        "论文",
+        "学术检索",
+        "arXiv",
+        "text"
+      ],
+      "publishedAt": 1793663349932,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "text",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 3,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "assistant",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "paper-literature-search",
+            "description": "论文文献检索（文本引擎·论文包入口技能）。当用户想查某个研究方向的论文、做文献综述、了解某领域有哪些工作、或要求\"找找关于 XX 的论文\"\"这个方向的研究现状\"时使用。驱动从方向定位到文献梳理的流程，数据经 fd-text-core 引擎的论文语料与外部开放检索（arXiv/OpenAlex/S2）实时获取。"
+          },
+          {
+            "name": "paper-method-tracking",
+            "description": "论文方法追踪（文本引擎·论文包）。当用户想查某个方法/技术（如 transformer、对比学习、GARCH）在学术论文里怎么用、有哪些变体、谁提出的，或要求\"追一下 XX 方法的发展\"时使用。按方法名驱动检索与脉络梳理，数据经 fd-text-core 引擎实时取。"
+          },
+          {
+            "name": "paper-related-work",
+            "description": "论文相关工作与相似文献（文本引擎·论文包）。当用户给出一段摘要/题目/研究想法，要求找相似论文、写相关工作段落、或做查重式比对（\"有没有做过类似的\"）时使用。按参考文本的语义向量找近邻，数据经 fd-text-core 引擎实时取。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "fd-text-core"
+          }
+        ]
+      }
+    },
+    {
+      "id": "0aVynUNHmscTAxu7fGs-NQ",
+      "authorEmail": "aloadtree@gmail.com",
+      "createdAt": 1792688930707,
+      "version": 2,
+      "name": "CRM 客服套件",
+      "description": "商家自带 Chatwoot 的客服接待套件：连接你的 Chatwoot 账号后，读未处理会话、草拟回复、人工确认后发送，全程你自己的租户与凭据（BYOK）。含客服接待技能与使用指南。",
+      "tags": [
+        "CRM",
+        "客服",
+        "Chatwoot"
+      ],
+      "publishedAt": 1793663347577,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "crm",
+      "line": "谦面 · 业务流",
+      "lineLabel": "谦面 · 业务流",
+      "featured": false,
+      "skillCount": 1,
+      "mcpCount": 1,
+      "facade": false,
+      "badge": "toolkit",
+      "official": true,
+      "contents": {
+        "skills": [
+          {
+            "name": "crm-desk-reception-merchant",
+            "description": "客服接待（商家自带 Chatwoot 租户）：发现账号、读未处理会话、草拟回复、确认后发送并复核；失败四分类如实上报。"
+          }
+        ],
+        "mcpServers": [
+          {
+            "registryName": "chatwoot"
+          }
+        ]
+      }
+    },
+    {
+      "id": "XfyXvzONQFelnFIgM0dJVw",
+      "authorEmail": "ops-seed@finddatatech.cloud",
+      "createdAt": 1792590360216,
+      "version": 3,
+      "name": "识律控制台伴随助手",
+      "description": "识律控制台的副驾：五页导览、配额与账单口径解读、凭据管理指引；经问询卡确认后可提议 navigate/refresh 页面动作（由宿主页面执行）。无账户数据读取与写操作工具，绝不编造数字。",
+      "tags": [
+        "lex",
+        "copilot",
+        "finddata"
+      ],
+      "publishedAt": 1793608623022,
+      "unlisted": false,
+      "visibility": "public",
+      "category": "legal",
+      "line": "识律 · 法律智能",
+      "lineLabel": "识律 · 法律智能",
+      "featured": false,
+      "agentCount": 1,
+      "skillCount": 4,
+      "mcpCount": 0,
+      "facade": false,
+      "badge": "facade",
+      "official": false,
+      "contents": {
+        "skills": [
+          {
+            "name": "lex-console-tour",
+            "description": "识律控制台五页导览与路由表——每页管什么、用户问题该去哪页、何时发起 navigate 意图"
+          },
+          {
+            "name": "lex-credentials-guide",
+            "description": "识律凭据管理指引——创建、轮换、泄露处置的通用流程与安全纪律；不代用户执行"
+          },
+          {
+            "name": "lex-intent-protocol",
+            "description": "宿主页面动作协议——确认纪律、被拒后的改口规则、什么算动作什么不算；信封的字面形状见 persona"
+          },
+          {
+            "name": "lex-quota-billing",
+            "description": "识律配额与账单的解读方法——口径以页面为准、硬停恢复途径、常见问题话术，绝不编造数字"
+          }
+        ],
+        "mcpServers": []
+      }
+    }
+  ]
+}

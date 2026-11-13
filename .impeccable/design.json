@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-26T00:00:00.000Z",
+  "title": "Design System: Platform (web)",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Workbench Blue",
+        "canonical": "light-dark(oklch(0.48 0.16 250), oklch(0.64 0.16 250))",
+        "tonalRamp": [
+          "oklch(0.18 0.05 250)",
+          "oklch(0.30 0.10 250)",
+          "oklch(0.40 0.13 250)",
+          "oklch(0.53 0.16 250)",
+          "oklch(0.64 0.16 250)",
+          "oklch(0.76 0.13 250)",
+          "oklch(0.87 0.08 250)",
+          "oklch(0.95 0.03 250)"
+        ]
+      },
+      "primary-deep": {
+        "role": "primary",
+        "displayName": "Deep Workbench Blue",
+        "canonical": "oklch(0.53 0.16 250)",
+        "tonalRamp": [
+          "oklch(0.18 0.05 250)",
+          "oklch(0.30 0.10 250)",
+          "oklch(0.40 0.13 250)",
+          "oklch(0.53 0.16 250)",
+          "oklch(0.64 0.16 250)",
+          "oklch(0.76 0.13 250)",
+          "oklch(0.87 0.08 250)",
+          "oklch(0.95 0.03 250)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Focus Blue",
+        "canonical": "light-dark(oklch(0.52 0.15 250), oklch(0.55 0.15 250))",
+        "tonalRamp": [
+          "oklch(0.18 0.05 250)",
+          "oklch(0.28 0.09 250)",
+          "oklch(0.38 0.12 250)",
+          "oklch(0.47 0.14 250)",
+          "oklch(0.55 0.15 250)",
+          "oklch(0.68 0.13 250)",
+          "oklch(0.82 0.08 250)",
+          "oklch(0.94 0.03 250)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Worktop",
+        "canonical": "light-dark(oklch(0.98 0 0), oklch(0.16 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.16 0 0)",
+          "oklch(0.19 0 0)",
+          "oklch(0.23 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Soft White / Ink",
+        "canonical": "light-dark(oklch(0.22 0 0), oklch(0.96 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.20 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.55 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.96 0 0)",
+          "oklch(0.99 0 0)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card Surface",
+        "canonical": "light-dark(oklch(1 0 0), oklch(0.19 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.16 0 0)",
+          "oklch(0.19 0 0)",
+          "oklch(0.23 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Quiet Surface",
+        "canonical": "light-dark(oklch(0.96 0 0), oklch(0.23 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.16 0 0)",
+          "oklch(0.19 0 0)",
+          "oklch(0.23 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Dim Gray",
+        "canonical": "light-dark(oklch(0.48 0 0), oklch(0.65 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.16 0 0)",
+          "oklch(0.19 0 0)",
+          "oklch(0.23 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Raised Surface",
+        "canonical": "light-dark(oklch(0.96 0 0), oklch(0.24 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.16 0 0)",
+          "oklch(0.19 0 0)",
+          "oklch(0.23 0 0)",
+          "oklch(0.24 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Gray",
+        "canonical": "light-dark(oklch(0.90 0 0), oklch(0.28 0 0))",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.16 0 0)",
+          "oklch(0.19 0 0)",
+          "oklch(0.23 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.96 0 0)"
+        ]
+      },
+      "scrim": {
+        "role": "neutral",
+        "displayName": "Scrim",
+        "canonical": "light-dark(oklch(0.44 0 0 / 0.40), oklch(0 0 0 / 0.60))",
+        "tonalRamp": [
+          "oklch(0 0 0 / 0.60)",
+          "oklch(0.15 0 0 / 0.55)",
+          "oklch(0.25 0 0 / 0.50)",
+          "oklch(0.35 0 0 / 0.45)",
+          "oklch(0.44 0 0 / 0.40)",
+          "oklch(0.55 0 0 / 0.35)",
+          "oklch(0.70 0 0 / 0.30)",
+          "oklch(0.90 0 0 / 0.25)"
+        ]
+      },
+      "destructive": {
+        "role": "signal",
+        "displayName": "Error Red",
+        "canonical": "light-dark(oklch(0.52 0.22 25), oklch(0.62 0.22 25))",
+        "tonalRamp": [
+          "oklch(0.18 0.07 25)",
+          "oklch(0.30 0.12 25)",
+          "oklch(0.40 0.16 25)",
+          "oklch(0.50 0.19 25)",
+          "oklch(0.62 0.22 25)",
+          "oklch(0.74 0.19 25)",
+          "oklch(0.86 0.12 25)",
+          "oklch(0.95 0.05 25)"
+        ]
+      },
+      "destructive-deep": {
+        "role": "signal",
+        "displayName": "Deep Error Red",
+        "canonical": "light-dark(oklch(0.52 0.22 25), oklch(0.55 0.22 25))",
+        "tonalRamp": [
+          "oklch(0.18 0.07 25)",
+          "oklch(0.30 0.12 25)",
+          "oklch(0.40 0.16 25)",
+          "oklch(0.50 0.19 25)",
+          "oklch(0.55 0.22 25)",
+          "oklch(0.74 0.19 25)",
+          "oklch(0.86 0.12 25)",
+          "oklch(0.95 0.05 25)"
+        ]
+      },
+      "destructive-foreground": {
+        "role": "signal",
+        "displayName": "Error-Foreground Near-White",
+        "canonical": "oklch(0.99 0 0)",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.20 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.55 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.96 0 0)",
+          "oklch(0.99 0 0)"
+        ]
+      },
+      "success": {
+        "role": "signal",
+        "displayName": "Done Green",
+        "canonical": "light-dark(oklch(0.52 0.15 145), oklch(0.72 0.17 145))",
+        "tonalRamp": [
+          "oklch(0.18 0.05 145)",
+          "oklch(0.30 0.09 145)",
+          "oklch(0.40 0.12 145)",
+          "oklch(0.55 0.15 145)",
+          "oklch(0.72 0.17 145)",
+          "oklch(0.82 0.14 145)",
+          "oklch(0.90 0.09 145)",
+          "oklch(0.96 0.04 145)"
+        ]
+      },
+      "warning": {
+        "role": "signal",
+        "displayName": "Pending Amber",
+        "canonical": "light-dark(oklch(0.52 0.14 85), oklch(0.80 0.15 85))",
+        "tonalRamp": [
+          "oklch(0.20 0.05 85)",
+          "oklch(0.32 0.09 85)",
+          "oklch(0.44 0.12 85)",
+          "oklch(0.58 0.14 85)",
+          "oklch(0.80 0.15 85)",
+          "oklch(0.87 0.12 85)",
+          "oklch(0.93 0.07 85)",
+          "oklch(0.97 0.03 85)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Page Headline", "purpose": "One per panel page — 24px semibold." },
+      "title": { "displayName": "Section Title", "purpose": "Panel sub-sections and markdown h1/h2 — 16–18px semibold." },
+      "body": { "displayName": "Body", "purpose": "Chat transcript, markdown prose, composer input — 14px, 1.625 line-height." },
+      "label": { "displayName": "Label", "purpose": "Buttons, nav, inputs, chips, block headers — 12px medium." },
+      "mono": { "displayName": "Mono", "purpose": "Tool names, code (Shiki dual-theme), skills, command tokens — system mono, 12px." }
+    },
+    "shadows": [
+      {
+        "name": "floating",
+        "value": "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)",
+        "purpose": "The only shadow. Detached layers only: popovers, menus, toast, dialogs. A shadow asserts 'this layer is floating and temporary.'"
+      }
+    ],
+    "motion": [
+      { "name": "color-swap", "value": "color/background 150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default state transition — decisive color swap, no travel." },
+      { "name": "chevron-rotate", "value": "transform 150ms ease", "purpose": "Disclosure rotation on thinking/tool block chevrons." },
+      { "name": "spinner", "value": "rotate 1s linear infinite", "purpose": "Loading states (animate-spin)." },
+      { "name": "streaming-pulse", "value": "opacity 2s cubic-bezier(0.4, 0, 0.6, 1) infinite", "purpose": "Streaming placeholder while tokens arrive (animate-pulse)." },
+      { "name": "dialog-fade", "value": "opacity 150ms ease-out", "purpose": "Dialog overlay/content entrance — fade only." },
+      { "name": "outline-jump-flash", "value": "background-color 1.2s ease-out (12% primary → transparent)", "purpose": "Outline-rail jump arrival wash on the target turn; forced reflow before re-adding lets a rapid re-tap restart it." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px", "purpose": "Welcome prompt grid 1 ↔ 2 columns." },
+      { "name": "md", "value": "768px", "purpose": "The structural break: sidebar rail ↔ off-canvas overlay drawer." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The rare filled-blue action; send is the only always-visible one in chat.",
+      "html": "<button class=\"ds-btn-primary\">确认发送</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 8px 16px; border: none; border-radius: 6px; background: var(--color-primary-deep); color: var(--color-primary-foreground); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: color-mix(in oklab, var(--color-primary-deep) 90%, transparent); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "The workhorse for rows and icon actions — invisible until hovered.",
+      "html": "<button class=\"ds-btn-ghost\">新建会话</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 8px 16px; border: none; border-radius: 6px; background: transparent; color: var(--color-foreground); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-ghost:hover { background: var(--color-secondary); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); } .ds-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Hairline-stroked quiet action; hover fills the quiet surface.",
+      "html": "<button class=\"ds-btn-outline\">刷新目录</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 8px 16px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-background); color: var(--color-foreground); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outline:hover { background: var(--color-secondary); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); } .ds-btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Standard 40px field — hairline stroke on the worktop, blue double-ring focus.",
+      "html": "<input class=\"ds-input\" placeholder=\"搜索模型…\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 40px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 6px; background: var(--color-background); color: var(--color-foreground); font-size: 14px; outline: none; transition: border-color 150ms; } .ds-input::placeholder { color: var(--color-muted-foreground); } .ds-input:focus-visible { box-shadow: 0 0 0 2px var(--color-background), 0 0 0 4px var(--color-ring); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Sidebar navigation item (rail on wide viewports, drawer below md); active state is the rail's only blue.",
+      "html": "<div style=\"display:flex;flex-direction:column;gap:2px;width:220px\"><button class=\"ds-nav-item\">知识库</button><button class=\"ds-nav-item is-active\">对话</button></div>",
+      "css": ".ds-nav-item { display: flex; width: 100%; padding: 8px 12px; border: none; border-radius: 6px; background: transparent; color: var(--color-muted-foreground); font-size: 14px; text-align: left; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1), color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-nav-item:hover { background: var(--color-muted); color: var(--color-foreground); } .ds-nav-item.is-active { background: var(--color-primary-deep); color: var(--color-primary-foreground); } .ds-nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--color-card), 0 0 0 4px var(--color-ring); }"
+    },
+    {
+      "name": "Muted Chip",
+      "kind": "chip",
+      "refersTo": "chip-muted",
+      "description": "Attachment/model/meta chip — quiet surface, never elevates.",
+      "html": "<span class=\"ds-chip\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48\"/></svg>年报摘要.pdf</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 6px; background: var(--color-muted); color: var(--color-foreground); font-size: 12px; } .ds-chip svg { color: var(--color-muted-foreground); }"
+    },
+    {
+      "name": "User Bubble",
+      "kind": "custom",
+      "refersTo": "user-bubble",
+      "description": "The user's own words — right-aligned, blue, the soft 16px mouth radius.",
+      "html": "<div style=\"display:flex;flex-direction:column;gap:8px\"><div class=\"ds-user-bubble\">帮我总结这份年报的关键风险点</div><div class=\"ds-user-bubble\">再对比一下去年的数据</div></div>",
+      "css": ".ds-user-bubble { max-width: 85%; margin-left: auto; padding: 8px 16px; border-radius: 16px; background: var(--color-primary-deep); color: var(--color-primary-foreground); font-size: 14px; line-height: 1.625; white-space: pre-wrap; word-break: break-word; }"
+    },
+    {
+      "name": "Composer Shell",
+      "kind": "custom",
+      "refersTo": "composer-shell",
+      "description": "The conversation's mouth — 16px-radius shell that turns blue on focus-within, with fully-round paperclip and send buttons; send swaps to a stop control (solid square) while a run streams.",
+      "html": "<div class=\"ds-composer\"><button class=\"ds-composer-attach\" aria-label=\"附件\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48\"/></svg></button><input class=\"ds-composer-input\" placeholder=\"输入消息，/ 唤起命令…\" /><button class=\"ds-composer-send\" aria-label=\"发送\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m5 12 7-7 7 7\"/><path d=\"M12 19V5\"/></svg></button></div>",
+      "css": ".ds-composer { display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-background); transition: border-color 150ms; } .ds-composer:focus-within { border-color: var(--color-primary); } .ds-composer-input { flex: 1; min-height: 24px; padding: 4px 0; border: none; background: transparent; outline: none; color: var(--color-foreground); font-size: 14px; } .ds-composer-input::placeholder { color: var(--color-muted-foreground); } .ds-composer-attach { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border: none; border-radius: 9999px; background: transparent; color: var(--color-muted-foreground); cursor: pointer; transition: background 150ms, color 150ms; } .ds-composer-attach:hover { background: var(--color-muted); color: var(--color-foreground); } .ds-composer-send { display: grid; place-items: center; width: 32px; height: 32px; border: none; border-radius: 9999px; background: var(--color-primary-deep); color: var(--color-primary-foreground); cursor: pointer; transition: opacity 150ms; } .ds-composer-send:hover { opacity: 0.9; } .ds-composer-send:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Tool Block",
+      "kind": "custom",
+      "refersTo": "tool-block",
+      "description": "Collapsible tool call on the assistant's left rail — 2px state-colored left edge: blue running, red error, green done.",
+      "html": "<div class=\"ds-tool-block\"><button class=\"ds-tool-header\"><svg class=\"ds-tool-chevron\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg><span class=\"ds-tool-icon\">🔧</span><span class=\"ds-tool-name\">mcp__search__web</span><span class=\"ds-tool-status\">运行中…</span></button><div class=\"ds-tool-body\">{\"query\": \"oklch tailwind v4\"}</div></div><div class=\"ds-tool-block is-done\" style=\"margin-top:8px\"><button class=\"ds-tool-header\"><svg class=\"ds-tool-chevron\" width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg><span class=\"ds-tool-icon\">🔧</span><span class=\"ds-tool-name\">read_file</span><span class=\"ds-tool-status\">完成</span></button></div>",
+      "css": ".ds-tool-block { overflow: hidden; border: 1px solid var(--color-border); border-left: 2px solid var(--color-primary); border-radius: 6px; background: color-mix(in oklab, var(--color-muted) 40%, transparent); } .ds-tool-block.is-error { border-left-color: var(--color-destructive); } .ds-tool-block.is-done { border-left-color: var(--color-success); } .ds-tool-header { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 12px; border: none; background: transparent; color: var(--color-foreground); font-size: 12px; cursor: pointer; } .ds-tool-chevron { color: var(--color-muted-foreground); } .ds-tool-icon { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; color: var(--color-muted-foreground); } .ds-tool-name { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-weight: 600; } .ds-tool-status { margin-left: auto; font-style: italic; font-size: 11px; color: var(--color-primary); } .is-error .ds-tool-status { color: var(--color-destructive); } .is-done .ds-tool-status { color: var(--color-success); } .ds-tool-body { padding: 8px 12px; border-top: 1px solid var(--color-border); font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 12px; color: var(--color-muted-foreground); white-space: pre-wrap; }"
+    },
+    {
+      "name": "Thinking Block",
+      "kind": "custom",
+      "refersTo": "tool-block",
+      "description": "Collapsible reasoning block — quiet surface at 40%, chevron rotates open.",
+      "html": "<div class=\"ds-think-block\"><button class=\"ds-think-header\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg><span>思考中</span></button><div class=\"ds-think-body\">用户想要的是 oklch 值，先查证 Tailwind v4 的默认色板…</div></div>",
+      "css": ".ds-think-block { border: 1px solid var(--color-border); border-radius: 6px; background: color-mix(in oklab, var(--color-muted) 40%, transparent); } .ds-think-header { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 12px; border: none; background: transparent; color: var(--color-muted-foreground); font-size: 12px; cursor: pointer; } .ds-think-header:hover { color: var(--color-foreground); } .ds-think-body { max-height: 200px; overflow-y: auto; padding: 8px 12px; border-top: 1px solid var(--color-border); color: var(--color-muted-foreground); font-size: 12px; white-space: pre-wrap; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Workbench",
+    "overview": "Platform is a workbench with one lamp on. The interface is the surface the owner keeps open all day: quiet neutral surfaces, hairline borders, and a single blue accent that means exactly one thing — work is happening here. When the assistant streams, when a field takes focus, when the user speaks (the blue bubble), the lamp is on. Everything else recedes so the work is the brightest thing on screen.\n\nThe room now has windows: every color token is a light-dark() pair and color-scheme decides which half applies — follow the OS by default (no JavaScript, no flash), or one data-theme attribute on <html> for an explicit choice. The dark half is the original palette, unchanged; the light half is its daylight translation, with card above background in both themes so a raised surface reads raised anywhere. Contrast is enforced, not eyeballed: scripts/test-palette-contrast.mjs parses the token file and fails the pairing that drops below WCAG AA in either theme. The lamp logic survives the daylight unchanged — one blue, tonal layering, shadows only on detached layers.\n\nThe feel is calm, precise, utilitarian. Surfaces never lift or glow; state changes are decisive color swaps, not movements. Density is compact — 12–14px body text, 6px paddings on rows, tight vertical rhythm — because this is an Operate surface: the visitor completes tasks, scans status, and reads transcripts, often for hours. The chat transcript is the product's center; every panel (Knowledge, Models, Extensions, Agents, Tasks, Status) is a quiet toolshed behind it, now gathered under one Settings roof. The system runs identically in the browser and the Electron desktop app, so nothing may assume browser chrome, custom fonts, or a network-loaded asset.",
+    "keyCharacteristics": [
+      "Dual-theme by one mechanism: every token a light-dark(<light>, <dark>) pair; color-scheme picks the half — nothing themes any other way",
+      "Neutral tonal layering (light: 0.98 paper → 1.00 card → 0.96 muted; dark: 0.16 → 0.19 → 0.23) plus 1px hairlines; depth is lightness, never shadow",
+      "One accent (Workbench Blue) with strict semantic scope: live work only",
+      "System font stacks, zero webfonts — the type is meant to be invisible",
+      "Compact, information-dense: fixed 240px rail (or its below-md overlay drawer), centered 768px transcript",
+      "Shadows mark detached layers only (menus, dialogs, toast, the mobile drawer); everything resting is flat",
+      "Monospace is a first-class voice: tool names, code, skills, identifiers",
+      "One icon language: Lucide everywhere, no emoji in the UI"
+    ],
+    "rules": [
+      { "name": "The One Lamp Rule", "body": "Workbench Blue appears on ≤10% of any screen and always means live work: streaming, focus, selection, active navigation, or the user's own words. If blue is used decoratively, the lamp goes out — the accent dies.", "section": "colors" },
+      { "name": "The One Mechanism Rule", "body": "A color themes exactly one way: a light-dark() pair in the @theme block, resolved by color-scheme. No per-component light variants, no [data-theme] forks below the token layer, no hand-written theme hex in JSX. scripts/test-palette-contrast.mjs gates every pair at WCAG AA in both halves — run it after touching any value.", "section": "colors" },
+      { "name": "The Dead Navy Rule", "body": "The 2019-era navy palette of the pre-redesign vanilla page is a confirmed anti-reference. No navy, no desaturated steel blues, no second accent hue.", "section": "colors" },
+      { "name": "The Invisible Type Rule", "body": "System stacks only. Never introduce a webfont, icon font, or remote-loaded type — the font swap must stay invisible and the desktop bundle stays self-contained.", "section": "typography" },
+      { "name": "The Content-First Rule", "body": "The transcript is the loudest thing on screen. Markdown headings top out at 18px; no panel heading, chrome label, or status line may outsize the words the agent produces.", "section": "typography" },
+      { "name": "The Floating-Only Shadow Rule", "body": "A box-shadow asserts 'this layer is detached and will disappear.' Resting cards, rows, inputs, and buttons are flat. If a surface needs emphasis, shift its tone or add a hairline — never a shadow.", "section": "elevation" },
+      { "name": "The Soft Mouth Rule", "body": "Only the surfaces you speak through get the 16px radius — the composer and the user bubble. Everything the machine renders back stays at 6–8px: the conversation's softness belongs to the human side.", "section": "shapes" }
+    ],
+    "dos": [
+      "Do use Workbench Blue for exactly five things: streaming, focus/selection, active nav, running tools, and the user bubble (The One Lamp Rule).",
+      "Do theme every new color as a light-dark() pair in the @theme block, and run scripts/test-palette-contrast.mjs after touching any value — AA in both halves or it doesn't ship (The One Mechanism Rule).",
+      "Do build depth with the neutral steps and 1px hairlines — a raised surface is a lighter (dark) or whiter (light) surface.",
+      "Do center the transcript at 768px (max-w-3xl) and keep 24px between turns.",
+      "Do use monospace for anything the machine emits or accepts as an identifier: tool names, code, skills, /commands.",
+      "Do use Lucide for every icon, at the established sizes (14px in-turn actions, 16px controls) — one icon language, no emoji.",
+      "Do resolve every user-visible string through the locale bundles — zh-CN lands first; design labels that survive both Chinese and English widths.",
+      "Do keep state changes as instant color swaps (transition-colors, 150ms); the only transforms are functional (chevron rotation) and the only loops are semantic (spinner, streaming pulse, outline jump flash)."
+    ],
+    "donts": [
+      "Don't add a second accent hue, gradients, glassmorphism, or neon glow — flat tonal layering is the identity.",
+      "Don't put a box-shadow on anything that rests; shadow means floating and temporary.",
+      "Don't introduce webfonts, icon fonts, or remote type assets (The Invisible Type Rule).",
+      "Don't hand-write light-mode or dark-mode values in components, or fork styles under [data-theme] — the token pair is the only theming path.",
+      "Don't let markdown or panel headings exceed 18px, or add entrance/parallax/decorative motion.",
+      "Don't hard-code hex colors in components — extend the @theme tokens instead.",
+      "Don't design a second navigation pattern for mobile — the below-md drawer is the same rail, floating."
+    ]
+  }
+}

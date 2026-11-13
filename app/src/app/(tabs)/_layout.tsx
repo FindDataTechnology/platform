@@ -53,6 +53,13 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon glyph="▦" focused={focused} />,
         }}
       />
+      <Tabs.Screen
+        name="zhiyu"
+        options={{
+          title: t("tabs.zhiyu"),
+          tabBarIcon: ({ focused }) => <TabIcon glyph="◈" focused={focused} />,
+        }}
+      />
     </Tabs>
   );
 }

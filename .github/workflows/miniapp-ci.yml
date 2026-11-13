@@ -50,3 +50,17 @@ jobs:
 
       - name: Markdown unit tests
         run: npm --prefix miniapp run test:markdown
+
+      # The zhiyu pages must ship, not merely exist (add-zhiyu-mobile-clients
+      # 3.1). A page listed in app.config.ts can still be absent from the
+      # package — bad import, path typo, a Taro template that never generates —
+      # and the source tree looks fine either way. This builds the weapp and
+      # checks the ARTIFACT: both routes in dist/app.json, the three emitted
+      # files per page, the 11 testid markers in the bundles, and an inbound
+      # navigateTo from a bundle other than app.js (a registered page nobody can
+      # reach is shipped and dead — the first version of this change was exactly
+      # that). ~8s measured; the one build this repo keeps in CI on purpose,
+      # because it is the only thing that proves the mini-program half of the
+      # device walkthrough (openspec 7.2) without a phone.
+      - name: Zhiyu pages ship in the built package
+        run: node scripts/verify-miniapp-zhiyu-pages.mjs

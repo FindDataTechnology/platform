@@ -1,0 +1,13 @@
+dsh-contracts — candidate: /Users/chengsishi/paas/node_modules/.cache/dsh-contracts-tree/ba760b347986d09f (matrix scratch tree (cache ba760b347986d09f), dsh@0.1.1-rc.2)
+  bin: /Users/chengsishi/paas/node_modules/.cache/dsh-contracts-tree/ba760b347986d09f/node_modules/.bin/dsh
+  home: /var/folders/rp/2v4sddsn10vg4z9sljcz87sh0000gn/T/dsh-contracts-home-08wTCW (throwaway; the real DSH_HOME is never touched)
+  route: provider=volces model=deepseek-v4.1-flash → http://127.0.0.1:58866/v1 (dummy endpoint, no real upstream)
+[dsh-contracts] initialize racing adapter registration; retrying…
+  ① boot/handshake/roster PASS — serverInfo deepseek-harness-sdk-runtime@0.0.1; 13 declared model(s) (adapter for "volces" registered); presets/list callable → 4 row(s) (17ms)
+  ② closure-resolvable PASS — 456/456 lock-declared entries resolve inside the tree (443 by entry, 10 by package.json, 3 binary-only present; 15 anchor group(s); lock: package-lock.json) (1153ms)
+  ③ hmr registerConfig (<1.0.17) PASS — cordis-plugin-hmr@1.0.16 < 1.0.17; no boot crash (watchUserPatches contract intact) (66ms)
+  ④ settings/credentials hot-reload PASS — hot provider route registered in ~503ms without a restart; rotated credential visible on the wire (request #1) (960ms)
+  ⑤ patch semantics + scaffold PASS — scaffold 4/4 loaded; disable+insert overlays applied (stock sdk-jsonrpc-server off, platform rows on — behavioral proof rides ⑥) (1ms)
+  ⑥ platform SDK RPC surface [internal-API] PASS — presets/list → 4 row(s); permissions/list → 3 option(s) (current "workspace-write"); permissions/set applied "read-only" to a live session without restart (20ms)
+
+dsh-contracts: 6/6 PASS — candidate /Users/chengsishi/paas/node_modules/.cache/dsh-contracts-tree/ba760b347986d09f

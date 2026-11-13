@@ -1768,14 +1768,17 @@
     }
   },
   "facetShell": {
-    "tabs": {
+    "entries": {
       "intro": "Introducción",
-      "packs": "Agentes",
-      "mcp": "Servicios MCP",
-      "mine": "Mis agentes",
-      "curate": "Curaduría",
-      "docs": "Docs",
-      "studio": "Studio"
+      "packs": "Mercado de agentes",
+      "mcp": "MCP y habilidades",
+      "docs": "Guía",
+      "studio": "Estudio de creación"
+    },
+    "account": {
+      "menuLabel": "Cuenta",
+      "mine": "Mis publicaciones",
+      "curate": "Operación de contenido"
     },
     "langLabel": "Idioma",
     "packsFootnote": "Navegación anónima; inicia sesión para publicar y suscribirte. Uso de la CLI:",
@@ -1786,17 +1789,17 @@
       "retry": "Reintentar el inicio de sesión",
       "dismiss": "Cerrar"
     },
-    "loggedInAs": "Sesión iniciada como {{email}}",
-    "studioTitle": "Studio"
+    "loggedInAs": "Sesión iniciada como {{email}}"
   },
   "facetDocs": {
-    "title": "Documentación",
+    "title": "Guía",
     "subtitle": "Todo lo necesario desde un id de agente hasta una instalación funcionando: instalar, conectar y crear.",
     "packageNote": "Paquete CLI publicado:",
     "nav": {
       "install": "Instalar",
-      "mcp": "Acceso MCP",
-      "create": "Crear"
+      "mcp": "Conectar",
+      "create": "Crear",
+      "site": "Mapa del sitio"
     },
     "install": {
       "title": "Instalar un agente",
@@ -1820,23 +1823,39 @@
     "clients": {
       "claude-code": {
         "label": "Claude Code",
-        "body": "Las habilidades se instalan como instantánea de versión; con una clave de llamada guardada, las referencias MCP del agente pueden escribirse en su configuración MCP nativa."
+        "body": "Las habilidades se instalan como instantánea de versión; con una clave de llamada guardada, las referencias MCP del agente pueden escribirse en su configuración MCP nativa.",
+        "pitfall1": "El nivel de usuario escribe ~/.claude.json; solo --project escribe el .mcp.json del proyecto: los dos no se ven entre sí.",
+        "pitfall2": "Una entrada MCP solo aplica a sesiones nuevas; una sesión abierta sigue con la configuración anterior."
       },
       "cursor": {
         "label": "Cursor",
-        "body": "Las habilidades van al directorio de habilidades de Cursor; las entradas MCP se escriben en el archivo de configuración propio de Cursor."
+        "body": "Las habilidades van al directorio de habilidades de Cursor; las entradas MCP se escriben en el archivo de configuración propio de Cursor.",
+        "pitfall1": "Hay que reiniciar Cursor para que vuelva a leer el directorio de habilidades.",
+        "pitfall2": "~/.cursor/mcp.json y el .cursor/mcp.json del proyecto son archivos distintos: instalar a nivel de usuario no sirve a nivel de proyecto."
       },
       "zcode": {
         "label": "ZCode",
-        "body": "Las habilidades van al directorio de habilidades de ZCode; las entradas MCP se escriben en la configuración CLI de ZCode."
+        "body": "Las habilidades van al directorio de habilidades de ZCode; las entradas MCP se escriben en la configuración CLI de ZCode.",
+        "pitfall1": "La entrada va bajo mcp.servers en ~/.zcode/cli/config.json, no en un mcpServers de nivel superior.",
+        "pitfall2": "Las habilidades nuevas las descubre la siguiente sesión; la actual no las ve."
       },
       "codex": {
         "label": "Codex CLI",
-        "body": "Las habilidades van al directorio de habilidades de Codex; las entradas MCP se escriben como TOML en la configuración de Codex."
+        "body": "Las habilidades van al directorio de habilidades de Codex; las entradas MCP se escriben como TOML en la configuración de Codex.",
+        "pitfall1": "La entrada MCP es TOML (~/.codex/config.toml), no JSON.",
+        "pitfall2": "Escribir [mcp_servers.<name>] con sintaxis JSON rompe todo el archivo de configuración."
       },
       "gemini-cli": {
         "label": "Gemini CLI",
-        "body": "Las habilidades van al directorio de habilidades de Gemini CLI; las entradas MCP usan su forma httpUrl."
+        "body": "Las habilidades van al directorio de habilidades de Gemini CLI; las entradas MCP usan su forma httpUrl.",
+        "pitfall1": "El campo es httpUrl, no url; una clave equivocada falla en silencio con una lista de herramientas vacía.",
+        "pitfall2": "Reinicia Gemini CLI tras el cambio o la nueva configuración no se carga."
+      },
+      "workbuddy": {
+        "label": "WorkBuddy",
+        "body": "Las habilidades van al directorio de habilidades de WorkBuddy; la entrada MCP va a su propio mcp.json.",
+        "pitfall1": "El mcp.json de usuario solo acepta la clave de cabecera (clave de llamada wgk-); sin ella no hay reingreso silencioso.",
+        "pitfall2": "Habilidades y MCP viven bajo ~/.workbuddy, no bajo ~/.codebuddy."
       }
     },
     "mcp": {
@@ -1865,7 +1884,7 @@
       "routesTitle": "Tres vías de creación",
       "route1": "En 壹座: Ajustes → Agentes → Nuevo agente — compón habilidades, referencias MCP y personas como borrador.",
       "route2": "Conversión con un clic: convierte un preset propio en borrador de agente (Ajustes → Presets personalizados → Publicar), con un informe de lo transferido y lo pendiente.",
-      "route3": "Desde la consola del autor (#/mine): envía un manifest directamente al endpoint de publicación; los errores de validación aparecen tal cual.",
+      "route3": "Desde Mis publicaciones (#/mine): envía un manifest directamente al endpoint de publicación; los errores de validación aparecen tal cual.",
       "disciplineTitle": "Disciplina de publicación",
       "versions": "Cada publicación añade una versión inmutable; cada versión puede llevar una nota breve (≤500 caracteres).",
       "subscribe": "Suscribirse e instalar son dos actos: la suscripción se registra en el mercado; la instalación toma una instantánea de versión concreta.",
@@ -1883,6 +1902,35 @@
       "verified": "Verificación real",
       "note": "Cada celda se remite a un hecho del código o a un registro verificado.",
       "deepDoc": "Matriz completa con fuentes →"
+    },
+    "searchPlaceholder": "Buscar en esta guía",
+    "searchEmpty": "Sin coincidencias",
+    "searchResults": "{{count}} coincidencias",
+    "intentTitle": "Por dónde empiezo",
+    "intent": {
+      "install": "Solo quiero instalar un agente",
+      "publish": "Quiero publicar",
+      "mcp": "Quiero conectar MCP",
+      "site": "Explícame cómo funciona este sitio"
+    },
+    "site": {
+      "title": "Mapa del sitio",
+      "lead": "Para qué sirve cada entrada y qué camino tomar: esta sección trata del sitio, no de un cliente.",
+      "entries": {
+        "intro": "Qué hace el producto, por qué suscribirse e instalar son dos actos, y el inicio rápido en una línea.",
+        "packs": "Explora y busca agentes, lee el inventario completo, suscríbete o toma uno.",
+        "mcp": "Los servicios MCP y el catálogo de habilidades de la plataforma, cada uno con su superficie de herramientas.",
+        "docs": "Esta página: instalar, conectar, crear y dónde vive cada cosa.",
+        "studio": "Aparece al iniciar sesión: arma un borrador (habilidades / referencias MCP / roles), valídalo y publícalo.",
+        "mine": "En el menú de cuenta: gestiona los agentes que publicaste — versiones, visibilidad, retirada.",
+        "curate": "En el menú de cuenta (solo administradores): categoría, dominios, destacados y patrulla de cobertura en inglés."
+      }
+    },
+    "client": {
+      "configTitle": "Así se ve la configuración nativa",
+      "configNote": "Sustituye <server-name> y la clave de llamada por los tuyos; la CLI escribe este bloque por ti — editarlo a mano es solo para diagnosticar.",
+      "afterInstall": "Reinicia el cliente tras instalar: una sesión abierta no carga habilidades nuevas.",
+      "pitfallsTitle": "Errores frecuentes"
     }
   },
   "facetIntro": {
@@ -3501,19 +3549,16 @@
     "sourceBlueprint": "Blueprint de origen"
   },
   "facetCurate": {
-    "title": "Panel de curaduría",
+    "title": "Operación de contenido",
     "subtitle": "La categoría y la destacada son de nivel de presentación (no afectan visibilidad, versiones ni instalabilidad); el uso proviene del agregado de la plataforma (últimos 7 días).",
-    "loading": "Cargando el panel…",
     "empty": "El panel está vacío por ahora — los agentes publicados aparecerán aquí.",
     "errorLoad": "Error al listar: {{message}}",
     "saved": "Guardado: {{name}}",
     "saveFailed": "Error al guardar: {{name}} — {{message}}",
-    "usageDegraded": "Fuente de uso no disponible (la curaduría no se ve afectada): {{message}}",
+    "usageDegraded": "Fuente de uso no disponible (la operación de contenido no se ve afectada): {{message}}",
     "unlisted": "no listado",
     "private": "privado",
     "usage": "{{users}} activos semanales / {{turns}} turnos",
-    "categoryPlaceholder": "slug de categoría (p. ej. legal)",
-    "setCategory": "Definir categoría",
     "feature": "Destacar",
     "unfeature": "Quitar destacado",
     "allPacks": "Todos",
@@ -3522,13 +3567,29 @@
     "unclassifiedCount": "Sin clasificar {{count}} / {{total}}",
     "lineResolved": "Línea: {{line}}",
     "domainsLabel": "Áreas",
-    "saveDomains": "Guardar áreas",
     "vocabUnavailable": "Vocabulario no disponible",
     "onlyGaps": "Solo huecos en inglés",
-    "coverageBadge": "en {{covered}}/{{total}}"
+    "coverageBadge": "en {{covered}}/{{total}}",
+    "searchPlaceholder": "Buscar por nombre",
+    "loadMore": "Cargar {{remaining}} más",
+    "loadingMore": "Cargando…",
+    "loadMoreFailed": "No se pudo cargar más: {{message}}",
+    "loadedOf": "cargados {{loaded}} / {{total}}",
+    "gapCount": "{{count}} faltantes",
+    "selectHint": "Elige un agente a la izquierda para editar aquí su categoría, dominios y destacado.",
+    "categoryLabel": "Categoría",
+    "categoryNone": "Sin categoría",
+    "categoryLegacy": "Valor guardado: {{value}}",
+    "featuredLabel": "Destacado",
+    "coverageLabel": "Cobertura en inglés",
+    "coverageFull": "Cobertura en inglés completa",
+    "usageNone": "Sin uso registrado en los últimos 7 días",
+    "dirty": "Cambios sin guardar",
+    "save": "Guardar",
+    "saving": "Guardando…"
   },
   "facetMine": {
-    "title": "Mis agentes",
+    "title": "Mis publicaciones",
     "subtitle": "Gestiona aquí lo que publicas: versiones, listado y visibilidad. La instalación en un entorno sigue siendo una función de 壹座 (Ajustes → Agentes → Míos). Los agentes públicos con contrato de servicio pasan al catálogo de 万星 — los desplegadores externos los ejecutan con turnos medidos y tu participación se acumula automáticamente.",
     "loading": "Cargando tus agentes…",
     "empty": "Nada publicado aún — usa el cuadro de publicación de abajo.",
@@ -3708,7 +3769,23 @@
       "room_renamed": "Sala renombrada",
       "guest_joined": "Un visitante entró en la sala",
       "guest_identified": "Identidad del visitante confirmada",
-      "guest_greeting": "Bienvenido/a — los asientos de guardia están para tus preguntas"
+      "guest_greeting": "Bienvenido/a — los asientos de guardia están para tus preguntas",
+      "route_decision": {
+        "mention": "Enrutado: nombrado explícitamente, enviado a {{to}}",
+        "attribution": "Enrutado: enviado al equipo del hablante ({{to}})",
+        "intent": "Enrutado por tema a {{to}} ({{n}} candidatos)",
+        "needs_confirmation": "Sin enrutar: hablante incierto, en espera de confirmación",
+        "broadcast": "Solicitud: sin nombre ni atribución, preguntado a {{to}}",
+        "fallback": "Enrutado a {{to}}"
+      },
+      "route_cancelled": "Envío detenido: {{n}} asiento(s) sin iniciar, sin cargo",
+      "route_reassigned": "Reenviado a {{to}}",
+      "route_action": {
+        "cancel": "Detener envío",
+        "reassign": "Reenviar",
+        "pickTarget": "Elige un asiento…",
+        "reassignReason": "Reenviado manualmente por el propietario"
+      }
     },
     "fleet": {
       "title": "Suscripciones de equipos",
@@ -3764,6 +3841,19 @@
       "close": "Cerrar",
       "empty": "Este puesto aún no tiene memoria.",
       "noPack": "Este equipo de agentes no tiene coordenada de agente."
+    },
+    "policy": {
+      "title": "Declaración de memoria (raíz del pack)",
+      "degraded": "Servicio de memoria no disponible",
+      "scope": "Ámbito: {{root}}",
+      "col": {
+        "key": "Clave",
+        "declared": "Declarado",
+        "inherited": "Heredado de",
+        "effective": "En vigor"
+      },
+      "unset": "sin definir",
+      "notExecuted": "no ejecutado"
     }
   },
   "blueprints": {
@@ -4034,7 +4124,8 @@
     "views": {
       "overview": "Resumen",
       "manage": "Gestionar",
-      "owner": "Operaciones"
+      "owner": "Operaciones",
+      "directory": "Directorio"
     },
     "overview": {
       "summaryTitle": "Todos los equipos de agentes",
@@ -4149,7 +4240,7 @@
     },
     "market": {
       "subtitle": "Adquiere y gestiona capacidades: agentes, herramientas, habilidades, complementos",
-      "openStudio": "Abrir Studio",
+      "openStudio": "Abrir el estudio de creación",
       "installed": "Packs instalados en esta máquina"
     }
   },
@@ -4204,6 +4295,12 @@
         "enabled": "Activado",
         "unsupplied": "No suministrado"
       },
+      "evidence": {
+        "complete": "Revisado",
+        "stale": "Revisión pendiente",
+        "missing": "Sin revisar",
+        "until": "revisado hasta {{date}}"
+      },
       "request": "Solicitar suministro",
       "requested": "Suministro solicitado: {{name}}",
       "requestPending": "Solicitado — pendiente del próximo suministro",
@@ -4216,6 +4313,384 @@
     "agents": {
       "unavailableTitle": "Este despliegue no tiene mercado de agentes",
       "unavailableBody": "No hay mercado conectado. Los paquetes ya instalados siguen en «Míos» y funcionan igual."
+    }
+  },
+  "inputInbox": {
+    "title": "Formularios pendientes",
+    "count": "{{count}}",
+    "empty": "Nada pendiente",
+    "refresh": "Actualizar",
+    "error": "Error al cargar: {{message}}"
+  },
+  "inputRequest": {
+    "title": "Se necesita información",
+    "waitingHint": "La conversación continúa al enviar",
+    "submit": "Enviar",
+    "cancel": "Cancelar solicitud",
+    "answered": "Enviado",
+    "cancelled": "Cancelado",
+    "expired": "Caducado (sin respuesta)",
+    "escalated": "Escalado para revisión",
+    "expiresIn": "Quedan {{minutes}} min",
+    "fillRequired": "Completa: {{fields}}",
+    "filePlaceholder": "Referencia de recurso o enlace",
+    "yes": "Sí",
+    "no": "No"
+  },
+  "teamDirectory": {
+    "title": "Directorio de equipos",
+    "refresh": "Actualizar",
+    "searchPlaceholder": "Buscar equipos, puestos o identificadores",
+    "openOnly": "Solo invocables directamente",
+    "sampled": "Muestreado {{at}} · {{cells}} espacios respondieron, {{degraded}} inaccesibles",
+    "stale": "La caché del directorio se está actualizando; esto es el resultado anterior.",
+    "degraded": "{{n}} espacio(s) no respondieron en esta ronda; sus equipos no aparecen.",
+    "truncated": "Se superó el límite: se muestran los primeros 200 equipos.",
+    "unavailable": "El directorio no se puede leer ahora ({{error}})",
+    "noMatch": "Ningún equipo coincide",
+    "empty": "Aún no hay equipos publicados en el directorio",
+    "emptyHint": "Abre la cabina de un equipo, elige «Publicar en el directorio», selecciona la visibilidad y guarda.",
+    "emptyAction": "Ir a equipos",
+    "clearFilters": "Quitar filtros",
+    "availability": {
+      "accepting": "Recibiendo",
+      "paused": "En pausa",
+      "unavailable": "No disponible"
+    },
+    "pricing": {
+      "title": "Límites diarios",
+      "calls": "Llamadas",
+      "tokens": "Tokens",
+      "usd": "Gasto (USD)",
+      "billedTo": "Las llamadas se facturan a la clave de despliegue del dueño del equipo.",
+      "compact": "{{calls}} llamadas/día · ${{usd}}"
+    },
+    "posts": {
+      "title": "Puestos que pueden recibir trabajo",
+      "empty": "Sin puesto invocable: aún no se puede llamar",
+      "truncated": "Se muestran los primeros 20 puestos; abre la tarjeta para verlos todos"
+    },
+    "trust": "Espacio {{cell}} · publicado {{at}}",
+    "callDoorNotHere": "El directorio solo descubre. Invocar es otra capacidad: aquí no se inicia conversación, delegación ni cobro.",
+    "backToTeams": "Volver a equipos",
+    "callOpenHint": "Invocable directamente: la lista blanca no necesita aprobación.",
+    "callListedHint": "Visible con puerta: el dueño debe aprobar al llamante."
+  },
+  "teamCard": {
+    "open": "Publicar en el directorio",
+    "title": "Publicar en el directorio de equipos",
+    "subtitle": "Otras personas verán esta tarjeta; invocar es otra puerta.",
+    "loadFailed": "No se pudo leer el estado de publicación: {{error}}",
+    "receipt": {
+      "saved": "Guardado. Tú lo ves al instante; los demás lo verán en un máximo de 60 segundos.",
+      "withdrawn": "Retirado del directorio. El equipo, sus puestos y sus datos siguen intactos."
+    },
+    "fields": {
+      "handle": "Identificador",
+      "handleHint": "Minúsculas, dígitos y guiones; no cambia tras publicar.",
+      "name": "Nombre público",
+      "description": "Descripción en una línea",
+      "descriptionPlaceholder": "Qué trabajo acepta este equipo y cómo"
+    },
+    "visibility": {
+      "title": "Quién puede verlo",
+      "private": {
+        "label": "Sin publicar",
+        "hint": "Igual que no publicado: no aparece en ninguna superficie de lectura"
+      },
+      "listed": {
+        "label": "Visible",
+        "hint": "Se puede encontrar, pero cada llamada espera tu aprobación"
+      },
+      "open": {
+        "label": "Invocable directamente",
+        "hint": "Quien esté en la lista blanca llama sin aprobación, con cargo a ti"
+      }
+    },
+    "openGate": {
+      "hint": "«Invocable directamente» significa que las personas de la lista blanca pueden llamar sin tu aprobación y el gasto se carga a tu clave de despliegue.",
+      "acknowledge": "Lo entiendo y confirmo"
+    },
+    "quota": {
+      "title": "Límites diarios",
+      "calls": "Llamadas",
+      "tokens": "Tokens",
+      "usd": "Gasto (USD)",
+      "hint": "Déjalo vacío para usar los valores por defecto (200 llamadas / 2 M tokens / $5). «Ilimitado» no se ofrece.",
+      "fallback": "{{field}} no puede ser ilimitado; se usó {{value}}"
+    },
+    "callers": {
+      "title": "Lista blanca de llamantes",
+      "hint": "Un correo por línea. Solo afecta a «invocable directamente»; en «visible» todos necesitan tu aprobación."
+    },
+    "preview": {
+      "title": "Vista previa de la tarjeta (no se escribe nada antes de confirmar)",
+      "loading": "Generando la vista previa…",
+      "invalid": "Estos valores aún no son válidos: {{error}}"
+    },
+    "actions": {
+      "withdraw": "Retirar del directorio",
+      "close": "Cerrar",
+      "saving": "Guardando…",
+      "update": "Guardar cambios",
+      "publish": "Publicar"
+    },
+    "withdraw": {
+      "title": "¿Retirar esta tarjeta del directorio?",
+      "description": "Dejará de aparecer en la próxima lectura; el equipo, sus puestos y su historial no se eliminan.",
+      "confirm": "Retirar"
+    }
+  },
+  "teamCall": {
+    "open": "Invocar",
+    "title": "Invocar a {{name}}",
+    "subtitle": "Una sola entrada: quién lo atiende y cómo se compone se decide dentro del equipo.",
+    "quota": "Límite diario {{calls}} llamadas ({{usedCalls}} usadas) · ${{usd}} ({{usedUsd}} usados) · se reinicia {{reset}}",
+    "needApproval": "Este equipo es visible pero con puerta: el dueño debe aprobar al llamante.",
+    "requestApproval": "Solicitar aprobación",
+    "requesting": "Enviando…",
+    "approvalState": {
+      "none": "Sin solicitar",
+      "pending": "Solicitada — esperando al dueño",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "expired": "Aprobación caducada",
+      "unknown": "Estado desconocido"
+    },
+    "taskLabel": "Tarea para el equipo",
+    "taskPlaceholder": "Di qué necesitas y con qué forma debe volver la respuesta",
+    "send": "Invocar al equipo",
+    "calling": "Invocando…",
+    "close": "Cerrar",
+    "answerTitle": "Respuesta del equipo",
+    "errorTitle": "La llamada no se completó",
+    "blockedUntilApproved": "El botón se habilita cuando el dueño apruebe.",
+    "errors": {
+      "unauthorized": "No se pudo resolver tu identidad; vuelve a iniciar sesión.",
+      "not_found": "Este equipo no existe o fue retirado.",
+      "not_listed": "No estás en la lista blanca y el equipo no acepta solicitudes.",
+      "needs_approval": "El dueño del equipo debe aprobarte primero.",
+      "quota_exceeded": "La cuota diaria del equipo se agotó; se reinicia mañana.",
+      "depth_exceeded": "La cadena de llamadas es demasiado profunda.",
+      "no_reception": "Este equipo aún no tiene un puesto que reciba llamadas.",
+      "team_paused": "Este equipo está en pausa.",
+      "not_serving": "Este despliegue aún no puede atender llamadas de equipo.",
+      "incomplete": "La respuesta no terminó; inténtalo de nuevo.",
+      "internal_error": "La llamada falló; reinténtalo en un momento."
+    }
+  },
+  "teamApprovals": {
+    "open": "Aprobaciones",
+    "title": "Llamadas pendientes de {{name}}",
+    "subtitle": "En un equipo visible, los llamantes solicitan aquí y tú decides.",
+    "grantFor": "Conceder por",
+    "duration": {
+      "oneoff": "Única (permanente)",
+      "24h": "24 horas",
+      "7d": "7 días",
+      "30d": "30 días"
+    },
+    "pending": "Esperando aprobación",
+    "empty": "No hay solicitudes pendientes ahora.",
+    "requestedAt": "solicitada {{at}}",
+    "approve": "Aprobar",
+    "reject": "Rechazar",
+    "approvedTitle": "Aprobados",
+    "approvedEmpty": "Aún no hay llamantes aprobados.",
+    "standing": "permanente",
+    "rejectTitle": "¿Rechazar a este llamante?",
+    "rejectDescription": "{{caller}} no podrá invocar este equipo; puede volver a solicitarlo."
+  },
+  "voiceCapture": {
+    "open": "Captura de voz",
+    "title": "Captura de voz",
+    "subtitle": "Graba una reunión completa: transcribe mientras grabas y, al terminar, corrige, exporta o envía a una sala.",
+    "defaultTitle": "Captura de reunión {{time}}",
+    "start": "Iniciar grabación",
+    "starting": "Iniciando…",
+    "restart": "Nueva captura",
+    "stop": "Detener grabación",
+    "finish": "Terminar y fusionar",
+    "finishing": "Fusionando…",
+    "elapsed": "{{at}} grabados · {{planned}} tramos previstos",
+    "finishHint": "Detén la grabación antes de terminar la fusión.",
+    "waitUploads": "Aún hay {{n}} tramo(s) subiendo o transcribiendo; termina cuando finalicen.",
+    "progressTitle": "Progreso de tramos",
+    "progressSummary": "{{done}}/{{total}} tramos · {{pct}} %",
+    "transcribed": "{{minutes}} minutos transcritos",
+    "recordingSlice": "Tramo {{seq}} · grabando",
+    "rowLabel": "Tramo {{seq}}",
+    "state": {
+      "pending": "En espera",
+      "transcribing": "Transcribiendo",
+      "done": "Listo",
+      "failed": "Fallido"
+    },
+    "retry": "Reintentar",
+    "retrying": "Reintentando…",
+    "retryGaveUp": "Se alcanzó el límite de reintentos",
+    "retryClosed": "La captura terminó: este tramo ya no se puede reintentar",
+    "mergedTitle": "Texto fusionado",
+    "mergedHint": "Editable antes de guardar; la corrección solo se permite una vez y se conserva la fusión automática",
+    "save": "Guardar corrección",
+    "saving": "Guardando…",
+    "saved": "Corrección guardada",
+    "correctionSpent": "Corrección guardada: ya no se puede modificar",
+    "export": "Exportar texto plano",
+    "segmentsTitle": "Segmentos",
+    "roomLabel": "ID de la sala destino",
+    "roomPlaceholder": "ID de sesión de la sala Zhiyu",
+    "toRoom": "Enviar a la sala",
+    "roomNeedId": "Escribe primero un ID de sala.",
+    "roomConfirmTitle": "¿Enviar esta nota de reunión a la sala?",
+    "roomConfirmDescription": "Se escribe una línea de sistema en la sala. No se despierta a ningún agente ni se consume cuota de turnos.",
+    "roomConfirm": "Enviar",
+    "roomSent": "Enviado a la sala {{sessionId}}",
+    "roomAlready": "Esta sala ya tiene esta captura ({{sessionId}})",
+    "abandon": "Abandonar captura",
+    "abandonTitle": "¿Abandonar esta captura?",
+    "abandonDescription": "El texto transcrito y el audio en búfer se eliminan y no se pueden recuperar.",
+    "abandonConfirm": "Abandonar",
+    "abandoned": "Captura abandonada",
+    "close": "Cerrar",
+    "micDenied": "Micrófono no disponible ({{error}}). Revisa el permiso del navegador.",
+    "micUnsupported": "Este navegador no puede grabar (se requieren MediaRecorder y un origen seguro).",
+    "unavailable": {
+      "title": "Captura de voz no disponible",
+      "disabled": "La voz está desactivada.",
+      "no_key": "No hay credencial de voz configurada.",
+      "generic": "El servicio de voz no está disponible temporalmente."
+    },
+    "stoppedTitle": "Se alcanzó el límite de presupuesto",
+    "stopped": {
+      "minutes": "Se alcanzó el límite de minutos; los tramos posteriores no se transcriben.",
+      "usd": "Se alcanzó el límite de coste; los tramos posteriores no se transcriben.",
+      "buffered": "El audio posterior al límite queda en búfer sin transcribir; podrá transcribirse al ampliar el límite."
+    },
+    "errors": {
+      "network": "Red no disponible: la solicitud no llegó al servidor.",
+      "internal_error": "La acción falló. Inténtalo más tarde.",
+      "voice_disabled": "La voz está desactivada.",
+      "voice_not_configured": "No hay credencial de voz configurada.",
+      "not_found": "La captura no existe o no es tuya.",
+      "capture_not_recording": "La captura terminó y ya no acepta tramos.",
+      "chunk_busy": "Este tramo se está transcribiendo; espera un momento.",
+      "chunk_retry_exhausted": "Este tramo alcanzó su límite de reintentos.",
+      "chunk_exists": "Este tramo ya existe y se trata como completado.",
+      "timeline_conflict": "El tiempo del tramo choca con un tramo existente.",
+      "chunk_audio_gone": "El audio de este tramo se limpió; vuelve a subirlo.",
+      "chunk_too_large": "El tramo supera el límite de tamaño.",
+      "bad_seq": "Número de tramo no válido.",
+      "bad_start_ms": "Hora de inicio del tramo no válida.",
+      "bad_duration_ms": "Duración del tramo no válida.",
+      "missing_audio": "Falta el archivo de audio.",
+      "bad_upload": "Formato de subida no válido.",
+      "not_finished": "La captura no ha terminado.",
+      "already_corrected": "Esta captura ya se corrigió una vez.",
+      "empty_capture": "La captura no tiene texto que enviar.",
+      "confirmation_required": "Enviar a una sala requiere confirmación.",
+      "forbidden": "No tienes acceso a esta sala.",
+      "bad_text": "El texto de corrección no es válido.",
+      "bad_session": "ID de sala no válido.",
+      "chat_history_unavailable": "El historial de conversación no está disponible."
+    }
+  },
+  "speakerAttribution": {
+    "title": "Atribución de hablantes",
+    "summary": "{{total}} segmentos · {{named}} resueltos · {{pending}} por confirmar",
+    "separation": {
+      "none": "Sin separar: el servicio no devuelve información de hablante, así que cada segmento queda sin resolver.",
+      "partial": "Separación parcial: la primera parte se separó y el resto llegó como texto plano. Los segmentos sin separar nunca reciben un hablante adivinado.",
+      "full": "Separado: los segmentos se agrupan por clúster anónimo. Los clústeres sin nombre siguen sin resolver.",
+      "not_needed": "Grabado en solitario en un dispositivo personal: todo pertenece a quien grabó, no hace falta separar."
+    },
+    "unset": "Sin resolver",
+    "sliceCount": "{{n}} segmentos",
+    "name": "Nombrar este hablante",
+    "unbind": "Quitar nombre",
+    "noCandidates": "No hay miembros presentes para elegir",
+    "overridden": "Atribuido por identidad de sesión",
+    "conflictNotice": "{{n}} segmento(s) no coincidían con la identidad de sesión. Prevaleció la identidad y se registró la discrepancia.",
+    "pendingHint": "Los segmentos sin resolver nunca se envían automáticamente. Sus confirmaciones están en la lista de tareas existente; responder allí se aplica aquí.",
+    "trail": "Historial de cambios ({{n}})",
+    "empty": "Aún no hay nada que atribuir (grabando o sin terminar).",
+    "op": {
+      "bind": "nombrado",
+      "rebind": "renombrado",
+      "unbind": "sin nombre"
+    },
+    "errors": {
+      "loadFailed": "No se pudo cargar la atribución. Inténtalo de nuevo.",
+      "memberRequired": "Elige primero un miembro.",
+      "member_not_present": "Ese miembro no estaba presente en esta grabación.",
+      "bad_binding": "El clúster o el miembro no son válidos.",
+      "not_bound": "Ese clúster aún no tiene nombre.",
+      "internal_error": "La operación falló. Inténtalo de nuevo."
+    }
+  },
+  "console": {
+    "title": "Consola del equipo",
+    "block": {
+      "team": "Puestos",
+      "stream": "Últimos informes",
+      "kpi": "Indicadores",
+      "decisions": "Decisiones abiertas",
+      "spend": "Gasto",
+      "orchestration": "Estructura",
+      "unknown": "Bloque no disponible",
+      "needsNewerClient": "Este bloque requiere una versión más reciente de la aplicación."
+    },
+    "absent": {
+      "no_members": "Aún no hay puestos.",
+      "no_reports": "Aún no hay informes.",
+      "no_reported_kpis": "Aún no se ha informado ningún indicador.",
+      "no_open_decisions": "No hay decisiones pendientes.",
+      "no_run_records": "Aún no hay rondas registradas.",
+      "not_declared": "Este equipo no declara estructura.",
+      "declaration_unreadable": "No se pudo leer la declaración de estructura.",
+      "unknown_block": "Este bloque no está disponible aquí.",
+      "unknown": "Nada que mostrar."
+    },
+    "states": {
+      "forbidden": "No tienes acceso a esta consola de equipo.",
+      "notPublished": "Esta consola no está publicada.",
+      "unavailable": "La consola no está disponible temporalmente."
+    },
+    "team": {
+      "lastReport": "Último informe"
+    },
+    "stream": {
+      "noSummary": "Este informe no trae resumen."
+    },
+    "decisions": {
+      "untitled": "Elemento sin título",
+      "expires": "vence",
+      "severity": {
+        "high": "Alta",
+        "normal": "Normal",
+        "low": "Baja"
+      }
+    },
+    "spend": {
+      "rounds": "Rondas",
+      "turns": "Turnos",
+      "cost": "Coste",
+      "pricedTurns": "Turnos con precio"
+    },
+    "orchestration": {
+      "summary": "{{declared}} declaradas · {{total}} en vigor",
+      "derived": "derivada"
+    },
+    "page": {
+      "subtitle": "Lo que este equipo declaró mostrar"
+    },
+    "publish": {
+      "published": "Publicada",
+      "private": "No publicada",
+      "privateHint": "Al publicar, esta consola obtiene un enlace público. La dirección se genera, no se elige.",
+      "action": "Publicar consola",
+      "unpublish": "Retirar",
+      "failed": "No se pudo cambiar el estado de publicación."
     }
   }
 }

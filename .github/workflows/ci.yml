@@ -23,19 +23,151 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gates:
-    name: lint → typecheck → unit → locales → build → e2e (fast)
+  # ── unit, split by FILE LIST across runners ────────────────────────────────
+  #
+  # Was one 63-minute step inside `gates` (run 42630983629, 2026-11-09). The
+  # cost is per-file work, and `--test-concurrency=1` exists to keep ONE file's
+  # cases ordered — a constraint that is about a process, not a machine. So the
+  # file list is sharded across runners: each holds the invariant (one file at a
+  # time, in order), and wall clock drops ~N×.
+  #
+  # It is NOT `node --test --test-shard`: that flag partitions the flattened
+  # CASE list, putting one file's cases on different runners concurrently.
+  # scripts/test-unit-shard-safety.mjs measured that and pins the ban; the split
+  # here is `scripts/unit-shard.mjs`, and `unit-coverage` below fails the run if
+  # the shards' union is not exactly the suite.
+  #
+  # Separate jobs also make the report honest: a lint failure (the public repo
+  # has been red at step 5 since 2026-11-08) no longer hides whether the suite
+  # passes.
+  unit:
+    name: unit (shard ${{ matrix.shard }}/8)
     runs-on: ubuntu-latest
-    # Measured, not guessed. The UNIT step alone runs ~63 min on a fresh
-    # 2-core runner (run 42630983629, 2026-11-09) — the suite spawns servers
-    # and dsh children, and every case is serialised by --test-concurrency=1
-    # because the tests share global state. With the old 90-minute ceiling that
-    # left ~27 min for build + e2e, i.e. one slow case away from a job kill that
-    # looks exactly like a product failure. 120 buys headroom without changing
-    # any semantics. Raising this is a stop-gap: the real fix is sharding the
-    # unit suite or trimming its slowest server-spawning cases (capacity work,
-    # tracked separately) — a shard split has to be done carefully BECAUSE the
-    # serial constraint is what keeps those tests deterministic.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    # 8 shards measured at ~8 min each on a 2-core runner (63 / 8) + ~4 min of
+    # setup; 45 leaves room for one slow shard without turning a slow case into
+    # a job kill that reads like a product failure.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # FULL history, not depth 1. Suites compare a file against an earlier
+          # revision to prove a change did not alter a value, and one of them
+          # (`test-knowledge-profile-noop`) SEARCHES history for the commit that
+          # introduced a spelling and then archives its parent — with a shallow
+          # clone it picks the wrong commit and dies with "not a valid object
+          # name", a red that says nothing about the code. The repo's whole
+          # history is ~48 MB / 3.5k commits, so a full clone costs seconds on a
+          # public repo, and it makes a shard behave exactly like a dev machine.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Install dependencies (skip resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      # web's dependencies are NOT optional for the unit suite: several store
+      # suites import zustand (a root dep) whose ESM entry pulls `react` from
+      # web/node_modules. The first sharded run proved it — shards died with
+      # `Cannot find package 'react' imported from
+      # node_modules/zustand/esm/react.mjs` because the old single job ran unit
+      # AFTER this step and the split dropped it. Every preparation the old job
+      # had before unit must be replicated here, or the shard result is not
+      # comparable to it.
+      - name: Install web dependencies
+        run: npm run web:install
+
+      # One unit file needs the app's OWN expo-router: it asserts the RESOLVED
+      # route tree (not files on disk — see scripts/test-app-zhiyu-routes.mjs),
+      # so it calls `getRoutes()` from app/node_modules. `--ignore-scripts`
+      # because nothing here builds a native project.
+      - name: Install app dependencies
+        run: npm --prefix app ci --ignore-scripts
+
+      # Same preparation the old in-job unit step had: the matrix tree is
+      # INSTALLED but not linked into the shared home, so dsh-dependent suites
+      # skip exactly as they did before. Keeping the two in step is what makes
+      # a shard's result comparable to the old single-job result.
+      - name: Install dsh runtime + platform profile from the matrix
+        run: |
+          mkdir -p "$HOME/.dsh-matrix"
+          cp dsh-matrix/package.json dsh-matrix/package-lock.json "$HOME/.dsh-matrix/"
+          [ -f dsh-matrix/.npmrc ] && cp dsh-matrix/.npmrc "$HOME/.dsh-matrix/" || true
+          cp -r dsh-matrix/samples "$HOME/.dsh-matrix/samples"
+          NODE_OPTIONS=--max-old-space-size=8192 npm ci --prefix "$HOME/.dsh-matrix"
+          mkdir -p "$HOME/.dsh/profiles/platform"
+          cp dsh-profile-template/package.json \
+             dsh-profile-template/pnpm-workspace.yaml \
+             dsh-profile-template/cordis.yml \
+             dsh-profile-template/cordis.patch.yml \
+             "$HOME/.dsh/profiles/platform/"
+
+      # The manifest is written BEFORE the tests run, so a shard that fails (or
+      # times out) still proves which files it owned — a missing manifest means
+      # the shard never started, not that its files vanished.
+      #
+      # The filename MUST carry the shard number: the coverage job downloads
+      # every artifact with `merge-multiple`, and eight files all called
+      # `shard.json` merge into one (first run did exactly that — the gate then
+      # reported "shard indexes are 7 but 8 shards were declared", which was
+      # true: seven manifests had been overwritten).
+      - name: Unit shard ${{ matrix.shard }}/8
+        run: node scripts/unit-shard.mjs --run --shard ${{ matrix.shard }}/8 --manifest "$RUNNER_TEMP/shard-${{ matrix.shard }}.json"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 3
+
+  # The completeness gate. A partition that quietly drops a file turns "the
+  # suite is green" into a lie with no symptom: nothing errors, fewer tests
+  # just run. This job compares the shards against the suite's own file list.
+  unit-coverage:
+    name: unit (shards cover the whole suite)
+    needs: unit
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unit-shard-*
+          merge-multiple: true
+          path: shards
+
+      # No `npm ci`: the check uses node builtins only, so it cannot be
+      # blocked by an install step that already succeeded eight times.
+      - name: Every suite file ran on exactly one shard
+        run: node scripts/unit-shard.mjs --check-artifacts shards
+
+  gates:
+    name: lint → typecheck → locales → build → e2e (fast)
+    runs-on: ubuntu-latest
+    # Measured, not guessed. Before the split, the UNIT step alone was ~63 min
+    # on a fresh 2-core runner (run 42630983629, 2026-11-09) — every case
+    # serialised by --test-concurrency=1 because the tests share global state.
+    # Unit now runs as the `unit` matrix above; what is left here is lint,
+    # typecheck, locales, a web build and the fast e2e lane, so 120 minutes of
+    # headroom is headroom rather than a stop-gap for one slow test.
     timeout-minutes: 120
 
     steps:
@@ -83,6 +215,38 @@ jobs:
       # the mirror repo where CI also runs the file is absent and this step must no-op
       # instead of failing on a missing module. gitleaks is skipped here — it is not on the
       # runner, and the secret scan already runs as part of a real release.
+      # spec-constant agreement: a number that binds behaviour must live in BOTH
+      # the spec (the contract people read) and the code (what runs). On
+      # 2026-11-11 the wrap-up salvage budget had drifted — spec said 90 seconds,
+      # code ran 240 — for a full day, silently: the code change was deliberate
+      # and recorded in the ledger, but the spec never followed, so anyone writing
+      # an acceptance check from the contract would be 2.7x off. ~50ms, no deps,
+      # and the files it reads all ship in the public snapshot (verified by
+      # running it inside a built snapshot), so it gates the mirror repo too.
+      - name: Spec ↔ code constants
+        run: node scripts/check-spec-constants.mjs
+
+      # Three envelopes, one source (add-pack-bundle-projection 3.3): the bakery
+      # list, the .yizpack files, and the dsh bundle trees are all regenerated
+      # from packs/projections.json. A manifest edited without re-projecting is
+      # exactly the "change one, remember three" drift this gate exists to stop,
+      # and it is cheap (~100ms) because it reads only the repo.
+      - name: Pack projection drift (--check)
+        run: node scripts/project-pack-bundles.mjs --check
+
+      # Ledger is generated from the catalogue (add-curation-evidence-gate 4.2).
+      # The gate owns a MARKED BLOCK only: hand-editing that table fails, while
+      # the human prose around it (first-batch rationale, exclusions) is never
+      # regenerated and never checked.
+      - name: Curation ledger drift (--check)
+        run: node scripts/gen-curation-ledger.mjs --check
+
+      # The same rejection point CI-side (add-curation-evidence-gate 3.2): a
+      # supplied catalogue entry with missing or expired evidence fails here
+      # rather than only at image build. No catalogue in the tree ⇒ exit 0.
+      - name: Curation evidence (blocking)
+        run: node scripts/check-curation-evidence.mjs
+
       - name: Publish surface (snapshot gate)
         if: hashFiles('scripts/make-public-snapshot.mjs') != ''
         env:
@@ -141,24 +305,17 @@ jobs:
              dsh-profile-template/cordis.patch.yml \
              "$HOME/.dsh/profiles/platform/"
           # NOTE: the tree is installed but NOT linked into the shared home yet.
-          # A complete home makes the dsh-dependent UNIT suites spawn a real
-          # child, and that is a separate axis from "can e2e run at all" — this
-          # landing moves only the generation (0.1.1 profile → 0.2.0 matrix) so
-          # a regression is attributable. The probe step below links it.
+          # A complete home makes dsh-dependent suites spawn a real child, and
+          # that is a separate axis from "can e2e run at all" — this step moves
+          # only the generation (0.1.1 profile → 0.2.0 matrix) so a regression
+          # is attributable. The probe step below links it, after the web build.
+          # The `unit` matrix installs the same tree WITHOUT linking, so its
+          # dsh-dependent suites keep skipping exactly as they did when unit ran
+          # inside this job.
 
-      - name: Unit tests
-        # 2, not 1: the blanket serialization this lane used to impose was a
-        # safety choice, never a measured requirement. Measured 2026-11-10 on one
-        # tree: the full suite (520 files) at --test-concurrency=4 finished in
-        # 315s and re-running its 14 failing files SERIALLY reproduced all 27 of
-        # those failures — zero concurrency-induced. 2 is the conservative step
-        # for this runner (2 cores, i.e. one process per core); the only failure
-        # concurrency surfaced was a wall-clock race in test-mp-demo (reading the
-        # data root in the same tick as the reaper's status flip), now polled.
-        # Raising further is a single number here; dropping back to 1 is too.
-        env:
-          UNIT_TEST_CONCURRENCY: "2"
-        run: npm run test:unit
+      # Unit lives in the `unit` matrix above (file-list shards + the
+      # `unit-coverage` completeness gate). It is deliberately NOT repeated
+      # here: two paths running the same suite would let one mask the other.
 
       - name: Locale parity
         run: npm run check:locales

@@ -1,0 +1,78 @@
+{
+  "agents": [
+    {
+      "path": "packs/spike-demo/agent-1",
+      "name": "Spike Agent 1",
+      "description": "Spike roster entry (local feed fixture)",
+      "version": "1.0.0",
+      "supported_protocol": "a2a",
+      "is_enabled": true,
+      "skills": [
+        "/skills/spike-demo/demo.md"
+      ],
+      "tags": [
+        "spike"
+      ],
+      "metadata": {
+        "packId": "spike-demo",
+        "packVersion": 1,
+        "agentId": "agent-1",
+        "persona": "spike-persona-1",
+        "skills": [
+          "/skills/spike-demo/demo.md"
+        ],
+        "runner_id": "spike-seat"
+      }
+    },
+    {
+      "path": "packs/spike-demo/agent-2",
+      "name": "Spike Agent 2",
+      "description": "Spike roster entry (local feed fixture)",
+      "version": "1.0.0",
+      "supported_protocol": "a2a",
+      "is_enabled": true,
+      "skills": [
+        "/skills/spike-demo/demo.md"
+      ],
+      "tags": [
+        "spike"
+      ],
+      "metadata": {
+        "packId": "spike-demo",
+        "packVersion": 1,
+        "agentId": "agent-2",
+        "persona": "spike-persona-2",
+        "skills": [
+          "/skills/spike-demo/demo.md"
+        ],
+        "runner_id": "spike-seat"
+      }
+    },
+    {
+      "path": "packs/spike-demo/foreign-agent-1",
+      "name": "Foreign 1",
+      "description": "Spike roster entry (local feed fixture)",
+      "version": "1.0.0",
+      "supported_protocol": "a2a",
+      "is_enabled": true,
+      "skills": [
+        "/skills/spike-demo/demo.md"
+      ],
+      "tags": [
+        "spike"
+      ],
+      "metadata": {
+        "packId": "spike-demo",
+        "packVersion": 1,
+        "agentId": "foreign-agent-1",
+        "persona": "spike-persona-1",
+        "skills": [
+          "/skills/spike-demo/demo.md"
+        ],
+        "runner_id": "other-seat"
+      }
+    }
+  ],
+  "total_count": 3,
+  "has_next": false
+}

@@ -33,6 +33,7 @@ import { initFacetMcpCatalog } from "./mcp-catalog.js";
 import { getRepoAnnotation, getRepoSkillAnnotation, loadRepoAnnotations } from "../lib/market-annotations.js";
 import { bundledJson } from "../paths.js";
 import { initSupplyCatalog } from "./supply-catalog.js";
+import { registerTeamConsoleProxy } from "./team-console-proxy.js";
 import { registerMcpRegistryJson } from "./mcp-registry-json.js";
 import { registerMarketplaceJson } from "./marketplace-json.js";
 import { createFacetPairing, registerPairingRoutes, withAppBearer } from "./pairing.js";
@@ -205,6 +206,11 @@ registerMarketRoutes(app, {
   rejectUnauthenticated,
   adminGroups,
 });
+
+// Team console share page (add-pack-console): the read-only proxy lives in its
+// own module so its posture (no identity forwarded, status passed through,
+// unreachable ⇒ 503 never an empty console) is unit-testable.
+registerTeamConsoleProxy(app, { baseUrl: process.env.PLATFORM_INTERNAL_URL });
 
 // Pack usage aggregate (add-facet-content-management): read-only proxy to the
 // platform gateway's ops aggregate over an in-cluster service credential —

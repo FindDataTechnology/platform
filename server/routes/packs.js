@@ -15,6 +15,7 @@ import { fetchMarketManifest, fetchMarketDetail } from "../pack-manifest-source.
 import { projectPackList } from "../../lib/pack-locale.js";
 import { buildBundle, bundleFileName, fromBase64, readBundle, toBase64 } from "../offline-bundle.js";
 import { validatePackManifest } from "../../lib/pack-manifest.js";
+import { defaultBakedRoots, readBakedVersions } from "../../lib/pack-plugins.js";
 import express from "express";
 
 // Locale track (add-pack-locale-tracks B): installed-pack cards render under
@@ -25,6 +26,19 @@ import express from "express";
 // strings + i18n block intact), so a client round-trip stays valid.
 export function registerPackRoutes(ctx) {
   const { app, db, broadcast } = ctx;
+
+  // Team plugin supply proof (add-fleet-plugin-declaration 1.2): the roster is
+  // the runtime's own answer to "what is baked here", and the versions come from
+  // the installed tree. Read per install — no caching, so a re-bake is visible
+  // immediately. A runtime that cannot answer yields no roster, and installPack
+  // refuses rather than assuming.
+  const resolvePluginSupply = async ({ declared = [] } = {}) => {
+    const inventory = await ctx.getPluginBundles?.();
+    const roster = Array.isArray(inventory?.bundles) ? inventory.bundles : null;
+    const ids = declared.map((p) => p?.id).filter(Boolean);
+    const bakedVersions = ids.length > 0 ? readBakedVersions({ roots: defaultBakedRoots(), ids }) : new Map();
+    return { roster, bakedVersions };
+  };
 
   const dbGate = (_req, res) => {
     if (!db.isDbReady()) {
@@ -278,6 +292,7 @@ export function registerPackRoutes(ctx) {
         // acknowledgment; the error carries code "script-confirm-required"
         // which the client maps to the one-time confirm dialog.
         confirm: req.body?.confirm === true,
+        pluginSupply: resolvePluginSupply,
         hooks: {
           onMcpChanged: () => {
             broadcast({ type: "extensions_changed", resource: "mcp", action: "pack-install", name: manifest?.name || packId });
@@ -367,6 +382,7 @@ export function registerPackRoutes(ctx) {
           user: req.user,
           confirm: req.body?.confirm === true || meta?.confirm === true,
           source: "bundle",
+          pluginSupply: resolvePluginSupply,
           hooks: {
             onMcpChanged: () => {
               broadcast({ type: "extensions_changed", resource: "mcp", action: "pack-import", name: manifest?.name || packId });

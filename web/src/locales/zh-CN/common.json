@@ -1768,14 +1768,17 @@
     }
   },
   "facetShell": {
-    "tabs": {
+    "entries": {
       "intro": "介绍",
-      "packs": "智能体",
-      "mcp": "MCP 服务",
-      "mine": "我的智能体",
-      "curate": "策展",
-      "docs": "文档",
-      "studio": "Studio"
+      "packs": "智能体市场",
+      "mcp": "MCP 与技能",
+      "docs": "使用指南",
+      "studio": "创作台"
+    },
+    "account": {
+      "menuLabel": "账号",
+      "mine": "我的发布",
+      "curate": "内容运营"
     },
     "langLabel": "语言",
     "packsFootnote": "匿名可浏览，登录后可发布订阅；CLI 安装与用法明细见",
@@ -1786,17 +1789,17 @@
       "retry": "重试登录",
       "dismiss": "关闭"
     },
-    "loggedInAs": "已登录：{{email}}",
-    "studioTitle": "Studio"
+    "loggedInAs": "已登录：{{email}}"
   },
   "facetDocs": {
-    "title": "使用文档",
+    "title": "使用指南",
     "subtitle": "从一个智能体 id 到装好可用，这里都有——安装、接入、创作。",
     "packageNote": "已发布的 CLI 包名：",
     "nav": {
       "install": "安装",
-      "mcp": "MCP 接入",
-      "create": "创作"
+      "mcp": "接入",
+      "create": "创作",
+      "site": "站内导航"
     },
     "install": {
       "title": "安装智能体",
@@ -1820,23 +1823,39 @@
     "clients": {
       "claude-code": {
         "label": "Claude Code",
-        "body": "技能以版本快照安装；存好调用键后，智能体的 MCP 引用可写进其原生 MCP 配置。"
+        "body": "技能以版本快照安装；存好调用键后，智能体的 MCP 引用可写进其原生 MCP 配置。",
+        "pitfall1": "用户级写 ~/.claude.json，加了 --project 才写项目级 .mcp.json——两份互不相通。",
+        "pitfall2": "MCP 条目只在重启会话后生效，旧会话仍按老配置走。"
       },
       "cursor": {
         "label": "Cursor",
-        "body": "技能落 Cursor 的技能目录；MCP 条目写进 Cursor 自己的配置文件。"
+        "body": "技能落 Cursor 的技能目录；MCP 条目写进 Cursor 自己的配置文件。",
+        "pitfall1": "必须重启 Cursor，它才会重新扫描技能目录。",
+        "pitfall2": "~/.cursor/mcp.json 与项目级 .cursor/mcp.json 是两份文件，装用户级不等于项目级可用。"
       },
       "zcode": {
         "label": "ZCode",
-        "body": "技能落 ZCode 的技能目录；MCP 条目写进 ZCode 的 CLI 配置。"
+        "body": "技能落 ZCode 的技能目录；MCP 条目写进 ZCode 的 CLI 配置。",
+        "pitfall1": "配置写在 ~/.zcode/cli/config.json 的 mcp.servers 节下，不是顶层 mcpServers。",
+        "pitfall2": "新技能要到下一个会话才会被发现，当前会话看不到。"
       },
       "codex": {
         "label": "Codex CLI",
-        "body": "技能落 Codex 的技能目录；MCP 条目以 TOML 形式写进 Codex 配置。"
+        "body": "技能落 Codex 的技能目录；MCP 条目以 TOML 形式写进 Codex 配置。",
+        "pitfall1": "MCP 写的是 TOML（~/.codex/config.toml），不是 JSON。",
+        "pitfall2": "把 [mcp_servers.<name>] 写成 JSON 语法会让整份配置解析失败。"
       },
       "gemini-cli": {
         "label": "Gemini CLI",
-        "body": "技能落 Gemini CLI 的技能目录；MCP 条目用其 httpUrl 形状。"
+        "body": "技能落 Gemini CLI 的技能目录；MCP 条目用其 httpUrl 形状。",
+        "pitfall1": "字段是 httpUrl，不是 url；写错了不报错，只是工具列表为空。",
+        "pitfall2": "改完要重启 Gemini CLI 才会加载新配置。"
+      },
+      "workbuddy": {
+        "label": "WorkBuddy",
+        "body": "技能落 WorkBuddy 的技能目录；MCP 条目写进它自己的 mcp.json。",
+        "pitfall1": "用户级 mcp.json 只认 header 键（wgk- 调用键），没有键时不会自动续登。",
+        "pitfall2": "技能与 MCP 都在 ~/.workbuddy 下，别写到 ~/.codebuddy。"
       }
     },
     "mcp": {
@@ -1865,7 +1884,7 @@
       "routesTitle": "三条组装路径",
       "route1": "壹座内：设置 → 智能体 → 新建智能体——以草稿形式组装技能、MCP 引用与角色。",
       "route2": "一键转换：把自建预设转成智能体草稿（设置 → 自建预设 → 发布并部署），附「带走了什么、还需替换什么」的报告。",
-      "route3": "作者面（#/mine）：把 manifest 直发发布端点；校验错误原样呈现。",
+      "route3": "我的发布（#/mine）：把 manifest 直发发布端点；校验错误原样呈现。",
       "disciplineTitle": "发布纪律",
       "versions": "每次发布追加一个不可变版本；每版可带一段简短说明（≤500 字）。",
       "subscribe": "订阅与安装是两个动作：订阅记录在市场；安装取的是确定的版本快照。",
@@ -1883,6 +1902,35 @@
       "verified": "真环境实证",
       "note": "每一格都有出处：CLI 代码事实或真环境实证记录。",
       "deepDoc": "完整矩阵与逐格出处 →"
+    },
+    "searchPlaceholder": "搜索这份指南",
+    "searchEmpty": "没有匹配的内容",
+    "searchResults": "{{count}} 条匹配",
+    "intentTitle": "我该从哪开始",
+    "intent": {
+      "install": "只想装一个智能体",
+      "publish": "我要发布智能体",
+      "mcp": "我要接入 MCP",
+      "site": "先看这个站怎么用"
+    },
+    "site": {
+      "title": "站内导航",
+      "lead": "每个入口干什么、我该走哪条路——这一节讲的是这个站本身，而不是某个客户端。",
+      "entries": {
+        "intro": "产品在做什么、订阅与安装的区别，以及一行命令的快速开始。",
+        "packs": "浏览与搜索智能体，看完整清单，订阅或取用。",
+        "mcp": "平台提供的 MCP 服务与技能目录，每个服务都能看它的工具面。",
+        "docs": "本页：安装、接入、创作与站内导航。",
+        "studio": "登录后出现：组装草稿（技能 / MCP 引用 / 角色），校验通过后发布。",
+        "mine": "在账号菜单里：管理你发布的智能体——版本、可见性、下架。",
+        "curate": "在账号菜单里（仅管理员）：分类、领域、精选与英文覆盖巡检。"
+      }
+    },
+    "client": {
+      "configTitle": "原生配置长这样",
+      "configNote": "把 <server-name> 与调用键换成你自己的；CLI 会替你写这一段，手改只在排错时需要。",
+      "afterInstall": "装完重启客户端：已开的会话不会加载新技能。",
+      "pitfallsTitle": "常见错误"
     }
   },
   "facetIntro": {
@@ -3501,19 +3549,16 @@
     "sourceBlueprint": "来源蓝图"
   },
   "facetCurate": {
-    "title": "策展板",
-    "subtitle": "垂类与精选是呈现层管理（不影响可见性/版本/可安装）；用量来自壹座网关聚合（近 7 天）。",
-    "loading": "策展板加载中…",
+    "title": "内容运营",
+    "subtitle": "分类与精选是呈现层管理（不影响可见性/版本/可安装）；用量来自壹座网关聚合（近 7 天）。",
     "empty": "板上还没有智能体——发布的智能体会出现在这里。",
     "errorLoad": "列表加载失败：{{message}}",
     "saved": "已保存：{{name}}",
     "saveFailed": "保存失败：{{name}} — {{message}}",
-    "usageDegraded": "用量面不可用（策展不受影响）：{{message}}",
+    "usageDegraded": "用量面不可用（运营不受影响）：{{message}}",
     "unlisted": "已下架",
     "private": "私有",
     "usage": "周活跃 {{users}} / {{turns}} 回合",
-    "categoryPlaceholder": "垂类 slug（如 legal）",
-    "setCategory": "改垂类",
     "feature": "精选",
     "unfeature": "取消精选",
     "allPacks": "全部",
@@ -3522,13 +3567,29 @@
     "unclassifiedCount": "未归类 {{count}} / {{total}}",
     "lineResolved": "归位：{{line}}",
     "domainsLabel": "领域",
-    "saveDomains": "保存领域",
     "vocabUnavailable": "词表不可用，暂不可选",
     "onlyGaps": "仅看 en 缺项",
-    "coverageBadge": "en {{covered}}/{{total}}"
+    "coverageBadge": "en {{covered}}/{{total}}",
+    "searchPlaceholder": "搜索智能体名称",
+    "loadMore": "加载剩余 {{remaining}} 个",
+    "loadingMore": "加载中…",
+    "loadMoreFailed": "加载更多失败：{{message}}",
+    "loadedOf": "已载入 {{loaded}} / {{total}}",
+    "gapCount": "缺 {{count}}",
+    "selectHint": "从左侧选一个智能体，在这里改分类、领域与精选。",
+    "categoryLabel": "分类",
+    "categoryNone": "未分类",
+    "categoryLegacy": "原值：{{value}}",
+    "featuredLabel": "精选",
+    "coverageLabel": "英文覆盖",
+    "coverageFull": "英文覆盖完整",
+    "usageNone": "近 7 天无用量记录",
+    "dirty": "有未保存的修改",
+    "save": "保存",
+    "saving": "保存中…"
   },
   "facetMine": {
-    "title": "我的智能体",
+    "title": "我的发布",
     "subtitle": "管理你发布的智能体：版本、上下架、可见性。安装到运行时请在壹座内完成（设置 → 智能体 → 我的智能体）。带服务契约（serving）的公开智能体会进入萬星目录——外部调用者一键部署、按回合计量，你按分成获得收益（发布即全链打通，无需额外配置）。",
     "loading": "我的智能体加载中…",
     "empty": "还没有发布的智能体——用下面的发布框开始。",
@@ -3686,7 +3747,23 @@
       "room_renamed": "空间已改名",
       "guest_joined": "一位访客进入了空间",
       "guest_identified": "访客身份已确认",
-      "guest_greeting": "欢迎——值班席位等你来问"
+      "guest_greeting": "欢迎——值班席位等你来问",
+      "route_decision": {
+        "mention": "大屏：这条被点名派给 {{to}}",
+        "attribution": "大屏：这条派给发言人自己的团队（{{to}}）",
+        "intent": "大屏：按内容派给 {{to}}（{{n}} 个候选）",
+        "needs_confirmation": "大屏：归属不确定，已落待确认，没有派发",
+        "broadcast": "大屏：无点名无归属，按征询发给 {{to}}",
+        "fallback": "大屏：派发给了 {{to}}"
+      },
+      "route_cancelled": "已停止本次派发：还有 {{n}} 个席位没开始，未计费",
+      "route_reassigned": "已改派给 {{to}}",
+      "route_action": {
+        "cancel": "停止派发",
+        "reassign": "改派",
+        "pickTarget": "选择一个席位…",
+        "reassignReason": "由房间所有者手动改派"
+      }
     },
     "hatch": {
       "menuItem": "升为空间…",
@@ -3764,6 +3841,19 @@
       "close": "关闭",
       "empty": "该岗位还没有记忆沉淀。",
       "noPack": "该智能体团队缺少蓝图包坐标，无法定位记忆根。"
+    },
+    "policy": {
+      "title": "记忆声明（pack 根）",
+      "degraded": "记忆服务不可用，暂时读不到声明",
+      "scope": "作用域：{{root}} —— 同一 pack 落地出的所有团队共用这一份",
+      "col": {
+        "key": "子键",
+        "declared": "声明值",
+        "inherited": "继承来源",
+        "effective": "生效值"
+      },
+      "unset": "未声明",
+      "notExecuted": "未执行"
     }
   },
   "blueprints": {
@@ -4034,7 +4124,8 @@
     "views": {
       "overview": "综合看板",
       "manage": "管理",
-      "owner": "经营"
+      "owner": "经营",
+      "directory": "目录"
     },
     "overview": {
       "summaryTitle": "全部智能体团队",
@@ -4149,7 +4240,7 @@
     },
     "market": {
       "subtitle": "获取与管理能力：智能体、工具、技能、插件",
-      "openStudio": "打开 Studio",
+      "openStudio": "打开创作台",
       "installed": "本机已装功能集"
     }
   },
@@ -4204,6 +4295,12 @@
         "enabled": "已启用",
         "unsupplied": "未供应"
       },
+      "evidence": {
+        "complete": "审校完整",
+        "stale": "待复审",
+        "missing": "未审校",
+        "until": "复审至 {{date}}"
+      },
       "request": "申请供应",
       "requested": "已申请供应：{{name}}",
       "requestPending": "已申请，等待下一次供应",
@@ -4216,6 +4313,384 @@
     "agents": {
       "unavailableTitle": "本部署未启用智能体市场",
       "unavailableBody": "这份部署没有接市场；已装的功能集仍在「我的」里，可以正常启用与卸载。"
+    }
+  },
+  "inputInbox": {
+    "title": "待填表",
+    "count": "{{count}} 项",
+    "empty": "没有待填的表单",
+    "refresh": "刷新",
+    "error": "读取失败：{{message}}"
+  },
+  "inputRequest": {
+    "title": "需要你补充信息",
+    "waitingHint": "填好后对话继续",
+    "submit": "提交",
+    "cancel": "取消请求",
+    "answered": "已提交",
+    "cancelled": "已取消",
+    "expired": "已过期（无人应答）",
+    "escalated": "已升级待人工处理",
+    "expiresIn": "剩余 {{minutes}} 分钟",
+    "fillRequired": "请先填写：{{fields}}",
+    "filePlaceholder": "资源引用或链接",
+    "yes": "是",
+    "no": "否"
+  },
+  "teamDirectory": {
+    "title": "团队目录",
+    "refresh": "刷新",
+    "searchPlaceholder": "搜索团队、岗位或标识",
+    "openOnly": "只看可直接调用",
+    "sampled": "采样于 {{at}} · {{cells}} 个空间已应答，{{degraded}} 个不可达",
+    "stale": "目录缓存正在刷新，下面是上一轮结果。",
+    "degraded": "{{n}} 个空间本轮没有应答，它们的团队暂不出现。",
+    "truncated": "结果超过上限，只显示前 200 支团队。",
+    "unavailable": "目录暂不可读（{{error}}）",
+    "noMatch": "没有匹配的团队",
+    "empty": "还没有团队发布到目录",
+    "emptyHint": "在团队驾驶舱里点「发布到目录」，选择可见性后保存即可。",
+    "emptyAction": "去团队",
+    "clearFilters": "清除筛选",
+    "availability": {
+      "accepting": "接单中",
+      "paused": "已暂停",
+      "unavailable": "不可用"
+    },
+    "pricing": {
+      "title": "每日配额",
+      "calls": "调用次数",
+      "tokens": "Token",
+      "usd": "金额（USD）",
+      "billedTo": "调用费用按团队主人的部署键计。",
+      "compact": "每日 {{calls}} 次 · ${{usd}}"
+    },
+    "posts": {
+      "title": "可对外接单的岗位",
+      "empty": "没有对外岗位——现在还不能被调用",
+      "truncated": "只显示前 20 个岗位，点开完整卡查看全部"
+    },
+    "trust": "空间 {{cell}} · 发布于 {{at}}",
+    "callDoorNotHere": "目录只负责发现。调用通路是另一项能力，这里不发起对话、委托或计费。",
+    "backToTeams": "返回团队总览",
+    "callOpenHint": "「可直接调用」档：白名单内的人免批调用。",
+    "callListedHint": "「可见」档：调用前需主人批准。"
+  },
+  "teamCard": {
+    "open": "发布到目录",
+    "title": "发布到团队目录",
+    "subtitle": "其他用户能看到这张卡；调用是另一道门。",
+    "loadFailed": "读取发布状态失败：{{error}}",
+    "receipt": {
+      "saved": "已保存。你自己立即能看到；其他人最多 60 秒后才会出现在目录里。",
+      "withdrawn": "已从目录撤回。团队本体、成员与数据一条没动。"
+    },
+    "fields": {
+      "handle": "标识",
+      "handleHint": "小写字母、数字与短横线，发布后不可更改。",
+      "name": "对外名称",
+      "description": "一句话简介",
+      "descriptionPlaceholder": "这支团队接什么活、怎么接"
+    },
+    "visibility": {
+      "title": "谁能看见",
+      "private": {
+        "label": "不发布",
+        "hint": "等同未发布，任何读面都不出现"
+      },
+      "listed": {
+        "label": "可见",
+        "hint": "能被找到，但每次调用都要你批准"
+      },
+      "open": {
+        "label": "可直接调用",
+        "hint": "白名单内的人免批调用，费用记在你名下"
+      }
+    },
+    "openGate": {
+      "hint": "切到「可直接调用」意味着：白名单内的人不经过你批准就能发起调用，费用按你的部署键计。",
+      "acknowledge": "我理解并确认"
+    },
+    "quota": {
+      "title": "每日配额",
+      "calls": "调用次数",
+      "tokens": "Token",
+      "usd": "金额（USD）",
+      "hint": "留空用系统默认（200 次 / 200 万 token / $5）；「不限制」不提供。",
+      "fallback": "{{field}} 不接受「无限」，已回落到 {{value}}"
+    },
+    "callers": {
+      "title": "调用方白名单",
+      "hint": "每行一个邮箱。只影响「可直接调用」这一档；「可见」档下任何人都要先经你批准。"
+    },
+    "preview": {
+      "title": "卡片预览（确认前不写入）",
+      "loading": "正在生成预览…",
+      "invalid": "当前填写还不合法：{{error}}"
+    },
+    "actions": {
+      "withdraw": "从目录撤回",
+      "close": "关闭",
+      "saving": "保存中…",
+      "update": "保存修改",
+      "publish": "发布"
+    },
+    "withdraw": {
+      "title": "从目录撤回这张卡？",
+      "description": "目录里下一次读取起不再出现；团队本体、成员与历史一条不删。",
+      "confirm": "撤回"
+    }
+  },
+  "teamCall": {
+    "open": "调用",
+    "title": "调用「{{name}}」",
+    "subtitle": "只与这一个入口对话：内部谁接、怎么汇总，由团队自己决定。",
+    "quota": "每日上限 {{calls}} 次（已用 {{usedCalls}}）· ${{usd}}（已用 ${{usedUsd}}）· {{reset}} 重置",
+    "needApproval": "这支团队是「可见」档：调用前需要主人批准。",
+    "requestApproval": "申请批准",
+    "requesting": "提交中…",
+    "approvalState": {
+      "none": "尚未申请",
+      "pending": "已申请，等主人批准",
+      "approved": "已批准",
+      "rejected": "已被拒绝",
+      "expired": "批准已过期",
+      "unknown": "状态未知"
+    },
+    "taskLabel": "交给团队的任务",
+    "taskPlaceholder": "写清楚要什么、交付成什么形状",
+    "send": "发起调用",
+    "calling": "调用中…",
+    "close": "关闭",
+    "answerTitle": "团队回复",
+    "errorTitle": "调用未成功",
+    "blockedUntilApproved": "批准后按钮才会可用。",
+    "errors": {
+      "unauthorized": "身份无法识别，请重新登录后再试。",
+      "not_found": "这支团队不存在或已撤回。",
+      "not_listed": "你不在白名单内，且这支团队不接受申请。",
+      "needs_approval": "需要团队主人批准后才能调用。",
+      "quota_exceeded": "该团队的当日配额已用完，明天重置后可再试。",
+      "depth_exceeded": "调用链过深，已被拒绝。",
+      "no_reception": "这支团队还没有对外接单的岗位，暂时不能调用。",
+      "team_paused": "这支团队已暂停接单。",
+      "not_serving": "这个部署还不能接团队调用。",
+      "incomplete": "回复没有完整结束，请重试。",
+      "internal_error": "调用失败，请稍后重试。"
+    }
+  },
+  "teamApprovals": {
+    "open": "待批准调用",
+    "title": "「{{name}」的待批准调用",
+    "subtitle": "「可见」档的团队，调用方申请后由你在这里放行。",
+    "grantFor": "批准有效期",
+    "duration": {
+      "oneoff": "一次性（长期有效）",
+      "24h": "24 小时",
+      "7d": "7 天",
+      "30d": "30 天"
+    },
+    "pending": "等待批准",
+    "empty": "暂时没有待批准的申请。",
+    "requestedAt": "申请于 {{at}}",
+    "approve": "批准",
+    "reject": "拒绝",
+    "approvedTitle": "已批准",
+    "approvedEmpty": "还没有已批准的调用方。",
+    "standing": "长期有效",
+    "rejectTitle": "拒绝这个调用方？",
+    "rejectDescription": "{{caller}} 将无法调用这支团队；他仍可重新申请。"
+  },
+  "voiceCapture": {
+    "open": "语音采集",
+    "title": "语音采集",
+    "subtitle": "录一整段会议：边录边转写，结束后可订正、导出或送入房间。",
+    "defaultTitle": "会议采集 {{time}}",
+    "start": "开始录音",
+    "starting": "启动中…",
+    "restart": "新建采集",
+    "stop": "停止录音",
+    "finish": "结束并归并",
+    "finishing": "归并中…",
+    "elapsed": "已录 {{at}} · 计划 {{planned}} 片",
+    "finishHint": "停止录音后才能结束归并。",
+    "waitUploads": "还有 {{n}} 片在上传或转写，完成后才能结束归并。",
+    "progressTitle": "分片进度",
+    "progressSummary": "{{done}}/{{total}} 片 · {{pct}}%",
+    "transcribed": "已转写 {{minutes}} 分钟",
+    "recordingSlice": "第 {{seq}} 片·录音中",
+    "rowLabel": "第 {{seq}} 片",
+    "state": {
+      "pending": "待转写",
+      "transcribing": "转写中",
+      "done": "已完成",
+      "failed": "失败"
+    },
+    "retry": "重试",
+    "retrying": "重试中…",
+    "retryGaveUp": "已达重试上限",
+    "retryClosed": "采集已结束，无法再重试",
+    "mergedTitle": "归并文本",
+    "mergedHint": "可直接修改；订正只有一次机会，原始归并文本仍会保留",
+    "save": "保存订正",
+    "saving": "保存中…",
+    "saved": "订正已保存",
+    "correctionSpent": "订正已保存，不能再修改",
+    "export": "导出纯文本",
+    "segmentsTitle": "分段文本",
+    "roomLabel": "目标房间 ID",
+    "roomPlaceholder": "填写智语房间的会话 ID",
+    "toRoom": "送入房间",
+    "roomNeedId": "请先填写房间 ID。",
+    "roomConfirmTitle": "把这段会议纪要送入房间？",
+    "roomConfirmDescription": "将在房间中写入一行系统消息，不会唤醒任何智能体，也不占回合配额。",
+    "roomConfirm": "确认送入",
+    "roomSent": "已送入房间 {{sessionId}}",
+    "roomAlready": "该房间已有这次采集的纪要（{{sessionId}}）",
+    "abandon": "放弃采集",
+    "abandonTitle": "放弃这次采集？",
+    "abandonDescription": "已转写的文本与暂存音频都会被删除，无法恢复。",
+    "abandonConfirm": "放弃",
+    "abandoned": "采集已放弃",
+    "close": "关闭",
+    "micDenied": "无法使用麦克风（{{error}}）。请检查浏览器权限。",
+    "micUnsupported": "当前浏览器不支持录音（需要 MediaRecorder 与安全的来源）。",
+    "unavailable": {
+      "title": "语音采集不可用",
+      "disabled": "语音功能已被停用。",
+      "no_key": "尚未配置语音凭据。",
+      "generic": "语音服务暂时不可用。"
+    },
+    "stoppedTitle": "已达到预算上限",
+    "stopped": {
+      "minutes": "分钟数上限已触顶，后续分片不再转写。",
+      "usd": "金额上限已触顶，后续分片不再转写。",
+      "buffered": "触顶后的音频已暂存，未转写；解开上限后可补转。"
+    },
+    "errors": {
+      "network": "网络不可用，请求没有到达服务器。",
+      "internal_error": "操作失败，请稍后重试。",
+      "voice_disabled": "语音功能已被停用。",
+      "voice_not_configured": "尚未配置语音凭据。",
+      "not_found": "采集不存在或不属于你。",
+      "capture_not_recording": "采集已结束，不再接收分片。",
+      "chunk_busy": "该片正在转写中，请稍候。",
+      "chunk_retry_exhausted": "该片重试次数已达上限。",
+      "chunk_exists": "该片已存在，按已完成处理。",
+      "timeline_conflict": "分片时间与已有分片冲突。",
+      "chunk_audio_gone": "该片音频已清理，请重新上传。",
+      "chunk_too_large": "单个分片超过大小上限。",
+      "bad_seq": "分片序号无效。",
+      "bad_start_ms": "分片起始时间无效。",
+      "bad_duration_ms": "分片时长无效。",
+      "missing_audio": "缺少音频文件。",
+      "bad_upload": "上传格式无效。",
+      "not_finished": "采集尚未结束。",
+      "already_corrected": "该采集已订正过一次。",
+      "empty_capture": "采集没有可送入的文本。",
+      "confirmation_required": "送入房间需要一次确认。",
+      "forbidden": "没有该房间的权限。",
+      "bad_text": "订正文本无效。",
+      "bad_session": "房间 ID 无效。",
+      "chat_history_unavailable": "对话记录暂不可用。"
+    }
+  },
+  "speakerAttribution": {
+    "title": "说话人归属",
+    "summary": "本场 {{total}} 段 · 已确定 {{named}} 段 · 待确认 {{pending}} 段",
+    "separation": {
+      "none": "本场未做分离：上游不返回说话人信息，所有段落都标为未确定。",
+      "partial": "部分未分离：前半场已分离，后半场只拿到纯文本；未分离的段落不会假装归属。",
+      "full": "本场已完成分离：段落按匿名簇归组，尚未贴名的仍显示为未确定。",
+      "not_needed": "个人设备直录：整段归属为录音者本人，无需分离。"
+    },
+    "unset": "未确定",
+    "sliceCount": "{{n}} 段",
+    "name": "贴名",
+    "unbind": "解除绑定",
+    "noCandidates": "暂无在场成员可选",
+    "overridden": "已按会话身份归属",
+    "conflictNotice": "有 {{n}} 段分离结果与会话身份不一致，已按会话身份归属并留痕。",
+    "pendingHint": "未确定的段落不会自动派发；待确认条目在「待办」里，确认后回到这里生效。",
+    "trail": "改动留痕（{{n}} 条）",
+    "empty": "本场还没有可归属的段落（录音中或尚未结束）。",
+    "op": {
+      "bind": "贴名",
+      "rebind": "改绑",
+      "unbind": "解除"
+    },
+    "errors": {
+      "loadFailed": "读取归属失败，请重试。",
+      "memberRequired": "请先选择一位成员。",
+      "member_not_present": "该成员不在本次采集的在场成员内。",
+      "bad_binding": "绑定的簇或成员不合法。",
+      "not_bound": "该簇尚未贴名。",
+      "internal_error": "操作失败，请重试。"
+    }
+  },
+  "console": {
+    "title": "团队控制台",
+    "block": {
+      "team": "岗位",
+      "stream": "最新汇报",
+      "kpi": "指标",
+      "decisions": "待拍板",
+      "spend": "花费",
+      "orchestration": "结构",
+      "unknown": "不可用区块",
+      "needsNewerClient": "此区块需要更新版本的应用。"
+    },
+    "absent": {
+      "no_members": "还没有岗位——去驾驶舱添加第一个。",
+      "no_reports": "还没有汇报。岗位会在第一轮上报。",
+      "no_reported_kpis": "还没有上报任何指标。",
+      "no_open_decisions": "没有等待拍板的事项。",
+      "no_run_records": "还没有运行记录。",
+      "not_declared": "这个团队没有声明结构。",
+      "declaration_unreadable": "结构声明无法解析。",
+      "unknown_block": "这个区块在这里不可用。",
+      "unknown": "暂无内容。"
+    },
+    "states": {
+      "forbidden": "你没有这个团队控制台的访问权限。",
+      "notPublished": "这个控制台尚未公开。",
+      "unavailable": "控制台暂时不可用。"
+    },
+    "team": {
+      "lastReport": "最近汇报"
+    },
+    "stream": {
+      "noSummary": "这次汇报没有摘要。"
+    },
+    "decisions": {
+      "untitled": "未命名事项",
+      "expires": "截止",
+      "severity": {
+        "high": "高",
+        "normal": "一般",
+        "low": "低"
+      }
+    },
+    "spend": {
+      "rounds": "轮次",
+      "turns": "回合",
+      "cost": "花费",
+      "pricedTurns": "已计价回合"
+    },
+    "orchestration": {
+      "summary": "声明 {{declared}} 条 · 生效 {{total}} 条",
+      "derived": "推导"
+    },
+    "page": {
+      "subtitle": "这个团队声明要展示的内容"
+    },
+    "publish": {
+      "published": "已公开",
+      "private": "未公开",
+      "privateHint": "公开后这个控制台会有一个对外链接。地址由系统生成，不能自定义。",
+      "action": "公开控制台",
+      "unpublish": "撤回",
+      "failed": "没能改变公开状态。"
     }
   }
 }

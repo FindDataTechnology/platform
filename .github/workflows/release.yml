@@ -1,0 +1,722 @@
+# ── 通道注记（revive-nonweb-ci，2026-10-27）──────────────────────────────
+# 本 workflow 的 macOS/Windows 矩阵**只走公开池侧分支通道**运行：
+# `testaction003/build-pool` 侧分支 `desktop-release/<ver>`（gitleaks 零泄漏
+# 快照 + workflow 修剪至本文件 + win-install-smoke），tag 触发。本私有仓的
+# 私有 minute 不为它付费 —— 见 docs/registry-maintenance.md「非 web 端通道」。
+#
+# ── Release: build .dmg (mac arm64 + x64) + .exe (win x64) on tag / dispatch ───
+#
+# Triggers:
+#   - push tag v*        -> build both, attach installers to a GitHub Release
+#   - workflow_dispatch  -> build both, upload as workflow artifacts (no release)
+#
+# `build-node.js` auto-matches the bundled standalone Node to the Node running
+# the build (process.version), so the native-addon ABI parity holds on whichever
+# Node `setup-node` provides. The bundled Node is the only build artifact and is
+# cross-platform.
+#
+# Signing is gated on secrets: when CSC_LINK / WIN_CSC_LINK (+ notarization
+# secrets) are present the installers are signed/notarized; when absent the
+# build still succeeds unsigned (CI smoke). See openspec change
+# `ci-build-installers`.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      artifact_run_id:
+        description: "复用既有 build 产物（run id；填了则跳过 build 只跑 installer-e2e）"
+        required: false
+        default: ""
+      installer_e2e_mac:
+        description: "同时跑 macOS 装机 e2e 腿（默认关：mac ×10 计费，月频显式开）"
+        required: false
+        default: "false"
+
+permissions:
+  contents: write # softprops/action-gh-release creates/edits the Release
+  actions: read # installer-e2e reuse mode: gh run download of a prior run's artifact
+
+jobs:
+  build:
+    name: build (${{ matrix.artifact }})
+    if: ${{ github.event.inputs.artifact_run_id == '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest # Apple Silicon (arm64)
+            arch: arm64
+            artifact: dmg-arm64
+          - os: macos-latest # arm64 host, x64 target via Rosetta
+            arch: x64
+            artifact: dmg-x64
+          - os: windows-latest # x64
+            arch: x64
+            artifact: exe
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # x64 mac build runs on the arm64 runner via Rosetta: install it so the
+      # x64 Node + x64 python-build-standalone binaries can execute.
+      - name: Install Rosetta
+        if: runner.os == 'macOS' && matrix.arch == 'x64'
+        run: softwareupdate --install-rosetta --agree-to-license || true
+
+      # Node 25 (not an LTS) MUST match the version package-lock.json was
+      # generated under (npm 11). Node 22's npm 10 misreads the npm-11 lock
+      # ("Missing: zod@... from lock file"). architecture: x64 on the x64 mac
+      # job installs x64 Node (runs via Rosetta) so npm ci compiles
+      # better-sqlite3 for the x64 ABI; build-node.js then bundles the matching
+      # x64 Node (process.arch == x64). Bump with the dev Node if you regen lock.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+          architecture: ${{ matrix.arch }}
+          cache: 'npm'
+
+      # Cache the bundled Node. predist is idempotent and skips when present,
+      # so a cache hit turns the download into a no-op. Keyed by OS + arch +
+      # package.json + the build scripts.
+      - name: Cache resources/
+        uses: actions/cache@v4
+        with:
+          path: resources
+          key: resources-${{ matrix.os }}-${{ matrix.arch }}-${{ hashFiles('package.json', 'scripts/build-*.js', 'scripts/verify-bundle.js') }}
+          # Same-arch only: do NOT fall back across arches (an arm64 cache
+          # restored into the x64 job would skip the rebuild and ship arm64
+          # binaries in an x64 dmg).
+          restore-keys: |
+            resources-${{ matrix.os }}-${{ matrix.arch }}-
+
+      # postinstall installs web/ deps + builds web/dist AND builds the bundled
+      # resources (when not cached). predist then ensures the bundled Node is
+      # built and verifies all resources. No skip flags - idempotency handles it.
+      #
+      # --legacy-peer-deps RETIRED (ADR-0023): the 0.2.0 unified dsh
+      # generation has one lockstep version and no conflicting peers; the
+      # historical flag existed for the rc.2/rc.5 mix (v1.3.5 release run:
+      # three matrices ERESOLVE at this step).
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build bundled resources + verify
+        run: npm run predist
+
+      - name: Build web + package installers
+        shell: bash
+        env:
+          # Build branding (deployment-branding): fork-settable repo variables
+          # (Settings → Secrets and variables → Actions → Variables) so a fork
+          # brands its installers without editing the workflow. Unset = the
+          # defaults (name "Platform", vendored build/icon.png).
+          PRODUCT_NAME: ${{ vars.PRODUCT_NAME }}
+          ICON_URL: ${{ vars.ICON_URL }}
+          COMPANY_NAME: ${{ vars.COMPANY_NAME }}
+          # macOS signing + notarization (gated - empty/absent = unsigned;
+          # electron-builder's built-in `mac.notarize` skips when APPLE_* env
+          # is absent, so unsigned CI smoke builds still succeed)
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows signing (gated - empty/absent = unsigned)
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          # A missing GitHub secret becomes an empty-string env var, which
+          # electron-builder treats as "set" and tries to sign with an empty
+          # cert path (fails: "<project> not a file"). Unset empties so it
+          # skips signing -> unsigned build when no cert is configured.
+          for v in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; do
+            [ -z "${!v}" ] && unset "$v"
+          done
+          # `npm run dist` runs electron-builder via `node .../cli.js` directly
+          # (not the bare bin command): the npm bin shim in a `&&` chain
+          # silently no-ops on the Windows runner (see package.json `dist`).
+          # Echo the resolved branding so a dispatch dry run logs what it used.
+          echo "PRODUCT_NAME='${PRODUCT_NAME:-Platform}' COMPANY_NAME='${COMPANY_NAME:-<unset>}'"
+          [ -n "$ICON_URL" ] && echo "ICON_URL=$ICON_URL" || echo "ICON_URL=<unset> (vendored icon)"
+          npm run dist -- --${{ matrix.arch }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-${{ matrix.artifact }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/latest*.yml
+          if-no-files-found: error
+
+  release:
+    name: publish GitHub Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download mac arm64 installer
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-dmg-arm64
+          path: dist
+      - name: Download mac x64 installer
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-dmg-x64
+          path: dist
+      - name: Download windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-exe
+          path: dist
+      - name: Generate update metadata (latest*.yml)
+        # The lane metadata electron-updater reads (add-desktop-in-app-update):
+        # version + per-file sha512/size, generated from the artifacts just
+        # downloaded — hash consistency with what the client verifies is the
+        # spec's 拒装 precondition.
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          node scripts/gen-desktop-latest-yml.mjs dist "$VERSION"
+
+      - name: Push lane to registry (OCI relay)
+        # The release lane is RustFS on the TAILNET (100.64.0.10:9000) — this
+        # runner can't reach it. The wire-downloads precedent: CI pushes the
+        # artifacts as an OCI image to hkccr (runners CAN reach the registry),
+        # and the cheap-3 sync worker (desktop-lane-sync, cron) pulls it and
+        # distributes to the lane. :current, overwritten each release.
+        # (harden-desktop-lane-relay) Creds are the repo-canonical
+        # TCR_USERNAME/TCR_PASSWORD (same pair image.yml/image-publish.yml
+        # use; the pools carry them since 2026-10-13). Missing creds or a
+        # failed push is a HARD FAILURE on tag releases — the spec's publish
+        # contract makes the lane part of the release, and the 1.3.27/1.3.28
+        # outage proved a silent skip here reads as success for weeks.
+        env:
+          TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
+          TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
+        run: |
+          set -euo pipefail
+          IMAGE="hkccr.ccs.tencentyun.com/yizuo/desktop-releases:current"
+          if [ -z "${TCR_USERNAME:-}" ]; then
+            echo "::error::TCR_USERNAME/TCR_PASSWORD not configured on this repo — the lane would silently stall (1.3.27/1.3.28 outage). Configure pool secrets per RELEASE_CHECKLIST."
+            exit 1
+          fi
+          echo "$TCR_PASSWORD" | docker login hkccr.ccs.tencentyun.com --username "$TCR_USERNAME" --password-stdin
+          # Isolated context: the repo-root context is filtered by
+          # .dockerignore (which removes dist for the server image build), so
+          # `COPY dist/ /lane/` from the repo root fails with "/dist: not
+          # found". A temp context holding only dist + the Dockerfile sidesteps
+          # ignore rules entirely — no negation games with the main image.
+          CTX=$(mktemp -d)
+          trap 'rm -rf "$CTX"' EXIT
+          cp -r dist "$CTX/dist"
+          printf 'FROM scratch\nCOPY dist/ /lane/\n' > "$CTX/Dockerfile.lane"
+          docker build -q -f "$CTX/Dockerfile.lane" -t "$IMAGE" "$CTX" >/dev/null
+          docker push "$IMAGE" >/dev/null
+          # Post-push verification: :current must be readable back from the
+          # registry (a swallowed push failure here would stall the lane again).
+          docker manifest inspect "$IMAGE" >/dev/null
+          echo "::notice::lane image pushed and verified: $IMAGE"
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.yml
+
+      - name: Publish installers to MinIO (public download page)
+        # Legacy optional mirror: never configured (empty secrets 410/failed
+        # every run). Skipped inside the shell — a secrets-context `if` on a
+        # step is not evaluated on tag pushes and made the whole workflow fail
+        # to parse (0s "workflow file issue").
+        env:
+          MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          MINIO_BUCKET: ${{ secrets.MINIO_BUCKET }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MINIO_ENDPOINT" ]; then
+            echo "MinIO mirror not configured — skipping"
+            exit 0
+          fi
+          # mc (MinIO client) - single static binary.
+          curl -fsSL -o /usr/local/bin/mc https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x /usr/local/bin/mc
+          mc alias set minio "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+          # Upload this release's installers + update metadata (overwrites
+          # same-name objects; different versions accumulate so all releases
+          # stay downloadable). latest*.yml at the bucket root = the
+          # electron-updater channel contract (add-desktop-in-app-update):
+          # DESKTOP_UPDATE_URL points at this bucket's public URL.
+          mc cp dist/*.dmg minio/"$MINIO_BUCKET"/
+          mc cp dist/*.exe minio/"$MINIO_BUCKET"/
+          mc cp dist/*.yml minio/"$MINIO_BUCKET"/
+          # Regenerate a cumulative index.html listing every installer in the
+          # bucket so the public "download page" shows all versions. Parse
+          # `mc ls --json` (not the human format) so filenames with spaces
+          # (e.g. "Platform Setup 1.0.0.exe") survive intact, and URL-encode the
+          # hrefs. node is on the runner from setup-node; the script uses only
+          # double-quoted strings + backtick template literals so it is safe
+          # inside a bash single-quoted argument.
+          mc ls --json minio/"$MINIO_BUCKET"/ > /tmp/listing.json
+          node -e 'const fs=require("fs");const items=fs.readFileSync("/tmp/listing.json","utf8").split("\n").filter(Boolean).map(l=>JSON.parse(l)).filter(i=>i.type==="file"&&/\.(dmg|exe)$/.test(i.key)).sort((a,b)=>a.key>b.key?-1:a.key<b.key?1:0);const rows=items.map(i=>`<li><a href="${encodeURIComponent(i.key)}">${i.key}</a> <span class="sz">(${Math.floor(i.size/1048576)} MiB)</span></li>`).join("");const html=`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Platform Releases</title><style>body{font-family:system-ui,-apple-system,sans-serif;max-width:760px;margin:2rem auto;padding:0 1rem;color:#222}h1{border-bottom:1px solid #ddd;padding-bottom:.5rem}ul{list-style:none;padding:0}li{margin:.6rem 0}.sz{color:#888;font-size:.85rem}a{font-weight:600}</style></head><body><h1>Platform Releases</h1><ul>${rows}</ul></body></html>`;fs.writeFileSync("dist/index.html",html);console.log("index.html:",items.length,"installers")'
+          mc cp dist/index.html minio/"$MINIO_BUCKET"/
+          PAGE_URL="$MINIO_ENDPOINT/$MINIO_BUCKET/index.html"
+          echo "::notice::Public download page: $PAGE_URL"
+          echo "Public download page: $PAGE_URL"
+          mc ls minio/"$MINIO_BUCKET"/
+
+  # ── 装机 e2e（automate-nonweb-acceptance 4.1）─────────────────────────────
+  # 把 2026-10-27 v1.3.19 首裁的三分支固化为每次发布自动断言：装 → 起管家
+  # （bundled node 直启，避开 GUI/launchctl 在 runner 的确定性赤字）→ 开 app
+  # 断 ATTACHED + 单栈（bundled node 全部上溯到管家 pid，无 embedded 第二条栈）
+  # → 杀 UI 断管家栈仍 healthy → 杀管家+死 pid 断 stale 自清回退 embedded →
+  # 重起常驻管家再卸载，断 pid 排干 + 计划任务注销 + 文件清场。资产走 build 的
+  # workflow artifact（tag 与 dispatch 同一路径，不依赖 GitHub Release 已生成）。
+  # 2026-10-28 消重：本作业是**唯一**装机 e2e 车道（win-install-smoke 的 Phase D
+  # 曾重复同一幕，已并入这里——那边保留 A/B/C 的「发布产物能不能装能跑」冒烟）。
+  installer-e2e:
+    name: installer e2e (windows)
+    needs: build
+    # always(): build 可能在「复用产物」dispatch 里被跳过——此时仍需执行。
+    if: ${{ always() && (needs.build.result == 'success' || needs.build.result == 'skipped') }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        if: ${{ github.event.inputs.artifact_run_id == '' }}
+        with:
+          name: platform-exe
+          path: installer
+
+      - name: Fetch exe from a previous run (reuse mode)
+        if: ${{ github.event.inputs.artifact_run_id != '' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          New-Item -ItemType Directory -Force -Path installer | Out-Null
+          gh run download ${{ github.event.inputs.artifact_run_id }} -n platform-exe -D installer -R ${{ github.repository }}
+
+      - name: Install silently (NSIS /S, per-user)
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem installer -Filter *.exe | Select-Object -First 1
+          Start-Process -FilePath $exe.FullName -ArgumentList '/S' -Wait
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter 'Platform.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $app) { throw "installed Platform.exe not found" }
+          "APP_EXE=$($app.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Seed settings (fleet plugin on + local feed token)
+        shell: pwsh
+        run: |
+          # The resident steward reads settings.json at ITS start (launchd/
+          # schtasks give it a bare env), so the seam must exist BEFORE the
+          # boot — otherwise the cell and the runner it spawns would see an
+          # empty feed bearer and no plugin switch. The app's first-run later
+          # merges without overwriting these keys.
+          $data = Join-Path $env:APPDATA 'platform'
+          New-Item -ItemType Directory -Force -Path $data | Out-Null
+          $token = -join (1..48 | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
+          $doc = [ordered]@{
+            WANXING_PLUGIN_ENABLED = '1'
+            WANXING_PLUGIN_RUNNER_ID = 'desktop-ciwin01'
+            WANXING_LOCAL_FEED_TOKEN = $token
+            AGENT_RUNNER_PORT = '8790'
+          }
+          $doc | ConvertTo-Json | Set-Content -Path (Join-Path $data 'settings.json') -Encoding utf8
+          Write-Host "settings seeded (plugin on, feed token minted)"
+
+      - name: Boot steward directly and wait for discovery
+        shell: pwsh
+        run: |
+          $root = Split-Path $env:APP_EXE
+          $node = Join-Path $root 'resources\node\node.exe'
+          $entry = Join-Path $root 'resources\app\supervisor\steward-main.js'
+          if (-not (Test-Path $node)) { throw "bundled node missing: $node" }
+          if (-not (Test-Path $entry)) { throw "steward entry missing: $entry" }
+          # The PACKAGED app resolves its data root to app.getPath('userData')
+          # — the steward must live in that SAME directory or the app never
+          # sees steward.json and silently boots embedded (attach step 2).
+          $data = Join-Path $env:APPDATA 'platform'
+          New-Item -ItemType Directory -Force -Path $data | Out-Null
+          $env:STEWARD_DATA = $data   # same-step use (GITHUB_ENV only affects later steps)
+          "STEWARD_DATA=$data" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "STEWARD_NODE=$node" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $env:PLATFORM_DATA_DIR = $data
+          # Detached launch, with the resident host's output captured to a file
+          # WITHOUT handing its stdout/stderr pipes to this step's shell.
+          #
+          # Why the indirection: -RedirectStandardOutput/-Error makes the child
+          # inherit pipes owned by this step, and when the step ends those
+          # pipes close — the resident host then dies on its next log write,
+          # BETWEEN steps. That is exactly how v1.3.26 lost its steward: the
+          # boot step went green, then attach step two minutes later found
+          # `steward.json (missing)`, `pid not alive`, and the app logging
+          # "stale steward discovery removed — embedded fallback" (2026-10-30,
+          # run 40974644674 diagnosis dump).
+          #
+          # A .cmd wrapper owns its own file handles, so the host outlives the
+          # step while a failed boot stays diagnosable (the v1.3.25
+          # SETTINGS_KEYS ReferenceError was invisible without this capture).
+          $bootOut = Join-Path $data 'steward-boot.out.log'
+          $bootErr = Join-Path $data 'steward-boot.err.log'
+          $runner = Join-Path $data 'boot-steward.cmd'
+          # Plain string assembly, NOT a here-string: an "@ at column 1 inside
+          # this YAML block scalar terminates it and GitHub rejects the whole
+          # workflow ("workflow file issue", runs 40975995536/40976219026).
+          $cmdLines = @(
+            '@echo off',
+            ('"{0}" "{1}" > "{2}" 2> "{3}"' -f $node, $entry, $bootOut, $bootErr)
+          )
+          Set-Content -Path $runner -Value $cmdLines -Encoding ascii
+          Start-Process -FilePath $runner -WindowStyle Hidden
+          $json = Join-Path $data 'steward.json'
+          # 180s: comfortably exceeds the supervisor's own 120s health window, so a
+          # slow-but-successful cold start is not mistaken for a dead control plane.
+          for ($i = 0; $i -lt 90 -and -not (Test-Path $json); $i++) { Start-Sleep -Seconds 2 }
+          if (-not (Test-Path $json)) {
+            "---- steward boot stdout (tail) ----" | Write-Host
+            Get-Content $bootOut -Tail 80 -ErrorAction SilentlyContinue | Write-Host
+            "---- steward boot stderr (tail) ----" | Write-Host
+            Get-Content $bootErr -Tail 80 -ErrorAction SilentlyContinue | Write-Host
+            "---- captured service logs ----" | Write-Host
+            Get-ChildItem (Join-Path $data 'logs') -ErrorAction SilentlyContinue | Select-Object Name, Length | Write-Host
+            throw "steward.json never appeared (control plane did not boot)"
+          }
+          $disc = Get-Content $json -Raw | ConvertFrom-Json
+          "STEWARD_PID=$($disc.pid)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          if (-not (Get-Process -Id $disc.pid -ErrorAction SilentlyContinue)) { throw "steward pid $($disc.pid) not alive" }
+
+          # The 2026-10-27 first-trial defect: bare `node` children died with
+          # "command not found" on a bare PATH. Ask the control plane directly.
+          $client = Join-Path (Split-Path $env:APP_EXE) 'resources\app\supervisor\steward-client.js'
+          $probe = @"
+          import { readStewardDiscovery, createStewardClient } from "file:///$($client -replace '\\','/')";
+          const d = readStewardDiscovery(process.env.STEWARD_DATA);
+          const c = createStewardClient({ socket: d.socket, timeoutMs: 5000 });
+          const st = await c.request("status");
+          console.log(JSON.stringify(st.servers ?? []));
+          const s = (st.servers ?? [])[0];
+          console.log("STATE=" + JSON.stringify({ state: s?.state, pid: s?.pid, port: s?.port, restartCount: s?.restartCount, lastError: s?.lastError, logTail: (s?.logs ?? []).slice(-6) }));
+          if (!s || s.state !== "healthy") process.exit(1);
+          "@
+          $probe | Out-File -FilePath "$env:TEMP\steward-status.mjs" -Encoding utf8
+          $ok = $false
+          for ($i = 0; $i -lt 45 -and -not $ok; $i++) {
+            & $node "$env:TEMP\steward-status.mjs" *>> "$env:TEMP\probe.log"
+            if ($LASTEXITCODE -eq 0) { $ok = $true } else { Start-Sleep -Seconds 2 }
+          }
+          Get-Content "$env:TEMP\probe.log" -Tail 30
+          if (-not $ok) {
+            "---- steward.log ----" | Write-Host
+            Get-ChildItem (Join-Path $data 'logs') -ErrorAction SilentlyContinue | Select-Object Name, Length
+            Get-Content (Join-Path $data 'logs\steward.log') -Tail 40 -ErrorAction SilentlyContinue
+          }
+          if (-not $ok) { throw "steward stack never became healthy (nodeBin/PATH regression?)" }
+
+      - name: App attaches; UI exit leaves the resident stack alive
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:APPDATA 'platform\main.log'
+          $before = if (Test-Path $log) { (Get-Content $log).Count } else { 0 }
+          Write-Host "main.log before: $before line(s) at $log"
+          Start-Process -FilePath $env:APP_EXE
+          $attached = $false
+          for ($i = 0; $i -lt 60 -and -not $attached; $i++) {
+            Start-Sleep -Seconds 2
+            $tail = if (Test-Path $log) { Get-Content $log | Select-Object -Skip $before } else { @() }
+            if ($tail -match 'ATTACHED to steward') { $attached = $true }
+          }
+          if (-not $attached) {
+            # The attach decision is invisible without these: the app either
+            # fell back embedded ("constructed embedded"), hit the
+            # alive-but-socket-dead branch (error window, NO log line at all),
+            # or never booted. Dump every witness before throwing.
+            Write-Host "=== attach diagnosis ==="
+            Write-Host "STEWARD_PID=$env:STEWARD_PID STEWARD_DATA=$env:STEWARD_DATA"
+            Write-Host "--- Platform processes ---"
+            Get-Process -Name 'Platform' -ErrorAction SilentlyContinue | Format-Table Id, ProcessName, StartTime -AutoSize | Out-String | Write-Host
+            Write-Host "--- steward.json (discovery) ---"
+            $disc = Join-Path $env:STEWARD_DATA 'steward.json'
+            if (Test-Path $disc) { Get-Content $disc -Raw | Write-Host } else { Write-Host "(missing) $disc" }
+            Write-Host "--- steward pid alive? ---"
+            if ($env:STEWARD_PID) { Write-Host "alive=$( [bool](Get-Process -Id $env:STEWARD_PID -ErrorAction SilentlyContinue) )" }
+            Write-Host "--- steward socket exists? ---"
+            if (Test-Path $disc) {
+              $sock = (Get-Content $disc -Raw | ConvertFrom-Json).socket
+              Write-Host "socket=$sock exists=$( [bool](Test-Path $sock) )"
+            }
+            Write-Host "--- main.log (last 120 lines) ---"
+            if (Test-Path $log) { Get-Content $log -Tail 120 | Write-Host } else { Write-Host "(missing) $log" }
+            Write-Host "--- app userData dir ---"
+            Get-ChildItem (Join-Path $env:APPDATA 'platform') -ErrorAction SilentlyContinue | Select-Object Name, Length | Format-Table -AutoSize | Out-String | Write-Host
+            throw "app never attached to the resident steward"
+          }
+
+          # Exactly ONE stack, rooted at the resident steward (moved here from
+          # win-install-smoke Phase D, 2026-10-28 consolidation): the attached
+          # app asks the steward to start the stack, so every bundled node.exe
+          # must reach STEWARD_PID by walking ParentProcessId. A node whose root
+          # is anything else is an embedded second stack — the app fell back
+          # instead of attaching, which the ATTACHED log line alone cannot see.
+          $sw = [int]$env:STEWARD_PID
+          $nodeRoot = Join-Path (Split-Path $env:APP_EXE) 'resources\node'
+          $bundled = Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+            Where-Object { $_.ExecutablePath -like "$nodeRoot*" }
+          $byPid = @{}
+          foreach ($p in $bundled) { $byPid[[int]$p.ProcessId] = $p }
+          $strays = @()
+          foreach ($p in $bundled) {
+            Write-Host "node pid $($p.ProcessId) parent $($p.ParentProcessId)"
+            # The walk STOPS at the steward: its own parent (this shell) is
+            # outside the stack and must not be taken for the root.
+            $cur = [int]$p.ProcessId
+            $guard = 0
+            while ($cur -ne $sw -and $byPid.ContainsKey($cur) -and $guard -lt 20) {
+              $cur = [int]$byPid[$cur].ParentProcessId
+              $guard += 1
+            }
+            if ($cur -ne $sw) { $strays += $p }
+          }
+          if (-not (Get-Process -Id $sw -ErrorAction SilentlyContinue)) {
+            throw "resident steward pid $sw vanished before the stack check"
+          }
+          if ($strays) {
+            $strays | ForEach-Object { Write-Host "stray node pid $($_.ProcessId) parent $($_.ParentProcessId)" }
+            throw "found a stack the resident steward does not root (embedded double stack)"
+          }
+          Write-Host "single stack rooted at the steward ($sw)"
+
+          Get-Process -Name 'Platform' -ErrorAction SilentlyContinue | Stop-Process -Force
+          Start-Sleep -Seconds 8
+          if (-not (Get-Process -Id $env:STEWARD_PID -ErrorAction SilentlyContinue)) { throw "steward died with the UI — resident semantics broken" }
+          & $env:STEWARD_NODE "$env:TEMP\steward-status.mjs"
+          if ($LASTEXITCODE -ne 0) { throw "resident stack not healthy after UI exit" }
+
+      - name: Local cluster is runnable AND manageable (write-face probe)
+        shell: pwsh
+        run: |
+          # The batch's promise, asserted against THIS installed app: the local
+          # roster feed answers with its own bearer, the write face deploys /
+          # stops / starts / removes an agent, the feed publishes exactly the
+          # deployed entries, and the convergence report answers. The probe
+          # is platform-neutral (scripts/desktop-local-cluster-probe.mjs) — the
+          # leg only locates the app and the data root.
+          $appRoot = Join-Path (Split-Path $env:APP_EXE) 'resources\app'
+          $probe = Join-Path $appRoot 'electron\local-cluster-probe.mjs'
+          if (-not (Test-Path $probe)) { throw "probe missing from the installed app: $probe" }
+          $env:PLATFORM_DATA_DIR = $env:STEWARD_DATA
+          $env:PLATFORM_RESOURCES_DIR = Join-Path (Split-Path $env:APP_EXE) 'resources'
+          & $env:STEWARD_NODE $probe
+          if ($LASTEXITCODE -ne 0) { throw "local cluster probe failed (the desktop cannot run/manage a cluster locally)" }
+
+      - name: Stale discovery falls back to embedded (never a second stack)
+        shell: pwsh
+        run: |
+          Stop-Process -Id $env:STEWARD_PID -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 4
+          $json = Join-Path $env:STEWARD_DATA 'steward.json'
+          @{ socket = "$env:STEWARD_DATA\gone.sock"; protocolVersion = 1; pid = 999999; startedAt = 0; dataDir = $env:STEWARD_DATA } |
+            ConvertTo-Json | Set-Content $json
+          $log = Join-Path $env:APPDATA 'platform\main.log'
+          $before = if (Test-Path $log) { (Get-Content $log).Count } else { 0 }
+          Start-Process -FilePath $env:APP_EXE
+          $fellBack = $false
+          for ($i = 0; $i -lt 45 -and -not $fellBack; $i++) {
+            Start-Sleep -Seconds 2
+            $tail = if (Test-Path $log) { Get-Content $log | Select-Object -Skip $before } else { @() }
+            if ($tail -match 'stale steward discovery removed|constructed embedded') { $fellBack = $true }
+          }
+          Get-Process -Name 'Platform' -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $fellBack) { throw "stale steward.json did not fall back to embedded" }
+          if (Test-Path $json) { throw "stale steward.json was not cleaned up" }
+
+      - name: Uninstall drains the resident steward and leaves the machine clean
+        shell: pwsh
+        run: |
+          # The stale-discovery step above killed the steward on purpose; a real
+          # customer uninstalls with the resident RUNNING — that is the act this
+          # step judges (add-cell-lifecycle 卸载幕, moved here from
+          # win-install-smoke Phase D). Policy manual: the point is the pid
+          # drain, not a backend boot (the stack's own proof is the boot step).
+          $data = $env:STEWARD_DATA
+          $appRoot = Join-Path (Split-Path $env:APP_EXE) 'resources\app'
+          $bytes = [Text.Encoding]::UTF8.GetBytes($data)
+          $hash = (New-Object System.Security.Cryptography.SHA256Managed).ComputeHash($bytes)
+          $cellId = ([BitConverter]::ToString($hash)).Replace('-','').ToLower().Substring(0,16)
+          # Single-quoted JSON + concatenation: a here-string's closing line
+          # would sit at column 1, which YAML block scalars cannot accept.
+          $row = '[{"schemaVersion":1,"cellId":"' + $cellId + '","ownerEmail":null,"state":"unbound","policy":"manual","workload":{"cronCount":0,"botCount":0,"fleetCount":0,"nextDueAt":null},"lastUserTrafficAt":null,"lastDutyRunAt":null,"lastBoundAt":null,"destroy":null,"createdAt":0,"updatedAt":0}]'
+          [IO.File]::WriteAllText((Join-Path $data 'steward-registry.json'), $row)
+          Remove-Item (Join-Path $data 'steward.json') -ErrorAction SilentlyContinue
+          $env:PLATFORM_DATA_DIR = $data
+          Start-Process -FilePath $env:STEWARD_NODE -ArgumentList @((Join-Path $appRoot 'supervisor\steward-main.js')) -WindowStyle Hidden
+          $disc = Join-Path $data 'steward.json'
+          for ($i = 0; $i -lt 60 -and -not (Test-Path $disc); $i++) { Start-Sleep -Seconds 2 }
+          if (-not (Test-Path $disc)) { throw "resident steward did not come back before the uninstall" }
+          $resident = (Get-Content $disc -Raw | ConvertFrom-Json).pid
+          if (-not (Get-Process -Id $resident -ErrorAction SilentlyContinue)) { throw "resident pid $resident not alive before the uninstall" }
+          Write-Host "resident steward $resident alive; uninstalling"
+
+          $un = Get-ChildItem (Split-Path $env:APP_EXE) -Filter 'Uninstall*.exe' | Select-Object -First 1
+          Start-Process -FilePath $un.FullName -ArgumentList '/S' -Wait
+          Start-Sleep -Seconds 10
+          if (Get-Process -Id $resident -ErrorAction SilentlyContinue) {
+            Stop-Process -Id $resident -Force -ErrorAction SilentlyContinue
+            throw "uninstaller did not drain the resident steward (pid $resident survived)"
+          }
+          # Get-ScheduledTask, not schtasks /Query: a native call that fails on
+          # the (correctly) absent task leaves $LASTEXITCODE=1 and pwsh exits
+          # non-zero after the PASS line — a pass reported as red.
+          if (Get-ScheduledTask -TaskName 'PlatformSteward' -ErrorAction SilentlyContinue) {
+            throw "scheduled task PlatformSteward still registered after uninstall"
+          }
+          if (Test-Path $env:APP_EXE) { throw "app files survived the uninstaller" }
+          Write-Host "::notice::uninstall clean — resident drained, task deregistered, files removed"
+
+  # ── 装机 e2e · macOS 腿（4.2，显式开启；launchctl 用 installPlan 断言替身）──
+  installer-e2e-mac:
+    name: installer e2e (macOS, opt-in)
+    needs: build
+    if: ${{ always() && inputs.installer_e2e_mac == 'true' }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/download-artifact@v4
+        if: ${{ github.event.inputs.artifact_run_id == '' }}
+        with:
+          name: platform-dmg-arm64
+          path: installer
+
+      - name: Fetch dmg from a previous run (reuse mode)
+        if: ${{ github.event.inputs.artifact_run_id != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p installer
+          gh run download ${{ github.event.inputs.artifact_run_id }} -n platform-dmg-arm64 -D installer -R ${{ github.repository }}
+
+      - name: Mount dmg and extract the app (no /Applications write, no launchctl)
+        run: |
+          set -euo pipefail
+          DMG=$(ls installer/*.dmg | head -1)
+          mnt=$(mktemp -d)
+          hdiutil attach "$DMG" -nobrowse -quiet -mountpoint "$mnt"
+          mkdir -p "$RUNNER_TEMP/apps"
+          cp -R "$mnt/Platform.app" "$RUNNER_TEMP/apps/"
+          hdiutil detach "$mnt" -quiet
+          APP="$RUNNER_TEMP/apps/Platform.app"
+          test -x "$APP/Contents/Resources/node/bin/node"
+          test -f "$APP/Contents/Resources/app/supervisor/steward-main.js"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          echo "BUNDLE_NODE=$APP/Contents/Resources/node/bin/node" >> "$GITHUB_ENV"
+
+      - name: LaunchAgent plan assertions (registration correctness without a GUI session)
+        run: |
+          set -euo pipefail
+          # The import path must be a literal — inline $APP into the script.
+          cat > "$RUNNER_TEMP/plan.mjs" <<JS
+          import { installPlan } from "${APP}/Contents/Resources/app/electron/steward-install.js";
+          const plan = installPlan({
+            isPackaged: true,
+            nodeBin: "${BUNDLE_NODE}",
+            dataDir: process.env.RUNNER_TEMP + "/steward-data",
+            resourcesDir: "${APP}/Contents/Resources",
+          });
+          if (plan.platform !== "darwin") throw new Error("plan platform: " + plan.platform);
+          if (!plan.plistContent.includes("RunAtLoad") || !plan.plistContent.includes("KeepAlive")) throw new Error("plist missing login/KeepAlive semantics");
+          if (!plan.plistContent.includes("${BUNDLE_NODE}")) throw new Error("plist does not point at the bundled node");
+          if (!plan.plistContent.includes("/supervisor/steward-main.js")) throw new Error("plist does not point at the packaged steward entry");
+          if (!plan.plistPath.includes("LaunchAgents")) throw new Error("plist not per-user LaunchAgents");
+          console.log("plan ok: " + plan.plistPath);
+          JS
+          "$BUNDLE_NODE" "$RUNNER_TEMP/plan.mjs"
+
+      - name: Steward runtime on macOS (boot, healthy stack, policy round-trip)
+        run: |
+          # Headless runners have no GUI session, so the app-attach / UI-exit
+          # semantics are asserted on the Windows leg (same shared code path).
+          # This leg owns what is genuinely macOS-specific: the LaunchAgent
+          # plan (above) and the steward runtime itself.
+          set -euo pipefail
+          export DATA="$RUNNER_TEMP/steward-data"
+          mkdir -p "$DATA"
+          PLATFORM_DATA_DIR="$DATA" "$BUNDLE_NODE" "$APP/Contents/Resources/app/supervisor/steward-main.js" > "$RUNNER_TEMP/steward.log" 2>&1 &
+          for i in $(seq 1 60); do [ -f "$DATA/steward.json" ] && break; sleep 2; done
+          test -f "$DATA/steward.json"
+          cat > "$RUNNER_TEMP/status.mjs" <<JS
+          import { readStewardDiscovery, createStewardClient } from "${APP}/Contents/Resources/app/supervisor/steward-client.js";
+          const d = readStewardDiscovery(process.env.DATA);
+          const c = createStewardClient({ socket: d.socket, timeoutMs: 5000 });
+          const st = await c.request("status");
+          const s = (st.servers ?? [])[0];
+          if (!s || s.state !== "healthy") { console.error(JSON.stringify(s)); process.exit(1); }
+          if (s.restartCount > 0) { console.error("restart loop: " + s.restartCount); process.exit(1); }
+          const set = await c.request("setPolicy", { policy: "on_demand" });
+          const got = await c.request("getPolicy");
+          const p = got?.policy ?? got?.value?.policy;
+          if (p !== "on_demand") { console.error("policy round-trip: " + JSON.stringify(got)); process.exit(1); }
+          console.log("healthy on " + s.port + "; policy " + p);
+          JS
+          # A fresh data root boots the whole cell (migrations, dsh profile,
+          # skills patch) — a SINGLE probe races that. Retry boundedly, the
+          # same shape the Windows leg uses, and print the last state on give-up.
+          ok=0
+          for i in $(seq 1 45); do
+            if "$BUNDLE_NODE" "$RUNNER_TEMP/status.mjs" >> "$RUNNER_TEMP/status.log" 2>&1; then ok=1; break; fi
+            sleep 3
+          done
+          tail -5 "$RUNNER_TEMP/status.log" || true
+          if [ "$ok" -ne 1 ]; then
+            echo "---- steward.log ----"
+            tail -40 "$RUNNER_TEMP/steward.log" || true
+            echo "steward stack never became healthy"
+            exit 1
+          fi
+          pkill -f "steward-main.js" || true
+
+      - name: Local cluster is runnable AND manageable (write-face probe)
+        run: |
+          # Same platform-neutral probe as the Windows leg: the local roster
+          # feed, the deploy/stop/start/remove write face, and the convergence
+          # report, asserted against the extracted .app on this machine.
+          set -euo pipefail
+          export DATA="$RUNNER_TEMP/steward-data"
+          export PLATFORM_DATA_DIR="$DATA"
+          export PLATFORM_RESOURCES_DIR="$APP/Contents/Resources"
+          mkdir -p "$DATA"
+          # Seed the seam BEFORE the boot: the resident steward reads
+          # settings.json at start (launchd gives it a bare env), so the plugin
+          # switch and the feed bearer must be on disk first.
+          TOKEN=$(od -An -tx1 -N24 /dev/urandom | tr -d ' \n')
+          cat > "$DATA/settings.json" <<JSON
+          {"WANXING_PLUGIN_ENABLED":"1","WANXING_PLUGIN_RUNNER_ID":"desktop-cimac01","WANXING_LOCAL_FEED_TOKEN":"$TOKEN","AGENT_RUNNER_PORT":"8790"}
+          JSON
+          PLATFORM_DATA_DIR="$DATA" "$BUNDLE_NODE" "$APP/Contents/Resources/app/supervisor/steward-main.js" > "$RUNNER_TEMP/steward-probe.log" 2>&1 &
+          for i in $(seq 1 60); do [ -f "$DATA/steward.json" ] && break; sleep 2; done
+          test -f "$DATA/steward.json"
+          "$BUNDLE_NODE" "$APP/Contents/Resources/app/electron/local-cluster-probe.mjs"
+          pkill -f "steward-main.js" || true
+
+      - name: Drag-deleted bundle guard is present (static; behaviour needs a real login session)
+        run: |
+          # Triggering the guard needs the entry to run from inside a live .app and
+          # then the bundle to vanish — not reproducible on an ephemeral runner.
+          # We pin the guard's presence instead; true login-respawn coverage stays
+          # in the monthly human spot-check (design D7 / Non-Goals).
+          grep -q "self-deregistering" "$APP/Contents/Resources/app/supervisor/steward-main.js"

@@ -240,11 +240,6 @@ function saveTasks() {
       projectId: t.projectId ?? null,
       aggregated: t.aggregated ?? false,
       paused: t.paused,
-      // Pause SOURCE (fix-fleet-operator-pause-durability): "operator" vs
-      // "fleet". Persisted for the same reason as lastMissedCountedUntil — the
-      // fleet converge pass judges on it, so an unpersisted value would let a
-      // restart turn an owner's stop back into "the fleet's to undo".
-      pausedBy: t.pausedBy ?? null,
       createdAt: t.createdAt,
       lastRun: t.lastRun,
       nextRun: t.nextRun,
@@ -309,16 +304,6 @@ function loadTasks() {
     } else if (t.state === "running") {
       t.state = "interrupted";
       t.error = "cell restarted during execution";
-      dirty = true;
-    }
-    if (t.pausedBy === undefined) {
-      // Legacy record (fix-fleet-operator-pause-durability): the field arrived
-      // with the operator/fleet split. Interpreting a missing value as "fleet"
-      // keeps pre-upgrade behaviour — a record paused before the split stays
-      // resumable by the converge pass, whereas defaulting to "operator" would
-      // silently freeze a whole class of parked posts. Only a paused record
-      // needs the marker; a running one carries null.
-      t.pausedBy = t.paused ? "fleet" : null;
       dirty = true;
     }
     if (t.state === "queued") {
@@ -560,10 +545,6 @@ function clientShape(t) {
     // the 默认项目 bucket. Read surfaces filter on it; the engine does not.
     projectId: t.projectId ?? null,
     paused: t.paused,
-    // Pause source rides the client shape too (fix-fleet-operator-pause-durability):
-    // the fleet reconcile reads jobs through this projection, so without it the
-    // "operator" marker would be invisible exactly where it is judged.
-    pausedBy: t.pausedBy ?? null,
     createdAt: t.createdAt,
     lastRun: t.lastRun,
     nextRun: t.nextRun,
@@ -1523,17 +1504,7 @@ async function runExecutionTurn(t, turnFn) {
   // inheriting the near-window context. Rotation is per fire and sticky — the
   // new id is what the runner reads (`job.sessionId || cron-<id>`).
   const overflowAsked = t.rotateNextSession === true;
-  // Rotate after a failed round too (ledger E35, live 2026-11-10). The
-  // threshold below reads TOKEN USAGE — and a round that died on an upstream
-  // 502/503 records no tokens at all, so `shouldRotateSession` never fires and
-  // the task keeps re-using the SAME rotated id forever. Once the child that
-  // owned that id is gone (bridge rebuild), every later round opens with
-  // `502 upstream_error` at revision 3 / index 1 — measured: the job's
-  // `sessionId` still carried `--r1794250091371` from 11:41 while rounds ran at
-  // 12:19. A failed round leaves nothing worth resuming, so start clean.
-  const lastOutcome = Array.isArray(t.history) ? t.history[t.history.length - 1] : null;
-  const lastFailed = Boolean(lastOutcome) && lastOutcome.success !== true;
-  if (t.trigger === "schedule" && (overflowAsked || lastFailed || shouldRotateSession(t.history))) {
+  if (t.trigger === "schedule" && (overflowAsked || shouldRotateSession(t.history))) {
     const previous = t.sessionId ?? null;
     t.sessionId = nextCronSessionId(t.id);
     t.sessionRotatedAt = Date.now();

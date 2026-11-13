@@ -116,6 +116,7 @@ import { matrixGate } from "./lib/dsh-matrix-verify.js";
 import { registerActionsRoutes } from "./server/routes/actions.js";
 import { startActionExpiryJob } from "./lib/action-expiry.js";
 import { recordRejection, prune, summarizeRejections } from "./lib/report-rejection-log.js";
+import { pickMemberIdentity, describeCandidates } from "./lib/member-identity.js";
 import { registerBoardRoutes } from "./server/routes/boards.js";
 // ERP 纵向 REST 服务面同源代理（add-erp-supply-chain-gateway-proxy）：
 // 客户端 X-ERP-* 一律剥离、服务端按会话注入、无会话 401（fail-closed）。
@@ -657,7 +658,7 @@ function seedStartupMcpConfigs(mcpJsonServers) {
 // now it only emits `done` on turn completion (the 1.5 round-trip placeholder).
 async function initDshAgent() {
   const { DshBridge } = await import("./dsh-bridge.js");
-  const { writeLlmProfile, writeMcpPatch, writeSkillsPatch, writePresetsPatch, writePermissionsPatch, writeToolSearchPatch, writeChartBindPatch, writeUserQuestionsPatch, writePluginSupplyPatch, writeSaveLibraryPatch, ensureCredentialsStore, ensureDshHome, buildScrubbedEnv, knownPresetIds, DEFAULT_AGENT_PRESET, readPatchAuthorizations, authorizationHeadersChanged } = await import("./dsh-profile.js");
+  const { writeLlmProfile, writeMcpPatch, writeSkillsPatch, writePresetsPatch, writePermissionsPatch, writeToolSearchPatch, writeChartBindPatch, writeUserQuestionsPatch, writePluginSupplyPatch, writeSaveLibraryPatch, ensureCredentialsStore, ensureDshHome, buildScrubbedEnv, targetPaths, knownPresetIds, DEFAULT_AGENT_PRESET, readPatchAuthorizations, authorizationHeadersChanged } = await import("./dsh-profile.js");
 
   // Scaffold $DSH_HOME if it is fresh — a hosted cell's per-user home always
   // is, and dsh refuses to boot a profile that was never materialized.
@@ -844,6 +845,11 @@ async function initDshAgent() {
   // "no bundles supplied", chat unaffected).
   const pluginSupplyPatchPath = writePluginSupplyPatch();
 
+  // The profile's own patch layer: passed to the bridge so it can assert route
+  // exclusivity on disk before spawning (harden-plugin-supply-gates D5). Read
+  // from the same module that writes it — never re-derived here.
+  const profilePatchPath = targetPaths().settings;
+
   // Default model: in a cell the user's saved binding wins (it IS this
   // runtime's configuration); otherwise the persisted Models-page pointer,
   // else DEFAULT_MODEL env if declared, else the first declared model.
@@ -913,6 +919,7 @@ async function initDshAgent() {
     userQuestionsPatchPath,
     pluginSupplyPatchPath,
     saveLibraryPatchPath,
+    profilePatchPath,
     agentPreset: ctx.currentPreset,
     env: dshChildEnv,
   });
@@ -931,6 +938,7 @@ async function initDshAgent() {
     userQuestionsPatchPath,
     pluginSupplyPatchPath,
     saveLibraryPatchPath,
+    profilePatchPath,
     env: dshChildEnv,
   };
   await ctx.dshBridge.start();
@@ -1287,16 +1295,27 @@ ctx.resolveFleetIdentity = (presetId, { turn } = {}) => fleetIdentityFor(getFlee
 // MCP server(s)" with no trim line and no member-* profile dir at all.
 // Only `running`/`queued` records count, so a finished fire cannot leave a
 // stale identity for the next chat turn on the same persona.
+//
+// FAIL-CLOSED on ambiguity (decision 2026-11-10, see
+// reports/attribution-preset-source-trace.md §8): the same preset can be on the
+// books twice (one persona holding posts in two fleets). Returning the first
+// match would hand this round ANOTHER post's memberId, which flows into
+// `memberTokenFor({ packId, memberId, … })` and lands in the private MCP
+// patch's Authorization header — someone else's deployment token baked into
+// this worker. Losing an identity is recoverable (caller falls back to the
+// shared patch, the documented pre-change behavior); wearing another member's
+// token is not. So >1 distinct pair ⇒ null, and the refusal is logged rather
+// than silent. This is the SAME direction as resolveAttribution's `ambiguous`.
 ctx.memberIdentityForPreset = (presetId) => {
   if (!presetId) return null;
   try {
-    for (const rec of engine.allRecords()) {
-      if (rec?.preset !== presetId) continue;
-      if (rec.state !== "running" && rec.state !== "queued") continue;
-      const tag = rec.sourceTag;
-      if (tag?.fleetId && tag?.memberId) {
-        return { fleetId: tag.fleetId, memberId: tag.memberId };
-      }
+    const { identity, candidates } = pickMemberIdentity(engine.allRecords(), presetId);
+    if (identity) return identity;
+    if (candidates.length > 1) {
+      console.warn(
+        `[member-patch] preset ${presetId} 命中 ${candidates.length} 个岗位（${describeCandidates(candidates)}）；` +
+          `拒绝绑定身份，回落共享 patch（同名 preset 多岗时不在两者间猜）`,
+      );
     }
   } catch { /* identity is best-effort; the scan fallback still runs */ }
   return null;

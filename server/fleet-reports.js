@@ -419,3 +419,19 @@ export function buildLatestView({ report, previous, kpiSlots }) {
     blockers: report.blockers,
   };
 }
+
+// The timeline row (the drawer's first page and the team console's `stream`
+// block): one report reduced to what a reader scans. Shared so the owner
+// cockpit and the console report list can never disagree about a row's shape.
+export function reportTimelineEntry(report) {
+  return {
+    id: report.id,
+    at: report.createdAt,
+    summary: report.summary,
+    metrics: report.metrics,
+    blockers: report.blockers,
+    resources: report.resources,
+    source: report.source,
+    sessionId: report.sessionId ?? null,
+  };
+}

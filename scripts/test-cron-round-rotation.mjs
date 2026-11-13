@@ -65,26 +65,21 @@ function roundCtx({ failChildDelete = false } = {}) {
     broadcast: () => {},
     onRuntimeIdle: () => {},
     reserveRuntime: () => () => {},
-    // Fleet-tagged jobs MUST carry a model plan (113233eb, ledger E28): a round
-    // that cannot resolve its post's model is a FAILED round, not a licence to
-    // run on whatever is live. Without this seam every case here died inside
-    // normalizeModelForJob — before the rotation/dispose behaviour under test
-    // was ever reached, so the dispose never fired and three cases went red for
-    // a reason that has nothing to do with rotation. Minimal single-hop plan,
-    // same shape as test-empty-turn-billing.mjs.
-    resolveFleetModel: async () => ({
-      memberId: "m1",
-      candidates: [{ model: "declared-model" }],
-      explicitChain: false,
+    // Both jobs below carry `sourceTag.fleetId`, so a round goes through
+    // normalizeModelForJob — and a fleet-attributed round with no model plan is
+    // now refused before it runs ("post model resolution unavailable …", ledger
+    // E28). Without these the round returns ok:false for a reason that has
+    // nothing to do with rotation, and the assertions here read it as "the
+    // child id did not rotate".
+    resolveFleetModel: async (preset) => ({
+      memberId: "m-1",
+      preset,
+      candidates: [{ model: "harness-model" }],
       notices: [],
-      budgetBlocked: [],
-      effort: null,
-      contextBudget: null,
+      explicitChain: false,
     }),
-    // The plan above lands through this seam (normalizeModelForJob walks
-    // candidates and stops on the first ok). Same one-liner as
-    // test-empty-turn-billing.mjs — no model behaviour is under test here.
     switchModelTo: async () => ({ ok: true }),
+    recordFleetModelNotices: () => {},
     switchPresetTo: async (p) => {
       ctx.currentPreset = p;
       return { ok: true };

@@ -6,6 +6,7 @@
 // fd-memory 现状全同，本层只做身份解析与透传，不再多建一套查询语言。
 
 import { cellMemoryConfig, personTokenFor } from "@finddatatechnology/yongyi-client";
+import { packMemoryRootKey } from "../../lib/pack-memory-policy.js";
 
 function intParam(v, def, min, max) {
   const n = Number(v);
@@ -143,6 +144,53 @@ export function registerMemoryRoutes(ctx) {
         if (!r.ok) return res.status(502).json({ error: `记忆读面 HTTP ${r.status}`, code: "memory_read_failed" });
         const doc = await r.json();
         return res.json(Array.isArray(doc) ? { items: doc } : doc);
+      } finally {
+        clearTimeout(timer);
+      }
+    } catch (err) {
+      return res.status(503).json({ error: String(err?.message ?? err), code: "memory_unavailable" });
+    }
+  });
+
+  // GET /api/memory/policy?packId=<id> — 处理策略读面（add-pack-memory-
+  // declaration 3.3/4.x）：fd-memory `/policy` 的四列（declared /
+  // inherited_from / effective / executed）+ 未执行清单，按 pack 记忆根解析。
+  //
+  // 三处是刻意的：
+  //   · 只收 `packId`，根键由 `packMemoryRootKey()` 推出来 —— 让调用方自己指定
+  //     rootKey 就等于让它指定「写进谁的 store」，与 `store.home` 只收枚举同一条边界。
+  //   · 响应带 `policy_root`：策略作用域是 pack 根，不是某一个 fleet 行（同一 pack
+  //     被不同所有者各落地一个团队时共用这一份）。读面必须让人看得出作用域。
+  //   · 用 platform lane（与 /deployer-entries 同缝），但**额外要求已登录**：
+  //     这条比邻居更严，因为新面不该比既有的更宽。
+  app.get("/api/memory/policy", async (req, res) => {
+    try {
+      const cfg = cellMemoryConfig(process.env);
+      if (!cfg) return res.status(503).json({ error: "记忆服务未配置", code: "memory_unavailable" });
+      if (!req.user?.email) return res.status(401).json({ error: "未登录", code: "unauthenticated" });
+      const packId = typeof req.query?.packId === "string" ? req.query.packId.trim() : "";
+      const rootKey = packMemoryRootKey(packId);
+      if (!rootKey) {
+        return res.status(400).json({
+          error: "packId 缺失或形状非法（字母数字_-，1-64 字符）",
+          code: "pack_id_invalid",
+        });
+      }
+      const platformToken = process.env.CELL_MEMORY_PLATFORM_TOKEN ?? "";
+      if (!platformToken) return res.status(503).json({ error: "记忆平台令牌未配置", code: "memory_unavailable" });
+      const u = new URL(`${cfg.url}/policy`);
+      u.searchParams.set("rootKey", rootKey);
+      const project = typeof req.query?.project === "string" ? req.query.project.trim() : "";
+      if (project) u.searchParams.set("project", project);
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const r = await fetch(u, { headers: { authorization: `Bearer ${platformToken}` }, signal: controller.signal });
+        if (!r.ok) return res.status(502).json({ error: `策略读面 HTTP ${r.status}`, code: "memory_read_failed" });
+        const doc = await r.json();
+        // `scope: "pack"` + `policy_root` 一起出现，是为了让 UI 不可能把它渲染成
+        // 「只影响本合同」——那是 D8 明确禁止的表述。
+        return res.json({ ...doc, packId, policy_root: rootKey, scope: "pack" });
       } finally {
         clearTimeout(timer);
       }

@@ -160,3 +160,11 @@
 | 2 | 代码审阅/检索类（纯本地读写） | 工作流 | 初判可收，需核 P2 是否抢同名工具 |
 | 3 | 需要外部 API key 的第三方 bundle | 集成 | 与 tavily 同模式：先过凭据决议（平台注入 vs 用户自带） |
 | 4 | 带 postinstall 或常驻外连的 bundle | 运行时 | **拒**（P1/P2 硬门） |
+
+<!-- BEGIN GENERATED: curation-ledger -->
+
+> 本段由 `node scripts/gen-curation-ledger.mjs` 从 `packs/plugin-catalog.json` 生成，请勿手改；改条目后重新生成。
+
+_目录中还没有条目。_
+
+<!-- END GENERATED: curation-ledger -->

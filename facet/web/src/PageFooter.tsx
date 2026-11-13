@@ -9,6 +9,7 @@
 // FilingFooter — the tool views' entire footer (spec: filing statements on
 // every view; ladder and brand block are intro-landing elements).
 import { useTranslation } from "react-i18next";
+import { Container } from "./Container";
 import { FACET_HELP_COMMAND } from "./cliFacts";
 import { LineLadder } from "./LineLadder";
 import { SiteMark } from "./SiteMark";
@@ -58,7 +59,7 @@ export function PageFooter() {
 
   return (
     <footer data-testid="facet-footer" className="mt-12 border-t border-border pt-8">
-      <div className="grid gap-8 md:grid-cols-3">
+      <Container className="grid gap-8 md:grid-cols-3">
         <div>
           <div className="flex items-center gap-2.5">
             <SiteMark chars="谦面" size="lg" />
@@ -109,12 +110,12 @@ export function PageFooter() {
             </li>
           </ul>
         </div>
-      </div>
+      </Container>
 
-      <p className="mt-8 text-sm text-muted-foreground">{t("facetFooter.mission")}</p>
-      <div className="mt-4">
+      <Container className="mt-8 space-y-4">
+        <p className="text-sm text-muted-foreground">{t("facetFooter.mission")}</p>
         <FilingLine />
-      </div>
+      </Container>
     </footer>
   );
 }

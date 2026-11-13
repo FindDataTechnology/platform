@@ -111,3 +111,75 @@ test("list / search facts name subcommands the CLI actually dispatches", async (
     assert.ok(cliSource.includes(`facet ${sub} `), `facet help documents ${sub}`);
   }
 });
+
+// ── Native MCP snippet shape (overhaul-facet-shell-ia-and-space 5.3) ────────
+// The docs render each client's configuration snippet from FACET_MCP_SHAPES.
+// A hand-written snippet would eventually teach a shape the CLI does not
+// write — the exact failure mode that sent readers to a dead GitHub link
+// before. So the table is compared against MCP_TARGETS.entry(): the URL key,
+// the declared transport flag, and the container path all have to agree.
+test("native MCP snippet shapes mirror the CLI's entry() output", async () => {
+  const { MCP_TARGETS } = await import("../facet/cli/facet.js");
+  const url = "https://example.test/mcp";
+  const headers = { Authorization: "Bearer test" };
+  for (const [id, shape] of Object.entries(facts.FACET_MCP_SHAPES)) {
+    const def = MCP_TARGETS[id];
+    assert.ok(def, `${id}: shape declared for a target the CLI does not carry`);
+    assert.equal(shape.format, def.toml ? "toml" : "json", `${id}: format drift`);
+    if (def.toml) {
+      // The TOML writer builds the table name from the container key.
+      const src = await (await import("node:fs/promises")).readFile(
+        new URL("../facet/cli/facet.js", import.meta.url),
+        "utf8",
+      );
+      assert.ok(src.includes(`[${shape.container[0]}.`), `${id}: TOML table name drift`);
+      continue;
+    }
+    const entry = def.entry(url, headers);
+    assert.deepEqual(
+      Object.keys(entry).sort(),
+      [...(shape.declaresType ? ["type"] : []), shape.urlKey, "headers"].sort(),
+      `${id}: entry keys drift (the docs would print a shape the CLI never writes)`,
+    );
+    // The container path the snippet nests under must be the map the CLI edits.
+    const doc = {};
+    const node = def.json.container(doc);
+    const containerKey = def.json.key;
+    assert.equal(shape.container[shape.container.length - 1], containerKey, `${id}: container key drift`);
+    assert.ok(node, `${id}: container() returned nothing`);
+  }
+});
+
+test("every client carries an in-site snippet (no guide is repo-only)", () => {
+  for (const row of facts.FACET_TARGETS) {
+    const sample = facts.mcpSample(row.id);
+    assert.ok(sample.length > 0, `${row.id}: empty snippet`);
+    assert.ok(sample.includes(facts.FACET_MCP_SHAPES[row.id].urlKey), `${row.id}: snippet omits its URL key`);
+    // The snippet must place the entry under the shape's own container path
+    // and must never ship a real credential.
+    assert.ok(sample.includes("wgk-"), `${row.id}: snippet does not show the caller-key placeholder`);
+    assert.equal(/wgk-[A-Za-z0-9]{8,}/.test(sample), false, `${row.id}: snippet looks like it embeds a real key`);
+  }
+});
+
+// ── Every target has docs copy (raw-key guard) ──────────────────────────────
+// The install tabs iterate FACET_TARGETS, but the copy table listed only five
+// clients for months: selecting WorkBuddy rendered the literal key
+// "facetDocs.clients.workbuddy.label" into the page. Nothing caught it because
+// no test walked the target table through the locale bundles.
+test("every target carries a client copy entry in all five locales", async () => {
+  const fs = await import("node:fs/promises");
+  const repoRoot = path.resolve(new URL("..", import.meta.url).pathname);
+  for (const locale of ["en", "zh-CN", "es", "fr", "ja"]) {
+    const bundle = JSON.parse(
+      await fs.readFile(path.join(repoRoot, "web/src/locales", locale, "common.json"), "utf8"),
+    );
+    const clients = bundle.facetDocs.clients;
+    for (const row of facts.FACET_TARGETS) {
+      const entry = clients[row.id];
+      assert.ok(entry, `${locale}: facetDocs.clients.${row.id} missing (the tab would render a raw key)`);
+      assert.ok(entry.label, `${locale}: facetDocs.clients.${row.id}.label missing`);
+      assert.ok(entry.pitfall1 && entry.pitfall2, `${locale}: facetDocs.clients.${row.id} lacks in-site troubleshooting copy`);
+    }
+  }
+});

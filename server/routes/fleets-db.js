@@ -346,6 +346,27 @@ export function createFleetDatabase({ file } = {}) {
     /* column already exists */
   }
 
+  // Team console publication (add-pack-console D5): the slug a share page is
+  // addressed by, plus when it was published. Both nullable — unset means the
+  // console is NOT public, which is the default and the safe state. The slug is
+  // server-derived (never user-chosen) so nobody can squat or impersonate a
+  // name; uniqueness is enforced by an index created alongside.
+  for (const col of [
+    "ALTER TABLE fleets ADD COLUMN console_slug TEXT",
+    "ALTER TABLE fleets ADD COLUMN console_published_at INTEGER",
+  ]) {
+    try {
+      db.exec(col);
+    } catch {
+      /* column already exists */
+    }
+  }
+  try {
+    db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fleets_console_slug ON fleets(console_slug) WHERE console_slug IS NOT NULL`);
+  } catch {
+    /* index exists */
+  }
+
   // Fleet row audit (add-fleet-row-update-audit): the DB-layer half. An
   // AFTER UPDATE trigger catches EVERY writer — including processes outside
   // the platform: a bare sqlite UPDATE leaves no application log, which is
@@ -593,7 +614,7 @@ export function createFleetDatabase({ file } = {}) {
   }
 
   function updateFleet(id, updates, meta = null) {
-    const COLUMNS = { name: "name", state: "state", defaultModel: "default_model", effort: "effort", contextBudget: "context_budget" };
+    const COLUMNS = { name: "name", state: "state", defaultModel: "default_model", effort: "effort", contextBudget: "context_budget", consoleSlug: "console_slug", consolePublishedAt: "console_published_at" };
     const setParts = [];
     const values = [];
     for (const [key, value] of Object.entries(updates)) {
@@ -1065,6 +1086,15 @@ export function createFleetDatabase({ file } = {}) {
       .prepare(`SELECT * FROM decision_items WHERE ${where.join(" AND ")} ORDER BY submitted_at DESC, id DESC`)
       .all(...args)
       .map(deserializeDecision);
+  }
+
+  // Share-page lookup (add-pack-console): resolve a published slug to its fleet.
+  // Only a published fleet is addressable — the WHERE clause is the publication
+  // guard, not a caller convention.
+  function getFleetByConsoleSlug(slug) {
+    if (typeof slug !== "string" || !slug) return null;
+    const row = db.prepare("SELECT * FROM fleets WHERE console_slug = ?").get(slug);
+    return row ? deserializeFleet(row) : null;
   }
 
   function countOpenDecisions(fleetId) {
@@ -1993,39 +2023,12 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       const money = db
         .prepare(`
           SELECT SUM(CASE WHEN pricing_at IS NOT NULL THEN 1 ELSE 0 END) AS priced_turns,
-                 -- 半截用量（fix-overflow-attribution D4）：溢出回合保留已观测 usage，
-                 -- 那些 token 真扣了钱，所以计入花费；但读面必须知道其中几条是半截快照。
-                 -- 这一行在 2026-11-10 的并线（968a3fc38）里被整行带走，靠
-                 -- test-fleet-context-pressure 的 partialTurns 用例抓回来——别删。
-                 SUM(CASE WHEN detail LIKE '%"usagePartial":true%' THEN 1 ELSE 0 END) AS partial_turns,
                  SUM(COALESCE(cost_input_usd, 0) + COALESCE(cost_output_usd, 0)
-                     + COALESCE(cost_cache_write_usd, 0) + COALESCE(cost_cache_read_usd, 0)) AS usd
+                     + COALESCE(cost_cache_write_usd, 0) + COALESCE(cost_cache_read_usd, 0)) AS usd,
+                 SUM(CASE WHEN json_extract(detail, '$.usagePartial') = 1 THEN 1 ELSE 0 END) AS partial_turns
           FROM member_turn_events WHERE fleet_id = ? AND started_at >= ?
         `)
         .get(fleetId, sinceMs);
-      // Delivery (enforce-report-contract): of the rounds that actually ran,
-      // how many delivered what their post owes. Kept SEPARATE from the pass
-      // rate on purpose — `ok` still means "the loop ended", and the delivery
-      // contract deliberately does not touch status. `deliveredOk` is the count
-      // of ok rounds NOT flagged missingReport; the rate divides by ALL turns so
-      // it can be read next to the pass rate without rescaling.
-      // Starts at the rollout of the flag: rows before it carry no detail key
-      // and therefore read as "delivered", which is why the read face says so.
-      const delivery = db
-        .prepare(`
-          SELECT COUNT(*) AS event_turns,
-                 SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_turns,
-                 SUM(CASE WHEN status = 'ok' AND detail LIKE '%"missingReport":true%' THEN 1 ELSE 0 END) AS flagged
-          FROM member_turn_events WHERE fleet_id = ? AND started_at >= ?
-        `)
-        .get(fleetId, sinceMs);
-      // Denominator and numerator come from the SAME table: `turns` above is the
-      // fleet_runs projection, which can be absent for an ad-hoc window while
-      // the turn rows exist. Mixing the two made the rate read null.
-      const eventTurns = delivery?.event_turns ?? 0;
-      const okTurns = delivery?.ok_turns ?? 0;
-      const flagged = delivery?.flagged ?? 0;
-      const deliveredOk = Math.max(0, okTurns - flagged);
       return {
         runs: agg.runs ?? 0,
         turns: agg.turns ?? 0,
@@ -2033,14 +2036,14 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
         usageOutput: agg.usage_output ?? null,
         costUsd: money?.priced_turns > 0 && Number.isFinite(money?.usd) ? money.usd : null,
         pricedTurns: money?.priced_turns ?? 0,
+        // A context-overflow turn is still billed for what it did produce, so it
+        // belongs IN costUsd — but a caller reading "what did this fleet
+        // consume" must be able to see how much of that came from half-turns,
+        // otherwise truncated spend reads as clean spend. The producer has
+        // marked rows (`detail.usagePartial`, server/cron-runner.js) since
+        // fix-overflow-attribution; nothing ever counted them, and the test
+        // written to prove the counter existed was the field's only mention.
         partialTurns: money?.partial_turns ?? 0,
-        // 交付率与通过率并列（设计 D4）：两个数一起看才不会被 `ok` 单独骗过。
-        okTurns,
-        missingReportTurns: flagged,
-        deliveredOk,
-        eventTurns,
-        deliveryRate: eventTurns > 0 ? deliveredOk / eventTurns : null,
-        deliveryBasis: "since the missingReport flag shipped (earlier rows carry no flag)",
       };
     };
     const day = 24 * 3600_000;
@@ -2287,6 +2290,7 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     listRunTurns,
     edgeTraffic,
     spendProjection,
+    getFleetByConsoleSlug,
     pruneRuns,
     reclaimOrphanRuns,
     listOpenRuns,
@@ -2360,6 +2364,10 @@ function deserializeFleet(row) {
     effort: row.effort ?? null,
     contextBudget: row.context_budget ?? null,
     orchestration: row.orchestration ? JSON.parse(row.orchestration) : null,
+    // Unpublished console = both null. A share request for a fleet without a
+    // slug answers 404, so this pair IS the publication switch.
+    consoleSlug: row.console_slug ?? null,
+    consolePublishedAt: row.console_published_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

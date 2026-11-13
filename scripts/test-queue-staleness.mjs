@@ -399,21 +399,51 @@ test("a daily round is NOT swept while an hourly one is", async () => {
 });
 
 test("an age-exempt round alone must not report the cell as stalled", async () => {
-  await boot(() => Promise.resolve({ ok: true }));
+  // `degraded` is a COMPOSITE (stalled ‖ overBudget ‖ orphaned), and this test
+  // is about ONE of the three. Two neighbouring facts used to leak into it and
+  // made the assertion depend on the environment rather than on the exemption
+  // (2026-11-13: red on a CI shard, green 5/5 locally):
+  //   · a queued non-exempt row left behind by an earlier case → `stalled`;
+  //   · the ORPHAN heuristic, which flags a queued round with nothing on the
+  //     chain from its SECOND consecutive sighting — and the old fixture built
+  //     exactly such a round by flipping `state` on an inserted task, so the
+  //     verdict changed the first time anything else read queue health.
+  // So the fixture is now structural: the single slot is held by a turn that
+  // does not resolve, and the daily round waits for it through the real enqueue
+  // path, which puts its execution on the chain. A real waiting round is not an
+  // orphan, however many times the snapshot is read.
+  let release;
+  const held = new Promise((r) => { release = r; });
+  await boot(async () => { await held; return { ok: true }; });
   process.env.QUEUE_MAX_AGE_MS = "600000";
   try {
+    // Isolation from anything an earlier case left queued.
+    await engine.idle();
+    for (const t of [...engine.listTasks()]) {
+      try { engine.deleteRecord(t.id); } catch { /* already gone */ }
+    }
+
+    addTask("slot-holder");
+    engine.enqueueExecution("slot-holder");
+    const running = await waitFor(() => engine.queueHealth().running === 1);
+    assert.equal(running, true, "the slot holder must be running before the daily round queues behind it");
+
     // The worst case: nothing has settled for longer than the bound (an idle
     // cell), and the queue holds ONE round — the exempt one.
     engine._stampSettlement(0);
     engine.insertTask({ id: "lonely-daily", name: "lonely-daily", prompt: "p", trigger: "schedule", targetType: "persona", interval: { number: 1, unit: "day" } });
     const rec = engine.getRecord("lonely-daily");
-    rec.state = "queued";
     rec.firstQueuedAt = Date.now() - 60 * 60_000;
+    engine.enqueueExecution("lonely-daily");   // no `by` → queuedBy="cadence", which the staleness policy ages
+    assert.equal(engine.getRecord("lonely-daily").state, "queued", "the daily round must be waiting behind the held slot");
 
     const health = engine.queueHealth();
     assert.equal(health.degraded, false, "one waiting daily round is not a stalled queue");
     assert.equal(health.oldestQueuedMs, null, "an exempt round is not evidence of waiting");
     assert.equal(health.queuedExempt, 1, "and it is named, so `null` is not mistaken for an unreachable cell");
+    // The old fixture survived exactly one snapshot; hold the claim across a
+    // second one so a stray read elsewhere can never flip it.
+    assert.equal(engine.queueHealth().degraded, false, "and it stays healthy on a re-read");
 
     // The contrast that keeps the bound honest: swap it for an hourly round and
     // the same snapshot must go degraded.
@@ -423,7 +453,9 @@ test("an age-exempt round alone must not report the cell as stalled", async () =
     assert.ok(health2.oldestQueuedMs >= 60 * 60_000);
   } finally {
     delete process.env.QUEUE_MAX_AGE_MS;
+    release();
     try { engine.deleteRecord("lonely-daily"); } catch { /* gone */ }
+    try { engine.deleteRecord("slot-holder"); } catch { /* gone */ }
     await engine.idle();
   }
 });

@@ -149,6 +149,10 @@ export async function reconcileFleet({
   cronApi, // { listJobs, addJob, updateJob, pauseJob, resumeJob, removeJob }
   resolveTarget, // (member) => ({ alive: boolean, clusterName?: string })
   rosterPresetId = (id) => id,
+  // Pack memory policy release (add-pack-memory-declaration 4.2). Injected so a
+  // test can observe the decision without a memory service; absent ⇒ the real
+  // one runs, and any failure degrades open.
+  releaseMemoryPolicy = null,
 }) {
   const fleet = db.getFleet(fleetId);
   if (!fleet) return { skipped: "fleet not found" };
@@ -162,7 +166,7 @@ export async function reconcileFleet({
   const tagged = cronApi.listJobs().filter((j) => j?.sourceTag?.fleetId === fleetId && j.trigger === "schedule");
   const taskByMember = new Map(tagged.map((j) => [j.sourceTag.memberId, j]));
 
-  const out = { created: [], updated: [], paused: [], resumed: [], removed: [], respectedPause: [] };
+  const out = { created: [], updated: [], paused: [], resumed: [], removed: [] };
 
   // Orphans first: members deleted, or cadence withdrawn (passive posts
   // materialize nothing — design D10).
@@ -212,18 +216,32 @@ export async function reconcileFleet({
       await cronApi.pauseJob(existing.id);
       out.paused.push(existing.id);
     } else if (!desiredPaused && existing.paused) {
-      // An owner's stop is its own layer (fix-fleet-operator-pause-durability):
-      // `desiredPaused` only says what the FLEET wants, so resuming here undid
-      // an owner's pause on the next catalog refresh — measured 2026-11-10, a
-      // paused member task came back minutes later with nobody touching it.
-      // Respect it and report it, so a caller can say "N posts stopped by the
-      // owner" instead of silently leaving them parked.
-      // Missing marker = pre-split record → "fleet", i.e. the old behaviour.
-      if ((existing.pausedBy ?? "fleet") === "operator") {
-        out.respectedPause.push(existing.id);
-      } else {
-        await cronApi.resumeJob(existing.id);
-        out.resumed.push(existing.id);
+      await cronApi.resumeJob(existing.id);
+      out.resumed.push(existing.id);
+    }
+  }
+
+  // Pack memory policy on archive (add-pack-memory-declaration 4.2).
+  //
+  // The policy row is keyed by PACK, not by fleet: every team landed from one
+  // pack shares `d-<pack>` and its document. So "this team was archived" is not
+  // by itself a reason to clear it — another owner's team on the same pack would
+  // silently lose its distillation setting. Clear only when this was the last
+  // live team on that pack, which is the reading of the spec that matches the
+  // storage's real granularity.
+  const packId = fleet.state === "archived" ? fleet.sourceTemplate?.packId : null;
+  if (packId) {
+    const liveOnPack = db.listFleets().filter(
+      (f) => f.state !== "archived" && f.sourceTemplate?.packId === packId,
+    ).length;
+    if (liveOnPack === 0) {
+      try {
+        const release = releaseMemoryPolicy ?? (await import("./pack-memory-policy-landing.js")).releasePackMemoryPolicy;
+        out.memoryPolicy = await release({ packId, liveFleets: 0 });
+      } catch (err) {
+        // Degrade open: an archived fleet must finish archiving even when the
+        // memory service is unreachable; the reason is reported, not thrown.
+        out.memoryPolicy = { ok: false, action: "failed", reason: String(err?.message ?? err) };
       }
     }
   }

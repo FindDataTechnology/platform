@@ -15,7 +15,6 @@ import { resolveAttribution } from "./fleet-reports.js";
 import { isPersonaBackedTargetKind } from "./routes/fleets-db.js";
 import { buildTurnRequest } from "./turn-request.js";
 import { resolvePersona } from "../dsh-profile.js";
-import { isMissingReport } from "./report-contract.js";
 import { pricingFor, estimateTurnCost } from "./turn-pricing.js";
 
 // Ordered: the FIRST matching row wins, so runtime-readiness outranks the
@@ -148,7 +147,7 @@ export function isStubTurn({ outputTokens = null, hasText = false, toolCalls = 0
 
 // The outcome → event-field shaping (status/errorKind/error/model/usage),
 // pure, shared with the ledger.
-export function shapeTurnOutcome(outcome, { model = null, contextBudget = null, hasAttribution = false, reportContract = null } = {}) {
+export function shapeTurnOutcome(outcome, { model = null, contextBudget = null, hasAttribution = false } = {}) {
   const ok = outcome?.ok === true;
   const interrupted = outcome?.interrupted === true;
   // fix-fleet-turn-attribution D4: a platform-skipped round (lane breaker
@@ -206,38 +205,18 @@ export function shapeTurnOutcome(outcome, { model = null, contextBudget = null, 
         ...(windowFull ? { windowFull: true, outputTokens: stubFacts.outputTokens } : {}),
       }
     : detail;
-  // Delivery contract (enforce-report-contract). The template says 「收尾必
-  // report_status」 for 34 of its 35 posts, and production ran 516 turns in 24h
-  // filing 129 reports — settlement never noticed because `ok` only ever meant
-  // "the loop ended". The status is deliberately NOT changed: the round really
-  // did run (tokens spent, tools called), so making it `failed` would pollute
-  // the failure rate and the re-run face. What changes is that the row can now
-  // say "ran, but delivered nothing".
-  // The FINAL status decides, not the pre-settlement fact (live 2026-11-10: the
-  // first stub row settled `interrupted` and still carried `missingReport`, i.e.
-  // two rules judged one round). A round that was re-classified as interrupted
-  // never got the chance to deliver, so it cannot break the delivery contract.
-  const finalStatus = skipped
-    ? "skipped"
-    : overBudget
-      ? "failed"
-      : hollowOk || stub
-        ? "interrupted"
-        : ok
-          ? "ok"
-          : interrupted
-            ? "interrupted"
-            : "failed";
-  const missingReport = isMissingReport({
-    status: finalStatus,
-    reportContract,
-    reported: outcome?.reported === true,
-  });
-  const finalDetail = missingReport
-    ? { ...(shapedDetail ?? {}), missingReport: true, reportContract: "required" }
-    : shapedDetail;
   return {
-    status: finalStatus,
+    status: skipped
+      ? "skipped"
+      : overBudget
+        ? "failed"
+        : hollowOk || stub
+          ? "interrupted"
+          : ok
+            ? "ok"
+            : interrupted
+              ? "interrupted"
+              : "failed",
     errorKind: skipped ? null : overBudget ? "context_budget" : ok && !stub ? null : classifyErrorKind(outcome?.error),
     error: overBudget
       ? `context budget exceeded: spent ${spent} tokens, budget ${contextBudget}`
@@ -250,7 +229,7 @@ export function shapeTurnOutcome(outcome, { model = null, contextBudget = null, 
             : String(outcome?.error ?? "execution failed").slice(0, 500),
     model: model ?? outcome?.usage?.model ?? null,
     usage,
-    detail: finalDetail,
+    detail: shapedDetail,
   };
 }
 
@@ -260,7 +239,7 @@ export function shapeTurnOutcome(outcome, { model = null, contextBudget = null, 
 // ledger opened this turn, `ledgerTurn` — the handle whose turnId/runId/chain
 // position/trace key land on the row. Returns the stored event, or null when
 // the turn carries no fleet attribution.
-export function recordTurnEvent(db, job, outcome, { startedAt, endedAt, model = null, rosterPresetId = (id) => id, ledgerTurn = null, contextBudget = null, reportContract = null } = {}) {
+export function recordTurnEvent(db, job, outcome, { startedAt, endedAt, model = null, rosterPresetId = (id) => id, ledgerTurn = null, contextBudget = null } = {}) {
   // Single derivation source (agent-turn-contract): attribution and source
   // both read off the same turnRequest — one rule for both doors.
   const request = buildTurnRequest(job);
@@ -273,7 +252,7 @@ export function recordTurnEvent(db, job, outcome, { startedAt, endedAt, model = 
   // the row gets a real turnId/trace key. Its absence on an otherwise "ok"
   // outcome is exactly the hollow-turn shape the guard below settles as
   // interrupted.
-  const shaped = shapeTurnOutcome(outcome, { model, contextBudget, hasAttribution: Boolean(ledgerTurn), reportContract });
+  const shaped = shapeTurnOutcome(outcome, { model, contextBudget, hasAttribution: Boolean(ledgerTurn) });
   return db.appendTurnEvent({
     fleetId: post.fleetId,
     memberId: post.memberId,

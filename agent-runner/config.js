@@ -3,7 +3,7 @@
 // One place that reads the runner's env so the rest of the service stays
 // injection-friendly for tests. Everything has a default that makes an inert
 // local boot possible; production values come from the compose env file
-// (operator runbook).
+// (DEPLOY.md runbook).
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -271,6 +271,11 @@ export function loadConfig(env = process.env) {
     // the token is the observer's ingest credential.
     fleetUrl: (env.AGENT_RUNNER_FLEET_URL || "").replace(/\/+$/, ""),
     fleetToken: env.AGENT_RUNNER_FLEET_TOKEN || "",
+    // 对外披露闸的裁决通道（add-principal-disclosure-gate D8）。
+    // 两个都配齐才注入客户端；任一为空 ⇒ 不注入 ⇒ 闸门维持
+    // no_verdict_client 的失败关闭，行为与打补丁前逐字节相同。
+    mandateVerdictUrl: (env.MANDATE_VERDICT_URL || "").replace(/\/+$/, ""),
+    mandateVerdictToken: env.MANDATE_VERDICT_TOKEN || "",
     fleetRunnerId: env.AGENT_RUNNER_FLEET_ID || "runner-1",
     fleetSampleSecs: num(env.AGENT_RUNNER_FLEET_SAMPLE_SECS, 30),
     // Seat mailbox cadence (add-desktop-fleet-runner ④).

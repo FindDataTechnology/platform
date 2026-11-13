@@ -1,0 +1,93 @@
+# Facet market (packs.db) backup — add-doc-studio follow-up.
+#
+# Why: the facet service keeps its store on a hostPath pinned to one node
+# (/opt/platform/facet → /data/facet in the container). That node is a
+# single point of failure — it went hard-down on 2026-10-08, taking the whole
+# market with it and leaving no copy anywhere. packs.db is small (~100KB), so
+# a daily snapshot costs nothing.
+#
+# Scheduling constraint: the local-path PVC is provisioned on whatever node
+# first consumes it, while the source directory only exists on the facet node
+# — so the job MUST be pinned to that node (nodeSelector below) or it reads an
+# empty hostPath and backs up nothing.
+#
+# Retention: 14 daily copies, pruned in the same job.
+# Restore: kubectl cp into a temporary pod, or stop the facet deployment,
+# copy the chosen file over /opt/platform/facet/packs.db, and roll again.
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: facet-packs-backup
+  namespace: fd-prod
+spec:
+  schedule: "17 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        spec:
+          restartPolicy: OnFailure
+          # Pinned to the facet data node — see the header note.
+          nodeSelector:
+            kubernetes.io/hostname: liuliangjkiimypbdzxa
+          containers:
+            - name: backup
+              image: alpine:3.20
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -eu
+                  SRC=/mnt/source/packs.db
+                  [ -f "$SRC" ] || { echo "source packs.db missing"; exit 1; }
+                  STAMP=$(date +%Y%m%d-%H%M%S)
+                  cp "$SRC" "/mnt/backup/packs.db.$STAMP"
+                  # WAL sidecars travel with the snapshot so a mid-write copy
+                  # is still restorable; absent ones are not an error.
+                  for ext in -wal -shm; do
+                    [ -f "$SRC$ext" ] && cp "$SRC$ext" "/mnt/backup/packs.db.$STAMP$ext" || true
+                  done
+                  cd /mnt/backup
+                  ls -1t packs.db.* | tail -n +43 | xargs -r rm -f
+                  echo "backed up $STAMP ($(du -h "packs.db.$STAMP" | cut -f1))"
+              # Deliberately tiny: the fd-prod namespace runs near its
+              # compute-quota ceiling (limits.cpu 9.7/10 cores as of
+              # 2026-10-08), and copying a ~100KB file needs nothing.
+              resources:
+                requests:
+                  cpu: 1m
+                  memory: 8Mi
+                limits:
+                  cpu: 50m
+                  memory: 64Mi
+              volumeMounts:
+                - name: source
+                  mountPath: /mnt/source
+                  readOnly: true
+                - name: backup
+                  mountPath: /mnt/backup
+          volumes:
+            - name: source
+              hostPath:
+                path: /opt/platform/facet
+                type: Directory
+            - name: backup
+              persistentVolumeClaim:
+                claimName: facet-backup
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: facet-backup
+  namespace: fd-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: local-path

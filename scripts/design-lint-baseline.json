@@ -74,9 +74,6 @@
   "web/src/components/fleet/InspectorDrawer.tsx": {
     "named-color": 12
   },
-  "web/src/components/fleet/MemoryDrawer.tsx": {
-    "named-color": 3
-  },
   "web/src/components/fleet/MiniSpan.tsx": {
     "named-color": 1
   },

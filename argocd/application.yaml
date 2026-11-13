@@ -1,0 +1,47 @@
+# ── ArgoCD Application (one-time bootstrap) ────────────────────────────────────
+#
+# Apply once to register the app with ArgoCD:
+#   kubectl apply -f argocd/application.yaml -n argocd
+#
+# Thereafter ArgoCD watches the `k8s/` dir of this repo and auto-syncs.
+# Destination server is the IN-CLUSTER address (https://kubernetes.default.svc),
+# NOT the node's external API — ArgoCD runs inside the cluster.
+#
+# repoURL uses HTTPS to reuse the law-ai-official org repo credential already
+# configured in ArgoCD (law-bench, lawai-web use the same). targetRevision is
+# `main`, the repo's default branch.
+#
+# Namespace is platform-private (hyphen, not underscore) — k8s RFC 1123 labels
+# forbid underscores. The Harbor PROJECT stays paas_private (Harbor allows
+# underscores) — they are two different names.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/law-ai-official/law-private.git
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: platform-private
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

@@ -25,6 +25,10 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../paths.js";
 import { SUPPLY_SPECIES_VERSION } from "../facet/supply-catalog.js";
+// Curation evidence (add-curation-evidence-gate): the shape/verdict rules live
+// in one pure module; this reader only carries the DERIVED state through, the
+// same way supply state is derived and never stored.
+import { evidenceState } from "../lib/curation-evidence.js";
 
 // The in-repo default catalogue. A deployment overrides it through
 // PLUGIN_CATALOG_FILE (docs/ecosystem-curation.md is the authoring runbook).
@@ -77,6 +81,11 @@ function normalizeEntry(raw) {
   if (typeof raw.whenToUse === "string" && raw.whenToUse) entry.whenToUse = raw.whenToUse;
   if (typeof raw.licence === "string" && raw.licence) entry.licence = raw.licence;
   if (typeof raw.reviewedAt === "string" && raw.reviewedAt) entry.reviewedAt = raw.reviewedAt;
+  // Evidence is carried WHOLE (the gate needs every field to judge), and the
+  // derived state rides alongside it. `species` defaults to plugin because this
+  // catalogue is the plugin supply surface; an entry may override it.
+  if (raw.evidence !== undefined) entry.evidence = raw.evidence;
+  if (typeof raw.species === "string" && raw.species) entry.species = raw.species;
   return entry;
 }
 
@@ -92,6 +101,19 @@ export function loadPluginCatalog({ env = process.env } = {}) {
   const plugins = rawPlugins.map(normalizeEntry).filter(Boolean);
   const version = Number.isInteger(doc?.version) ? doc.version : SUPPLY_SPECIES_VERSION;
   return { version, plugins, file };
+}
+
+/**
+ * The read face's THIRD dimension (design D2): evidence state, derived per read
+ * from the entry's own fields. Kept separate from supply state so "this
+ * deployment does not carry it" and "nobody finished reviewing it" can never
+ * mask each other.
+ *
+ * @param {{evidence?: object, species?: string}} entry
+ * @param {{today?: string|Date}} [opts]
+ */
+export function pluginEvidenceState(entry, opts = {}) {
+  return evidenceState({ evidence: entry?.evidence, species: entry?.species ?? "plugin" }, opts);
 }
 
 export function listPluginCatalog({ env = process.env } = {}) {

@@ -1768,14 +1768,17 @@
     }
   },
   "facetShell": {
-    "tabs": {
+    "entries": {
       "intro": "Présentation",
-      "packs": "Agents",
-      "mcp": "Services MCP",
-      "mine": "Mes agents",
-      "curate": "Curation",
-      "docs": "Docs",
-      "studio": "Studio"
+      "packs": "Marché des agents",
+      "mcp": "MCP et compétences",
+      "docs": "Guide",
+      "studio": "Atelier de création"
+    },
+    "account": {
+      "menuLabel": "Compte",
+      "mine": "Mes publications",
+      "curate": "Gestion de contenu"
     },
     "langLabel": "Langue",
     "packsFootnote": "Navigation anonyme ; connectez-vous pour publier et vous abonner. Usage de la CLI :",
@@ -1786,17 +1789,17 @@
       "retry": "Réessayer la connexion",
       "dismiss": "Fermer"
     },
-    "loggedInAs": "Connecté en tant que {{email}}",
-    "studioTitle": "Studio"
+    "loggedInAs": "Connecté en tant que {{email}}"
   },
   "facetDocs": {
-    "title": "Documentation",
+    "title": "Guide",
     "subtitle": "Tout ce qu'il faut pour passer d'un id de agent à une installation fonctionnelle : installer, connecter, créer.",
     "packageNote": "Paquet CLI publié :",
     "nav": {
       "install": "Installer",
-      "mcp": "Accès MCP",
-      "create": "Créer"
+      "mcp": "Connecter",
+      "create": "Créer",
+      "site": "Plan du site"
     },
     "install": {
       "title": "Installer un agent",
@@ -1820,23 +1823,39 @@
     "clients": {
       "claude-code": {
         "label": "Claude Code",
-        "body": "Les compétences s'installent comme instantané de version ; une fois une clé d'appel enregistrée, les références MCP de l'agent peuvent être écrites dans sa configuration MCP native."
+        "body": "Les compétences s'installent comme instantané de version ; une fois une clé d'appel enregistrée, les références MCP de l'agent peuvent être écrites dans sa configuration MCP native.",
+        "pitfall1": "Le niveau utilisateur écrit ~/.claude.json ; seul --project écrit le .mcp.json du projet — les deux s'ignorent.",
+        "pitfall2": "Une entrée MCP ne s'applique qu'aux nouvelles sessions ; une session ouverte garde l'ancienne configuration."
       },
       "cursor": {
         "label": "Cursor",
-        "body": "Les compétences vont dans le répertoire de compétences de Cursor ; les entrées MCP sont écrites dans le fichier de configuration propre à Cursor."
+        "body": "Les compétences vont dans le répertoire de compétences de Cursor ; les entrées MCP sont écrites dans le fichier de configuration propre à Cursor.",
+        "pitfall1": "Cursor doit être redémarré pour relire le dossier des compétences.",
+        "pitfall2": "~/.cursor/mcp.json et le .cursor/mcp.json du projet sont deux fichiers distincts : une installation utilisateur ne vaut pas pour le projet."
       },
       "zcode": {
         "label": "ZCode",
-        "body": "Les compétences vont dans le répertoire de compétences de ZCode ; les entrées MCP sont écrites dans la configuration CLI de ZCode."
+        "body": "Les compétences vont dans le répertoire de compétences de ZCode ; les entrées MCP sont écrites dans la configuration CLI de ZCode.",
+        "pitfall1": "L'entrée se place sous mcp.servers dans ~/.zcode/cli/config.json, pas dans un mcpServers de premier niveau.",
+        "pitfall2": "Les nouvelles compétences sont découvertes à la session suivante ; la session en cours ne les voit pas."
       },
       "codex": {
         "label": "Codex CLI",
-        "body": "Les compétences vont dans le répertoire de compétences de Codex ; les entrées MCP sont écrites en TOML dans la configuration de Codex."
+        "body": "Les compétences vont dans le répertoire de compétences de Codex ; les entrées MCP sont écrites en TOML dans la configuration de Codex.",
+        "pitfall1": "L'entrée MCP est en TOML (~/.codex/config.toml), pas en JSON.",
+        "pitfall2": "Écrire [mcp_servers.<name>] en syntaxe JSON casse tout le fichier de configuration."
       },
       "gemini-cli": {
         "label": "Gemini CLI",
-        "body": "Les compétences vont dans le répertoire de compétences de Gemini CLI ; les entrées MCP utilisent sa forme httpUrl."
+        "body": "Les compétences vont dans le répertoire de compétences de Gemini CLI ; les entrées MCP utilisent sa forme httpUrl.",
+        "pitfall1": "Le champ est httpUrl, pas url ; une clé erronée échoue en silence avec une liste d'outils vide.",
+        "pitfall2": "Redémarrez Gemini CLI après la modification, sinon la configuration n'est pas chargée."
+      },
+      "workbuddy": {
+        "label": "WorkBuddy",
+        "body": "Les compétences vont dans le dossier de compétences de WorkBuddy ; l'entrée MCP va dans son propre mcp.json.",
+        "pitfall1": "Le mcp.json utilisateur n'accepte que la clé d'en-tête (clé d'appel wgk-) ; sans elle, pas de reconnexion silencieuse.",
+        "pitfall2": "Compétences et MCP vivent sous ~/.workbuddy, pas sous ~/.codebuddy."
       }
     },
     "mcp": {
@@ -1865,7 +1884,7 @@
       "routesTitle": "Trois voies de création",
       "route1": "Dans 壹座 : Réglages → Agents → Nouveau agent — composez compétences, références MCP et personas sous forme de brouillon.",
       "route2": "Conversion en un clic : transformez un preset personnel en brouillon de agent (Réglages → Presets personnalisés → Publier), avec un rapport de ce qui a été repris et de ce qui reste à remplacer.",
-      "route3": "Depuis la console d'auteur (#/mine) : soumettez un manifest directement à l'endpoint de publication ; les erreurs de validation s'affichent telles quelles.",
+      "route3": "Depuis Mes publications (#/mine) : soumettez un manifest directement à l'endpoint de publication ; les erreurs de validation s'affichent telles quelles.",
       "disciplineTitle": "Discipline de publication",
       "versions": "Chaque publication ajoute une version immuable ; chaque version peut porter une note courte (≤500 caractères).",
       "subscribe": "S'abonner et installer sont deux actes : l'abonnement est enregistré sur le marché ; l'installation prend un instantané de version précis.",
@@ -1883,6 +1902,35 @@
       "verified": "Vérification réelle",
       "note": "Chaque cellule renvoie à un fait de code ou à un enregistrement vérifié.",
       "deepDoc": "Matrice complète avec sources →"
+    },
+    "searchPlaceholder": "Rechercher dans ce guide",
+    "searchEmpty": "Aucun résultat",
+    "searchResults": "{{count}} résultats",
+    "intentTitle": "Par où commencer",
+    "intent": {
+      "install": "Je veux juste installer un agent",
+      "publish": "Je veux publier",
+      "mcp": "Je veux connecter MCP",
+      "site": "Expliquez-moi comment ce site fonctionne"
+    },
+    "site": {
+      "title": "Plan du site",
+      "lead": "À quoi sert chaque entrée et quel chemin prendre — cette section parle du site, pas d'un client.",
+      "entries": {
+        "intro": "Ce que fait le produit, pourquoi s'abonner et installer sont deux actes, et le démarrage rapide en une ligne.",
+        "packs": "Parcourir et rechercher des agents, lire l'inventaire complet, s'abonner ou en prendre un.",
+        "mcp": "Les services MCP et le catalogue de compétences de la plateforme, chacun avec sa surface d'outils.",
+        "docs": "Cette page : installer, connecter, créer, et où vit chaque chose.",
+        "studio": "Apparaît après connexion : assemblez un brouillon (compétences / références MCP / rôles), validez, publiez.",
+        "mine": "Dans le menu du compte : gérez les agents publiés — versions, visibilité, retrait.",
+        "curate": "Dans le menu du compte (administrateurs) : catégorie, domaines, mise en avant et veille de couverture anglaise."
+      }
+    },
+    "client": {
+      "configTitle": "À quoi ressemble la configuration native",
+      "configNote": "Remplacez <server-name> et la clé d'appel par les vôtres ; la CLI écrit ce bloc pour vous — l'édition manuelle sert au diagnostic.",
+      "afterInstall": "Redémarrez le client après l'installation : une session ouverte ne charge pas les nouvelles compétences.",
+      "pitfallsTitle": "Erreurs courantes"
     }
   },
   "facetIntro": {
@@ -3501,19 +3549,16 @@
     "sourceBlueprint": "Document source"
   },
   "facetCurate": {
-    "title": "Panneau de curation",
+    "title": "Gestion de contenu",
     "subtitle": "La catégorie et la mise en avant relèvent de la présentation (visibilité, versions et installabilité inchangées) ; l'usage provient de l'agrégat de la plateforme (7 derniers jours).",
-    "loading": "Chargement du panneau…",
     "empty": "Le tableau est vide pour l'instant — les agents publiés apparaîtront ici.",
     "errorLoad": "Échec du listage : {{message}}",
     "saved": "Enregistré : {{name}}",
     "saveFailed": "Échec de l'enregistrement : {{name}} — {{message}}",
-    "usageDegraded": "Source d'usage indisponible (la curation n'est pas affectée) : {{message}}",
+    "usageDegraded": "Source d'usage indisponible (la gestion de contenu n'est pas affectée) : {{message}}",
     "unlisted": "délisté",
     "private": "privé",
     "usage": "{{users}} actifs hebdo / {{turns}} tours",
-    "categoryPlaceholder": "slug de catégorie (ex. legal)",
-    "setCategory": "Définir la catégorie",
     "feature": "Mettre en avant",
     "unfeature": "Retirer la mise en avant",
     "allPacks": "Tous",
@@ -3522,13 +3567,29 @@
     "unclassifiedCount": "Non classés {{count}} / {{total}}",
     "lineResolved": "Ligne : {{line}}",
     "domainsLabel": "Domaines",
-    "saveDomains": "Enregistrer les domaines",
     "vocabUnavailable": "Vocabulaire indisponible",
     "onlyGaps": "Lacunes anglais seules",
-    "coverageBadge": "en {{covered}}/{{total}}"
+    "coverageBadge": "en {{covered}}/{{total}}",
+    "searchPlaceholder": "Rechercher par nom",
+    "loadMore": "Charger {{remaining}} de plus",
+    "loadingMore": "Chargement…",
+    "loadMoreFailed": "Impossible de charger la suite : {{message}}",
+    "loadedOf": "chargés {{loaded}} / {{total}}",
+    "gapCount": "{{count}} manquants",
+    "selectHint": "Choisissez un agent à gauche pour modifier ici sa catégorie, ses domaines et sa mise en avant.",
+    "categoryLabel": "Catégorie",
+    "categoryNone": "Sans catégorie",
+    "categoryLegacy": "Valeur enregistrée : {{value}}",
+    "featuredLabel": "Mise en avant",
+    "coverageLabel": "Couverture anglaise",
+    "coverageFull": "Couverture anglaise complète",
+    "usageNone": "Aucun usage enregistré ces 7 derniers jours",
+    "dirty": "Modifications non enregistrées",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…"
   },
   "facetMine": {
-    "title": "Mes agents",
+    "title": "Mes publications",
     "subtitle": "Gérez ici ce que vous publiez : versions, listage et visibilité. L'installation dans un environnement reste une fonction de 壹座 (Réglages → Agents → Mes agents). Les agents publics avec contrat de service alimentent le catalogue 万星 — les déployeurs externes les exécutent avec des tours mesurés et votre part s'accumule automatiquement.",
     "loading": "Chargement de vos agents…",
     "empty": "Rien de publié pour l'instant — utilisez la zone de publication ci-dessous.",
@@ -3708,7 +3769,23 @@
       "room_renamed": "Salon renommé",
       "guest_joined": "Un visiteur est entré dans le salon",
       "guest_identified": "Identité du visiteur confirmée",
-      "guest_greeting": "Bienvenue — les sièges de garde sont là pour vos questions"
+      "guest_greeting": "Bienvenue — les sièges de garde sont là pour vos questions",
+      "route_decision": {
+        "mention": "Acheminé : nommé explicitement, envoyé à {{to}}",
+        "attribution": "Acheminé : envoyé à l'équipe du locuteur ({{to}})",
+        "intent": "Acheminé par sujet vers {{to}} ({{n}} candidats)",
+        "needs_confirmation": "Non acheminé : locuteur incertain, mis en attente de confirmation",
+        "broadcast": "Sollicitation : ni nom ni attribution, demandé à {{to}}",
+        "fallback": "Acheminé vers {{to}}"
+      },
+      "route_cancelled": "Envoi arrêté : {{n}} siège(s) jamais démarré(s), rien facturé",
+      "route_reassigned": "Réacheminé vers {{to}}",
+      "route_action": {
+        "cancel": "Arrêter l'envoi",
+        "reassign": "Réacheminer",
+        "pickTarget": "Choisir un siège…",
+        "reassignReason": "Réacheminé manuellement par le propriétaire"
+      }
     },
     "fleet": {
       "title": "Abonnements d'équipes",
@@ -3764,6 +3841,19 @@
       "close": "Fermer",
       "empty": "Pas encore de mémoire pour ce poste.",
       "noPack": "Cette équipe d'agents n'a pas de coordonnée d'agent."
+    },
+    "policy": {
+      "title": "Déclaration de mémoire (racine du pack)",
+      "degraded": "Servicio de memoria no disponible",
+      "scope": "Portée : {{root}}",
+      "col": {
+        "key": "Clé",
+        "declared": "Déclaré",
+        "inherited": "Hérité de",
+        "effective": "En vigueur"
+      },
+      "unset": "non défini",
+      "notExecuted": "non exécuté"
     }
   },
   "blueprints": {
@@ -4034,7 +4124,8 @@
     "views": {
       "overview": "Vue d'ensemble",
       "manage": "Gérer",
-      "owner": "Opérations"
+      "owner": "Opérations",
+      "directory": "Annuaire"
     },
     "overview": {
       "summaryTitle": "Toutes les équipes d'agents",
@@ -4149,7 +4240,7 @@
     },
     "market": {
       "subtitle": "Acquérir et gérer des capacités : agents, outils, compétences, plugins",
-      "openStudio": "Ouvrir Studio",
+      "openStudio": "Ouvrir l'atelier de création",
       "installed": "Packs installés sur cette machine"
     }
   },
@@ -4204,6 +4295,12 @@
         "enabled": "Activé",
         "unsupplied": "Non fourni"
       },
+      "evidence": {
+        "complete": "Vérifié",
+        "stale": "À revérifier",
+        "missing": "Non vérifié",
+        "until": "vérifié jusqu'au {{date}}"
+      },
       "request": "Demander la fourniture",
       "requested": "Fourniture demandée : {{name}}",
       "requestPending": "Demandé — en attente du prochain approvisionnement",
@@ -4216,6 +4313,384 @@
     "agents": {
       "unavailableTitle": "Ce déploiement n'a pas de marché d'agents",
       "unavailableBody": "Aucun marché n'est branché ici. Les paquets déjà installés restent sous « Les miens » et fonctionnent comme avant."
+    }
+  },
+  "inputInbox": {
+    "title": "Formulaires à remplir",
+    "count": "{{count}}",
+    "empty": "Rien en attente",
+    "refresh": "Actualiser",
+    "error": "Échec du chargement : {{message}}"
+  },
+  "inputRequest": {
+    "title": "Informations requises",
+    "waitingHint": "La conversation reprend après envoi",
+    "submit": "Envoyer",
+    "cancel": "Annuler la demande",
+    "answered": "Envoyé",
+    "cancelled": "Annulé",
+    "expired": "Expiré (sans réponse)",
+    "escalated": "Escaladé pour revue",
+    "expiresIn": "{{minutes}} min restantes",
+    "fillRequired": "Veuillez renseigner : {{fields}}",
+    "filePlaceholder": "Référence de ressource ou lien",
+    "yes": "Oui",
+    "no": "Non"
+  },
+  "teamDirectory": {
+    "title": "Annuaire des équipes",
+    "refresh": "Actualiser",
+    "searchPlaceholder": "Rechercher une équipe, un poste ou un identifiant",
+    "openOnly": "Appel direct uniquement",
+    "sampled": "Échantillonné à {{at}} · {{cells}} espaces ont répondu, {{degraded}} injoignables",
+    "stale": "Le cache de l'annuaire se rafraîchit ; voici le résultat précédent.",
+    "degraded": "{{n}} espace(s) n'ont pas répondu ce tour ; leurs équipes n'apparaissent pas.",
+    "truncated": "Limite dépassée : seules les 200 premières équipes sont affichées.",
+    "unavailable": "L'annuaire est illisible pour le moment ({{error}})",
+    "noMatch": "Aucune équipe ne correspond",
+    "empty": "Aucune équipe n'est encore publiée dans l'annuaire",
+    "emptyHint": "Ouvrez le cockpit d'une équipe, choisissez « Publier dans l'annuaire », sélectionnez la visibilité puis enregistrez.",
+    "emptyAction": "Aller aux équipes",
+    "clearFilters": "Effacer les filtres",
+    "availability": {
+      "accepting": "Accepte",
+      "paused": "En pause",
+      "unavailable": "Indisponible"
+    },
+    "pricing": {
+      "title": "Limites quotidiennes",
+      "calls": "Appels",
+      "tokens": "Jetons",
+      "usd": "Dépense (USD)",
+      "billedTo": "Les appels sont facturés sur la clé de déploiement du propriétaire de l'équipe.",
+      "compact": "{{calls}} appels/jour · ${{usd}}"
+    },
+    "posts": {
+      "title": "Postes qui peuvent prendre du travail",
+      "empty": "Aucun poste appelable — l'équipe ne peut pas encore être appelée",
+      "truncated": "Les 20 premiers postes seulement ; ouvrez la fiche pour tout voir"
+    },
+    "trust": "Espace {{cell}} · publié le {{at}}",
+    "callDoorNotHere": "L'annuaire sert uniquement à découvrir. L'appel est une autre capacité : rien ici ne lance de conversation, de délégation ni de facturation.",
+    "backToTeams": "Retour aux équipes",
+    "callOpenHint": "Appel direct : la liste blanche n'a pas besoin d'approbation.",
+    "callListedHint": "Visible mais protégée : le propriétaire doit approuver l'appelant."
+  },
+  "teamCard": {
+    "open": "Publier dans l'annuaire",
+    "title": "Publier dans l'annuaire des équipes",
+    "subtitle": "Les autres verront cette fiche ; appeler est une autre porte.",
+    "loadFailed": "Impossible de lire l'état de publication : {{error}}",
+    "receipt": {
+      "saved": "Enregistré. Vous la voyez tout de suite ; les autres la verront sous 60 secondes au plus.",
+      "withdrawn": "Retirée de l'annuaire. L'équipe, ses postes et ses données sont intacts."
+    },
+    "fields": {
+      "handle": "Identifiant",
+      "handleHint": "Minuscules, chiffres et tirets ; il ne change plus après publication.",
+      "name": "Nom public",
+      "description": "Description en une ligne",
+      "descriptionPlaceholder": "Ce que cette équipe prend en charge, et comment"
+    },
+    "visibility": {
+      "title": "Qui peut la voir",
+      "private": {
+        "label": "Non publiée",
+        "hint": "Comme non publiée : absente de toute surface de lecture"
+      },
+      "listed": {
+        "label": "Visible",
+        "hint": "Trouvable, mais chaque appel attend votre accord"
+      },
+      "open": {
+        "label": "Appel direct",
+        "hint": "Les personnes en liste blanche appellent sans accord, à vos frais"
+      }
+    },
+    "openGate": {
+      "hint": "Choisir « appel direct » signifie que les personnes en liste blanche peuvent appeler sans votre accord, et que la dépense est portée par votre clé de déploiement.",
+      "acknowledge": "Je comprends et je confirme"
+    },
+    "quota": {
+      "title": "Limites quotidiennes",
+      "calls": "Appels",
+      "tokens": "Jetons",
+      "usd": "Dépense (USD)",
+      "hint": "Laissez vide pour les valeurs par défaut (200 appels / 2 M jetons / 5 $). « Illimité » n'est pas proposé.",
+      "fallback": "{{field}} ne peut pas être illimité ; valeur rétablie à {{value}}"
+    },
+    "callers": {
+      "title": "Liste blanche des appelants",
+      "hint": "Un e-mail par ligne. N'agit que sur « appel direct » ; en « visible », chacun a besoin de votre accord."
+    },
+    "preview": {
+      "title": "Aperçu de la fiche (rien n'est écrit avant confirmation)",
+      "loading": "Génération de l'aperçu…",
+      "invalid": "Ces valeurs ne sont pas encore valides : {{error}}"
+    },
+    "actions": {
+      "withdraw": "Retirer de l'annuaire",
+      "close": "Fermer",
+      "saving": "Enregistrement…",
+      "update": "Enregistrer",
+      "publish": "Publier"
+    },
+    "withdraw": {
+      "title": "Retirer cette fiche de l'annuaire ?",
+      "description": "Elle disparaîtra dès la prochaine lecture ; l'équipe, ses postes et son historique restent intacts.",
+      "confirm": "Retirer"
+    }
+  },
+  "teamCall": {
+    "open": "Appeler",
+    "title": "Appeler {{name}}",
+    "subtitle": "Une seule entrée : qui prend la demande et comment elle est assemblée reste dans l'équipe.",
+    "quota": "Limite quotidienne {{calls}} appels ({{usedCalls}} utilisés) · ${{usd}} ({{usedUsd}} utilisés) · réinitialisation {{reset}}",
+    "needApproval": "Cette équipe est visible mais protégée : le propriétaire doit approuver l'appelant.",
+    "requestApproval": "Demander l'approbation",
+    "requesting": "Envoi…",
+    "approvalState": {
+      "none": "Pas encore demandé",
+      "pending": "Demandé — en attente du propriétaire",
+      "approved": "Approuvé",
+      "rejected": "Refusé",
+      "expired": "Approbation expirée",
+      "unknown": "État inconnu"
+    },
+    "taskLabel": "Tâche pour l'équipe",
+    "taskPlaceholder": "Décrivez le besoin et la forme attendue de la réponse",
+    "send": "Appeler l'équipe",
+    "calling": "Appel en cours…",
+    "close": "Fermer",
+    "answerTitle": "Réponse de l'équipe",
+    "errorTitle": "L'appel n'a pas abouti",
+    "blockedUntilApproved": "Le bouton s'active dès l'approbation du propriétaire.",
+    "errors": {
+      "unauthorized": "Identité non résolue — reconnectez-vous puis réessayez.",
+      "not_found": "Cette équipe n'existe pas ou a été retirée.",
+      "not_listed": "Vous n'êtes pas sur la liste blanche, et l'équipe n'accepte pas de demandes.",
+      "needs_approval": "Le propriétaire de l'équipe doit d'abord vous approuver.",
+      "quota_exceeded": "Le quota quotidien de l'équipe est épuisé ; il se réinitialise demain.",
+      "depth_exceeded": "La chaîne d'appels est trop profonde, elle a été refusée.",
+      "no_reception": "Cette équipe n'a pas encore de poste qui reçoive les appels.",
+      "team_paused": "Cette équipe est en pause.",
+      "not_serving": "Ce déploiement ne peut pas encore servir les appels d'équipe.",
+      "incomplete": "La réponse ne s'est pas terminée ; réessayez.",
+      "internal_error": "L'appel a échoué ; réessayez dans un instant."
+    }
+  },
+  "teamApprovals": {
+    "open": "Approbations d'appel",
+    "title": "Appels en attente pour {{name}}",
+    "subtitle": "Pour une équipe visible, les appelants demandent ici et vous décidez.",
+    "grantFor": "Accorder pour",
+    "duration": {
+      "oneoff": "Unique (permanent)",
+      "24h": "24 heures",
+      "7d": "7 jours",
+      "30d": "30 jours"
+    },
+    "pending": "En attente d'approbation",
+    "empty": "Aucune demande en attente pour le moment.",
+    "requestedAt": "demandé {{at}}",
+    "approve": "Approuver",
+    "reject": "Refuser",
+    "approvedTitle": "Approuvés",
+    "approvedEmpty": "Aucun appelant approuvé pour l'instant.",
+    "standing": "permanent",
+    "rejectTitle": "Refuser cet appelant ?",
+    "rejectDescription": "{{caller}} ne pourra plus appeler cette équipe ; il peut redemander."
+  },
+  "voiceCapture": {
+    "open": "Capture vocale",
+    "title": "Capture vocale",
+    "subtitle": "Enregistrez toute une réunion : transcription en direct, puis correction, export ou envoi dans une salle.",
+    "defaultTitle": "Capture de réunion {{time}}",
+    "start": "Démarrer l'enregistrement",
+    "starting": "Démarrage…",
+    "restart": "Nouvelle capture",
+    "stop": "Arrêter l'enregistrement",
+    "finish": "Terminer et fusionner",
+    "finishing": "Fusion…",
+    "elapsed": "{{at}} enregistrées · {{planned}} tranches prévues",
+    "finishHint": "Arrêtez l'enregistrement avant de lancer la fusion.",
+    "waitUploads": "{{n}} tranche(s) encore en envoi ou en transcription ; terminez une fois qu'elles sont réglées.",
+    "progressTitle": "Progression des tranches",
+    "progressSummary": "{{done}}/{{total}} tranches · {{pct}} %",
+    "transcribed": "{{minutes}} minutes transcrites",
+    "recordingSlice": "Tranche {{seq}} · enregistrement",
+    "rowLabel": "Tranche {{seq}}",
+    "state": {
+      "pending": "En attente",
+      "transcribing": "Transcription",
+      "done": "Terminé",
+      "failed": "Échec"
+    },
+    "retry": "Réessayer",
+    "retrying": "Nouvel essai…",
+    "retryGaveUp": "Limite de tentatives atteinte",
+    "retryClosed": "Capture terminée — cette tranche ne peut plus être réessayée",
+    "mergedTitle": "Texte fusionné",
+    "mergedHint": "Modifiable avant l'enregistrement ; la correction n'est possible qu'une fois et la fusion automatique est conservée",
+    "save": "Enregistrer la correction",
+    "saving": "Enregistrement…",
+    "saved": "Correction enregistrée",
+    "correctionSpent": "Correction enregistrée — elle ne peut plus être modifiée",
+    "export": "Exporter en texte brut",
+    "segmentsTitle": "Segments",
+    "roomLabel": "ID de la salle cible",
+    "roomPlaceholder": "ID de session de la salle Zhiyu",
+    "toRoom": "Envoyer dans la salle",
+    "roomNeedId": "Saisissez d'abord un ID de salle.",
+    "roomConfirmTitle": "Envoyer ce compte rendu dans la salle ?",
+    "roomConfirmDescription": "Une ligne système est écrite dans la salle. Aucun agent n'est réveillé et aucun quota de tour n'est consommé.",
+    "roomConfirm": "Envoyer",
+    "roomSent": "Envoyé dans la salle {{sessionId}}",
+    "roomAlready": "Cette salle contient déjà cette capture ({{sessionId}})",
+    "abandon": "Abandonner la capture",
+    "abandonTitle": "Abandonner cette capture ?",
+    "abandonDescription": "Le texte transcrit et l'audio en tampon sont supprimés, sans récupération possible.",
+    "abandonConfirm": "Abandonner",
+    "abandoned": "Capture abandonnée",
+    "close": "Fermer",
+    "micDenied": "Microphone indisponible ({{error}}). Vérifiez l'autorisation du navigateur.",
+    "micUnsupported": "Ce navigateur ne peut pas enregistrer (MediaRecorder et une origine sécurisée sont requis).",
+    "unavailable": {
+      "title": "Capture vocale indisponible",
+      "disabled": "La voix est désactivée.",
+      "no_key": "Aucun identifiant vocal n'est configuré.",
+      "generic": "Le service vocal est temporairement indisponible."
+    },
+    "stoppedTitle": "Plafond budgétaire atteint",
+    "stopped": {
+      "minutes": "Le plafond de minutes est atteint ; les tranches suivantes ne sont pas transcrites.",
+      "usd": "Le plafond de coût est atteint ; les tranches suivantes ne sont pas transcrites.",
+      "buffered": "L'audio après le plafond est conservé en tampon mais non transcrit ; il pourra l'être après relèvement du plafond."
+    },
+    "errors": {
+      "network": "Réseau indisponible — la requête n'a jamais atteint le serveur.",
+      "internal_error": "L'action a échoué. Réessayez plus tard.",
+      "voice_disabled": "La voix est désactivée.",
+      "voice_not_configured": "Aucun identifiant vocal n'est configuré.",
+      "not_found": "Capture introuvable ou ne vous appartenant pas.",
+      "capture_not_recording": "La capture est terminée et n'accepte plus de tranches.",
+      "chunk_busy": "Cette tranche est en cours de transcription ; patientez.",
+      "chunk_retry_exhausted": "Cette tranche a atteint sa limite de tentatives.",
+      "chunk_exists": "Cette tranche existe déjà et est considérée comme terminée.",
+      "timeline_conflict": "L'heure de la tranche entre en conflit avec une tranche existante.",
+      "chunk_audio_gone": "L'audio de cette tranche a été purgé ; renvoyez-la.",
+      "chunk_too_large": "La tranche dépasse la limite de taille.",
+      "bad_seq": "Numéro de tranche invalide.",
+      "bad_start_ms": "Heure de début de tranche invalide.",
+      "bad_duration_ms": "Durée de tranche invalide.",
+      "missing_audio": "Le fichier audio est manquant.",
+      "bad_upload": "Format d'envoi invalide.",
+      "not_finished": "La capture n'est pas terminée.",
+      "already_corrected": "Cette capture a déjà été corrigée une fois.",
+      "empty_capture": "La capture n'a aucun texte à envoyer.",
+      "confirmation_required": "L'envoi dans une salle exige une confirmation.",
+      "forbidden": "Vous n'avez pas accès à cette salle.",
+      "bad_text": "Le texte de correction est invalide.",
+      "bad_session": "ID de salle invalide.",
+      "chat_history_unavailable": "L'historique de conversation est indisponible."
+    }
+  },
+  "speakerAttribution": {
+    "title": "Attribution des locuteurs",
+    "summary": "{{total}} segments · {{named}} résolus · {{pending}} en attente",
+    "separation": {
+      "none": "Non séparé : l'amont ne renvoie aucune information de locuteur, donc chaque segment reste non résolu.",
+      "partial": "Séparation partielle : le début a été séparé, la suite est revenue en texte brut. Les segments non séparés ne reçoivent jamais de locuteur deviné.",
+      "full": "Séparé : les segments sont regroupés par cluster anonyme. Les clusters non nommés restent non résolus.",
+      "not_needed": "Enregistré seul sur un appareil personnel : tout appartient à la personne qui a enregistré, aucune séparation nécessaire."
+    },
+    "unset": "Non résolu",
+    "sliceCount": "{{n}} segments",
+    "name": "Nommer ce locuteur",
+    "unbind": "Retirer le nom",
+    "noCandidates": "Aucun membre présent à choisir",
+    "overridden": "Attribué par l'identité de session",
+    "conflictNotice": "{{n}} segment(s) contredisaient l'identité de session. L'identité a prévalu et le désaccord a été enregistré.",
+    "pendingHint": "Les segments non résolus ne sont jamais envoyés automatiquement. Leurs confirmations figurent dans la liste de tâches existante ; y répondre s'applique ici.",
+    "trail": "Historique des changements ({{n}})",
+    "empty": "Rien à attribuer pour l'instant (enregistrement en cours ou non terminé).",
+    "op": {
+      "bind": "nommé",
+      "rebind": "renommé",
+      "unbind": "dénommé"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger l'attribution. Réessayez.",
+      "memberRequired": "Choisissez d'abord un membre.",
+      "member_not_present": "Ce membre n'était pas présent dans cet enregistrement.",
+      "bad_binding": "Le cluster ou le membre est invalide.",
+      "not_bound": "Ce cluster n'a pas encore de nom.",
+      "internal_error": "Échec de l'opération. Réessayez."
+    }
+  },
+  "console": {
+    "title": "Console d'équipe",
+    "block": {
+      "team": "Postes",
+      "stream": "Derniers rapports",
+      "kpi": "Indicateurs",
+      "decisions": "Décisions en attente",
+      "spend": "Dépense",
+      "orchestration": "Structure",
+      "unknown": "Bloc indisponible",
+      "needsNewerClient": "Ce bloc nécessite une version plus récente de l'application."
+    },
+    "absent": {
+      "no_members": "Aucun poste pour l'instant.",
+      "no_reports": "Aucun rapport pour l'instant.",
+      "no_reported_kpis": "Aucun indicateur n'a encore été rapporté.",
+      "no_open_decisions": "Aucune décision en attente.",
+      "no_run_records": "Aucune exécution enregistrée.",
+      "not_declared": "Cette équipe ne déclare aucune structure.",
+      "declaration_unreadable": "La déclaration de structure est illisible.",
+      "unknown_block": "Ce bloc n'est pas disponible ici.",
+      "unknown": "Rien à afficher."
+    },
+    "states": {
+      "forbidden": "Vous n'avez pas accès à cette console d'équipe.",
+      "notPublished": "Cette console n'est pas publiée.",
+      "unavailable": "La console est temporairement indisponible."
+    },
+    "team": {
+      "lastReport": "Dernier rapport"
+    },
+    "stream": {
+      "noSummary": "Ce rapport n'a pas de résumé."
+    },
+    "decisions": {
+      "untitled": "Élément sans titre",
+      "expires": "échéance",
+      "severity": {
+        "high": "Élevée",
+        "normal": "Normale",
+        "low": "Faible"
+      }
+    },
+    "spend": {
+      "rounds": "Exécutions",
+      "turns": "Tours",
+      "cost": "Coût",
+      "pricedTurns": "Tours facturés"
+    },
+    "orchestration": {
+      "summary": "{{declared}} déclarées · {{total}} en vigueur",
+      "derived": "dérivée"
+    },
+    "page": {
+      "subtitle": "Ce que cette équipe a déclaré afficher"
+    },
+    "publish": {
+      "published": "Publiée",
+      "private": "Non publiée",
+      "privateHint": "Publier donne à cette console un lien public. L'adresse est générée, pas choisie.",
+      "action": "Publier la console",
+      "unpublish": "Retirer",
+      "failed": "Impossible de modifier l'état de publication."
     }
   }
 }

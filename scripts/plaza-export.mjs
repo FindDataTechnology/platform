@@ -25,6 +25,13 @@
 //       [--allow-stale]   # on total fetch failure, continue from the last snapshot
 //
 // Offline/test: --fixture <file> (see scripts/test-plaza-export.mjs for shape).
+//
+// A BARE RUN WRITES `site-plaza/generated/` (the tracked audit snapshot of the
+// last scheduled export). That snapshot is produced by `.github/workflows/
+// plaza-refresh.yml` against the LIVE deployment; regenerating it from a dev
+// base rewrites ~700 files with a different material count. So the CLI parses
+// its arguments strictly: an unknown flag is an error, not a silent full
+// export — silently exporting is how a smoke test turns into a 740-file diff.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -172,6 +179,19 @@ function mapCategory(_pack) {
 // public face (万星's own admission rule). The annotation shape is carried from
 // the catalog (zh-fallback synthesized when unannotated); live status is the
 // serving plane's report or an explicit "unknown" — never a defaulted healthy.
+//
+// Curation evidence (openspec: curation-evidence) rides along when the source
+// face computed it. It is projected field-by-field rather than spread, because
+// this object becomes a PUBLIC json: a future internal field (reviewer, per-axis
+// reasons) must not reach it by default.
+function outwardEvidence(ev) {
+  if (!ev || typeof ev !== "object" || typeof ev.state !== "string") return null;
+  const out = { state: ev.state };
+  if (typeof ev.licence === "string" && ev.licence.trim()) out.licence = ev.licence;
+  if (typeof ev.reviewValidUntil === "string" && ev.reviewValidUntil.trim()) out.reviewValidUntil = ev.reviewValidUntil;
+  return out;
+}
+
 export function annotateFacade(f, generatedAt, source) {
   if (!f?.id) return null; // malformed — the G1 count gate must see the drop
   const name = f.name || f.id;
@@ -197,6 +217,7 @@ export function annotateFacade(f, generatedAt, source) {
       source: f.annotation?.provenance?.source ?? source,
       updatedAt: f.annotation?.provenance?.updatedAt ?? generatedAt,
     },
+    ...(outwardEvidence(f.evidence) ? { evidence: outwardEvidence(f.evidence) } : {}),
   };
 }
 
@@ -226,6 +247,7 @@ export function annotateDataAnchor(a, generatedAt, _source) {
       source: a.annotation?.provenance?.source ?? "daas-catalog",
       updatedAt: a.annotation?.provenance?.updatedAt ?? generatedAt,
     },
+    ...(outwardEvidence(a.evidence) ? { evidence: outwardEvidence(a.evidence) } : {}),
   };
 }
 
@@ -376,8 +398,13 @@ export function buildCatalog(materials) {
       officialData: materials.filter((m) => m.category === "official-data").length,
       tools: materials.reduce((n, m) => n + (m.toolCount ?? 0), 0),
     },
-    materials: materials.map(({ id, slug, category, marketCategory, tags, contents, canonical, human, whenToUse, badges, tools, toolCount, license, provider, endpoint, repositoryUrl, provenance }) => {
+    materials: materials.map(({ id, slug, category, marketCategory, tags, contents, canonical, human, whenToUse, badges, tools, toolCount, license, provider, endpoint, repositoryUrl, provenance, evidence }) => {
       const entry = { id, slug, category, marketCategory, tags, canonical, human, whenToUse, badges, provenance };
+      // Curation evidence survives the catalog projection (curation-evidence):
+      // a material the market lists must be able to say what was reviewed and
+      // until when. Optional — a material with no evidence carries no key,
+      // rather than an invented "unknown" state.
+      if (evidence) entry.evidence = evidence;
       if (contents) entry.contents = contents;
       if (category === "mcp") Object.assign(entry, { tools, toolCount, license, provider, endpoint });
       if (category === "skill" && repositoryUrl) entry.repositoryUrl = repositoryUrl;
@@ -604,11 +631,8 @@ export async function fetchPackContents(base, packs, { fetchImpl = fetchJson } =
 }
 
 // ── main ──
-export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PLAZA_SITE_BASE || "https://agent.finddatatech.cloud", outDir = "site-plaza/generated", fixture = null, allowStale = false, whitelist = [], now = new Date() } = {}) {
-  // `now` 只为可测：周期刷新的验收要求「两次 generatedAt 相差一个周期」，而这值是日期、
-  // 同一天重跑不变——没有注入点就只能等一天。默认 `new Date()`，生产行为一字未改；
-  // 测试传两个相差一天的 now 即可确定性验证「隔天必然前进」。
-  const generatedAt = now.toISOString().slice(0, 10);
+export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PLAZA_SITE_BASE || "https://agent.finddatatech.cloud", outDir = "site-plaza/generated", fixture = null, allowStale = false, whitelist = [] } = {}) {
+  const generatedAt = new Date().toISOString().slice(0, 10);
   if (fixture) return runFixture({ fixture, siteBase, outDir, whitelist, generatedAt });
   try {
     return await runFresh({ base, siteBase, outDir, whitelist, generatedAt });
@@ -868,10 +892,34 @@ function writeArtifacts(outDir, { catalog, materialPages, infra, llms, generated
 import { pathToFileURL } from "node:url";
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = process.argv.slice(2);
+  const USAGE =
+    "usage: node scripts/plaza-export.mjs [--base <facet-url>] [--out <dir>] [--fixture <file>] [--allow-stale]\n" +
+    "  --out defaults to site-plaza/generated (the TRACKED snapshot) — pass --out when smoke-testing.";
   const opt = (name) => {
     const i = args.indexOf(name);
     return i >= 0 ? args[i + 1] : null;
   };
+  // Strict parse (see the header note): a typo must not become a full export.
+  if (args.includes("--help") || args.includes("-h")) {
+    console.log(USAGE);
+    process.exit(0);
+  }
+  const withValue = new Set(["--base", "--out", "--fixture"]);
+  const bare = new Set(["--allow-stale"]);
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (bare.has(a)) continue;
+    if (withValue.has(a)) {
+      if (args[i + 1] == null || args[i + 1].startsWith("--")) {
+        console.error(`${a} needs a value\n${USAGE}`);
+        process.exit(2);
+      }
+      i++;
+      continue;
+    }
+    console.error(`unknown argument: ${a}\n${USAGE}`);
+    process.exit(2);
+  }
   const fixture = opt("--fixture");
   const allowStale = args.includes("--allow-stale");
   const outDir = opt("--out") ?? "site-plaza/generated";

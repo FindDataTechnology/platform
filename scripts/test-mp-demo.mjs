@@ -356,12 +356,6 @@ test("demo reap: idle demo cells stop and delete their data; the account cell st
     }
   }
   assert.ok(sawReaped, "demo cells must be reaped after the demo idle window");
-  // The registry flips to "no demo cells" when the stop is decided; the data
-  // root is removed by the child's exit handler afterwards. Reading the disk in
-  // the same tick as the status read therefore races that cleanup — it passed
-  // until the suite ran under load (concurrency 2/4) and then failed here with
-  // the directory still present. The promise is unchanged, only "eventually".
-  for (let i = 0; i < 20 && existsSync(demoDir); i++) await new Promise((r) => setTimeout(r, 250));
   assert.ok(!existsSync(demoDir), "the demo data root is deleted on reap");
   assert.ok(existsSync(aliceDir), "the account cell's data root is untouched by demo cleanup");
 

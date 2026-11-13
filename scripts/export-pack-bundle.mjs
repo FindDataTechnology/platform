@@ -16,6 +16,9 @@ import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { buildBundle, bundleFileName } from "../server/offline-bundle.js";
+// One seam for the platform envelope (add-pack-bundle-projection 2.1): the CLI
+// and the projector must not each call the container builder on their own.
+import { toYizpackEnvelope } from "../server/pack-projection.js";
 
 const args = process.argv.slice(2);
 const arg = (name, fallback = null) => {
@@ -47,12 +50,15 @@ if (installed.length === 0) {
 }
 
 async function exportOne(row) {
-  const bytes = await buildBundle({
-    packId: row.packId,
-    version: Number(row.version),
-    manifest: row.manifest,
-    ...(ORIGIN ? { origin: ORIGIN } : {}),
-  });
+  const bytes = await toYizpackEnvelope(
+    {
+      packId: row.packId,
+      version: Number(row.version),
+      manifest: row.manifest,
+      ...(ORIGIN ? { origin: ORIGIN } : {}),
+    },
+    { buildBundle },
+  );
   const target = OUT_DIR
     ? path.join(OUT_DIR, bundleFileName(row.packId, row.version))
     : (OUT || bundleFileName(row.packId, row.version));

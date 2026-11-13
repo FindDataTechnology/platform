@@ -17,6 +17,7 @@
 import { EventEmitter } from "node:events";
 
 import { observeTurnTap } from "../../server/observe-tap.js";
+import { matchMentions } from "./voice-router.js";
 
 export function createRoomRouter({
   store,
@@ -30,9 +31,23 @@ export function createRoomRouter({
   // → the block to append, or "" for none. The wiring decides identity (guests
   // never inject); this file only appends, and any failure degrades open.
   memoryBlock = null,
+  // Voice routing seam (add-voice-routing 3.1): ({ room, member, message, agents })
+  // → a decideAddressee() result, or null to mean "not this room's policy".
+  // Null is the DEFAULT and it is the whole safety property: with no seam, or a
+  // room that has not opted in, the room behaves exactly as it does today.
+  voiceRoute = null,
 }) {
   const overlay = bus ?? new EventEmitter();
   const inFlight = new Set(); // `${roomId}:${memberId}`
+
+  // Dispatch cancellation (add-voice-routing 4.3). The router dispatches
+  // sequentially, so "not yet started" is exactly the tail of `targets` — and
+  // cancelling is a flag checked before each turn, never a rollback. A turn that
+  // already ran is billed and stays; the stop semantics for it are the room's
+  // existing ones, not this flag.
+  const cancelledTriggers = new Set(); // `${roomId}:${triggerKey}`
+  // How to name one human message across cancel/reassign calls.
+  const triggerKeyOf = (message) => String(message?.seq ?? message?.id ?? "");
 
   const PASS_MARK = "「过」";
 
@@ -50,28 +65,46 @@ export function createRoomRouter({
     }
   }
 
-  function namesFor(member) {
-    const names = [member.display, member.alias]
-      .flatMap((s) => String(s || "").split(/[,/]/))
-      .map((s) => s.trim())
-      .filter(Boolean);
-    return [...new Set(names)];
-  }
+  // Same rule as before, now living in voice-router.js so the voice decision and
+  // the room cannot drift apart on what counts as a mention (add-voice-routing 2.1).
+  // The alias that used to sit here (`namesFor = sharedNamesFor`) went dead when
+  // the mention parsing moved; kept as a note so the next reader does not
+  // re-introduce a second copy of the rule.
 
   // @mention parsing: first-hit per name, case-insensitive, `@名字` anywhere
   // in the message. Display-name collisions resolve to the earliest joiner —
   // the roster UI should keep displays distinct (and aliases disambiguate).
   function resolveMentions(content, agents) {
-    const hits = new Map();
-    for (const member of agents) {
-      for (const name of namesFor(member)) {
-        if (content.toLowerCase().includes(`@${name.toLowerCase()}`)) {
-          if (!hits.has(member.id)) hits.set(member.id, member);
-          break;
-        }
-      }
+    return matchMentions(content, agents);
+  }
+  /**
+   * Map a routing recipient onto a seat that can actually answer.
+   *
+   * A decision names TEAMS (that is the unit with a budget and a quota). A turn
+   * needs a SEAT. The link is not implicit, so try, in order: an explicit
+   * `seatId` from the seam, an agent seat carrying that `teamId`, a seat whose id
+   * IS the recipient, then a ref match (`acme/sales` ↔ seat `acme/sales` or the
+   * seat named by the handle's first segment). No match = no dispatch, and the
+   * caller logs it.
+   */
+  function resolveSeat(recipient, agents) {
+    if (!recipient) return null;
+    if (recipient.seatId) {
+      const bySeatId = agents.find((m) => m.id === recipient.seatId);
+      if (bySeatId) return bySeatId;
     }
-    return [...hits.values()];
+    const byId = agents.find((m) => m.id === recipient.id);
+    if (byId) return byId;
+    const byTeam = agents.find((m) => m.teamId && m.teamId === recipient.id);
+    if (byTeam) return byTeam;
+    const refs = [recipient.ref, recipient.handle, String(recipient.ref ?? "").split("/")[0]]
+      .map((r) => String(r ?? "").trim())
+      .filter(Boolean);
+    for (const ref of refs) {
+      const byRef = agents.find((m) => m.ref === ref || m.handle === ref);
+      if (byRef) return byRef;
+    }
+    return null;
   }
 
   // Room-context prompt assembly (group 6 refines the privacy partition; the
@@ -326,12 +359,72 @@ export function createRoomRouter({
     if (!agents.length) return;
     const mentioned = resolveMentions(message.content, agents);
     // Broadcast eligibility excludes listening facades (principal took over).
-    const targets = mentioned.length ? mentioned : agents.filter((m) => m.kind === "agent" || m.presence !== "listening");
+    const legacyTargets = mentioned.length ? mentioned : agents.filter((m) => m.kind === "agent" || m.presence !== "listening");
+
+    // A room may opt into voice routing; every other room keeps the line above
+    // untouched. `decision === null` is the documented "not my policy" answer.
+    let targets = legacyTargets;
+    let routeDecision = null;
+    if (voiceRoute) {
+      try {
+        routeDecision = voiceRoute({ room: fresh, member, message, agents, mentioned });
+      } catch (err) {
+        // A router failure must never drop a human's message: fall back to the
+        // legacy targets and record that the decision was unavailable.
+        console.warn(`[zhiyu] voice route failed (degrade to broadcast): ${err?.message || err}`);
+        routeDecision = null;
+      }
+    }
+    if (routeDecision) {
+      const mapped = [];
+      for (const recipient of routeDecision.recipients ?? []) {
+        const seat = resolveSeat(recipient, agents);
+        if (seat && !mapped.some((m) => m.id === seat.id)) mapped.push(seat);
+        else if (!seat) {
+          // A team with no seat in this room cannot be woken. Say so rather than
+          // silently shrinking the recipient list into a no-op.
+          console.warn(`[zhiyu] route recipient ${recipient?.id ?? recipient?.ref ?? "?"} has no seat in ${room.id}`);
+        }
+      }
+      targets = mapped;
+      // 4.1: the decision is a room EVENT, readable afterwards, carrying the
+      // candidates and the reason so 「为什么派给了他」 has an answer.
+      store.messageAppend({
+        roomId: room.id,
+        kind: "event",
+        content: "",
+        visibility: "shared",
+        meta: {
+          event: "route_decision",
+          kind: routeDecision.basis,
+          reason: routeDecision.reason,
+          recipients: (routeDecision.recipients ?? []).map((r) => r.id ?? r.ref ?? null).filter(Boolean),
+          candidates: (routeDecision.candidates ?? []).map((r) => r.id ?? r.ref ?? null).filter(Boolean),
+          seq: null,
+        },
+      });
+    }
     if (!targets.length) return;
     const cap = effectiveCap(fresh);
     let answered = 0;
     let budgetNoted = false;
     for (const target of targets) {
+      if (cancelledTriggers.has(`${room.id}:${triggerKeyOf(message)}`)) {
+        const remaining = targets.slice(targets.indexOf(target));
+        store.messageAppend({
+          roomId: room.id,
+          kind: "event",
+          content: "",
+          visibility: "shared",
+          meta: {
+            event: "route_cancelled",
+            skipped: remaining.length,
+            skippedSeats: remaining.map((t) => t.ref ?? t.id).filter(Boolean),
+            answeredBeforeStop: answered,
+          },
+        });
+        break;
+      }
       if (answered >= cap) {
         store.messageAppend({
           roomId: room.id,
@@ -428,5 +521,67 @@ export function createRoomRouter({
     return outcome === "answered";
   }
 
-  return { onHumanMessage, directiveTurn, dispatchPrivateTurn, resolveMentions, buildPrompt, promptWithMemory, roomContextId, overlay, PASS_MARK };
+  /**
+   * Stop dispatching the rest of one human message (4.3).
+   *
+   * Returns how many targets had not started yet — that number is what the room
+   * is told, and it is the honest one: turns already run are billed and stand.
+   */
+  function cancelDispatch({ roomId, triggerSeq, by = null }) {
+    const key = `${roomId}:${String(triggerSeq ?? "")}`;
+    if (!String(triggerSeq ?? "")) return { ok: false, code: "trigger_required" };
+    cancelledTriggers.add(key);
+    overlay.emit(roomId, { type: "route_cancelled", triggerSeq: String(triggerSeq), by });
+    return { ok: true, triggerSeq: String(triggerSeq), by };
+  }
+
+  /**
+   * Re-dispatch one utterance to different targets (4.4).
+   *
+   * Not a rewrite: the original route_decision stays exactly as it was, a
+   * `route_reassigned` row records the new intent, and the new decision is its
+   * own row. Anyone reading later sees both attempts and why the second happened.
+   */
+  async function reassignDispatch({ room, triggerSeq, targets, reason = "", by = null, decision = null }) {
+    const fresh = store.roomGet(room.id);
+    if (!fresh) return { ok: false, code: "room_not_found" };
+    const seats = (targets ?? [])
+      .map((t) => (typeof t === "string" ? store.membersOf(room.id).find((m) => m.id === t) : resolveSeat(t, store.membersOf(room.id))))
+      .filter(Boolean);
+    if (!seats.length) return { ok: false, code: "no_targets" };
+
+    cancelledTriggers.add(`${room.id}:${String(triggerSeq ?? "")}`);
+    store.messageAppend({
+      roomId: room.id,
+      kind: "event",
+      content: "",
+      visibility: "shared",
+      meta: {
+        event: "route_reassigned",
+        triggerSeq: String(triggerSeq ?? ""),
+        to: seats.map((s) => s.ref ?? s.id),
+        reason: String(reason ?? "").slice(0, 300),
+        by: by ?? null,
+        basis: decision?.basis ?? "manual",
+      },
+    });
+    for (const target of seats) {
+      await runTurn({ room: fresh, target, sender: { ref: by ?? "router" }, message: { content: reason }, mode: "direct" });
+    }
+    return { ok: true, count: seats.length };
+  }
+
+  return {
+    onHumanMessage,
+    directiveTurn,
+    dispatchPrivateTurn,
+    cancelDispatch,
+    reassignDispatch,
+    resolveMentions,
+    buildPrompt,
+    promptWithMemory,
+    roomContextId,
+    overlay,
+    PASS_MARK,
+  };
 }

@@ -1,0 +1,10 @@
+{
+  "name": "fd-health-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Thin MCP shim over finddata central library public.health_config (read-only)",
+  "dependencies": {
+    "pg": "^8.13.0"
+  }
+}

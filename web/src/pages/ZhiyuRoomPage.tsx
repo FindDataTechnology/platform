@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ZhiyuRoomClient } from "@platform/core";
+import { createEventSourceTransport, type EventSourceLike } from "@/lib/zhiyu-room-transport";
 
 interface MemberRow {
   id: string;
@@ -97,6 +99,12 @@ const EVENT_LABEL_KEYS = new Set([
   "hand_back",
   "owner_transferred",
   "room_renamed",
+  // Routing trail (openspec: add-voice-routing 6.1). Without these keys the
+  // router's decision rows are written and then dropped by the filter below —
+  // a trail nobody can read is not a trail.
+  "route_decision",
+  "route_cancelled",
+  "route_reassigned",
 ]);
 
 export function ZhiyuRoomPage() {
@@ -116,6 +124,8 @@ export function ZhiyuRoomPage() {
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const skipScrollRef = useRef(false);
+  // The shared room state machine for the CURRENT room (one per mount).
+  const clientRef = useRef<ZhiyuRoomClient | null>(null);
   const [overlays, setOverlays] = useState<Record<string, Overlay>>({});
   const [privateOpen, setPrivateOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -254,103 +264,126 @@ export function ZhiyuRoomPage() {
   // arrives when the member asks for it (`loadEarlier`).
   useEffect(() => {
     if (!roomId) return;
-    let cancelled = false;
-    let es: EventSource | null = null;
     setRows([]);
     setOlderCursor(null);
     setHasOlder(false);
-    void (async () => {
-      let lastSeq = 0;
-      try {
-        const d = await jcall<{ messages: StreamRow[] }>("GET", `/api/zhiyu/rooms/${roomId}/messages?tail=200`);
-        if (cancelled) return;
-        const msgs = d.messages ?? [];
-        if (msgs.length) {
-          setRows(msgs);
-          const first = msgs[0];
-          const last = msgs[msgs.length - 1];
-          if (last) lastSeq = last.seq;
-          if (first) setOlderCursor(first.seq);
-          setHasOlder(msgs.length >= 200);
+
+    // One state machine, one transport (openspec: add-zhiyu-mobile-clients 2.2).
+    // What used to live here — tail-first, dedupe on replay, prepend on demand,
+    // "the cursor never goes backwards" — is `ZhiyuRoomClient`, which the
+    // mini-program and the app drive with their own transports. This page keeps
+    // only the browser-specific parts: the stream itself and the overlay
+    // rendering (overlays are seq-less, so they are not messages).
+    const transport = createEventSourceTransport({
+      roomId,
+      request: (p) => fetch(p),
+      // The DOM EventSource satisfies the structural shape; the cast is the
+      // one place the browser global meets the injectable interface.
+      eventSource: (url) => new EventSource(url) as unknown as EventSourceLike,
+      onConnectionChange: (open) => setStreamOpen(open),
+      onOverlay: (payload) => {
+        const o = payload as { type?: string; memberId?: string; display?: string; delta?: string };
+        if (o.type === "agent_start" && o.memberId) {
+          setOverlays((prev) => ({ ...prev, [o.memberId!]: { memberId: o.memberId!, display: o.display ?? "", text: "", startedAt: Date.now() } }));
+        } else if (o.type === "agent_delta" && o.memberId) {
+          setOverlays((prev) => {
+            const cur = prev[o.memberId!];
+            if (!cur) return prev;
+            return { ...prev, [o.memberId!]: { ...cur, text: cur.text + (o.delta ?? "") } };
+          });
+        } else if (o.type === "agent_done" && o.memberId) {
+          setOverlays((prev) => {
+            const next = { ...prev };
+            delete next[o.memberId!];
+            return next;
+          });
         }
-      } catch {
-        // Tail prefetch is best-effort: the SSE pump still delivers the tail,
-        // it just costs a full replay than a windowed first paint.
+      },
+    });
+    // No `resumedFrom` on purpose: a web reload has always reopened at the tail,
+    // and this change is not the place to alter that.
+    const client = new ZhiyuRoomClient({ transport, roomId, tailCount: 200, pageSize: 200 });
+    clientRef.current = client;
+    // Membership/system rows are not rendered, they are TRIGGERS: they mean the
+    // room object changed (a join, a take-over, an end). Fired once per seq.
+    let lastSeenSeq = 0;
+    const unsubscribe = client.subscribe((state) => {
+      setRows(state.messages as StreamRow[]);
+      setHasOlder(state.hasOlder);
+      setOlderCursor(state.messages.length ? state.messages[0]!.seq : null);
+      for (const row of state.messages) {
+        if (row.seq <= lastSeenSeq) continue;
+        lastSeenSeq = row.seq;
+        const event = row.kind === "system" ? String((row.meta as { event?: string } | null)?.event ?? "") : "";
+        if (
+          ["member_joined", "member_left", "member_removed", "take_over", "hand_back", "room_ended"].includes(event)
+        ) {
+          void load();
+        }
       }
-      if (cancelled) return;
-      es = new EventSource(`/api/zhiyu/rooms/${roomId}/events${lastSeq ? `?after=${lastSeq}` : ""}`);
-      es.onopen = () => setStreamOpen(true);
-      es.onmessage = (ev) => {
-        try {
-          const row = JSON.parse(ev.data) as StreamRow;
-          setRows((prev) => (prev.some((r) => r.seq === row.seq) ? prev : [...prev, row]));
-          if (row.kind === "agent") {
-            setOverlays((prev) => {
-              if (!row.senderMemberId || !prev[row.senderMemberId]) return prev;
-              const next = { ...prev };
-              delete next[row.senderMemberId];
-              return next;
-            });
-          }
-          if (row.kind === "system" && row.meta && ["member_joined", "member_left", "member_removed", "take_over", "hand_back", "room_ended"].includes(String(row.meta.event))) {
-            void load();
-          }
-        } catch { /* malformed frame */ }
-      };
-      es.addEventListener("overlay", (ev) => {
-        try {
-          const o = JSON.parse((ev as MessageEvent).data) as { type: string; memberId: string; display?: string; delta?: string; outcome?: string };
-          if (o.type === "agent_start") {
-            setOverlays((prev) => ({ ...prev, [o.memberId]: { memberId: o.memberId, display: o.display ?? "", text: "", startedAt: Date.now() } }));
-          } else if (o.type === "agent_delta") {
-            setOverlays((prev) => {
-              const cur = prev[o.memberId];
-              if (!cur) return prev;
-              return { ...prev, [o.memberId]: { ...cur, text: cur.text + (o.delta ?? "") } };
-            });
-          } else if (o.type === "agent_done") {
-            setOverlays((prev) => {
-              const next = { ...prev };
-              delete next[o.memberId];
-              return next;
-            });
-          }
-        } catch { /* malformed overlay */ }
-      });
-    })();
+    });
+    void client.start();
     return () => {
-      cancelled = true;
-      es?.close();
+      unsubscribe();
+      transport.close();
+      clientRef.current = null;
       setStreamOpen(false);
     };
   }, [roomId, load]);
 
   // Load one earlier window and PREPEND it. The prepend must not yank the
   // reader to the bottom, so the follow-the-stream scroll is skipped once.
+  // Routing trail actions (add-voice-routing 6.1): who to move a decision to.
+  const [reassignTo, setReassignTo] = useState("");
+  const [routeError, setRouteError] = useState<string | null>(null);
+
+  /** Stop the part of one round that has not started (4.3). */
+  const cancelDispatch = useCallback(
+    async (seq: number) => {
+      try {
+        await jcall("POST", `/api/zhiyu/rooms/${roomId}/dispatch/${seq}/cancel`, {});
+        setRouteError(null);
+        await load();
+      } catch (err) {
+        setRouteError((err as Error).message);
+      }
+    },
+    [roomId, load],
+  );
+
+  /** Move one round to a different seat, leaving the original record intact (4.4). */
+  const reassignDispatch = useCallback(
+    async (seq: number, targetId: string) => {
+      try {
+        await jcall("POST", `/api/zhiyu/rooms/${roomId}/dispatch/${seq}/reassign`, {
+          targets: [targetId],
+          reason: t("zhiyu.event.route_action.reassignReason"),
+        });
+        setRouteError(null);
+        setReassignTo("");
+        await load();
+      } catch (err) {
+        setRouteError((err as Error).message);
+      }
+    },
+    [roomId, load, t],
+  );
+
+  // Paging back is the state machine's job too (it owns "prepend, and never
+  // move the cursor"). What stays here is the scroll bookkeeping: a prepend must
+  // not yank the reader to the bottom.
   const loadEarlier = useCallback(async () => {
-    if (!olderCursor || loadingOlder) return;
+    const client = clientRef.current;
+    if (!client || !olderCursor || loadingOlder) return;
     setLoadingOlder(true);
     skipScrollRef.current = true;
     try {
-      const d = await jcall<{ messages: StreamRow[] }>("GET", `/api/zhiyu/rooms/${roomId}/messages?before=${olderCursor}&limit=200`);
-      const msgs = d.messages ?? [];
-      const first = msgs[0];
-      if (!first) {
-        setHasOlder(false);
-        return;
-      }
-      setRows((prev) => {
-        const seen = new Set(prev.map((r) => r.seq));
-        return [...msgs.filter((m) => !seen.has(m.seq)), ...prev];
-      });
-      setOlderCursor(first.seq);
-      setHasOlder(msgs.length >= 200);
-    } catch (err) {
-      setError((err as Error).message);
+      const state = await client.loadOlder();
+      if (state.error) setError(state.error);
     } finally {
       setLoadingOlder(false);
     }
-  }, [olderCursor, loadingOlder, roomId]);
+  }, [olderCursor, loadingOlder]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: rows/overlays are intentional re-scroll triggers, not values the effect body reads
   useEffect(() => {
@@ -596,6 +629,65 @@ export function ZhiyuRoomPage() {
                   : baseKey === "settle_unbilled" && row.meta?.expected === true
                     ? "settle_unbilled_expected"
                     : baseKey;
+              // The routing decision is the one event row that carries ACTIONS:
+              // who it went to, why, and the two ways to correct it (6.1).
+              if (key === "route_decision") {
+                const basis = String(row.meta?.kind ?? "");
+                const recipients = Array.isArray(row.meta?.recipients) ? row.meta.recipients : [];
+                return (
+                  <div key={row.seq} className="my-1.5 rounded-md border border-border px-3 py-2 text-xs text-muted-foreground" data-testid={`zy-event-route_decision-${row.seq}`}>
+                    <div className="text-foreground">
+                      {t(`zhiyu.event.route_decision.${basis}`, {
+                        defaultValue: t("zhiyu.event.route_decision.fallback"),
+                        n: recipients.length,
+                        to: recipients.join("、"),
+                      })}
+                    </div>
+                    {row.meta?.reason ? <div className="mt-0.5">{String(row.meta.reason)}</div> : null}
+                    {routeError && (
+                      <div className="mt-1 text-status-failed" data-testid="zy-route-error">
+                        {routeError}
+                      </div>
+                    )}
+                    {isOwner && active && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          className="rounded border border-border px-2 py-0.5 hover:bg-muted"
+                          data-testid={`zy-route-cancel-${row.seq}`}
+                          onClick={() => void cancelDispatch(row.seq)}
+                        >
+                          {t("zhiyu.event.route_action.cancel")}
+                        </button>
+                        <select
+                          className="rounded border border-border bg-background px-2 py-0.5"
+                          data-testid={`zy-route-target-${row.seq}`}
+                          value={reassignTo}
+                          onChange={(e) => setReassignTo(e.target.value)}
+                        >
+                          <option value="">{t("zhiyu.event.route_action.pickTarget")}</option>
+                          {members
+                            .filter((m) => m.kind === "agent")
+                            .map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.display || m.ref}
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="rounded border border-border px-2 py-0.5 hover:bg-muted disabled:opacity-50"
+                          disabled={!reassignTo}
+                          data-testid={`zy-route-reassign-${row.seq}`}
+                          onClick={() => void reassignDispatch(row.seq, reassignTo)}
+                        >
+                          {t("zhiyu.event.route_action.reassign")}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               // A system row whose content IS the message (e.g. the guest
               // greeting) renders its text; meta-only rows keep the label.
               return (

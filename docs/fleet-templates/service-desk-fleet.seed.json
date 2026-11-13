@@ -203,7 +203,7 @@
   "i18n": {
     "en": {
       "name": "Service Desk Crew",
-      "description": "Official fleet template: high-frequency service-desk escort — the support lead patrols tickets with the team every 4 hours while the line agent handles them and the QA reviewer samples; for hard tickets the lead merges them into a single escalate (demonstrating report discipline against the daily flood cap) and uses the CRM service-desk tool face, which idles honestly when credentials are not configured instead of failing as a whole. Exactly 3 posts, fully staffed, with no reference post. The orchestration section demonstrates inbound wake: an event edge bot:{{SERVICE_BOT}} wakes the line agent on an inbound message (the service bot is a channel instance configured at operations time; when it is absent, that is judged honestly at runtime), the line reports upward to the lead, and the lead may dispatch work straight to the line. When minting and listing, packId/agents/placeholders are filled in by the minting script; this file is the source of truth for the manifest and the test pins that it must pass fleet pre-validation.",
+      "description": "Official fleet template: high-frequency service-desk escort — the support lead patrols tickets every 4 hours with the line agent handling and the QA reviewer sampling; the lead merges hard tickets into one escalate (demonstrating report discipline against the daily flood cap) and the CRM tools degrade honestly when credentials are missing.",
       "agents": {
         "service-lead": {
           "name": "Support lead"

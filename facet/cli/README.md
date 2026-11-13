@@ -1,12 +1,12 @@
 # @finddatatechnology/facet — 谦面 CLI
 
-把[谦面](https://facet.finddatatech.cloud)功能集里的**技能**装进你正在用的编辑器，需要时一键连上包里的 **MCP**。
+把[谦面](https://facet.finddatatech.cloud)智能体里的**技能**装进你正在用的编辑器，需要时一键连上包里的 **MCP**。
 
 ```bash
 npx @finddatatechnology/facet install <packRef>
 ```
 
-- `<packRef>`：功能集 id（市场详情页可见），或任何含 id 的 URL。
+- `<packRef>`：智能体 id（市场详情页可见），或任何含 id 的 URL。
 - `--target claude-code|cursor|zcode|codex|gemini-cli|workbuddy`：六家编辑器（默认 claude-code），各按其原生布局落盘（如 `~/.claude/skills/<skill>/SKILL.md`、`~/.codex/skills/…`、`~/.gemini/skills/…`、`~/.workbuddy/skills/…`）。
 - `--project <dir>`：改为项目级（`<dir>/.<target>/skills/…`）。
 - `--base <url>`：换谦面部署地址（默认 `https://facet.finddatatech.cloud`）。
@@ -15,10 +15,10 @@ npx @finddatatechnology/facet install <packRef>
 
 ## 先找包（list / search）
 
-不知道功能集 id 时不必先去网页翻——CLI 自己就能列目录，打印出来的 id 可以直接喂给 `install`：
+不知道智能体 id 时不必先去网页翻——CLI 自己就能列目录，打印出来的 id 可以直接喂给 `install`：
 
 ```bash
-npx @finddatatechnology/facet list                          # 列已上架功能集
+npx @finddatatechnology/facet list                          # 列已上架智能体
 npx @finddatatechnology/facet list --line lex                # 按产品线过滤（lex / wire / …）
 npx @finddatatechnology/facet search 合同                     # 按关键词搜
 npx @finddatatechnology/facet search 合同 --line lex --json    # 出原始行，便于脚本消费
@@ -31,7 +31,7 @@ npx @finddatatechnology/facet list --base https://facet.example.internal   # 自
 
 ## 连接 MCP（connect）
 
-功能集引用的 MCP 经谦面注册处网关调用，需要一把 `wgk-` 调用键（免费注册即得，带月度免费额度）：
+智能体引用的 MCP 经谦面注册处网关调用，需要一把 `wgk-` 调用键（免费注册即得，带月度免费额度）：
 
 ```bash
 npx @finddatatechnology/facet connect            # 打开铸造页 → 粘贴 wgk- 键 → 验活后 0600 存本地
@@ -67,13 +67,13 @@ npx @finddatatechnology/facet prefs <agent-slug> --key sk-… --clear all
 
 ## 它做什么、不做什么
 
-**做**：拉取功能集最新版本的技能原文（快照），按目标编辑器的布局落盘；持键时代写 MCP 连接配置（打印所写文件清单）。
+**做**：拉取智能体最新版本的技能原文（快照），按目标编辑器的布局落盘；持键时代写 MCP 连接配置（打印所写文件清单）。
 
 **不做**：
 - 不产生订阅、不做更新推送——重跑 `install` 即取新快照。
 - 不经确认写任何配置——MCP 写入要么 `--write-mcp` 显式开启，要么 TTY 下逐次确认。
 - 键不进 shell 历史、不回显全文（`--show` 只露头尾四位）。
-- 不安装到对话运行时——那是壹座的工作面：订阅功能集后在 壹座 → 设置 → 功能集 → 我的功能集
+- 不安装到对话运行时——那是壹座的工作面：订阅智能体后在 壹座 → 设置 → 智能体 → 我的
   一键安装（MCP 凭据在壹座内已打通）。
 
 ## 更新已装的包（update）
@@ -89,18 +89,6 @@ npx @finddatatechnology/facet update <packRef>     # 只更新一个
 - 老工具留下的记录没有 base 时回落到官方市场，**并在报告里明说**。
 
 ## 版本说明
-
-**0.4.1** — `update` 有失败时退出码不再报成功。
-
-- 以前：某个包下架/私有/网络不可达时只打印 `✗ …已不可解析`，然后继续跑完，
-  **退出码仍是 0**。脚本里用 `$?` 判「这轮更新是否全成功」会拿到假成功。
-- 现在：只要有一笔失败，退出码非零，且收尾如实报「N 笔失败」：
-
-  ```bash
-  facet update            # 全成功 → 0；有失败 → 1
-  ```
-
-  输出行（`✓` / `↻` / `✗`）仍是逐包结论，`$?` 只回答「这轮是否全成功」。
 
 **0.4.0** — 补上「不知道 id 也能用」和「自部署不会被带偏」两件事。
 

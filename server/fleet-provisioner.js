@@ -21,6 +21,11 @@
 //              the owner starts it explicitly (install never auto-runs)
 import { parseFleetTemplate, resolveFleetTemplateParams } from "./fleet-template.js";
 import { validateOrchestration } from "./fleet-orchestration.js";
+// The pack's `process` axis becomes the pack memory root's policy (add-pack-
+// memory-declaration 4.1). Landing a team must never depend on memory being
+// reachable, so this call is degrade-open by construction and its outcome is
+// reported rather than thrown.
+import { landPackMemoryPolicy } from "./pack-memory-policy-landing.js";
 
 // deps: { db, resolveExisting({kind,id}) => boolean|object, rosterPresetId,
 //         reconcile(fleetId), catalogAgentIds(): Set<string> }
@@ -229,6 +234,22 @@ export async function provisionFleetFromTemplate({
   // Converge the materialized tasks under the paused policy (they park).
   await deps.reconcile(fleet.id);
 
+  // Pack memory policy (add-pack-memory-declaration 4.1): the declaration
+  // compiles to ONE document under the pack's memory root — `d-<pack>`, shared
+  // by every team landed from this pack, which is the storage's own granularity
+  // and not something this change invents. `deps.syncMemoryPolicy` is an
+  // injection seam so a test can observe the call without a memory service;
+  // when it is absent the real landing runs, and any failure is reported in
+  // `memoryPolicy` rather than failing the provision.
+  const syncMemoryPolicy = typeof deps.syncMemoryPolicy === "function"
+    ? deps.syncMemoryPolicy
+    : (args) => landPackMemoryPolicy(args);
+  const memoryPolicy = await syncMemoryPolicy({ packId, manifest, liveFleets: 1 }).catch((err) => ({
+    ok: false,
+    action: "failed",
+    reason: String(err?.message ?? err),
+  }));
+
   return {
     ok: true,
     fleet: landedFleet,
@@ -236,5 +257,9 @@ export async function provisionFleetFromTemplate({
     missing,
     conflicts,
     pausedAtBirth: true,
+    // Reported, never thrown: memory is a product surface, not a landing
+    // dependency. Absent key would leave callers unable to tell "no declaration"
+    // from "we did not try".
+    memoryPolicy,
   };
 }

@@ -32,6 +32,7 @@ import { StatusPill } from "@/components/ui/status-pill";
 import { cn } from "@/lib/utils";
 
 type SupplyState = "available" | "enabled" | "unsupplied";
+type EvidenceState = "complete" | "stale" | "missing";
 
 interface CatalogEntry {
   id: string;
@@ -42,6 +43,14 @@ interface CatalogEntry {
   whenToUse?: string;
   licence?: string;
   reviewedAt?: string;
+  /** Curation evidence — a dimension ORTHOGONAL to `state` (supply). The
+   *  server's outward projection: no reviewer, no per-axis reasons. */
+  evidence?: {
+    state: EvidenceState;
+    licence?: string;
+    reviewValidUntil?: string | null;
+    reasons?: string[];
+  };
   state: SupplyState;
   requestState?: "requested" | "queued" | "supplied" | "declined" | null;
   declineReason?: string | null;
@@ -59,6 +68,23 @@ const STATE_TONE: Record<SupplyState, "running" | "waiting" | "neutral"> = {
   available: "waiting",
   enabled: "running",
   unsupplied: "neutral",
+};
+
+// Evidence is the SECOND dimension: it answers "was this reviewed, and until
+// when", which supply state cannot. Same token vocabulary, different question —
+// a row can be supplied and unreviewed, or catalogued and reviewed.
+const EVIDENCE_LABEL: Record<EvidenceState, string> = {
+  complete: "market.plugins.evidence.complete",
+  stale: "market.plugins.evidence.stale",
+  missing: "market.plugins.evidence.missing",
+};
+
+// complete = the review holds today; stale = it lapsed and needs a human;
+// missing = nothing on record. Lapsed is "waiting on someone", not "failed".
+const EVIDENCE_TONE: Record<EvidenceState, "running" | "waiting" | "neutral"> = {
+  complete: "running",
+  stale: "waiting",
+  missing: "neutral",
 };
 
 export function PluginCatalogView() {
@@ -167,6 +193,7 @@ export function PluginCatalogView() {
       <ul className="flex flex-col gap-2">
         {rows.map((entry) => {
           const bundle = bundles.find((b) => b.id === entry.id);
+          const evidence = entry.evidence;
           const requested = entry.requestState === "requested" || entry.requestState === "queued";
           return (
             <li
@@ -180,6 +207,25 @@ export function PluginCatalogView() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="truncate text-sm font-medium text-foreground">{label(entry, "name")}</span>
                   <StatusPill status={STATE_TONE[entry.state]} label={t(STATE_LABEL[entry.state])} />
+                  {evidence ? (
+                    <>
+                      <StatusPill
+                        status={EVIDENCE_TONE[evidence.state]}
+                        label={t(EVIDENCE_LABEL[evidence.state])}
+                        dot={false}
+                        data-testid={`plugin-evidence-${entry.id}`}
+                        data-evidence={evidence.state}
+                      />
+                      {evidence.reviewValidUntil ? (
+                        <span
+                          className="text-[11px] text-muted-foreground"
+                          data-testid={`plugin-evidence-until-${entry.id}`}
+                        >
+                          {t("market.plugins.evidence.until", { date: evidence.reviewValidUntil })}
+                        </span>
+                      ) : null}
+                    </>
+                  ) : null}
                   {entry.licence ? (
                     <span className="text-[11px] text-muted-foreground/80">{entry.licence}</span>
                   ) : null}

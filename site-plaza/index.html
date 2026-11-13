@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>壹座·智能体素材广场 — Yizuo Agent Materials Plaza</title>
+<meta name="description" content="壹座·智能体素材广场（Yizuo Agent Materials Plaza）：智能体要用的每一种素材——功能集、生态技能、MCP 服务、AI 分身、官方数据锚——都可被人与 AI 理解、获取、运行。这里呈现素材有什么、怎么供给、此刻有什么在场。">
+<meta property="og:title" content="壹座·智能体素材广场 — Yizuo Agent Materials Plaza">
+<meta property="og:description" content="素材有什么 · 怎么供给 · 此刻有什么在场。五语人面 + AI 机器面（llms.txt / catalog.json / 每素材自足页）。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='8' y='8' width='84' height='84' rx='14' fill='%230a0f1e'/%3E%3Crect x='24' y='24' width='22' height='22' rx='4' fill='%23e0895f'/%3E%3Crect x='54' y='24' width='22' height='22' rx='4' fill='%234fd0d8'/%3E%3Crect x='24' y='54' width='22' height='22' rx='4' fill='none' stroke='%23978e79' stroke-width='2.4' stroke-dasharray='4 3'/%3E%3Crect x='54' y='54' width='22' height='22' rx='4' fill='%23b6ac97'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css?v=20261103b">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "name": "Yizuo Agent Materials Plaza",
+      "alternateName": "壹座·智能体素材广场",
+      "url": "https://agent.finddatatech.cloud/",
+      "description": "The outward understanding surface of the Yizuo platform: what agent materials exist, how the platform supplies them, and how to obtain each one — readable by humans in five locales and by AI agents through machine surfaces.",
+      "inLanguage": ["zh-CN", "en", "es", "fr", "ja"]
+    },
+    {
+      "@type": "DataFeed",
+      "name": "Yizuo Agent Materials Plaza catalog",
+      "url": "https://agent.finddatatech.cloud/generated/catalog.json",
+      "description": "Every material with a canonical brief, five-locale human summaries, whenToUse, and provenance — the annotation-layer shape this platform runs internally.",
+      "dateModified": "2026-11-02",
+      "isAccessibleForFree": true
+    }
+  ]
+}
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="22" height="22"><rect x="3" y="3" width="26" height="26" rx="6" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="8" y="8" width="7" height="7" rx="1.5" fill="currentColor"/><rect x="17" y="8" width="7" height="7" rx="1.5" fill="#4fd0d8"/><rect x="8" y="17" width="7" height="7" rx="1.5" fill="none" stroke="#978e79" stroke-width="1.2" stroke-dasharray="2 2"/><rect x="17" y="17" width="7" height="7" rx="1.5" fill="#b6ac97"/></svg>
+    </span>
+    <span class="brand-name" data-i18n="brand.name">壹座·智能体素材广场</span>
+    <span class="brand-en">Yizuo Agent Materials Plaza</span>
+    <nav class="topnav" aria-label="nav">
+      <a href="#materials" data-i18n="nav.materials">素材有什么</a>
+      <a href="#mechanism" data-i18n="nav.mechanism">怎么供给</a>
+      <a href="#inventory" data-i18n="nav.inventory">素材目录</a>
+      <a href="#audience" data-i18n="nav.audience">给谁用</a>
+      <select id="localeSwitcher" class="locale-switcher" aria-label="Language">
+        <option value="zh-CN">中文</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+        <option value="ja">日本語</option>
+      </select>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="hero">
+    <h1 class="hero-title" data-i18n="hero.title">智能体要用的每一种素材，<br>都摆在这个广场上。</h1>
+    <p class="hero-lead" data-i18n="hero.lead">功能集、生态技能、MCP 服务、AI 分身、官方数据锚——每一件都可被人与 AI 理解、获取、运行。这里呈现素材有什么、怎么供给、此刻有什么在场。</p>
+    <div class="counters mono" id="counters" aria-live="polite">
+      <span class="counter"><b id="countPacks">—</b><i data-i18n="counters.packs">智能体</i></span>
+      <span class="counter"><b id="countSkills">—</b><i data-i18n="counters.skills">技能</i></span>
+      <span class="counter"><b id="countMcp">—</b><i data-i18n="counters.mcp">MCP 服务</i></span>
+      <span class="counter"><b id="countFacade">—</b><i data-i18n="counters.facade">在场分身</i></span>
+      <span class="counter"><b id="countOfficialData">—</b><i data-i18n="counters.officialData">官方数据锚</i></span>
+      <span class="counter"><b id="countTools">—</b><i data-i18n="counters.tools">可调工具</i></span>
+      <span class="counter asof"><b id="asOfDate">—</b><i data-i18n="counters.asOf">快照截至</i></span>
+    </div>
+    <p class="hero-paths mono">
+      <span>AI: <a href="generated/llms.txt">/llms.txt</a> · <a href="generated/catalog.json">/catalog.json</a></span>
+      <span data-i18n="hero.actions">人：往下看，或直接去目录</span>
+    </p>
+  </section>
+
+  <section class="chapter" id="materials" aria-label="materials">
+    <h2 class="sec-title" data-i18n="materials.title">素材有什么</h2>
+    <p class="sec-lead" data-i18n="materials.lead">广场上的每一件供给物叫「素材」。素材是属——下面五个种各有各的形状，共享同一套供给机制。</p>
+    <div class="card-grid" id="categoryGrid"></div>
+  </section>
+
+  <section class="chapter" id="mechanism" aria-label="mechanism">
+    <h2 class="sec-title" data-i18n="mechanism.title">怎么供给</h2>
+    <p class="sec-lead" data-i18n="mechanism.lead">四段机制链，每一段都从素材的视角讲：它对你的素材做了什么，承诺是什么。</p>
+    <div class="mech-grid" id="mechGrid"></div>
+    <p class="sec-ink mono"><a href="generated/infrastructure.md" data-i18n="mechanism.link">同一张表的机器可读版：/generated/infrastructure.md</a></p>
+  </section>
+
+  <section class="chapter wide" id="inventory" aria-label="inventory">
+    <h2 class="sec-title" data-i18n="inventory.title">素材目录</h2>
+    <p class="sec-lead" data-i18n="inventory.lead">实时画廊：页面加载后向市场实时刷新；不通时以构建期快照为准，截至日期永远可见。</p>
+    <p class="inv-status mono" id="invStatus"></p>
+    <div class="inv-tabs mono" id="invTabs" role="tablist">
+      <button class="inv-tab active" data-tab="all" data-i18n="inventory.tabs.all">全部</button>
+      <button class="inv-tab" data-tab="agents" data-i18n="inventory.tabs.agents">智能体</button>
+      <button class="inv-tab" data-tab="skills" data-i18n="inventory.tabs.skills">技能</button>
+      <button class="inv-tab" data-tab="mcp" data-i18n="inventory.tabs.mcp">MCP 服务</button>
+    </div>
+    <div class="inv-controls">
+      <input id="invSearch" class="inv-search" type="search" data-i18n-attr="placeholder:inventory.search" placeholder="搜索素材…" aria-label="search">
+      <select id="invCategory" aria-label="category">
+        <option value="" data-i18n="inventory.allCategories">全部类别</option>
+      </select>
+    </div>
+    <div class="inv-grid" id="invGrid" aria-live="polite"></div>
+  </section>
+
+  <section class="chapter" id="audience" aria-label="audience">
+    <h2 class="sec-title" data-i18n="audience.title">给谁用</h2>
+    <p class="sec-lead" data-i18n="audience.lead">本站自己就是双向的：每一份内容同时说给人听，也说给 AI 听。</p>
+    <div class="aud-grid">
+      <div class="aud-card">
+        <h3 data-i18n="audience.human.title">如果你是人</h3>
+        <ul id="audHuman"></ul>
+        <p class="mono"><a class="cta" href="https://facet.finddatatech.cloud/#/packs" target="_blank" rel="noopener" data-i18n="audience.human.cta">去市场订阅安装 ↗</a></p>
+      </div>
+      <div class="aud-card">
+        <h3 data-i18n="audience.ai.title">如果你是 AI</h3>
+        <ul id="audAi"></ul>
+        <p class="mono"><a class="cta" href="generated/llms.txt" data-i18n="audience.ai.cta">从 /llms.txt 开始 →</a></p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="foot-grid">
+    <p class="foot-brand"><span class="brand-name">壹座·智能体素材广场</span> — <span data-i18n="footer.tagline">人与 AI 共读的素材总览面</span></p>
+    <nav class="foot-links mono" aria-label="siblings">
+      <a href="https://zhiyu.finddatatech.cloud/" target="_blank" rel="noopener">智语 · 沟通</a>
+      <a href="https://yongyi.finddatatech.cloud/" target="_blank" rel="noopener">永忆 · 记忆</a>
+      <a href="https://facet.finddatatech.cloud/" target="_blank" rel="noopener">谦面 · 市场</a>
+      <a href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">萬星 · 执行</a>
+    </nav>
+    <p class="foot-corp mono">
+      <span data-i18n="footer.lines">寻数产品线</span>：
+      <a href="https://www.finddatatech.cloud/products/base/">壹座</a> ·
+      <a href="https://www.finddatatech.cloud/products/lex/">识律</a> ·
+      <a href="https://www.finddatatech.cloud/products/wire/">柏讯</a> ·
+      <a href="https://www.finddatatech.cloud/products/facet/">谦面</a> ·
+      <a href="https://www.finddatatech.cloud/products/constellation/">萬星</a>
+      — FindData Technology
+    </p>
+  </div>
+</footer>
+
+<script src="script.js?v=20261103b"></script>
+</body>
+</html>

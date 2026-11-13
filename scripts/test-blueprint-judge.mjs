@@ -14,7 +14,7 @@ import { test } from "node:test";
 const { parseJudgeOutput, judgeAssertion, buildJudgePrompt, JUDGE_LIMITS, JUDGE_VERDICTS, __judgeQuotaUsed, __resetJudgeState } =
   await import("../server/blueprint-judge.js");
 
-const LANE = { providerId: "p1", baseUrl: "https://judge.example/v1", apiKey: "sk-test", model: "runner-a", laneId: "lane-judge" };
+const LANE = { providerId: "p1", baseUrl: "https://judge.example/v1", apiKey: "sk-test", model: "cheap-1", laneId: "lane-judge" };
 const okFetch = (content) => async () => ({
   ok: true,
   status: 200,
@@ -58,20 +58,16 @@ test("提示词：只含判据与证据，不含蓝图自述（D3 防回声）",
 
 test("禁自证：judge 与产出同一车道 → 拒判；产出车道解析不出 → 拒判", async () => {
   let called = 0;
-  // `okFetch(content)` returns the fake fetch; it takes no arguments, and an
-  // arrow function has no `arguments` binding at all — the old `…(...arguments)`
-  // threw `ReferenceError: arguments is not defined` the first time this counter
-  // was installed.
   const countingFetch = async () => {
     called += 1;
-    return okFetch('{"verdict":"pass"}')();
+    return okFetch('{"verdict":"pass"}')(...arguments);
   };
 
   const same = await judgeAssertion({
     assertionId: "a1",
     rubric: "判据",
     evidenceText: "证据",
-    productionLanes: [{ laneId: "lane-judge", providerId: "p1", model: "runner-a" }],
+    productionLanes: [{ laneId: "lane-judge", providerId: "p1", model: "cheap-1" }],
     lane: LANE,
     fetchImpl: countingFetch,
   });
@@ -102,7 +98,7 @@ test("成本闸：证据超字符上限如实拒（不静默截断）", async ()
     lane: LANE,
     fetchImpl: async () => {
       called += 1;
-      return okFetch('{"verdict":"pass"}')();
+      return okFetch('{"verdict":"pass"}')(...arguments);
     },
   });
   assert.equal(out.verdict, "insufficient-evidence");
@@ -149,7 +145,7 @@ test("正常判定：pass 并留审计件（模型/端点摘要/提示词哈希/
   assert.equal(out.reason, "证据直接支持");
   const a = out.audit;
   assert.equal(a.assertionId, "a1");
-  assert.equal(a.model, "runner-a");
+  assert.equal(a.model, "cheap-1");
   assert.equal(a.verdict, "pass");
   assert.match(a.endpointDigest, /^[0-9a-f]{16}$/);
   assert.match(a.promptHash, /^[0-9a-f]{16}$/);

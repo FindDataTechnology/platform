@@ -467,7 +467,11 @@ export function parseFleetTemplate(manifest) {
 // The live orchestration section survives verbatim (spec: 导出保留现役编导
 // 段) — its edges already speak member ids, and the export's refs ARE those
 // ids, so the section re-parses as a template unchanged.
-export function exportFleetToTemplate(fleet, members) {
+export function exportFleetToTemplate(fleet, members, { plugins = [] } = {}) {
+  // Team plugin declaration (add-fleet-plugin-declaration 4.1): the exported
+  // template carries the same `plugins[]` the source pack declared, so a pack is
+  // self-describing wherever it travels. Shape only — whether the receiving
+  // machine bakes them is the IMPORT face's question, not the exporter's.
   const memberFor = (targetKind) =>
     targetKind === "cluster"
       ? "existing-cluster"
@@ -490,6 +494,11 @@ export function exportFleetToTemplate(fleet, members) {
           : {}),
       })),
       requires: [],
+      // Declaration travels with the template (4.1). Absent ⇒ byte-identical to
+      // the pre-change export.
+      ...(Array.isArray(plugins) && plugins.length > 0
+        ? { plugins: plugins.map((p) => (p?.version ? { id: p.id, version: p.version } : { id: p.id })) }
+        : {}),
       ...(fleet.orchestration ? { orchestration: fleet.orchestration } : {}),
     },
   };

@@ -37,10 +37,20 @@ export function PackCard({
   relation,
   children,
   extra,
+  layout = "row",
 }: {
   pack: PackSummary;
   onOpen: () => void;
   testId: string;
+  /** Presentation shape (overhaul-facet-shell-ia-and-space D2):
+   *  `row` — the original horizontal card (seal beside the slots), what 壹座
+   *          renders and what this component rendered before the parameter
+   *          existed; the default keeps that surface byte-identical.
+   *  `tile` — the stacked card for a multi-column grid: seal above the slots,
+   *          promise clamped to two lines so a grid row stays even. Same five
+   *          slots, same anchors — only the flow direction and the promise
+   *          clamp differ. */
+  layout?: "row" | "tile";
   // Gallery tiles ride the primary tint; the featured rail keeps the plain
   // border but is reachable through the same component.
   tone?: "plain" | "gallery";
@@ -110,13 +120,15 @@ export function PackCard({
   );
 
   const stagger = index === undefined ? undefined : `${Math.min(Math.max(index, 0) * 20, 200)}ms`;
+  const tiled = layout === "tile";
 
   return (
     <div
       data-testid={testId}
+      data-layout={layout}
       className={`rise-in text-left border rounded-lg p-4 transition-colors ${
-        tone === "gallery" ? "border-primary/40 bg-primary/5 hover:border-primary/70" : "border-border hover:border-primary/50"
-      }`}
+        tiled ? "flex flex-col " : ""
+      }${tone === "gallery" ? "border-primary/40 bg-primary/5 hover:border-primary/70" : "border-border hover:border-primary/50"}`}
       style={stagger ? { animationDelay: stagger } : undefined}
     >
       <div
@@ -129,13 +141,13 @@ export function PackCard({
             onOpen();
           }
         }}
-        className="cursor-pointer"
+        className={tiled ? "flex flex-1 cursor-pointer flex-col" : "cursor-pointer"}
       >
-      <div className="flex gap-3">
+      <div className={tiled ? "flex flex-1 flex-col gap-2.5" : "flex gap-3"}>
         {/* Slot 1 · identity — the line seal gives 70 same-shaped cards a
             one-glance fingerprint (the brand asset, no upload/audit surface). */}
         <SiteMark chars={sealChar} size="sm" />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col">
           <div className="flex items-center justify-between gap-2">
             <span className="font-medium text-foreground flex items-center gap-1.5 min-w-0">
               <span className="truncate">{pack.name}</span>
@@ -178,8 +190,11 @@ export function PackCard({
 
           {/* Slot 2 · promise — the degradation chain never renders a
               half-clipped paragraph; long descriptions reach the reader in the
-              detail dialog. */}
-          {promise ? <p className="text-sm text-muted-foreground mt-1">{promise}</p> : null}
+              detail dialog. In tile mode the clamp is explicit (two lines) so
+              a grid row keeps an even baseline. */}
+          {promise ? (
+            <p className={`text-sm text-muted-foreground mt-1 ${tiled ? "line-clamp-2" : ""}`}>{promise}</p>
+          ) : null}
 
           {/* Slot 3 · obtainable signals — unknown counts omit the segment. */}
           {(pack.skillCount !== undefined || pack.agentCount !== undefined || pack.mcpCount !== undefined) && (

@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "auditor-"));
 process.env.CRON_STORAGE_PATH = tmp;
@@ -13,9 +14,16 @@ process.env.PLATFORM_DATA_DIR = tmp;
 process.env.DSH_HOME = path.join(tmp, "dsh");
 fs.mkdirSync(process.env.DSH_HOME, { recursive: true });
 
-const { initDb } = await import("/Users/chengsishi/finddata/paas/db.js");
-const { createFleetDatabase, setFleetDatabase } = await import("/Users/chengsishi/finddata/paas/server/routes/fleets-db.js");
-const { auditorAllowedFor } = await import("/Users/chengsishi/finddata/paas/lib/auditor-tool-face.js");
+// Resolve the repo from THIS file, never from one machine's absolute path: the
+// imports below must run AFTER the env vars above are set, so they stay
+// dynamic — but a hardcoded /Users/… prefix makes the suite pass on exactly one
+// laptop and ENOENT everywhere else (the first sharded CI run caught it).
+const REPO = path.resolve(import.meta.dirname, "..");
+const { initDb } = await import(pathToFileURL(path.join(REPO, "db.js")).href);
+const { createFleetDatabase, setFleetDatabase } = await import(
+  pathToFileURL(path.join(REPO, "server/routes/fleets-db.js")).href
+);
+const { auditorAllowedFor } = await import(pathToFileURL(path.join(REPO, "lib/auditor-tool-face.js")).href);
 await initDb();
 const f = createFleetDatabase({});
 setFleetDatabase(f);

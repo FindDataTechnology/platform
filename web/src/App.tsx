@@ -54,6 +54,9 @@ const SharePage = lazy(() => import("@/pages/SharePage").then((m) => ({ default:
 const TasksPage = lazy(() => import("@/pages/TasksPage").then((m) => ({ default: m.TasksPage })));
 const FleetPage = lazy(() => import("@/pages/FleetPage").then((m) => ({ default: m.FleetPage })));
 const FleetsPage = lazy(() => import("@/pages/FleetsPage").then((m) => ({ default: m.FleetsPage })));
+const FleetConsolePage = lazy(() =>
+  import("@/pages/FleetConsolePage").then((m) => ({ default: m.FleetConsolePage })),
+);
 const MachinesPage = lazy(() => import("@/pages/MachinesPage").then((m) => ({ default: m.MachinesPage })));
 // fold-blueprint-into-studio D2 (two-step retire): the old route redirects
 // to the studio team mode. Step 2 executed 2026-10-31: the dead component is
@@ -417,6 +420,10 @@ export default function App() {
                 (single-page merge, D6). */}
             <Route path="/fleets" element={<FleetsPage />} />
             <Route path="/fleets/:fleetId" element={<FleetsPage />} />
+            {/* Team console (add-pack-console): the team's own face — the blocks
+                its pack declared, read-only. The facet share page mounts the
+                same component with surface="share". */}
+            <Route path="/fleets/:fleetId/console" element={<FleetConsolePage />} />
 
             {/* Machines console (add-unified-fleet-console): steward-paired
                 machines, derived health, desired-state editing. Read-mostly:

@@ -27,10 +27,7 @@ test.describe("live runtime control: latch, usage, web-search toggle", () => {
           const parsed = JSON.parse(data);
           if (parsed) window.__sent.push(parsed);
         } catch {
-          // Non-JSON frame: nothing to record. (The old `parsed = null` here
-          // assigned to a name declared CONST inside the try, which threw a
-          // ReferenceError out of the hook — an unparseable frame broke the
-          // capture instead of being skipped.)
+          parsed = null;
         }
         return origSend.call(this, data);
       };
@@ -76,6 +73,13 @@ test.describe("live runtime control: latch, usage, web-search toggle", () => {
   });
 
   test("done usage lands on the turn footer and the context meter", async ({ page }) => {
+    // Injecting a synthetic turn races the page's own session sync: when the
+    // history fetch lands AFTER these applies it replaces `turns` and the
+    // footer never appears. Individually this passed 3/3; running with other
+    // specs made it fail every time, which is the signature of that race rather
+    // than a product defect (the footer and the meter do render — the body text
+    // carries "in 50k · out 1.2k" and "ctx 50%"). Settle the network first.
+    await page.waitForLoadState("networkidle");
     await page.evaluate(() => {
       const s = window.__chatStore.getState();
       s.apply({

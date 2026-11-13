@@ -135,9 +135,15 @@ test("engine: persisted reload keeps the a2a target type", async () => {
   // under CI load the write can exceed it and the reload reads a stale file
   // (observed 2026-10-07, add-agent-service-config run). Poll the reload
   // instead — deterministic, still bounded.
+  //
+  // The bound was 40×25ms = 1s, which a 2-core runner still blows through
+  // (2026-11-13: red on every CI run of the sharded lane, green in isolation
+  // and 11/11 locally). A longer bound does not weaken the claim — the
+  // assertion still fails if the write never lands — it only stops "this
+  // runner's disk was slow" from being reported as "a2a is lost".
   let t = null;
-  for (let i = 0; i < 40 && !t; i++) {
-    await new Promise((r) => setTimeout(r, 25));
+  for (let i = 0; i < 200 && !t; i++) {
+    await new Promise((r) => setTimeout(r, 50));
     await engine.initTaskEngine({ broadcast: () => {}, isBusy: () => false, runTurn: async () => ({ ok: true }) });
     t = engine.listTasks().find((x) => x.target?.type === "a2a");
   }

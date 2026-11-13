@@ -417,11 +417,16 @@ export function listPacks(
     author?: "me";
     page?: number;
     pageSize?: number;
+    /** Admin-only widening (overhaul-facet-shell-ia-and-space): the curation
+     *  board must reach unlisted packs too — the server ignores the flag for
+     *  non-admins, so a caller cannot widen its own visibility. */
+    includeUnlisted?: boolean;
   } = {},
 ) {
   const q = new URLSearchParams();
   if (params.search) q.set("search", params.search);
   if (params.tag) q.set("tag", params.tag);
+  if (params.includeUnlisted) q.set("includeUnlisted", "1");
   if (params.category) q.set("category", params.category);
   if (params.domain) q.set("domain", params.domain);
   if (params.author) q.set("author", params.author);

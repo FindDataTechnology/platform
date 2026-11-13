@@ -20,6 +20,7 @@ import { createZhiyuStore } from "./store.js";
 import { createRoomRouter } from "./room-router.js";
 import { chatMemoryBlockFor } from "@finddatatechnology/yongyi-client";
 import { newWidgetToken, newSiteSecret, verifyWidgetToken, hostAllowed, signGuestPass, verifyGuestPass, verifyIdentify, guestRefFor } from "./guest-auth.js";
+import { mintDeeplink, redeemDeeplink, verifyDeeplink, isDeeplinkPurpose, DEEPLINK_PURPOSES } from "./deeplink.js";
 import { registerZhiyuImBridge } from "./im-bridge.js";
 
 export function registerZhiyuRoutes(app, {
@@ -36,6 +37,7 @@ export function registerZhiyuRoutes(app, {
   settleTurn = null, // (member, { usageId, minutes }) → void — per-deployment billing (group 7)
   onHumanMessage = null, // round-router override hook (whole-sale test seam)
   memoryBlock = null, // room-turn memory seam override (see the wired default below)
+  voiceRoute = null, // voice-routing seam (add-voice-routing 3.1): null = legacy broadcast
   notify = null, // notification lanes hook (task group 8)
   onRoomEnded = null, // minutes generation hook (task group 8)
   ssePollMs = 1000,
@@ -85,6 +87,7 @@ export function registerZhiyuRoutes(app, {
     callAgent: callAgent ?? missingLane,
     settleTurn,
     memoryBlock: wiredMemoryBlock,
+    voiceRoute,
     onBudgetWarning: (room, dayTurns, budget) =>
       notifyUser("budget_warning", {
         to: room.ownerEmail,
@@ -734,8 +737,19 @@ export function registerZhiyuRoutes(app, {
     const targetUser = auth.members.find((m) => m.kind === "user" && m.ref === target && m.state === "active");
     const targetFacade = auth.members.find((m) => m.kind === "facade" && m.onBehalfOf === target && m.state === "active");
     if (!targetUser && !targetFacade) return res.status(404).json({ error: "target is not a member of this room" });
-    emit(auth.room.id, "system", "", { event: "needs_you", to: target, from: auth.user.email });
-    notifyUser("call", { to: target, roomId: auth.room.id, roomTitle: auth.room.title, from: auth.user.email });
+    // The notification carries the room and the POSITION of the needs_you row
+    // (add-zhiyu-mobile-clients 6.1): tapping it opens the room scrolled to this
+    // seq. `from` is the caller's address — the recipient already sees it in the
+    // room — and nothing of the conversation travels: a push renders on a lock
+    // screen, so the template is an allowlist (packages/core/notification-deeplink).
+    const needsYou = emit(auth.room.id, "system", "", { event: "needs_you", to: target, from: auth.user.email });
+    notifyUser("call", {
+      to: target,
+      roomId: auth.room.id,
+      roomTitle: auth.room.title,
+      from: auth.user.email,
+      seq: needsYou?.seq ?? null,
+    });
     if (targetFacade?.presence === "on_duty") {
       void Promise.resolve(
         router.directiveTurn({
@@ -783,6 +797,41 @@ export function registerZhiyuRoutes(app, {
     res.json({ message: row });
   });
 
+  // ── routing trail: undo / reassign (add-voice-routing 4.3/4.4 entry points) ─
+  //
+  // Owner-only: a routing decision is a room-wide act, so moving it is the
+  // owner's call — not any member's. The human who spoke is second: their words
+  // are theirs. Everything is recorded with `by`, and the original
+  // `route_decision` row is never edited (4.4).
+  const canReroute = (auth) => Boolean(auth?.isOwner) || auth?.myUser?.kind === "human";
+  app.post("/api/zhiyu/rooms/:id/dispatch/:seq/cancel", express.json({ limit: "4kb" }), (req, res) => {
+    const auth = authorize(req, res, req.params.id);
+    if (!auth) return;
+    if (!canReroute(auth)) return res.status(403).json({ error: "房间所有者或发言人才能改派" });
+    const seq = Number(req.params.seq);
+    if (!Number.isInteger(seq) || seq <= 0) return res.status(400).json({ error: "bad seq" });
+    const out = router.cancelDispatch({ roomId: auth.room.id, triggerSeq: seq, by: auth.myUser?.ref ?? auth.user?.email ?? null });
+    res.json(out);
+  });
+  app.post("/api/zhiyu/rooms/:id/dispatch/:seq/reassign", express.json({ limit: "8kb" }), async (req, res) => {
+    const auth = authorize(req, res, req.params.id);
+    if (!auth) return;
+    if (!canReroute(auth)) return res.status(403).json({ error: "房间所有者或发言人才能改派" });
+    const seq = Number(req.params.seq);
+    if (!Number.isInteger(seq) || seq <= 0) return res.status(400).json({ error: "bad seq" });
+    const targets = Array.isArray(req.body?.targets) ? req.body.targets.map(String).slice(0, 20) : [];
+    if (!targets.length) return res.status(400).json({ error: "targets required" });
+    const out = await router.reassignDispatch({
+      room: auth.room,
+      triggerSeq: seq,
+      targets,
+      reason: String(req.body?.reason ?? "").slice(0, 300),
+      by: auth.myUser?.ref ?? auth.user?.email ?? null,
+    });
+    if (!out.ok) return res.status(409).json(out);
+    res.json(out);
+  });
+
   app.post("/api/zhiyu/rooms/:id/messages", express.json({ limit: "32kb" }), (req, res) => {
     const auth = authorize(req, res, req.params.id);
     if (!auth) return;
@@ -825,6 +874,22 @@ export function registerZhiyuRoutes(app, {
   // silently picking one.
   const MESSAGE_PAGE_DEFAULT = 200;
   const MESSAGE_PAGE_MAX = 500;
+
+  /**
+   * The ONE reader of a room window (add-zhiyu-mobile-clients 1.1/1.3).
+   *
+   * Paging, live streaming and the polling transport all have to answer the same
+   * question — "which rows may THIS viewer see after this cursor" — and if each
+   * transport answers it separately they will eventually disagree, leaking one
+   * viewer's private window or hiding their own. So the choice lives here and
+   * every transport calls it.
+   */
+  const readWindow = ({ roomId, viewerMemberId, after, before, tail, limit }) => {
+    const scope = { viewerMemberId: viewerMemberId ?? null, limit };
+    if (tail !== undefined) return store.messagesTail(roomId, Math.min(Math.floor(Number(tail)) || limit, MESSAGE_PAGE_MAX), scope);
+    if (before !== undefined) return store.messagesBefore(roomId, Number(before) || 0, scope);
+    return store.messagesAfter(roomId, Number(after ?? 0) || 0, scope);
+  };
   app.get("/api/zhiyu/rooms/:id/messages", (req, res) => {
     const auth = authorize(req, res, req.params.id);
     if (!auth) return;
@@ -837,13 +902,71 @@ export function registerZhiyuRoutes(app, {
       return res.status(400).json({ error: "limit must be a positive number" });
     }
     const limit = Math.min(Math.floor(rawLimit), MESSAGE_PAGE_MAX);
-    const viewerMemberId = auth.myUser?.id ?? null;
-    const messages = has("tail")
-      ? store.messagesTail(auth.room.id, Math.min(Math.floor(Number(req.query.tail)) || limit, MESSAGE_PAGE_MAX), { viewerMemberId, limit })
-      : has("before")
-        ? store.messagesBefore(auth.room.id, Number(req.query.before) || 0, { viewerMemberId, limit })
-        : store.messagesAfter(auth.room.id, Number(req.query.after ?? 0) || 0, { viewerMemberId, limit });
+    const messages = readWindow({
+      roomId: auth.room.id,
+      viewerMemberId: auth.myUser?.id ?? null,
+      ...(has("tail") ? { tail: req.query.tail } : {}),
+      ...(has("before") ? { before: req.query.before } : {}),
+      ...(has("after") ? { after: req.query.after } : {}),
+      limit,
+    });
     res.json({ messages });
+  });
+
+  // Polling transport for clients that cannot hold a long connection
+  // (add-zhiyu-mobile-clients 1.2). Same cursor, same window reader, same
+  // visibility as SSE — the difference is only how long a request lives.
+  //
+  // `wait` bounds the hold: with nothing new we hold up to N ms and return an
+  // empty increment with the SAME cursor, so the client's loop is a plain
+  // "ask again" and never has to invent a backoff schedule to stay correct.
+  const STREAM_WAIT_DEFAULT_MS = 5_000;
+  const STREAM_WAIT_MAX_MS = 25_000;
+
+  /** Parse `?wait=`. Shared by the member and the guest polling lane. */
+  const parseWait = (raw) => {
+    const n = raw === undefined ? STREAM_WAIT_DEFAULT_MS : Number(raw);
+    if (!Number.isFinite(n) || n < 0) return null;
+    return Math.min(Math.floor(n), STREAM_WAIT_MAX_MS);
+  };
+
+  /**
+   * Hold an increment until something appears or the window closes.
+   *
+   * Polls INSIDE the hold rather than waiting for a bus signal: writers do not
+   * all emit (a plain message append does not), and a transport that depends on
+   * every writer remembering to notify is a transport with a silent hole in it.
+   *
+   * Shared by every polling transport — the guest lane below included — because
+   * "how long we hold" and "what the cursor is" must have exactly one answer
+   * (add-zhiyu-mobile-clients: 新传输与 SSE 同源).
+   */
+  const holdIncrement = async (read, wait) => {
+    let rows = read();
+    if (!rows.length && wait > 0) {
+      const deadline = Date.now() + wait;
+      while (!rows.length && Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, Math.min(200, Math.max(0, deadline - Date.now()))));
+        rows = read();
+      }
+    }
+    return rows;
+  };
+
+  app.get("/api/zhiyu/rooms/:id/stream", async (req, res) => {
+    const auth = authorize(req, res, req.params.id);
+    if (!auth) return;
+    const roomId = auth.room.id;
+    const viewerMemberId = auth.myUser?.id ?? null;
+    const after = Number(req.query.after ?? 0) || 0;
+    const wait = parseWait(req.query.wait);
+    if (wait === null) return res.status(400).json({ error: "wait must be a non-negative number of milliseconds" });
+
+    const rows = await holdIncrement(() => readWindow({ roomId, viewerMemberId, after }), wait);
+    // A row appended between the read and the response must not be lost: the
+    // cursor is the last row we HAND BACK, never the one we asked after.
+    const cursor = rows.length ? rows[rows.length - 1].seq : after;
+    res.json({ messages: rows, cursor });
   });
 
   // SSE live stream (design D-E): seq-monotonic replay makes reconnect =
@@ -863,7 +986,7 @@ export function registerZhiyuRoutes(app, {
     res.write(`retry: 1000\n\n`);
     const pump = () => {
       try {
-        const rows = store.messagesAfter(roomId, last, { viewerMemberId: auth.myUser?.id ?? null });
+        const rows = readWindow({ roomId, viewerMemberId: auth.myUser?.id ?? null, after: last });
         for (const m of rows) {
           last = m.seq;
           res.write(`id: ${m.seq}\ndata: ${JSON.stringify(m)}\n\n`);
@@ -1046,6 +1169,65 @@ export function registerZhiyuRoutes(app, {
     const row = widgetRowFor(auth.room.id, "link");
     if (row) store.widgetTokenRevoke(row.id);
     res.json({ ok: true });
+  });
+
+  // ── Mobile→web hand-off links (add-zhiyu-mobile-clients 5.1/5.2) ───────────
+  //
+  // Mint: any member can hand their OWN session over to the web to do the heavy
+  // thing (a member manages their own private window and subscription; invites
+  // and settings are owner-only, which the web surface re-checks — the link
+  // grants nothing by itself, it only carries the user's intent to a browser
+  // they are already signed into).
+  //
+  // Redeem: requires an authenticated user who is a member of that room. A
+  // stolen token is therefore worth nothing to a stranger — the bearer still
+  // has to hold a session with the room's authority.
+  app.post("/api/zhiyu/rooms/:id/deeplink", express.json({ limit: "4kb" }), (req, res) => {
+    const auth = authorize(req, res, req.params.id);
+    if (!auth) return;
+    const purpose = String(req.body?.purpose ?? "").trim();
+    if (!isDeeplinkPurpose(purpose)) {
+      return res.status(400).json({ error: "unknown purpose", purposes: [...DEEPLINK_PURPOSES] });
+    }
+    if (purpose !== "private_window" && purpose !== "subscription" && !auth.isOwner) {
+      return res.status(403).json({ error: "room owner required" });
+    }
+    const minted = mintDeeplink(store, { roomId: auth.room.id, purpose, createdBy: auth.user.email });
+    if (minted.error) return res.status(400).json({ error: minted.error });
+    res.json({
+      url: `${siteBase()}/zhiyu/deeplink/${minted.token}`,
+      path: `/zhiyu/deeplink/${minted.token}`,
+      purpose: minted.purpose,
+      expiresAt: minted.expiresAt,
+    });
+  });
+
+  // Spend it. One-time: the second POST with the same token is 404.
+  app.post("/api/zhiyu/deeplink/:token", (req, res) => {
+    const user = resolveUser(req);
+    if (!user) return rejectUnauthenticated(req, res);
+    const peek = verifyDeeplink(store, req.params.token);
+    if (!peek) return res.status(404).json({ error: "not found" });
+    const auth = authorize(req, res, peek.roomId);
+    if (!auth) return;
+    const done = redeemDeeplink(store, req.params.token, { usedBy: user.email });
+    if (!done) return res.status(404).json({ error: "not found" });
+    res.json({ roomId: done.roomId, purpose: done.purpose, path: done.path });
+  });
+
+  // The shell the link opens. A GET must NOT spend the link — a link preview
+  // crawler (WeChat unfurls every URL pasted into a chat) would eat it before
+  // the user ever tapped. Only the SPA's POST spends.
+  app.get("/zhiyu/deeplink/:token", (req, res) => {
+    if (!verifyDeeplink(store, req.params.token) || !webDist) return res.status(404).json({ error: "not found" });
+    res.setHeader("Content-Security-Policy", "frame-ancestors 'self'");
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    try {
+      res.end(readFileSync(path.join(webDist, "index.html"), "utf8"));
+    } catch {
+      res.status(502).end("page unavailable");
+    }
   });
 
   // ── Widget public lanes ────────────────────────────────────────────────────
@@ -1256,17 +1438,44 @@ export function registerZhiyuRoutes(app, {
     const limit = Math.min(Math.floor(rawLimit), 500);
     const viewerMemberId = seat.member.id;
     const enrich = widgetSenderOf(ctx.row.roomId);
-    // Same window contract as the in-room route: bare = after 0 (compat),
-    // ?tail=N = first-screen window, ?before=N = load earlier.
-    const raw = has("tail")
-      ? store.messagesTail(ctx.row.roomId, Math.min(Math.floor(Number(req.query.tail)) || limit, 500), { viewerMemberId, limit })
-      : has("before")
-        ? store.messagesBefore(ctx.row.roomId, Number(req.query.before) || 0, { viewerMemberId, limit })
-        : store.messagesAfter(ctx.row.roomId, Number(req.query.after ?? 0) || 0, { viewerMemberId, limit });
+    // Same window contract as the in-room route, through the SAME reader: bare
+    // = after 0 (compat), ?tail=N = first-screen window, ?before=N = earlier.
+    const raw = readWindow({
+      roomId: ctx.row.roomId,
+      viewerMemberId,
+      ...(has("tail") ? { tail: req.query.tail } : {}),
+      ...(has("before") ? { before: req.query.before } : {}),
+      ...(has("after") ? { after: req.query.after } : {}),
+      limit,
+    });
     const messages = raw
       .filter((m) => m.visibility === "shared" || m.visibility === `private:${viewerMemberId}`)
       .map(enrich);
     res.json({ messages });
+  });
+
+  // Polling increment for a guest on a phone (add-zhiyu-mobile-clients 6.3): a
+  // visitor is a first-class reader on the mobile clients, and a guest on a
+  // phone cannot hold SSE any more than a member can. Same reader, same cursor
+  // rule, same hold — only the seat is different, and the seat is the ONLY
+  // difference: no guest-only capability is added here.
+  app.get("/api/zhiyu/widget/:token/stream", async (req, res) => {
+    const ctx = authorizeWidget(req, res, { requireHost: false });
+    if (!ctx) return;
+    const seat = guestSeat(req, ctx.row);
+    if (!seat) return res.status(401).json({ error: "guest pass required" });
+    const roomId = ctx.row.roomId;
+    const viewerMemberId = seat.member.id;
+    const after = Number(req.query.after ?? 0) || 0;
+    const wait = parseWait(req.query.wait);
+    if (wait === null) return res.status(400).json({ error: "wait must be a non-negative number of milliseconds" });
+    const rows = await holdIncrement(() => readWindow({ roomId, viewerMemberId, after }), wait);
+    const enrich = widgetSenderOf(roomId);
+    const messages = rows
+      .filter((m) => m.visibility === "shared" || m.visibility === `private:${viewerMemberId}`)
+      .map(enrich);
+    const cursor = rows.length ? rows[rows.length - 1].seq : after;
+    res.json({ messages, cursor });
   });
 
   app.post("/api/zhiyu/widget/:token/messages", express.json({ limit: "16kb" }), (req, res) => {

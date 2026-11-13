@@ -6,8 +6,8 @@
 # `npm start` does locally. dsh's native plugins cover LLM routing and SaaS
 # connectors, so there are no sidecar processes.
 #
-#   docker build -t your-registry/platform .
-#   docker run -p 3000:3000 -v platform-data:/data your-registry/platform
+#   docker build -t harbor.local/paas_private/platform .
+#   docker run -p 3000:3000 -v platform-data:/data harbor.local/paas_private/platform
 #
 # Multi-stage: the builder compiles native addons + builds web/dist; the runtime
 # stage copies only what is needed. Node 25 is used in BOTH stages: the same major
@@ -24,8 +24,8 @@
 # ── Base image ───────────────────────────────────────────────────────────────
 # A build arg because the two build hosts have opposite network access: the
 # GitHub runner (docker-deploy.yml) reaches Docker Hub, while the China build
-# host cannot reach registry-1.docker.io and pulls
-# a registry mirror instead — its CI passes that as
+# host (Jenkins on cheap-3) cannot reach registry-1.docker.io at all and pulls
+# the cluster's Harbor mirror instead — its Jenkinsfile passes that as
 # BASE_IMAGE. Declared before the first FROM so both stages can use it.
 ARG BASE_IMAGE=node:25-bookworm-slim
 
@@ -44,8 +44,8 @@ RUN sed -i 's|deb.debian.org|mirrors.aliyun.com|g' /etc/apt/sources.list.d/debia
 
 WORKDIR /app
 
-# Bound every build-time Node process. The China build host
-# is memory-constrained and shares the node with other workloads: a build that spikes past its
+# Bound every build-time Node process. The China build host (Jenkins on cheap-3)
+# is a 4GB machine that ALSO runs the production pod: a build that spikes past its
 # free memory makes the kernel OOM-kill kubelet and the node's registry/proxy —
 # node NotReady, site 502 — which happened twice on 2026-09-21. A build that needs
 # more than this cap fails HERE, which is recoverable, instead of taking the
@@ -186,6 +186,26 @@ RUN mkdir -p /opt/browser-mcp \
 # not build and does not use.
 COPY . .
 
+# Credential-surface gate at image build (harden-plugin-supply-gates 3.2): the
+# same check the desktop's predist runs, over the declarations that compose into
+# every profile (template package.json + patch layers, supply manifest, sample
+# bundles). It must sit AFTER `COPY . .` — scripts/ does not exist before that.
+# A hit fails the image here, before it can reach a cell: runbook S6 as a build
+# gate rather than a reviewer's memory.
+RUN node scripts/check-bundle-credentials.mjs
+
+# Supply declaration gate (same change, 4.1): every composed bundle must carry a
+# reviewed contribution declaration, and every declaration must compose somewhere.
+RUN node scripts/check-plugin-supply.mjs
+
+# Curation-evidence gate (add-curation-evidence-gate 3.2): the plugin catalogue
+# has no HTTP write face — an entry is listed by editing the file and baking it,
+# so this IS the 上架 rejection point. It BLOCKS: a supplied entry whose evidence
+# is missing or expired stops the build and names the entry and the missing field.
+# While the repo has no catalogue this is a no-op (exit 0) — the loop is closed
+# for the FIRST entry that lands, not for a human who must remember to flip a flag.
+RUN node scripts/check-curation-evidence.mjs
+
 # Build provenance. `scripts/make-public-snapshot.mjs` writes BUILD-INFO.json into
 # the snapshot tree (baseRef / baseCommit / builtAt); a build from anything else
 # (the private repo, a feature branch) has no such file, and the runtime stage's
@@ -265,7 +285,7 @@ COPY --chown=node:node --from=builder /app/web/dist ./web/dist
 # npm-published @finddata/facet package, not part of the runtime. That last rule
 # is why credential-pattern.js exists: marketplace-repo.js (the offline exporter,
 # NOT shipped) imports facet/cli/, so the runtime needed the pattern without it.
-COPY --chown=node:node --from=builder /app/facet/index.js /app/facet/identity.js /app/facet/mcp-catalog.js /app/facet/supply-catalog.js /app/facet/marketplace-json.js /app/facet/pairing.js /app/facet/publish-gate.js /app/facet/mcp-registry-json.js /app/facet/credential-pattern.js /app/facet/studio.js /app/facet/preview-sandbox.js /app/facet/machine-paths.js ./facet/
+COPY --chown=node:node --from=builder /app/facet/index.js /app/facet/identity.js /app/facet/mcp-catalog.js /app/facet/supply-catalog.js /app/facet/marketplace-json.js /app/facet/pairing.js /app/facet/publish-gate.js /app/facet/mcp-registry-json.js /app/facet/credential-pattern.js /app/facet/studio.js /app/facet/preview-sandbox.js /app/facet/machine-paths.js /app/facet/team-console-proxy.js ./facet/
 COPY --chown=node:node --from=builder /app/facet/web/dist ./facet/web/dist
 
 # Application source: all root .js (server.js, paths.js, local-services.js,
@@ -373,7 +393,7 @@ ENV NODE_ENV=production \
 # produced files must land under the serving root or they can be neither
 # previewed, downloaded, nor saved to resources. A deployment mounting /data
 # from a hostPath masks this dir — its runbook step creates it on the host
-# (operator's responsibility when /data is a host mount).
+# (see DEPLOY.md → Agent workspace).
 RUN mkdir -p /data/workspace && chown -R node:node /data
 USER node
 
@@ -381,9 +401,9 @@ EXPOSE 3000
 
 # No baked HEALTHCHECK: this image carries three roles (cell/facet on 3000,
 # runner on 8790) and a role-specific probe mislabels the others unhealthy
-# (one runner lived "unhealthy" for a generation). Each
+# (the cheap-1 runner lived "unhealthy" for a generation — 2026-10-07). Each
 # role defines its own: k8s roles use k8s probes; the runner's compose and the
-# ops runbook carries the 8790 /health probe.
+# DEPLOY.md runbook carry the 8790 /health probe.
 
 # start.js → local-services.js → Supervisor spawns server.js, then keeps running.
 CMD ["node", "scripts/start.js"]

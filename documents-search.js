@@ -143,10 +143,22 @@ export function searchLibrary(query, { collectionId = null, docId = null, limit 
   const q = String(query || "").trim();
   if (!q) return [];
   const filters = { collectionId, docId, limit };
+  // `via` is attached ONLY when the hit did not come from the default path.
+  //
+  // The contract has two clauses that pull against each other: "关闭态检索结果
+  // MUST NOT 引入任何额外字段" (so the shape must stay byte-identical when the
+  // semantic rung is off and the default path answered) and "结果 SHALL 标注
+  // 实际档位" (so a degraded or unranked answer must be distinguishable). Both
+  // are satisfied by omitting the field exactly when it would carry no
+  // information: the default `fts` path means "nothing to report". Consumers
+  // already read `h.via || "fts"`, so absence is the documented default rather
+  // than a missing value.
   const shape = (rows, via) =>
-    rows.map((r) => ({
-      docId: r.doc_id, name: r.name, loc: r.loc, snippet: r.snippet, via,
-    }));
+    rows.map((r) =>
+      via === "fts"
+        ? { docId: r.doc_id, name: r.name, loc: r.loc, snippet: r.snippet }
+        : { docId: r.doc_id, name: r.name, loc: r.loc, snippet: r.snippet, via },
+    );
 
   const expr = matchExprFor(q);
   const nonAscii = hasNonAscii(q);
@@ -263,6 +275,29 @@ export async function semanticHits(query, { collectionId = null, docId = null, l
   return { ok: true, hits, reason: "vector" };
 }
 
+// The one-line rung label the library tool prints above its hits. Pure and
+// exported so it can be tested directly: the tool server mounts stdio at import
+// time (and that harness hangs), so anything only reachable through it is
+// effectively untested.
+//
+// `rung` is the semantic tier and is `keyword` until the semantic rung exists;
+// `via` is the actual path taken inside the lexical tier — `trigram` (ranked,
+// CJK sub-phrases), `fts` (unicode61, exact tokens) or `like` (unranked escape
+// hatch, insertion order). An unranked answer must never look like a ranked one.
+export function rungHeader(hits, semantic = null) {
+  const via = [...new Set((hits || []).map((h) => h.via || "fts"))];
+  const unranked = via.includes("like");
+  // A degraded semantic leg is reported even when the lexical leg returned
+  // nothing: "no matches" and "no matches, and the other leg was down" are
+  // different facts, and the caller can only act on the second one.
+  const degraded = semantic && semantic.ok === false && semantic.reason === "unavailable";
+  return (
+    `(rung: keyword · via: ${via.length ? via.join("+") : "-"}` +
+    `${degraded ? ` · 语义档降级：${semantic.retryable ? "可重试" : "不可重试"}` : ""}` +
+    `${unranked ? " · 未排序：LIKE 兜底，结果为插入顺序" : ""})`
+  );
+}
+
 // Reciprocal rank fusion. Same (docId, loc) from both paths accumulates, so a
 // passage that is strong on both legs outranks one that is strong on only one.
 export function fuseRrf(lexical, semantic, limit = 10) {
@@ -374,14 +409,22 @@ export function scheduleEmbed(docId, { embedder = null } = {}) {
 // Boot/backfill pass over documents missing vectors. Bounded per call so a large
 // library cannot stall startup; the remainder is picked up on the next pass.
 export async function backfillVectors({
-  max = Number(process.env.LIBRARY_EMBED_BACKFILL_MAX) || 25, embedder = null,
+  max = Number(process.env.LIBRARY_EMBED_BACKFILL_MAX) || 25,
+  gapMs = Number(process.env.LIBRARY_EMBED_BACKFILL_GAP_MS) || 250,
+  embedder = null,
 } = {}) {
   const status = semanticRungStatus();
   if (!status.enabled || !status.configured) return { status: "disabled", done: 0, remaining: 0 };
   const cfg = readEmbedConfig();
   const missing = db.listDocIdsMissingVectors({ model: cfg.model, dim: cfg.dimensions });
   let done = 0;
+  let first = true;
   for (const id of missing.slice(0, max)) {
+    // Pace the pass: `max` bounds how many documents one pass touches, not how
+    // fast it touches them. Without the gap a 25-document pass is one burst at
+    // the lane — the thing the contract's "按批限速" forbids.
+    if (!first && gapMs > 0) await new Promise((r) => setTimeout(r, gapMs));
+    first = false;
     const r = await scheduleEmbed(id, { embedder });
     if (r?.status === "ok") done++;
   }

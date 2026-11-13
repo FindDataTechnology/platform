@@ -408,46 +408,6 @@ errorKind SHALL 在写时从错误文本与形状归类为有限枚举:模型/�
 - **WHEN** 岗位主档模型上游 5xx 快速失败且解析链存在下一档
 - **THEN** 本回合以下一档模型重试一次,detail.degradedTo 记录接棒档;成功则回合 status=ok
 
-#### Scenario: 桩输出不得结算为成功
-
-- **WHEN** 一个回合以 ok 结束，但输出 tokens 不超过桩阈值（默认 128）、没有任何文本产出、没有任何工具调用、也没有报数
-- **THEN** 该回合 SHALL 结算为 `interrupted`（可重跑、不推进在场），且 `detail` SHALL 含 `stubTurn: true` 与该判定的依据（输出 tokens、是否有工具调用、是否有报数）
-- **AND** 四项中任一项不成立（有文本 / 有工具调用 / 有报数 / 输出超过阈值）时，行为 SHALL 与引入本条款前逐字节一致
-
-#### Scenario: 窗口塞满型与从未真跑型可分
-
-- **WHEN** 一个回合的输入达到解析窗口的 95% 以上
-- **THEN** `detail` SHALL 含 `windowFull: true` 与该回合的输出 tokens
-- **AND** 结算 SHALL NOT 仅凭窗口占用判定失败——那是观测字段，不是结论
-
-#### Scenario: 正常短回合不被误伤
-
-- **WHEN** 某岗位回合只调用一次 `report_status` 就结束（输出 tokens 很少）
-- **THEN** 因为有工具调用与报数，该回合 SHALL 仍按 `ok` 结算
-
-#### Scenario: 声明了必交报却未交的回合可被判读
-
-- **WHEN** 某岗位的人设声明了「收尾必 report_status」，其回合以 `ok` 结束但本回合没有任何完成的 `report_status` 调用
-- **THEN** 该回合 SHALL 仍记 `status=ok`（回合确实跑完），且 `detail` SHALL 含 `missingReport: true`
-- **AND** 交付率读面 SHALL 能把该回合与"已交付"的 `ok` 回合区分开
-
-#### Scenario: 未声明必交报的岗位不被判违约
-
-- **WHEN** 某岗位人设没有声明必交报（例如只在被委派时起回合的内容岗）
-- **THEN** 其 `ok` 回合 SHALL NOT 带 `missingReport`，行为与引入本条款前一致
-
-#### Scenario: 失败与中断回合不参与交付契约判定
-
-- **WHEN** 某声明了必交报的岗位回合以 `failed` / `interrupted` / `skipped` 结束
-- **THEN** 该回合 SHALL NOT 被判 `missingReport`——交付契约只在"回合成功跑完"的前提下才有意义
-- **AND** 一个回合 SHALL 只被一条规则判：巳判为桩（`stubTurn`）的回合 SHALL NOT 再被判 `missingReport`
-
-#### Scenario: 契约标记来自人设而非散文匹配
-
-- **WHEN** 平台合成运行时 profile（写入 `presets.patch.yml`）
-- **THEN** SHALL 在同一刻用手里的人设文本判定是否声明必交报，并把结论发布给结算面
-- **AND** 结算 SHALL 读该结论，SHALL NOT 在每回合对散文做正则匹配，也 SHALL NOT 依赖平台 catalog（活 cell 里可能为空）
-
 ### Requirement: 回合触发前的运行时就绪等待
 
 依赖本地运行时的回合（persona 形态）SHALL 在开火前等待运行时进入就绪：经有界等待（默认 120 秒，部署可配）轮询就绪——等待吸收运行中桥重启窗（预设切换/catalog 同步/凭据 patch/崩溃重拉）与冷 cell 启动窗。等待 SHALL 能区分「重启中且即将回来」与「从未就绪」两种状态（桥 SHALL 暴露重启态），且**一旦观察到重启中，等待 SHALL 以粘性方式延长至多一个额外等待窗**（延长不随后续非重启轮询收回——重启结束后子进程仍需启动时间，收回宽限会在最需要它的时刻超时）。

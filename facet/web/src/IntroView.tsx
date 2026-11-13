@@ -6,6 +6,7 @@
 // live data, no loading states. Copy is fully keyed (five locales, parity
 // enforced); the CLI command is a constant from cliFacts, never re-typed.
 import { useTranslation } from "react-i18next";
+import { Container } from "./Container";
 import { FACET_HELP_COMMAND, FACET_INSTALL_COMMAND } from "./cliFacts";
 
 const CARDS = ["contents", "install", "version"] as const;
@@ -53,30 +54,61 @@ export function IntroView() {
     : "https://www.finddatatech.cloud/products/facet/";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-10 pb-10">
-      <section>
-        <h1 className="text-2xl font-semibold tracking-tight">{t("facetIntro.title")}</h1>
-        <p className="mt-3 text-sm text-muted-foreground">{t("facetIntro.subtitle")}</p>
-        <p className="mt-2 text-xs text-muted-foreground">{t("facetIntro.factRow")}</p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <a
-            href="#/packs"
-            data-testid="intro-cta-packs"
-            className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            {t("facetIntro.ctaPacks")}
-          </a>
-          <a
-            href="#/mcp"
-            data-testid="intro-cta-mcp"
-            className="rounded-md border border-border px-4 py-2 text-sm transition-colors hover:bg-muted"
-          >
-            {t("facetIntro.ctaMcp")}
-          </a>
+    <Container className="space-y-10 pb-10">
+      {/* Hero + path figure share the first screen: the copy keeps a reading
+          measure on the left, the three-node graph fills the right. Capping the
+          whole page at 768px (the pre-overhaul shape) left half a 1920 screen
+          empty on both sides while the figure wrapped in the narrow column. */}
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("facetIntro.title")}</h1>
+          <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{t("facetIntro.subtitle")}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("facetIntro.factRow")}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <a
+              href="#/packs"
+              data-testid="intro-cta-packs"
+              className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              {t("facetIntro.ctaPacks")}
+            </a>
+            <a
+              href="#/mcp"
+              data-testid="intro-cta-mcp"
+              className="rounded-md border border-border px-4 py-2 text-sm transition-colors hover:bg-muted"
+            >
+              {t("facetIntro.ctaMcp")}
+            </a>
+          </div>
+
+          <div className="mt-8">
+            <h2 className="text-sm font-semibold">{t("facetIntro.quickTitle")}</h2>
+            <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 text-xs">
+              <code>{`${FACET_INSTALL_COMMAND} ${t("facetIntro.quickArg")}`}</code>
+            </pre>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("facetIntro.quickNote")} {t("facetIntro.quickHelpPrefix")}{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono whitespace-nowrap">{FACET_HELP_COMMAND}</code>
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-sm font-semibold">{t("facetIntro.pathTitle")}</h2>
+          {/* Path figure (polish-facet-usability): the ASCII text lines became a
+              three-node graph. Fully static, copy keyed, mobile-wrappable — the
+              flex layout is the diagram; no SVG asset, no live data. */}
+          <div className="mt-3 rounded-lg border border-border bg-muted/40 p-4 space-y-4">
+            <PathRow from="creator" edge="edgePublish" to="market" />
+            <div className="pl-4 sm:pl-6 space-y-3 border-l-2 border-border">
+              <PathRow from="market" edge="edgeSubscribe" to="platform" note="edgeSubscribeNote" />
+              <PathRow from="market" edge="edgeCli" to="editors" note="edgeCliNote" />
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {CARDS.map((card) => (
           <div key={card} className="rounded-lg border border-border p-4">
             <h2 className="text-sm font-semibold">{t(`facetIntro.card.${card}.title`)}</h2>
@@ -87,31 +119,6 @@ export function IntroView() {
         ))}
       </section>
 
-      <section>
-        <h2 className="text-sm font-semibold">{t("facetIntro.pathTitle")}</h2>
-        {/* Path figure (polish-facet-usability): the ASCII text lines became a
-            three-node graph. Fully static, copy keyed, mobile-wrappable — the
-            flex layout is the diagram; no SVG asset, no live data. */}
-        <div className="mt-3 rounded-lg border border-border bg-muted/40 p-4 space-y-4">
-          <PathRow from="creator" edge="edgePublish" to="market" />
-          <div className="pl-4 sm:pl-6 space-y-3 border-l-2 border-border">
-            <PathRow from="market" edge="edgeSubscribe" to="platform" note="edgeSubscribeNote" />
-            <PathRow from="market" edge="edgeCli" to="editors" note="edgeCliNote" />
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 className="text-sm font-semibold">{t("facetIntro.quickTitle")}</h2>
-        <pre className="mt-3 overflow-x-auto rounded-lg border border-border bg-muted/40 p-4 text-xs">
-          <code>{`${FACET_INSTALL_COMMAND} ${t("facetIntro.quickArg")}`}</code>
-        </pre>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {t("facetIntro.quickNote")} {t("facetIntro.quickHelpPrefix")}{" "}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono whitespace-nowrap">{FACET_HELP_COMMAND}</code>
-        </p>
-      </section>
-
       <a
         className="inline-block text-xs text-muted-foreground underline hover:text-foreground"
         href={lineUrl}
@@ -120,6 +127,6 @@ export function IntroView() {
       >
         {t("facetIntro.lineLink")}
       </a>
-    </div>
+    </Container>
   );
 }

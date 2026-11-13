@@ -18,21 +18,6 @@ import { isGenericBotType, packBotMeta, PACK_BOT_CREDENTIAL_KEY } from "../lib/g
 import { observeTurnTap } from "./observe-tap.js";
 import { gateOutboundMessage, noteBypassAttempt } from "../lib/outbound-message.js";
 
-// Outbound accountability ledger writer — NOT IMPLEMENTED YET, and this null is
-// deliberate. The call sites below said `recordOutboundLedger?.(…)` with no such
-// binding anywhere: `?.` guards a nullish VALUE, never an undeclared NAME, so
-// every bot send that carried `gate.ledger` threw `ReferenceError:
-// recordOutboundLedger is not defined` — swallowed by their try/catch, leaving
-// the accountability trail (spec: principal-disclosure-accountability, "每次对外
-// 发言 SHALL 记录") silently empty and, on one site, a misleading warning per
-// send. Declaring the seam makes the optional call what it always meant to be.
-//
-// Wiring it for real needs a decision the disclosure owner has to make: the
-// audit table (`action_audit`) requires line/action_id/args_digest/risk/target/
-// impact_text/result_summary as NOT NULL, and a bot utterance has none of those.
-// Tracked in openspec/changes/bot-outbound-accountability-ledger.
-const recordOutboundLedger = null;
-
 // Trust-boundary guards (design D3). These bound an untrusted external caller's
 // reach into an agent, so they live here — before prompt() — not in the adapters.
 const MAX_MESSAGE_CHARS = 4000;

@@ -172,7 +172,7 @@ async function main() {
   const dlHost = process.env.DL_HOST;
   const dlRoot = process.env.DL_ROOT || "/srv/dl";
   // The dl subdomain has no DNS (dl-host-findings: NAT fleet can't own it);
-  // production serves /dl/* from the platform host via its edge proxy.
+  // production serves /dl/* from the platform host via cheap-1 Caddy.
   const dlBase = process.env.DL_BASE || "https://platform.finddatatech.cloud/dl";
 
   // 1. Release + assets via gh api (assets ride on the release object).

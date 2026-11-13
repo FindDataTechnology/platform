@@ -1,0 +1,35 @@
+# add-chart-data-binding — proposal
+
+## Why
+
+Charts captured into the resource library are frozen snapshots: the numbers were baked into the ` ```echarts ` option by the model at generation time, they carry no record of which tool call produced them, and they never move again. Meanwhile the data the chart was drawn from — a monthly macro series on `fd-open-data-mcp` — keeps being revised and extended upstream. A user who saves "M0 同比趋势" today has no way to see next month's point, no way to know a historical period was revised, and no way to ask "what did this chart look like in September". This change makes time-series charts living views over their data source, with full observation history.
+
+## What Changes
+
+- **Data binding for time-series charts.** A chart resource can be bound to the MCP read call that produced its data (`fd-open-data-mcp` `read_series`/`read` in v1). The binding is first-class: identity `(tool, args, map)` with a content-derived lineage key, sharable across charts, created from three sources with priority **declared > confirmed > inferred** — a `chart_bind` dsh plugin tool the model calls (patterned after the existing `tool_search` bridge), a user confirmation on the chart card from same-turn call candidates, and a witness-based inference when exactly one same-turn call maps onto the recorded option.
+- **Bitemporal point store (new tables).** Bound data lands in a point-level append-only store — period (valid time) × observation moment (record time) — not per-refresh snapshots. Refresh classifies every point as **appended / revised / resourced / unchanged / missing** (resourced = value changed because `source_used` changed; unit change is refused). "What did this chart show at time T" is a query, not a stored artifact; revision tracking ("2026-03 was revised twice") comes free.
+- **Frequency-aware period normalization.** Periods normalize by the concept's frequency (monthly → `YYYY-MM`, yearly → `YYYY`); the observed upstream defect where one response contains both `"2023"` and `"2023-12-31"` for the same period is deduplicated, and a same-key different-value collision is recorded as an anomaly rather than silently resolved.
+- **Server-side MCP fetcher.** A small streamable-http JSON-RPC client (initialize + tools/call) resolves the endpoint from the installed extension config and the credential from the existing per-user registry token (`registry-credentials.liveToken`) — the same resolution the dsh child already uses; no new credential kind. A **per-tool read-only allowlist, default-deny** gates what may be replayed on a schedule (probed: prefix heuristics miss `policy_delete` — an allowlist is mandatory).
+- **Refresh with a cheap gate.** Refresh triggers: manual (button), on-open when stale past TTL, and an optional per-binding cron rule. Each tick first calls the cheap `data_stats` freshness gate (upstream `last_fetch`/`latest_date`); only a moved gate triggers the series read. Failure semantics: keep the old payload, mark `stale` with reason and backoff — never blank, never delete.
+- **Client surfaces.** Both resources pages gain the source line (`fd-open-data-mcp · read_series · 截至 X`), refresh action, stale badge, unbind, and the data-period filter (`近 6 月 / 近 1 年 / 全部`) needed because bound series grow beyond any single tool-call window; the web page additionally gains the observation timeline with observation-time filter and single-revision view. Rendering needs no change — `EChart.tsx` and the MP canvas renderer already redraw from option data.
+- **Deliberately not in v1:** depending on fd-daas-mcp's alert/cron/dashboard capabilities (probed: all return empty on the current deployment), triggering upstream fetches (`read` read-through / `fetch` force — the latter writes their cache), fd-cn-report bindings (excluded by decision), non-time-series bindings (category/pie charts stay static snapshots), sharing live views, a user-authored map editor, and the AI-analysis read tool (the storage contract below is its foundation, the tool is a follow-up).
+
+## Capabilities
+
+### New Capabilities
+
+- `chart-data-binding`: binding identity and lifecycle — the three binding sources and their priority, the declared-channel tool contract, the read-only allowlist gate, the time-series-only scope, the server-side MCP fetcher, refresh triggers (manual / TTL-on-open / cron rule) with the data_stats gate, and stale/failure semantics.
+- `chart-observation-history`: the bitemporal observation store — point-level appends with valid-time × record-time, the five-way point classification, frequency-aware period normalization with duplicate dedupe and collision anomaly, as-of reconstruction, the observation timeline contract (the future AI-analysis read surface builds on this query contract), and retention.
+
+### Modified Capabilities
+
+- `resource-library`: identity becomes dual-track — content-hash identity for unbound charts (unchanged rule), binding-lineage identity for bound charts whose payload updates in place; resources gain binding references (a multi-series chart holds one binding per series); the REST surface gains refresh / bind / unbind / observation-list mutations alongside the existing broadcast consistency event.
+- `resource-library-ui`: both resources pages gain the bound-chart affordances — source line (`fd-open-data-mcp · read_series · 截至 X`), refresh action, stale badge, and the data-period filter (`近 6 月 / 近 1 年 / 全部`) needed because bound series grow beyond any single fetch window; the web page additionally gains the observation timeline with observation-time filter and single-revision view; the mini program degrades invisibly against an older cell (the chart renders, the affordances hide). The chart renderers themselves are unchanged — they already redraw from option data.
+
+## Impact
+
+- **Server**: `db.js` migrations 17–18 (bindings table + resources binding refs; point revisions, series points materialized view, refresh log); new `chart-source.js` (fetcher + map evaluator + normalization), `chart-refresh.js` (scheduler + gate + point diff), `chart-bindings.js` (identity + allowlist); `resources.js` capture path extended to receive same-turn tool blocks; `server/routes/resources.js` new mutations; `server.js` init wiring.
+- **dsh profile**: new `dsh-profile-template/platform-chart-bind-bridge.js` + a `writeChartBindPatch()` alongside the existing tool-search patch — zero image-persona changes, the contract rides the tool description.
+- **Clients**: `packages/core` API additions; web resources page chart card + observation timeline + filters; MP resources page additions; five-locale i18n.
+- **Data**: new tables in the per-cell SQLite; point rows accumulate under the retention rule (changed points permanent, unchanged/error observations 30 days); no migration for existing rows beyond marking them unbound.
+- **Verification**: unit tests for the map evaluator / normalization / diff / allowlist; a fake streamable-http MCP driving the full refresh loop; e2e for bind → refresh → redraw; MP devtools walkthrough; a live probe against the real fd-open-data-mcp on the tailnet.

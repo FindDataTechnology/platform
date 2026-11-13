@@ -80,9 +80,37 @@ const trialOf = (b: Blueprint | null): TrialReport | null => {
 // domain, the run domain (壹座) origin to hand the deploy deep link to — the
 // honest boundary of D4. Undefined on the 壹座 host, where the deploy action
 // keeps its direct same-domain API path (byte-for-byte unchanged).
-export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
+//
+// onExit / onNavigate (overhaul-facet-shell-ia-and-space D4): a host embedding
+// this page in its own shell may not carry 壹座's routes. The page used to
+// render `<Link to="/agents?tab=build">` and navigate to cross-domain
+// destinations unconditionally, so on the facet shell — whose local route
+// table holds only the creation face — those controls were no-ops a viewer
+// could click forever (supply-studio: 不存在静默无操作). A host now supplies the
+// landing for "back" and gets first refusal on every destination: return true
+// to claim it (the host moves its own view or opens a real link), false to let
+// this page's router handle it. Both props are optional, so 壹座 keeps its
+// exact behaviour.
+export function AgentStudioPage({
+  runOrigin,
+  onExit,
+  onNavigate,
+}: {
+  runOrigin?: string;
+  onExit?: () => void;
+  onNavigate?: (to: string) => boolean;
+} = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Every destination goes through here: the host claims what it can serve,
+  // everything else stays local navigation.
+  const go = useCallback(
+    (to: string, opts?: { replace?: boolean }) => {
+      if (onNavigate?.(to)) return;
+      navigate(to, opts);
+    },
+    [navigate, onNavigate],
+  );
   const [searchParams] = useSearchParams();
   const { marketCatalog, load, skills: localSkillsAll } = useExtensionsStore();
   const modelRoster = useChatStore((s) => s.models);
@@ -295,7 +323,7 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
       await refreshDocs();
       await openDoc(blueprint.id);
       // Same URL contract as the fork seed: the address carries the doc id.
-      navigate(`/studio?doc=${encodeURIComponent(blueprint.id)}`, { replace: true });
+      go(`/studio?doc=${encodeURIComponent(blueprint.id)}`, { replace: true });
       showToast({ severity: "success", title: t("studio.workspace.library.starterCreated", { name: seed.boundary?.name ?? "" }) });
       return blueprint.id;
     } catch (err) {
@@ -304,7 +332,7 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
     } finally {
       setBusy(null);
     }
-  }, [openDoc, refreshDocs, navigate, t]);
+  }, [openDoc, refreshDocs, go, t]);
 
   // Focus the scene name right after a fresh document opens (one click to edit).
   useEffect(() => {
@@ -348,7 +376,7 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
           await refreshDocs();
           await openDoc(blueprint.id);
           // Replace the seeding URL: a reload must not mint a second draft.
-          navigate(`/studio?doc=${encodeURIComponent(blueprint.id)}`, { replace: true });
+          go(`/studio?doc=${encodeURIComponent(blueprint.id)}`, { replace: true });
           showToast({ severity: "success", title: t("studio.fork.seeded", { name: detail.name ?? detail.id }) });
         } catch (err) {
           // Unreadable seed: honest toast, land on the library — never a blank editor.
@@ -359,7 +387,7 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
       if (newParam) {
         // 4.4: ?new=agent 直铸岗位文档；?new=1 / ?new=team 铸场景文档。
         const id = await createDoc(newParam === "agent" ? "agent" : "team");
-        if (id) navigate(`/studio?doc=${encodeURIComponent(id)}`, { replace: true });
+        if (id) go(`/studio?doc=${encodeURIComponent(id)}`, { replace: true });
       }
     })();
   }, [docParam, forkParam, newParam]);
@@ -538,13 +566,13 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
       const fleetId: string | undefined = body?.fleet?.id ?? body?.id;
       recordStudioMetric({ type: "deploy", at: Date.now(), docId: doc.id, fleetId: fleetId ?? null });
       showToast({ severity: "success", title: t("studio.workspace.deployOk") });
-      if (fleetId) navigate(`/fleets/${encodeURIComponent(fleetId)}`);
+      if (fleetId) go(`/fleets/${encodeURIComponent(fleetId)}`);
     } catch (err) {
       showToast({ severity: "error", title: t("studio.workspace.deployFailed"), description: (err as Error).message });
     } finally {
       setBusy(null);
     }
-  }, [doc, navigate, t, runOrigin]);
+  }, [doc, go, t, runOrigin]);
 
   // ── emit ports (never mutate the document; re-validate at emit) ──────────
   const selectedAgent = useMemo(
@@ -601,7 +629,7 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
       });
       if (doc) recordStudioMetric({ type: "emit", at: Date.now(), docId: doc.id, emit: "draft" });
       showToast({ severity: "success", title: t("studio.emit.draftOk") });
-      navigate("/agents?tab=market");
+      go("/agents?tab=market");
     } catch (err) {
       showToast({ severity: "error", title: t("studio.emit.failed", { message: (err as Error).message }) });
     } finally {
@@ -686,9 +714,23 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
     <div className="relative flex h-full flex-col bg-background" data-testid="agent-studio">
       {/* ── Header: document identity + save state ── */}
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <Link to="/agents?tab=build" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" data-testid="ws-back">
-          <ArrowLeft className="h-3.5 w-3.5" /> {t("studio.workspace.back")}
-        </Link>
+        {/* Back control (D4): a host without 壹座's routes supplies its own
+            landing; 壹座 keeps the original link to the builder tab. Same
+            anchor either way, so no test and no muscle memory moves. */}
+        {onExit ? (
+          <button
+            type="button"
+            onClick={onExit}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            data-testid="ws-back"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> {t("studio.workspace.back")}
+          </button>
+        ) : (
+          <Link to="/agents?tab=build" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground" data-testid="ws-back">
+            <ArrowLeft className="h-3.5 w-3.5" /> {t("studio.workspace.back")}
+          </Link>
+        )}
         <h2 className="text-sm font-medium">{t("studio.workspace.title")}</h2>
         <button type="button" className="rounded p-1 text-muted-foreground hover:bg-muted lg:hidden" aria-label={t("studio.workspace.toggleLibrary")} data-testid="ws-toggle-library" onClick={() => setShowLibrary((v) => !v)}>
           <PanelLeft className="h-4 w-4" />
@@ -792,7 +834,7 @@ export function AgentStudioPage({ runOrigin }: { runOrigin?: string } = {}) {
               </Button>
             </div>
           ) : (
-            <div className="mx-auto max-w-2xl space-y-3">
+            <div className="mx-auto max-w-3xl space-y-3">
               {/* form | json dual track — both land through the same PUT+chain */}
               <div className="flex gap-2 text-xs">
                 {(["form", "json"] as const).map((k) => (

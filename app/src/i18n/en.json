@@ -2,7 +2,8 @@
   "tabs": {
     "chat": "Chat",
     "cron": "Scheduled",
-    "resources": "Library"
+    "resources": "Library",
+    "zhiyu": "Zhiyu"
   },
   "pair": {
     "title": "Connect to your Yizuo",
@@ -35,7 +36,29 @@
     "stop": "Stop",
     "attach": "Attach",
     "regenerate": "Regenerate",
-    "fileDefault": "file"
+    "fileDefault": "file",
+    "voiceHold": "Hold to talk",
+    "voiceRelease": "Release to finish, slide up to cancel",
+    "voiceRecording": "Recording · slide up to cancel",
+    "voiceTranscribing": "Transcribing…",
+    "voiceFailed": "Voice transcription failed",
+    "voiceTooLarge": "This recording is over the 25 MB limit — record it in parts"
+  },
+  "voiceCapture": {
+    "entry": "Long recording",
+    "hint": "Meetings and lectures — transcribed as you record",
+    "title": "Long recording",
+    "progress": "{{minutes}} min transcribed / {{total}} slices",
+    "retry": "Retry {{n}} slices",
+    "stop": "Stop and merge",
+    "resultTitle": "Transcript",
+    "close": "Close",
+    "empty": "No speech recognized",
+    "denied": "Microphone permission denied — allow recording in Settings",
+    "startFailed": "Could not start the long recording",
+    "audioFailed": "Recording could not start",
+    "noAudio": "No audio was captured — recording stopped",
+    "budget": "Transcription budget reached — later slices are only buffered"
   },
   "cron": {
     "placeholderTitle": "Scheduled tasks",
@@ -131,5 +154,33 @@
     "verifyText": "Help me verify a technical question and cite the sources",
     "write": "Polish writing",
     "writeText": "Turn these bullets into a concise weekly report:\n- Point one\n- Point two"
+  },
+  "zhiyu": {
+    "untitled": "Untitled space",
+    "active": "Active",
+    "ended": "Ended",
+    "emptyList": "No rooms yet. Create one on the web and it shows up here.",
+    "loadFailed": "Could not load rooms",
+    "loadEarlier": "Load earlier",
+    "loading": "Loading…",
+    "placeholder": "Say something…",
+    "send": "Send",
+    "sending": "Sending",
+    "sendFailed": "Send failed",
+    "talk": "Hold to talk",
+    "talkRelease": "Release to send",
+    "shortPoll": "Slow network — switched to short polling. Messages still arrive.",
+    "handoffCopied": "Link copied (single use). Open it on your computer.",
+    "handoffFailed": "Could not create the link: {{message}}",
+    "handoff": {
+      "private_window": "Private window (on web)",
+      "invite": "Invite (on web)",
+      "subscription": "Subscription (on web)"
+    },
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} h ago",
+    "daysAgo": "{{count}} d ago",
+    "presenceNone": "Nobody present"
   }
 }

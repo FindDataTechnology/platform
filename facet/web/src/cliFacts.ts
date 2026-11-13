@@ -84,3 +84,58 @@ export const FACET_CAPABILITIES: FacetCapabilityFacts[] = [
   { id: "gemini-cli", mcpProjectFile: null, marketplace: false, verified: "config-only" },
   { id: "workbuddy", mcpProjectFile: "<dir>/.workbuddy/mcp.json", marketplace: true, verified: "config-only" },
 ];
+
+// ── Native MCP entry shapes (overhaul-facet-shell-ia-and-space 5.3) ──────────
+// The docs used to answer "how do I connect this client" with a link into the
+// public repository — a URL that times out on many customer networks, on the
+// exact page a stuck user opens last. The in-site answer is the client's own
+// configuration snippet, rendered from THIS table rather than hand-written
+// copy: the shapes mirror `MCP_TARGETS` in facet/cli/facet.js, and
+// scripts/test-facet-docs-facts.mjs asserts the two stay equal, so the page
+// cannot teach a shape the CLI does not write.
+export type McpShape = {
+  /** File format the client reads. */
+  format: "json" | "toml";
+  /** JSON container path to the server map (`mcp.servers` is two segments). */
+  container: string[];
+  /** Key carrying the endpoint — gemini-cli declares `httpUrl`, the rest `url`. */
+  urlKey: "url" | "httpUrl";
+  /** Whether the entry declares an explicit transport type. */
+  declaresType: boolean;
+};
+
+export const FACET_MCP_SHAPES: Record<FacetTargetId, McpShape> = {
+  "claude-code": { format: "json", container: ["mcpServers"], urlKey: "url", declaresType: true },
+  cursor: { format: "json", container: ["mcpServers"], urlKey: "url", declaresType: false },
+  zcode: { format: "json", container: ["mcp", "servers"], urlKey: "url", declaresType: true },
+  "gemini-cli": { format: "json", container: ["mcpServers"], urlKey: "httpUrl", declaresType: false },
+  codex: { format: "toml", container: ["mcp_servers"], urlKey: "url", declaresType: false },
+  workbuddy: { format: "json", container: ["mcpServers"], urlKey: "url", declaresType: true },
+};
+
+const PLACEHOLDER_URL = "https://mcp.finddatatech.cloud/mcp";
+const PLACEHOLDER_KEY = "wgk-调用键";
+
+/** The snippet the docs show for one client. Placeholders are visibly
+ *  placeholders (the caller key is minted per viewer, never shipped here). */
+export function mcpSample(id: FacetTargetId): string {
+  const shape = FACET_MCP_SHAPES[id];
+  const name = "<server-name>";
+  if (shape.format === "toml") {
+    return [
+      `[${shape.container[0]}.${name}]`,
+      `${shape.urlKey} = "${PLACEHOLDER_URL}"`,
+      `http_headers = { Authorization = "Bearer ${PLACEHOLDER_KEY}" }`,
+    ].join("\n");
+  }
+  const entry: Record<string, string> = {};
+  if (shape.declaresType) entry.type = "http";
+  entry[shape.urlKey] = PLACEHOLDER_URL;
+  const body = {
+    ...entry,
+    headers: { Authorization: `Bearer ${PLACEHOLDER_KEY}` },
+  };
+  let node: unknown = { [name]: body };
+  for (const key of [...shape.container].reverse()) node = { [key]: node };
+  return JSON.stringify(node, null, 2);
+}

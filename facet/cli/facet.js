@@ -51,7 +51,7 @@ const DEFAULT_REGISTRY = process.env.FACET_REGISTRY || "https://mcp.finddatatech
 const DEFAULT_OAUTH_CLIENT_ID = process.env.FACET_OAUTH_CLIENT_ID || "tvmzkpz3ld5kqlmse5se9";
 const DEFAULT_OAUTH_SCOPE = "openid gateway:access offline_access";
 
-const USAGE = `facet v${VERSION} — 谦面功能集安装器 / 萬星调用者偏好
+const USAGE = `facet v${VERSION} — 谦面智能体安装器 / 萬星调用者偏好
 
 用法：
   facet install <packRef> [--target CC|cursor|zcode|codex|gemini-cli|workbuddy]
@@ -66,11 +66,11 @@ const USAGE = `facet v${VERSION} — 谦面功能集安装器 / 萬星调用者�
   facet prefs <agent-slug> [--key sk-…] [--wanxing <url>]
                           [--set-callback <url> <secret>] [--set-reap <minutes>]
                           [--clear callback|reap|all] [--show]
-  facet publish <manifest.json | 功集id> [--from <自部署实例>]
+  facet publish <manifest.json | packRef> [--from <自部署实例>]
                           [--market <url>] [--pack-id <官方id>] [--new] [--no-open]
   facet help | --version
 
-  <packRef>  功能集 id（市场详情页可见）或含 id 的 URL
+  <packRef>  智能体 id（市场详情页可见）或含 id 的 URL
   --target   安装目标（默认 CC）：写技能到目标编辑器的技能目录
   --project  项目级安装：写进 <dir>/<dotdir>/skills/ 而非用户级目录
   --base     谦面地址（默认 ${DEFAULT_BASE}）
@@ -111,8 +111,8 @@ const USAGE = `facet v${VERSION} — 谦面功能集安装器 / 萬星调用者�
   读的是 install 用的同一个 /api/packs，打印的 id 可直接喂给 install。
   --line 按产品线过滤（lex / wire …），--limit 最多 100，--json 出原始行。
 
-  publish 子命令（F3.2 回流桥）：把功集 manifest 发到官方市场——本地清单文件，
-  或从自部署实例的公开详情拉取（--from <base>，或直接给功集页 URL）。首次运行
+  publish 子命令（F3.2 回流桥）：把智能体 manifest 发到官方市场——本地清单文件，
+  或从自部署实例的公开详情拉取（--from <base>，或直接给智能体页 URL）。首次运行
   走配对：打开 ${DEFAULT_BASE}/api/mp/bindcode（登录创作者账号）取 6 位绑定码，
   输回终端；之后每次静默续登。token 不落盘；首发记 源id→官方id 映射，同源续推
   自动出新版本（--new 强制新包；--pack-id 手工指定官方 id）。
@@ -880,12 +880,12 @@ export async function authRun(opts) {
   }
 
   if (pick.lane === LANE.NATIVE) {
-    if (!opts.packRef) throw new Error("原生 OAuth 写入需要 <packRef>（从功能集详情页取 id）");
+    if (!opts.packRef) throw new Error("原生 OAuth 写入需要 <packRef>（从智能体详情页取 id）");
     const detail = await fetchJson(`${opts.base}/api/packs/${encodeURIComponent(extractPackId(opts.packRef))}`).catch((e) => {
-      throw new Error(`取不到功能集 ${opts.packRef}：${e.message}`);
+      throw new Error(`取不到智能体 ${opts.packRef}：${e.message}`);
     });
     const servers = detail.manifest?.mcpServers ?? [];
-    if (!servers.length) { console.log("\n该功能集没有 MCP 引用，无需连接。"); return; }
+    if (!servers.length) { console.log("\n该智能体没有 MCP 引用，无需连接。"); return; }
     const files = await writeMcpConfig(opts.target, {
       registry: opts.registry, servers, project: opts.project, oauth: clientId,
     });
@@ -911,7 +911,7 @@ export async function authRun(opts) {
 
   if (!opts.packRef && !opts.server) {
     console.log(`\n已取得令牌（剩 ${s.minutesLeft} 分钟，账号 ${s.username ?? "?"}）。`);
-    console.log("要写入某个功能集的 MCP 配置：facet auth <packRef> --target <t> --write-mcp");
+    console.log("要写入某个智能体的 MCP 配置：facet auth <packRef> --target <t> --write-mcp");
     console.log("要看状态：facet auth --status");
     return;
   }
@@ -919,7 +919,7 @@ export async function authRun(opts) {
   const servers = opts.server
     ? [{ registryName: opts.server }]
     : (await fetchJson(`${opts.base}/api/packs/${encodeURIComponent(extractPackId(opts.packRef))}`)).manifest?.mcpServers ?? [];
-  if (!servers.length) { console.log("\n该功能集没有 MCP 引用，无需连接。"); return; }
+  if (!servers.length) { console.log("\n该智能体没有 MCP 引用，无需连接。"); return; }
 
   const shouldWrite = opts.writeMcp === true || (opts.noWriteMcp !== true && process.stdin.isTTY
     ? await (async () => {
@@ -995,17 +995,17 @@ async function install(opts) {
   const base = String(opts.base).replace(/\/+$/, "");
   const registry = String(opts.registry).replace(/\/+$/, "");
   const packId = extractPackId(opts.packRef);
-  if (!packId) throw new Error("缺少功能集引用——用法见 facet help");
+  if (!packId) throw new Error("缺少智能体引用——用法见 facet help");
 
   const detail = await fetchJson(`${base}/api/packs/${encodeURIComponent(packId)}`).catch(() => null);
-  if (!detail?.id) throw new Error(`功能集未找到：${packId}（检查 id，或该包为私有/已下架）`);
+  if (!detail?.id) throw new Error(`智能体未找到：${packId}（检查 id，或该智能体为私有/已下架）`);
 
   const { dir, scope } = targetDir(opts);
   const version = detail.version;
   const skills = detail.manifest?.skills ?? [];
 
   console.log(`谦面 Facet · 安装 ${detail.name}（${detail.id}）v${version} → ${opts.target}（${scope}）`);
-  if (skills.length === 0) console.log("  （该功能集没有技能条目）");
+  if (skills.length === 0) console.log("  （该智能体没有技能条目）");
   await writeSkillSnapshot(base, detail, dir);
   // 记下装自哪个市场（fix-supply-machine-faces 6.1）：update 之前一律回落到
   // 官方基址，自部署者装完再更新会静默从别人的市场拉同一 id——装成不是自己
@@ -1106,7 +1106,7 @@ async function install(opts) {
     console.log("    免键车道（两层状态，2026-10-30 定案）：授权/网关侧已端到端实证（静态 client_id 绕开动态注册，token 零落盘）；WorkBuddy 5.9.3 客户端的用户级 mcp.json 加载器暂不消费 oauth 块（仅连接器/市场模板路径消费）——`facet install … --oauth --write-mcp` 写的是同形前瞻条目，今日真连接走 facet connect 贴键 + --write-mcp。两层证据与去向见 docs/ecosystem/workbuddy.md §1a。");
   }
   console.log(`\n完成：${detail.id} v${version}（快照安装，无订阅副作用）。`);
-  console.log(`把功能集装进运行时（对话/Agent 服务）请到壹座：设置 → 功能集 → 我的功能集（订阅后一键安装）。`);
+  console.log(`把智能体装进运行时（对话/Agent 服务）请到壹座：设置 → 智能体 → 我的（订阅后一键安装）。`);
 }
 
 // ── prefs: 萬星调用者偏好（add-caller-preferences） ─────────────────────────
@@ -1193,9 +1193,6 @@ async function update(opts) {
     return;
   }
   let upgraded = 0;
-  // 失败也要计数：原来只打印 ✗ 就 continue，退出码仍是 0，脚本用 $? 会把失败当成功
-  // （fix-supply-machine-faces 0.4.1）。
-  let failed = 0;
   for (const rec of targets) {
     const label = `${rec.name ?? rec.packId}（${rec.target}${rec.scope === "项目级" ? " · 项目级" : ""}）`;
     // 按记录解析来源（fix-supply-machine-faces 6.2）：显式 --base 覆盖一切；
@@ -1212,8 +1209,7 @@ async function update(opts) {
         : `来源 ${base}（记录无 base，默认官方市场）`;
     const detail = await fetchJson(`${base}/api/packs/${encodeURIComponent(rec.packId)}`).catch(() => null);
     if (!detail?.id) {
-      console.log(`✗ ${label} — 功能集已不可解析（下架/私有/网络），记录保持 v${rec.version}；${fromNote}`);
-      failed += 1;
+      console.log(`✗ ${label} — 智能体已不可解析（下架/私有/网络），记录保持 v${rec.version}；${fromNote}`);
       continue;
     }
     if (detail.version === rec.version) {
@@ -1227,13 +1223,7 @@ async function update(opts) {
     await recordInstall({ ...rec, base, version: detail.version, installedAt: new Date().toISOString() });
     upgraded += 1;
   }
-  if (failed > 0) {
-    // 退出码必须反映失败：脚本化调用靠它判断「这轮是否全成功」。
-    console.log(`${upgraded > 0 ? `完成：${upgraded} 笔更新` : "没有需要更新的安装"}；${failed} 笔失败（见上方 ✗）。`);
-    process.exitCode = 1;
-  } else {
-    console.log(upgraded > 0 ? `完成：${upgraded} 笔更新（无订阅副作用——快照模型）。` : "没有需要更新的安装。");
-  }
+  console.log(upgraded > 0 ? `完成：${upgraded} 笔更新（无订阅副作用——快照模型）。` : "没有需要更新的安装。");
 }
 
 // ── list / search (fix-supply-machine-faces 5.x): 不知道 id 也能走到 install ──
@@ -1269,7 +1259,7 @@ async function fetchListing(opts, { search = "" } = {}) {
 function printListing({ base, payload }, { search = "" } = {}) {
   const rows = payload.packs ?? [];
   if (rows.length === 0) {
-    const what = search ? `匹配「${search}」的功能集` : "已上架的功能集";
+    const what = search ? `匹配「${search}」的智能体` : "已上架的智能体";
     console.log(`无匹配：${base} 上没有${what}（目录可达，结果为空）。`);
     return;
   }
@@ -1448,7 +1438,7 @@ async function publishToken(market, opts, device) {
 async function publishRun(opts) {
   const market = String(opts.market || DEFAULT_BASE).replace(/\/+$/, "");
   const ref = String(opts.packRef || "").trim();
-  if (!ref) throw new Error("缺少发布载荷——给 manifest 文件路径，或功集 id 配 --from <源实例>");
+  if (!ref) throw new Error("缺少发布载荷——给 manifest 文件路径，或智能体 id 配 --from <源实例>");
 
   let manifest;
   let sourceId = null;
@@ -1468,11 +1458,11 @@ async function publishRun(opts) {
         fromBase = new URL(ref).origin; // a detail-page URL names its own source
       } catch { /* bare id — --from is required */ }
     }
-    if (!fromBase) throw new Error("跨实例发布需要 --from <源实例地址>（或直接给功集详情页 URL）");
+    if (!fromBase) throw new Error("跨实例发布需要 --from <源实例地址>（或直接给智能体详情页 URL）");
     sourceId = extractPackId(ref);
     const detail = await fetchJson(`${fromBase}/api/packs/${encodeURIComponent(sourceId)}`).catch(() => null);
     if (!detail?.manifest) {
-      throw new Error(`源实例 ${fromBase} 上找不到公开功集 ${sourceId}——私有/下架包不可搬运（先转公开，或改用本地清单文件）`);
+      throw new Error(`源实例 ${fromBase} 上找不到公开智能体 ${sourceId}——私有/已下架的智能体不可搬运（先转公开，或改用本地清单文件）`);
     }
     manifest = detail.manifest;
     console.log(`载荷：${fromBase} 的 ${detail.name ?? sourceId} v${detail.version}（存储 manifest，含技能内容）`);

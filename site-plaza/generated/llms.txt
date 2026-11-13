@@ -1,0 +1,886 @@
+# Yizuo Agent Materials Plaza（壹座·智能体素材广场）
+
+> The outward understanding surface of the Yizuo platform: what materials exist, how the platform supplies them, and how to obtain each one. Every item below is a material — something a human or an AI agent can understand, obtain, and run. Three species: 577 agents (versioned bundles), 265 skills, 22 MCP servers (784 public tools). Canonical data: https://agent.finddatatech.cloud/generated/catalog.json. As of: 2026-11-05.
+
+## Machine surfaces
+
+- [catalog.json](https://agent.finddatatech.cloud/generated/catalog.json): every material with a canonical brief, five-locale human summaries, whenToUse, and provenance — the annotation-layer shape this platform already runs internally.
+- [infrastructure.md](https://agent.finddatatech.cloud/generated/infrastructure.md): the supply mechanism as an input–action–output table (publish / obtain / run / serve), self-contained.
+
+## Agents (577 — one self-contained page each, stable addresses)
+
+- [Cross-border Compliance Triage](https://agent.finddatatech.cloud/generated/materials/pack-ng61wkne3vg6vtdhfdc-ua.md): Cross-border compliance triage cluster template: the triager turns policy dailies, notice streams and ePing items into four-field triage tic
+- [Cross-border Logistics Watch](https://agent.finddatatech.cloud/generated/materials/pack-h4hc53rotmdosxypgkxn3q.md): Cross-border logistics watch cluster template: the monitor reads port observations via fd-open-data-mcp (port.calls daily snapshot, four hub
+- [Qicai Watch](https://agent.finddatatech.cloud/generated/materials/pack-kyznb-adeempufed1kp7ta.md): Qicai (education) watch fleet template: the watch post produces a per-entry incremental ledger (new/updated/retired, machine-countable categ
+- [Cross-border Industry Monitor](https://agent.finddatatech.cloud/generated/materials/pack-4zeibg4apf6d7-kutlrmra.md): Cross-border industry monitor cluster template: the scout weekly-scans the outer-ring demand picture (observations: TradeFlow partner axes /
+- [Cross-border Watch Roles Pack](https://agent.finddatatech.cloud/generated/materials/pack-0lvfedthoxtymbwlbdztgw.md): Four on-duty roles for the cross-border e-commerce line: compliance triage, customs documentation, product scouting, logistics watch. Each c
+- [Content Pipeline](https://agent.finddatatech.cloud/generated/materials/pack-tkhe8ihe0budyyig5lgluw.md): Official team template: a weekly-pipeline content factory — the editor-in-chief chairs the Monday topic meeting, the topic planner greenligh
+- [文档工坊](https://agent.finddatatech.cloud/generated/materials/pack-qnhd7b3j1-hkddkzzq-fuq.md): Office 文档生成与编辑：商务报告（docx）、数据工作簿（xlsx）、汇报演示（pptx）三场景成稿，配验证过的封面配方、中式设计系统与生成后质检 postcheck；支持编辑用户上传的原件（fetch_document_file 取原件）。回合内免费。
+- [数据研究 · 生态版](https://agent.finddatatech.cloud/generated/materials/pack-aqag8mky4ksopmwrdmcvyw.md): 官方功能集（生态首发）：FindData 数据底座（fd-open-data-mcp 宏观/金融真数据）+ 官方 time/fetch 生态 server + 数据研究 persona。装上即可做可溯源的数据问答与网页取证。
+- [Walkthrough Deploy Chain II](https://agent.finddatatech.cloud/generated/materials/pack-4wlvbyp0ilhmjddcpjammw.md): cast debugging
+- [萬星 · 本地内容发布套件](https://agent.finddatatech.cloud/generated/materials/pack-bzz9r5rmypiaits8ca33lw.md): 云端生成 + 本地发布的完整闭环：从 VAAS 托管实例拉取租户名下的生成产物（图/视频/图文），在本机完成平台适配、人工确认后经自己的浏览器登录态发布到 10 视频平台 + 11 图文平台。登录态只存本机、平台零保管（见包内 SECURITY-NOTES.md）。发布前必须人工
+- [Market Flash · One-page Briefing](https://agent.finddatatech.cloud/generated/materials/pack-ev5e51eth7e5mcvydrl9rg.md): Distill a piece of financial news, an announcement, or market commentary into a one-page briefing: three-line verdict, five key points, one 
+- [Facet Market Assistant](https://agent.finddatatech.cloud/generated/materials/pack-0rdqe184anpuamhivfwnda.md): Operate the Facet market and gateway with AI directly: browse/search skills and gateway entries, publish new skills and versions, list/unlis
+- [Data · Indicator Workshop](https://agent.finddatatech.cloud/generated/materials/pack-ogurb41bdyaotvgoebhzua.md): The five-piece Qianmian indicator-workshop creation suite: rule-driven entity sets, indicator persistence, indicator-set curation, unified r
+- [Data · Self-serve Analytics](https://agent.finddatatech.cloud/generated/materials/pack-50tp176hw0hyttwxzbarka.md): The eight-piece Qianmian self-serve analytics consumption suite: data fetch (workflow playbooks / AkShare), entity and collection management
+- [nano-pdf](https://agent.finddatatech.cloud/generated/materials/pack-5y0-gislp-ogelqq4zpswa.md): Edit PDFs with natural-language instructions using the nano-pdf CLI.
+- [Team Architect](https://agent.finddatatech.cloud/generated/materials/pack-nobbxkvxznjnhlcrawwp-w.md): Natural-language team orchestration inside Yizuo chat: compile the user's words into a team-structure draft, present a validated, cost-estim
+- [Wire · Paper Trading Suite](https://agent.finddatatech.cloud/generated/materials/pack-dydb2cal-m9l91imjyhsha.md): Wire paper trading three-skill suite: conversational operations (accounts/positions/orders/cancellations), strategy workflow (templates and 
+- [Wire · Decision Review Suite](https://agent.finddatatech.cloud/generated/materials/pack-wqpd5rpcfl3qihg6oldamg.md): Turns 'the call made at the time' into an auditable history: decision logging (append-only, idempotent, revisions leave traces) → settlement
+- [Wire · Equity Research Suite](https://agent.finddatatech.cloud/generated/materials/pack-azkowu4q6mmtmbw75ow7yq.md): Full-chain single-stock research: data acquisition and methodology, peers and competition, financial modeling, thesis synthesis, and 13-chap
+- [Dev Review Squad](https://agent.finddatatech.cloud/generated/materials/pack-jwdl7dsykjp7-nnqpk7dpa.md): Eight handless engineering review roles: code review, security audit, architecture review, performance analysis, QA strategy, API design, in
+- [Lex Zhengxin Watch](https://agent.finddatatech.cloud/generated/materials/pack-1hbpcl4lab-cskpuqgn2ew.md): Lex Zhengxin watch cluster template: the monitor patrols the real V-Dem/MARPOR libraries by domain (fd-zhengxin-reference read face), the sy
+- [Lex · Litigation Documents Suite](https://agent.finddatatech.cloud/generated/materials/pack-3uoelnbma6wiwstqxrv93g.md): Civil/commercial litigation drafting and filing prep: complaints, defenses and evidence lists, with evidence cards and checklists; v2 adds e
+- [Wire · Regional Economy Suite](https://agent.finddatatech.cloud/generated/materials/pack-5mqv0jhihj0ahdnpcpc1iw.md): Regional economy comparison: a multi-indicator system backed by the city panel (209 variables × 297 cities × 2000-2024) and the statistical 
+- [Wire · Data Governance](https://agent.finddatatech.cloud/generated/materials/pack-8edswnv3lixcusakzs9vva.md): Wire data governance suite: read the data collected through forms, correct one record, undo a correction, review correction history, and exp
+- [Wire · Valuation Suite](https://agent.finddatatech.cloud/generated/materials/pack-alziwywesfbs9hqri4d-ia.md): Equity valuation and earnings-cycle analysis: DCF (five-year forecast + WACC + terminal value + sensitivity tables) + comparable companies +
+- [Wire · Event-Driven](https://agent.finddatatech.cloud/generated/materials/pack-bx0qjze26kju-walqnvs-a.md): Wire event-driven four-skill set: event identification (three-way retrieval over announcement list / classification / full text, mapped into
+- [Wire · Expectation Gap](https://agent.finddatatech.cloud/generated/materials/pack-dnynrrjjawinzqr-armbjq.md): Wire Expectation Gap four-skill set: interactive Q&A extraction (structures info-stream sse-interaction items into 'investor question + comp
+- [Wire · IC Debate](https://agent.finddatatech.cloud/generated/materials/pack-i5n-srpbxufu6wlbh6pfvq.md): Wire IC Debate, a three-skill set: it turns the company-level debate procedure that TradingAgents/FinRobot spell out but never wire up into 
+- [Wire Intel & Sentiment](https://agent.finddatatech.cloud/generated/materials/pack-ivcgxpg9itgnlphxt1khwq.md): Wire intel/sentiment fleet template: intel patrol + sentiment sentinel run in parallel, the chief cross-checks both and composes the morning
+- [Wire · Artifact Build](https://agent.finddatatech.cloud/generated/materials/pack-swpvacoftftfvngmmfotwq.md): Wire artifact build suite: turn data into things visible in the console through conversation — build data-entry forms, build single-record s
+- [Lex · Criminal Defense Suite](https://agent.finddatatech.cloud/generated/materials/pack-uzmqpvazqdmpluqsby-eng.md): Criminal defense suite: a master workflow chains plea/non-prosecution argumentation (review-for-prosecution) with examination outlines (firs
+- [Wire · Industry & Corporate Suite](https://agent.finddatatech.cloud/generated/materials/pack-xozwssrjsa8mxfpkhbjzbw.md): Industry cyclical conditions and chain transmission + corporate fundamentals and financial quality + panel econometrics: industry structure 
+- [Lex Marketing](https://agent.finddatatech.cloud/generated/materials/pack-y99vun6rdws98ock0zan8a.md): Lex marketing content cluster template (content-factory variant): collector (customer scenarios and industry pain points) → synthesizer (mag
+- [Wire Ontology Builder](https://agent.finddatatech.cloud/generated/materials/pack-yt87-2axuu49i123zvyyha.md): A Wire ontology-building cluster for the data plane: profile datasets, draft entity/relation declarations, pass deterministic validation, an
+- [Lex Statute Update](https://agent.finddatatech.cloud/generated/materials/pack-zcot-b6hsnjrttdkr-aunq.md): Lex statute-update cluster template: the monitor scans new/amended/repealed statutes daily (fd-legal-search-mcp authoritative statute face, 
+- [Wire · Strategy Lab](https://agent.finddatatech.cloud/generated/materials/pack-fn7pti9th5jmg3ynqut0w.md): Wire Strategy Lab, a four-skill set: strategy design (weight semantics and universe validation), backtest interpretation (five requirements 
+- [Wire · Sentiment-Driven](https://agent.finddatatech.cloud/generated/materials/pack-amdkhzcbsc3fpsyiqmduoa.md): Wire Sentiment, a three-skill set that turns announcement text into observable dimensions that carry verbatim quotes and can be verified and
+- [Wire · Policy Transmission](https://agent.finddatatech.cloud/generated/materials/pack-ceuuuwyfyh-hiynj6uyqsg.md): Wire Policy Transmission four-skill set: policy identification (ministry items with source_type=ministry; read the body and extract the seve
+- [Wire · Macro Research Suite](https://agent.finddatatech.cloud/generated/materials/pack-cjt2aw1qdgpgbvnifmlgdg.md): Macro cycle and conditions analysis: a six-domain indicator framework (growth / inflation / money & credit / fiscal / external trade / prope
+- [Wire · Industry-Chain Linkage](https://agent.finddatatech.cloud/generated/materials/pack-dxt2hez1z8gibrjmagfjjw.md): Wire industry-chain linkage four-skill suite: chain mapping (multi-level upstream/midstream/downstream segments with representative names an
+- [Baixun · Three-Lens Investment Research](https://agent.finddatatech.cloud/generated/materials/pack-egayyoazvtf0fwllvagaqa.md): A three-role investment research team that examines one question through three independent lenses: macro analysis (the environment), valuati
+- [Wire · Factor Selection](https://agent.finddatatech.cloud/generated/materials/pack-kimcqr9qsygmbxej3cmedg.md): Wire factor-selection four-skill suite: factor library and methodologies (a list of 52 factors in nine categories, with per-factor numerator
+- [Wire · Portfolio Risk](https://agent.finddatatech.cloud/generated/materials/pack-mfyxwufp5ohspcprdhxahw.md): Wire Portfolio Risk, a four-skill set: risk budgeting (per-position and sector caps + proportional reallocation on breach + an explicit iter
+- [Lex · Contract Review Suite](https://agent.finddatatech.cloud/generated/materials/pack-mfaiaxhrvfqjaxpxyiazkq.md): Contract review under PRC (mainland) law: five industry review cards (labor & employment / loans & financing / NDA & confidentiality / sale 
+- [Lex · Labor Law Suite](https://agent.finddatatech.cloud/generated/materials/pack-ndvkyag2nfivxg7osdawxw.md): Full labor-dispute workflow plus two calculators (Lex × Wire convergence): labor arbitration end to end (application / defense / evidence li
+- [Wire · Adaptive Rotation Suite](https://agent.finddatatech.cloud/generated/materials/pack-nol2xkatzp2kierrc-gtka.md): Adaptive industry rotation: from market-regime classification (slow trend/drawdown/volatility Z plus a fast shock check) to group-strength r
+- [Lex · Civil Litigation Suite](https://agent.finddatatech.cloud/generated/materials/pack-rz-ebxhd5astvgcyqlhmqa.md): End-to-end analysis of civil and commercial cases: fixing the claims (S1) → basis of the claim (S2) → defense analysis (S3) → element breakd
+- [Wire · Info Shock](https://agent.finddatatech.cloud/generated/materials/pack-txqaaury2f-kog-rb21bcw.md): Wire Info Shock four-skill set: shock identification (source health first, then cursor pull plus retrieval as two complementary paths, initi
+- [Lex · Legal Research Suite](https://agent.finddatatech.cloud/generated/materials/pack-zxuh617bsfnj1qqk81qy-a.md): A five-tool legal research set: statute and validity checks, similar-case retrieval reports, legal concept maps, five-corpus search with cal
+- [Data Q&A](https://agent.finddatatech.cloud/generated/materials/pack-y2-qsukxv8dzfr-39-0zrq.md): Shared fleet layer: read-only analysis discipline — dataset read faces, every number traceable, scope stated, honest empty results, chart-co
+- [FindData Product Introduction](https://agent.finddatatech.cloud/generated/materials/pack-v8rz8f7e92mrssz92ygnxq.md): External-facing product-introduction team: one front-desk “Product Guide” plus five product-line specialists (FindData·Base / Lex / Wire / F
+- [Facet Platform Ops](https://agent.finddatatech.cloud/generated/materials/pack-ujui1a2cacuw7tg1z1mleg.md): Facet platform-ops cluster: inventory patrol (read-only), daily integrity sentinel that degrades honestly when integrity is not exposed, and
+- [External Finds · Quick Brief](https://agent.finddatatech.cloud/generated/materials/pack-thd65-7sfbt-z0kftvhgiw.md): M4③ bundle acceptance — item two: greenfield merchandising by an external author
+- [Qianmian Assistant](https://agent.finddatatech.cloud/generated/materials/pack-qceiutjzqd49jndtv4qeqw.md): A dedicated assistant for operating Qianmian within Yizuo — browse the pack catalog, read details, run pre-publish validation, and use the p
+- [Xingyan Academy](https://agent.finddatatech.cloud/generated/materials/pack-bq-nloblozeggfkiczktda.md): Xingyan Academy's first release, two lessons: 1) 'Getting Started with Yizuo' — your first deliverable: document library, pack install, a re
+- [Infra Factory Fleet](https://agent.finddatatech.cloud/generated/materials/pack-bkipx4urgfo5te6gjj9ihg.md): Owner-facing three-post fleet: the sentinel audits all registered fleets and infrastructure against countable thresholds and lands a per-ite
+- [AI Company](https://agent.finddatatech.cloud/generated/materials/pack-aofnf6o2lr61lpk8ivvkjw.md): Official team-template showcase: CEO patrol ({{fleetContext}} injected) + three real-data roles (open source / investment) + an assistant re
+- [Avatar Workshop](https://agent.finddatatech.cloud/generated/materials/pack-vcfzzuxpgkirsj5pozigg.md): Chat with the workshop assistant for a few rounds and it turns your knowledge into a publishable AI avatar: it interviews you, organizes you
+- [Eval Sentinel](https://agent.finddatatech.cloud/generated/materials/pack-rl8i99cs5nwuarvbp0d5q.md): Shared fleet layer: quality-gate discipline — gold-set comparison (exact/direction/coverage), KPI reporting, drift escalation, eval reports 
+- [Facet Forge](https://agent.finddatatech.cloud/generated/materials/pack-b99vdq0cfbnqgvmfy5isw.md): The pack-forging workshop for ecosystem creators: turn an idea into an installable pack. 1) Forge — discover the platform's MCP tools and sk
+- [Investment Research Morning Meeting](https://agent.finddatatech.cloud/generated/materials/pack-ymst-hrninwxrllyc8psia.md): Official team template: a three-tier cascading investment-research morning meeting — the Chief Analyst consolidates the macro/sector researc
+- [FindData Avatar](https://agent.finddatatech.cloud/generated/materials/pack-ut-bjmuw5kxad83kimpmlg.md): FindData's corporate AI avatar: want to know about our company, the projects we're working on, or what our products can do — just talk to th
+- [Micro-Business · Retail Signal Pack](https://agent.finddatatech.cloud/generated/materials/pack-uxwchrypeynue1z4qql-tw.md): Retail industry environmental signal pack (install alongside the Micro-Business · Core Checkup Suite): wholesale price reference (Kunming In
+- [Vertical Constructor](https://agent.finddatatech.cloud/generated/materials/pack-o30la92kq1d5uunibgkszq.md): Blueprint construction face: compiles a natural-language vertical brief into a blueprint draft (boundary/sources/fleet/boards/monitoring/acc
+- [Board Contribution](https://agent.finddatatech.cloud/generated/materials/pack-mo3-awe7tf2efvzkqft9ma.md): Shared fleet layer: artifact-write discipline for contribution posts — wire-build references, draft-first, source_ref triplets, column pre-c
+- [Content Factory](https://agent.finddatatech.cloud/generated/materials/pack-mnvipe6mi-fboul1z0tdtw.md): A topic → draft → review pipeline that produces drafts only and leaves finalization to a human; it never auto-publishes.
+- [Micro-Business · Core Checkup Suite](https://agent.finddatatech.cloud/generated/materials/pack-mbcxthtyymoxdhmsuyvddq.md): Operating-checkup core for China's micro-enterprises and sole proprietors: a four-stage workflow (intake interview → single-store accounting
+- [Marketing Site Content](https://agent.finddatatech.cloud/generated/materials/pack-ljtjzwqsr2aox7weftvlpg.md): Marketing content fleet template: topics → draft → review → publish-draft chain (staggered crons) plus an eval sentinel post. Magnitude-only
+- [Wanxing Cluster Assistant](https://agent.finddatatech.cloud/generated/materials/pack-indsrwpgpp2q03i0z3xofa.md): A dedicated assistant for operating the Wanxing cluster from within Yizuo — browse the agent catalog, read details, and check deployment sta
+- [Briefing & Reporting](https://agent.finddatatech.cloud/generated/materials/pack-f8gbhnaeg6c2rdz468mwaa.md): Shared fleet layer: reporting and briefing discipline for brief/chief posts — report_status slots aligned to the fleet KPIs, morning/weekly 
+- [Customer Support Crew](https://agent.finddatatech.cloud/generated/materials/pack-emgw14n8voa1b36lsutxxw.md): Official team template for high-volume support — the support lead sweeps the ticket queue with the team every 4 hours, front-line agents han
+- [Cross-border E-commerce Policy Watch](https://agent.finddatatech.cloud/generated/materials/pack-c8wx14-4h7zj0n19-j4nwq.md): A policy-watch cluster over customs/commerce/tax/port announcement lanes, daily brief with three escalation criteria, board draft contributi
+- [Micro-Business · Catering Signal Pack](https://agent.finddatatech.cloud/generated/materials/pack-bnia5thfddb3og-ft0ckja.md): Catering industry environmental signal pack (install alongside the Micro-Business · Core Checkup Suite): food-cost trend (Dalian Commodity E
+- [Wanxing Fleet Ops](https://agent.finddatatech.cloud/generated/materials/pack-8wjvzznk369wm0ofscdeca.md): Wanxing fleet-ops fleet: health patrol over fleets.db (read-only, names failing members), agent steward over the wanxing read face (degrades
+- [External Finds · Data Quick Look](https://agent.finddatatech.cloud/generated/materials/pack-6kdskgmb-3-86a81vzc6ua.md): M4② greenfield deploy-from-catalog acceptance — a deployable pack by an external author
+- [Morning Intel Station](https://agent.finddatatech.cloud/generated/materials/pack-56opygliv9fyamhmsdijow.md): Official team template: the Daily Morning Intel Station — the tech and market intel agents each sweep their sources every morning, and the i
+- [Intel Gathering](https://agent.finddatatech.cloud/generated/materials/pack-4z4dmrtnbtn2wce-45qpfw.md): Shared fleet layer: collection discipline for intel patrol posts — fd-info references, source-list patrol, read-the-original before summariz
+- [Platform Guides](https://agent.finddatatech.cloud/generated/materials/pack-3luwfbgs3rje5biv9mvbfw.md): Operation and authoring guides for the Finddata platform: 1) the Yizuo and Wanxing manuals — using the AI assistant workbench, installing pa
+- [Text Engine · Screenplay Classics Suite](https://agent.finddatatech.cloud/generated/materials/pack-1majyoowe-sajhzqtnmhbw.md): Retrieval and research over public-domain classic plays: structure analysis (act/scene skeleton and plot progression), character search (lin
+- [Text Engine · Paper Research Suite](https://agent.finddatatech.cloud/generated/materials/pack-1oq93flbzzvgcn2js31ada.md): Retrieval and research over academic papers: literature review (framing the direction and mapping the thread), method tracking (lineage of p
+- [CRM Customer Support Suite](https://agent.finddatatech.cloud/generated/materials/pack-0avynunhmsctaxu7fgs-nq.md): A customer support reception suite for merchants who bring their own Chatwoot: connect your Chatwoot account to read unhandled conversations
+- [Lex Console Companion](https://agent.finddatatech.cloud/generated/materials/pack-xfyxvzonqfelnfigm0djvw.md): A copilot for the Lex console: a five-page tour, reading quota and billing methodology, credential guidance; after an ask-card confirmation 
+- [阿尔法哨兵](https://agent.finddatatech.cloud/generated/materials/facade-packs-4fhjskpibrr2d0-9bxacqq-wx-alpha.md): 向导验收 · 双子 · M4① 部署向导生产验收——双子 agent 勾选与子集部署
+- [数据侦察员](https://agent.finddatatech.cloud/generated/materials/facade-packs-6kdskgmb-3-86a81vzc6ua-data-scout.md): 外部好货 · 数据速览 · M4② 绿地从目录部署验收——外作者的可部署 pack
+- [p2 接待](https://agent.finddatatech.cloud/generated/materials/facade-packs-ibsyc2w-l9uuc1cdt-amhg-reception.md): facet-demo 的分身 · M5.3 构造验收：facet-demo 账号开放门自助发布的个人 AI 分身。
+- [p2 接待](https://agent.finddatatech.cloud/generated/materials/facade-packs-kmpgjvkewly9hgwtjrfzxa-reception.md): p2 的分身 · M5.3 构造验收：新客户 p2walk1025 开放门自助发布的个人 AI 分身——它自己就是旅程记录。
+- [寻数分身](https://agent.finddatatech.cloud/generated/materials/facade-packs-ut-bjmuw5kxad83kimpmlg-reception.md): 想了解寻数（FindData）？和这个接待角色聊：企业是谁、项目在做什么、产品有什么能力。回答出自随版本冻结的策展语料，答不了的如实说。
+- [寻数分身](https://agent.finddatatech.cloud/generated/materials/facade-packs-ut-bjmuw5kxad83kimpmlg-reception-dde7ec3a6.md): 想了解寻数（FindData）？和这个接待角色聊：企业是谁、项目在做什么、产品有什么能力。回答出自随版本冻结的策展语料，答不了的如实说。
+- [识律控制台伴随助手](https://agent.finddatatech.cloud/generated/materials/facade-packs-xfyxvzonqfelnfigm0djvw-lex-console-copilot.md): 识律控制台副驾：导览、配额账单解读、凭据指引、经确认的页面导航。
+- [分身工坊](https://agent.finddatatech.cloud/generated/materials/facade-packs--vcfzzuxpgkirsj5pozigg-builder.md): 想拥有自己的 AI 分身？和工坊聊几句：它采访你、整理语料、生成可直接发布的 manifest 和发布指引。
+- [谦面专家](https://agent.finddatatech.cloud/generated/materials/facade-packs-btnrv2p-jhmczqqxcf0gia-intro-facet.md): 谦面产品线：千人千面，人人搭建自己的文本与数据 AI 工作流，从 DAAS 平台起步。
+- [产品向导](https://agent.finddatatech.cloud/generated/materials/facade-packs-btnrv2p-jhmczqqxcf0gia-intro-guide.md): 公司前台。介绍 FindData 全貌、跨产品线关系与使命；法律、数据、工作流、智能体互联、平台部署等话题负责分诊到对应产品线专家。
+- [识律专家](https://agent.finddatatech.cloud/generated/materials/facade-packs-btnrv2p-jhmczqqxcf0gia-intro-lex.md): 识律产品线：让法律被读懂。LawBench 合同智能、微调法律模型、法律语料库。
+- [柏讯专家](https://agent.finddatatech.cloud/generated/materials/facade-packs-btnrv2p-jhmczqqxcf0gia-intro-wire.md): 柏讯产品线：让 AI 替你读世界。开放数据本体、MCP 数据服务与背后的爬虫平台。
+- [壹座专家](https://agent.finddatatech.cloud/generated/materials/facade-packs-btnrv2p-jhmczqqxcf0gia-intro-yizuo.md): 壹座产品线：智能体团队执行平台。组合、管理、迭代并分享你自己的智能体团队；开源（MIT），覆盖网页、小程序与桌面端，支持私有化部署。
+- [宏观经济研究员](https://agent.finddatatech.cloud/generated/materials/facade-packs-egayyoazvtf0fwllvagaqa-pack-wire-macro-analyst.md): 柏讯 · 投研三镜头 · 三员投研团队：宏观分析（环境）、估值分析（价值）、投委会多空质询（博弈）三个独立镜头审读同一问题。集群任务下扇出聚合；单聊可切换任一角色。舆情/风控等更多角色可入动态集群叠加。
+- [股票估值分析师](https://agent.finddatatech.cloud/generated/materials/facade-packs-egayyoazvtf0fwllvagaqa-pack-wire-valuation-analyst.md): 柏讯 · 投研三镜头 · 三员投研团队：宏观分析（环境）、估值分析（价值）、投委会多空质询（博弈）三个独立镜头审读同一问题。集群任务下扇出聚合；单聊可切换任一角色。舆情/风控等更多角色可入动态集群叠加。
+- [市场快讯速览员](https://agent.finddatatech.cloud/generated/materials/facade-packs-ev5e51eth7e5mcvydrl9rg-market-flash-briefer.md): 发来一段财经新闻/公告/评论，收回一页固定版式速览：三行结论、五个要点、一处存疑。
+- [萬星 Planner](https://agent.finddatatech.cloud/generated/materials/facade-packs-i262i0tuwtf9wslex12cow-mission-planner.md): 萬星 Planner · Mission Planner · M2 任务拆解执行体：消费任务定义面的派发契约——一句话目标 → 拆解计划（search_agents 实查步骤 agent）→ 按状态机串行驱动步骤 → 终态报告与通知。节奏自巡检驱动多回合推进。
+- [演示接待](https://agent.finddatatech.cloud/generated/materials/facade-packs-mjbgihphn1sfrmrhfat8cq-reception.md): 演示分身 · M5.2 开门首验：platform-test（非 creator）经开放发布门发布的第一个 AI 分身。语料为演示占位——正式演示内容随后续版本补充。
+- [文档工坊 · 报告撰写](https://agent.finddatatech.cloud/generated/materials/facade-packs-qnhd7b3j1-hkddkzzq-fuq-doc-report-writer.md): 文档工坊 · Office 文档生成与编辑：商务报告（docx）、数据工作簿（xlsx）、汇报演示（pptx）三场景成稿，配验证过的封面配方、中式设计系统与生成后质检 postcheck；支持编辑用户上传的原件（fetch_document_file 取原件）。回合内免费。
+- [简报写手](https://agent.finddatatech.cloud/generated/materials/facade-packs-thd65-7sfbt-z0kftvhgiw-brief-writer.md): 外部好货 · 简报快写 · M4③ 套装验收——第二件外作者绿地带货
+- [演示分析师](https://agent.finddatatech.cloud/generated/materials/facade-packs-vtdpsnmtw6oq9i99mbhbdw-pack-demo-fingpt.md): 部署演示 · FingPt 分析师 · add-a2a-agent-serving 首个带服务契约的演示包：一个技能 + 一个可部署角色
+- [一键流验收](https://agent.finddatatech.cloud/generated/materials/facade-packs-vz-kdoitzsqfgkmp5undxg-agent.md): 一键流验收 · S4.1 一键流线上验收：preset → 发布 → 部署（add-facet-platform）
+- [SPY_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-1.md): SPY_ma5（yfinance）
+- [SPY_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-2.md): SPY_ma10（yfinance）
+- [SPY_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-3.md): SPY_ma20（yfinance）
+- [SPY_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-4.md): SPY_rsi14（yfinance）
+- [SPY_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-5.md): SPY_volstd20（yfinance）
+- [SPY_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-6.md): SPY_high20（yfinance）
+- [QQQ_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-7.md): QQQ_ma5（yfinance）
+- [QQQ_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-8.md): QQQ_ma10（yfinance）
+- [QQQ_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-9.md): QQQ_ma20（yfinance）
+- [QQQ_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-10.md): QQQ_rsi14（yfinance）
+- [QQQ_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-11.md): QQQ_volstd20（yfinance）
+- [QQQ_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-12.md): QQQ_high20（yfinance）
+- [AAPL_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-13.md): AAPL_ma5（yfinance）
+- [AAPL_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-14.md): AAPL_ma10（yfinance）
+- [AAPL_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-15.md): AAPL_ma20（yfinance）
+- [AAPL_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-16.md): AAPL_rsi14（yfinance）
+- [AAPL_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-17.md): AAPL_volstd20（yfinance）
+- [AAPL_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-18.md): AAPL_high20（yfinance）
+- [MSFT_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-19.md): MSFT_ma5（yfinance）
+- [MSFT_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-20.md): MSFT_ma10（yfinance）
+- [MSFT_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-21.md): MSFT_ma20（yfinance）
+- [MSFT_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-22.md): MSFT_rsi14（yfinance）
+- [MSFT_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-23.md): MSFT_volstd20（yfinance）
+- [MSFT_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-24.md): MSFT_high20（yfinance）
+- [NVDA_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-25.md): NVDA_ma5（yfinance）
+- [NVDA_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-26.md): NVDA_ma10（yfinance）
+- [NVDA_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-27.md): NVDA_ma20（yfinance）
+- [NVDA_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-28.md): NVDA_rsi14（yfinance）
+- [NVDA_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-29.md): NVDA_volstd20（yfinance）
+- [NVDA_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-30.md): NVDA_high20（yfinance）
+- [AMZN_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-31.md): AMZN_ma5（yfinance）
+- [AMZN_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-32.md): AMZN_ma10（yfinance）
+- [AMZN_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-33.md): AMZN_ma20（yfinance）
+- [AMZN_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-34.md): AMZN_rsi14（yfinance）
+- [AMZN_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-35.md): AMZN_volstd20（yfinance）
+- [AMZN_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-36.md): AMZN_high20（yfinance）
+- [GOOGL_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-37.md): GOOGL_ma5（yfinance）
+- [GOOGL_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-38.md): GOOGL_ma10（yfinance）
+- [GOOGL_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-39.md): GOOGL_ma20（yfinance）
+- [GOOGL_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-40.md): GOOGL_rsi14（yfinance）
+- [GOOGL_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-41.md): GOOGL_volstd20（yfinance）
+- [GOOGL_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-42.md): GOOGL_high20（yfinance）
+- [META_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-43.md): META_ma5（yfinance）
+- [META_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-44.md): META_ma10（yfinance）
+- [META_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-45.md): META_ma20（yfinance）
+- [META_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-46.md): META_rsi14（yfinance）
+- [META_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-47.md): META_volstd20（yfinance）
+- [META_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-48.md): META_high20（yfinance）
+- [TSLA_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-49.md): TSLA_ma5（yfinance）
+- [TSLA_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-50.md): TSLA_ma10（yfinance）
+- [TSLA_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-51.md): TSLA_ma20（yfinance）
+- [TSLA_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-52.md): TSLA_rsi14（yfinance）
+- [TSLA_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-53.md): TSLA_volstd20（yfinance）
+- [TSLA_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-54.md): TSLA_high20（yfinance）
+- [AVGO_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-55.md): AVGO_ma5（yfinance）
+- [AVGO_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-56.md): AVGO_ma10（yfinance）
+- [AVGO_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-57.md): AVGO_ma20（yfinance）
+- [AVGO_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-58.md): AVGO_rsi14（yfinance）
+- [AVGO_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-59.md): AVGO_volstd20（yfinance）
+- [AVGO_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-60.md): AVGO_high20（yfinance）
+- [AMD_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-61.md): AMD_ma5（yfinance）
+- [AMD_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-62.md): AMD_ma10（yfinance）
+- [AMD_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-63.md): AMD_ma20（yfinance）
+- [AMD_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-64.md): AMD_rsi14（yfinance）
+- [AMD_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-65.md): AMD_volstd20（yfinance）
+- [AMD_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-66.md): AMD_high20（yfinance）
+- [NFLX_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-67.md): NFLX_ma5（yfinance）
+- [NFLX_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-68.md): NFLX_ma10（yfinance）
+- [NFLX_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-69.md): NFLX_ma20（yfinance）
+- [NFLX_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-70.md): NFLX_rsi14（yfinance）
+- [NFLX_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-71.md): NFLX_volstd20（yfinance）
+- [NFLX_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-72.md): NFLX_high20（yfinance）
+- [sma30_yield_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-73.md): sma30_yield_1_year（massive）
+- [ema20_yield_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-74.md): ema20_yield_1_year（massive）
+- [pct_change_yield_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-75.md): pct_change_yield_1_year（massive）
+- [zscore30_yield_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-76.md): zscore30_yield_1_year（massive）
+- [rolling_std30_yield_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-77.md): rolling_std30_yield_1_year（massive）
+- [level_yield_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-78.md): level_yield_1_year（massive）
+- [sma30_yield_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-79.md): sma30_yield_5_year（massive）
+- [ema20_yield_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-80.md): ema20_yield_5_year（massive）
+- [pct_change_yield_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-81.md): pct_change_yield_5_year（massive）
+- [zscore30_yield_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-82.md): zscore30_yield_5_year（massive）
+- [rolling_std30_yield_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-83.md): rolling_std30_yield_5_year（massive）
+- [level_yield_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-84.md): level_yield_5_year（massive）
+- [sma30_yield_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-85.md): sma30_yield_10_year（massive）
+- [ema20_yield_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-86.md): ema20_yield_10_year（massive）
+- [pct_change_yield_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-87.md): pct_change_yield_10_year（massive）
+- [zscore30_yield_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-88.md): zscore30_yield_10_year（massive）
+- [rolling_std30_yield_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-89.md): rolling_std30_yield_10_year（massive）
+- [level_yield_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-90.md): level_yield_10_year（massive）
+- [sma12_cpi](https://agent.finddatatech.cloud/generated/materials/official-data-ind-91.md): sma12_cpi（massive）
+- [pct_change_cpi](https://agent.finddatatech.cloud/generated/materials/official-data-ind-92.md): pct_change_cpi（massive）
+- [zscore12_cpi](https://agent.finddatatech.cloud/generated/materials/official-data-ind-93.md): zscore12_cpi（massive）
+- [level_cpi](https://agent.finddatatech.cloud/generated/materials/official-data-ind-94.md): level_cpi（massive）
+- [sma12_model_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-95.md): sma12_model_1_year（massive）
+- [pct_change_model_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-96.md): pct_change_model_1_year（massive）
+- [zscore12_model_1_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-97.md): zscore12_model_1_year（massive）
+- [sma12_model_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-98.md): sma12_model_5_year（massive）
+- [pct_change_model_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-99.md): pct_change_model_5_year（massive）
+- [zscore12_model_5_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-100.md): zscore12_model_5_year（massive）
+- [sma12_model_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-101.md): sma12_model_10_year（massive）
+- [pct_change_model_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-102.md): pct_change_model_10_year（massive）
+- [zscore12_model_10_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-103.md): zscore12_model_10_year（massive）
+- [sma12_model_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-104.md): sma12_model_30_year（massive）
+- [pct_change_model_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-105.md): pct_change_model_30_year（massive）
+- [zscore12_model_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-106.md): zscore12_model_30_year（massive）
+- [sma12_unemployment_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-107.md): sma12_unemployment_rate（massive）
+- [pct_change_unemployment_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-108.md): pct_change_unemployment_rate（massive）
+- [zscore12_unemployment_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-109.md): zscore12_unemployment_rate（massive）
+- [level_unemployment_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-110.md): level_unemployment_rate（massive）
+- [sma12_labor_force_participation_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-111.md): sma12_labor_force_participation_rate（massive）
+- [pct_change_labor_force_participation_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-112.md): pct_change_labor_force_participation_rate（massive）
+- [zscore12_labor_force_participation_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-113.md): zscore12_labor_force_participation_rate（massive）
+- [level_labor_force_participation_rate](https://agent.finddatatech.cloud/generated/materials/official-data-ind-114.md): level_labor_force_participation_rate（massive）
+- [sma30_yield_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-115.md): sma30_yield_30_year（massive）
+- [ema20_yield_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-116.md): ema20_yield_30_year（massive）
+- [pct_change_yield_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-117.md): pct_change_yield_30_year（massive）
+- [zscore30_yield_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-118.md): zscore30_yield_30_year（massive）
+- [rolling_std30_yield_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-119.md): rolling_std30_yield_30_year（massive）
+- [level_yield_30_year](https://agent.finddatatech.cloud/generated/materials/official-data-ind-120.md): level_yield_30_year（massive）
+- [sma12_cpi_core](https://agent.finddatatech.cloud/generated/materials/official-data-ind-121.md): sma12_cpi_core（massive）
+- [pct_change_cpi_core](https://agent.finddatatech.cloud/generated/materials/official-data-ind-122.md): pct_change_cpi_core（massive）
+- [zscore12_cpi_core](https://agent.finddatatech.cloud/generated/materials/official-data-ind-123.md): zscore12_cpi_core（massive）
+- [level_cpi_core](https://agent.finddatatech.cloud/generated/materials/official-data-ind-124.md): level_cpi_core（massive）
+- [sma12_pce](https://agent.finddatatech.cloud/generated/materials/official-data-ind-125.md): sma12_pce（massive）
+- [pct_change_pce](https://agent.finddatatech.cloud/generated/materials/official-data-ind-126.md): pct_change_pce（massive）
+- [zscore12_pce](https://agent.finddatatech.cloud/generated/materials/official-data-ind-127.md): zscore12_pce（massive）
+- [level_pce](https://agent.finddatatech.cloud/generated/materials/official-data-ind-128.md): level_pce（massive）
+- [sma12_job_openings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-129.md): sma12_job_openings（massive）
+- [pct_change_job_openings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-130.md): pct_change_job_openings（massive）
+- [zscore12_job_openings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-131.md): zscore12_job_openings（massive）
+- [level_job_openings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-132.md): level_job_openings（massive）
+- [sma12_avg_hourly_earnings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-133.md): sma12_avg_hourly_earnings（massive）
+- [pct_change_avg_hourly_earnings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-134.md): pct_change_avg_hourly_earnings（massive）
+- [zscore12_avg_hourly_earnings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-135.md): zscore12_avg_hourly_earnings（massive）
+- [level_avg_hourly_earnings](https://agent.finddatatech.cloud/generated/materials/official-data-ind-136.md): level_avg_hourly_earnings（massive）
+- [gdp_level_usd](https://agent.finddatatech.cloud/generated/materials/official-data-ind-137.md): gdp_level_usd（wbdata）
+- [population_total](https://agent.finddatatech.cloud/generated/materials/official-data-ind-138.md): population_total（wbdata）
+- [gdp_growth_annual_pct](https://agent.finddatatech.cloud/generated/materials/official-data-ind-139.md): gdp_growth_annual_pct（wbdata）
+- [COST_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-140.md): COST_ma5（yfinance）
+- [COST_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-141.md): COST_ma10（yfinance）
+- [COST_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-142.md): COST_ma20（yfinance）
+- [COST_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-143.md): COST_rsi14（yfinance）
+- [COST_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-144.md): COST_volstd20（yfinance）
+- [COST_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-145.md): COST_high20（yfinance）
+- [ADBE_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-146.md): ADBE_ma5（yfinance）
+- [ADBE_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-147.md): ADBE_ma10（yfinance）
+- [ADBE_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-148.md): ADBE_ma20（yfinance）
+- [ADBE_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-149.md): ADBE_rsi14（yfinance）
+- [ADBE_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-150.md): ADBE_volstd20（yfinance）
+- [ADBE_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-151.md): ADBE_high20（yfinance）
+- [CSCO_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-152.md): CSCO_ma5（yfinance）
+- [CSCO_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-153.md): CSCO_ma10（yfinance）
+- [CSCO_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-154.md): CSCO_ma20（yfinance）
+- [CSCO_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-155.md): CSCO_rsi14（yfinance）
+- [CSCO_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-156.md): CSCO_volstd20（yfinance）
+- [CSCO_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-157.md): CSCO_high20（yfinance）
+- [INTU_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-158.md): INTU_ma5（yfinance）
+- [INTU_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-159.md): INTU_ma10（yfinance）
+- [INTU_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-160.md): INTU_ma20（yfinance）
+- [INTU_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-161.md): INTU_rsi14（yfinance）
+- [INTU_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-162.md): INTU_volstd20（yfinance）
+- [INTU_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-163.md): INTU_high20（yfinance）
+- [NOW_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-164.md): NOW_ma5（yfinance）
+- [NOW_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-165.md): NOW_ma10（yfinance）
+- [NOW_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-166.md): NOW_ma20（yfinance）
+- [NOW_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-167.md): NOW_rsi14（yfinance）
+- [NOW_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-168.md): NOW_volstd20（yfinance）
+- [NOW_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-169.md): NOW_high20（yfinance）
+- [ORCL_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-170.md): ORCL_ma5（yfinance）
+- [ORCL_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-171.md): ORCL_ma10（yfinance）
+- [ORCL_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-172.md): ORCL_ma20（yfinance）
+- [ORCL_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-173.md): ORCL_rsi14（yfinance）
+- [ORCL_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-174.md): ORCL_volstd20（yfinance）
+- [ORCL_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-175.md): ORCL_high20（yfinance）
+- [CRM_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-176.md): CRM_ma5（yfinance）
+- [CRM_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-177.md): CRM_ma10（yfinance）
+- [CRM_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-178.md): CRM_ma20（yfinance）
+- [CRM_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-179.md): CRM_rsi14（yfinance）
+- [CRM_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-180.md): CRM_volstd20（yfinance）
+- [CRM_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-181.md): CRM_high20（yfinance）
+- [PEP_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-182.md): PEP_ma5（yfinance）
+- [PEP_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-183.md): PEP_ma10（yfinance）
+- [PEP_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-184.md): PEP_ma20（yfinance）
+- [PEP_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-185.md): PEP_rsi14（yfinance）
+- [PEP_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-186.md): PEP_volstd20（yfinance）
+- [PEP_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-187.md): PEP_high20（yfinance）
+- [JPM_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-188.md): JPM_ma5（yfinance）
+- [JPM_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-189.md): JPM_ma10（yfinance）
+- [JPM_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-190.md): JPM_ma20（yfinance）
+- [JPM_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-191.md): JPM_rsi14（yfinance）
+- [JPM_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-192.md): JPM_volstd20（yfinance）
+- [JPM_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-193.md): JPM_high20（yfinance）
+- [V_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-194.md): V_ma5（yfinance）
+- [V_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-195.md): V_ma10（yfinance）
+- [V_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-196.md): V_ma20（yfinance）
+- [V_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-197.md): V_rsi14（yfinance）
+- [V_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-198.md): V_volstd20（yfinance）
+- [V_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-199.md): V_high20（yfinance）
+- [MA_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-200.md): MA_ma5（yfinance）
+- [MA_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-201.md): MA_ma10（yfinance）
+- [MA_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-202.md): MA_ma20（yfinance）
+- [MA_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-203.md): MA_rsi14（yfinance）
+- [MA_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-204.md): MA_volstd20（yfinance）
+- [MA_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-205.md): MA_high20（yfinance）
+- [LLY_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-206.md): LLY_ma5（yfinance）
+- [LLY_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-207.md): LLY_ma10（yfinance）
+- [LLY_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-208.md): LLY_ma20（yfinance）
+- [LLY_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-209.md): LLY_rsi14（yfinance）
+- [LLY_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-210.md): LLY_volstd20（yfinance）
+- [LLY_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-211.md): LLY_high20（yfinance）
+- [UNH_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-212.md): UNH_ma5（yfinance）
+- [UNH_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-213.md): UNH_ma10（yfinance）
+- [UNH_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-214.md): UNH_ma20（yfinance）
+- [UNH_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-215.md): UNH_rsi14（yfinance）
+- [UNH_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-216.md): UNH_volstd20（yfinance）
+- [UNH_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-217.md): UNH_high20（yfinance）
+- [HD_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-218.md): HD_ma5（yfinance）
+- [HD_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-219.md): HD_ma10（yfinance）
+- [HD_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-220.md): HD_ma20（yfinance）
+- [HD_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-221.md): HD_rsi14（yfinance）
+- [HD_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-222.md): HD_volstd20（yfinance）
+- [HD_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-223.md): HD_high20（yfinance）
+- [WMT_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-224.md): WMT_ma5（yfinance）
+- [WMT_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-225.md): WMT_ma10（yfinance）
+- [WMT_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-226.md): WMT_ma20（yfinance）
+- [WMT_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-227.md): WMT_rsi14（yfinance）
+- [WMT_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-228.md): WMT_volstd20（yfinance）
+- [WMT_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-229.md): WMT_high20（yfinance）
+- [BAC_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-230.md): BAC_ma5（yfinance）
+- [BAC_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-231.md): BAC_ma10（yfinance）
+- [BAC_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-232.md): BAC_ma20（yfinance）
+- [BAC_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-233.md): BAC_rsi14（yfinance）
+- [BAC_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-234.md): BAC_volstd20（yfinance）
+- [BAC_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-235.md): BAC_high20（yfinance）
+- [ABBV_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-236.md): ABBV_ma5（yfinance）
+- [ABBV_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-237.md): ABBV_ma10（yfinance）
+- [ABBV_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-238.md): ABBV_ma20（yfinance）
+- [ABBV_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-239.md): ABBV_rsi14（yfinance）
+- [ABBV_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-240.md): ABBV_volstd20（yfinance）
+- [ABBV_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-241.md): ABBV_high20（yfinance）
+- [KO_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-242.md): KO_ma5（yfinance）
+- [KO_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-243.md): KO_ma10（yfinance）
+- [KO_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-244.md): KO_ma20（yfinance）
+- [KO_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-245.md): KO_rsi14（yfinance）
+- [KO_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-246.md): KO_volstd20（yfinance）
+- [KO_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-247.md): KO_high20（yfinance）
+- [XOM_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-248.md): XOM_ma5（yfinance）
+- [XOM_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-249.md): XOM_ma10（yfinance）
+- [XOM_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-250.md): XOM_ma20（yfinance）
+- [XOM_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-251.md): XOM_rsi14（yfinance）
+- [XOM_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-252.md): XOM_volstd20（yfinance）
+- [XOM_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-253.md): XOM_high20（yfinance）
+- [CVX_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-254.md): CVX_ma5（yfinance）
+- [CVX_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-255.md): CVX_ma10（yfinance）
+- [CVX_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-256.md): CVX_ma20（yfinance）
+- [CVX_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-257.md): CVX_rsi14（yfinance）
+- [CVX_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-258.md): CVX_volstd20（yfinance）
+- [CVX_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-259.md): CVX_high20（yfinance）
+- [AXON_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-260.md): AXON_ma5（yfinance）
+- [AXON_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-261.md): AXON_ma10（yfinance）
+- [AXON_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-262.md): AXON_ma20（yfinance）
+- [AXON_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-263.md): AXON_rsi14（yfinance）
+- [AXON_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-264.md): AXON_volstd20（yfinance）
+- [AXON_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-265.md): AXON_high20（yfinance）
+- [CBOE_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-266.md): CBOE_ma5（yfinance）
+- [CBOE_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-267.md): CBOE_ma10（yfinance）
+- [CBOE_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-268.md): CBOE_ma20（yfinance）
+- [CBOE_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-269.md): CBOE_rsi14（yfinance）
+- [CBOE_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-270.md): CBOE_volstd20（yfinance）
+- [CBOE_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-271.md): CBOE_high20（yfinance）
+- [DDOG_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-272.md): DDOG_ma5（yfinance）
+- [DDOG_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-273.md): DDOG_ma10（yfinance）
+- [DDOG_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-274.md): DDOG_ma20（yfinance）
+- [DDOG_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-275.md): DDOG_rsi14（yfinance）
+- [DDOG_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-276.md): DDOG_volstd20（yfinance）
+- [DDOG_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-277.md): DDOG_high20（yfinance）
+- [DELL_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-278.md): DELL_ma5（yfinance）
+- [DELL_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-279.md): DELL_ma10（yfinance）
+- [DELL_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-280.md): DELL_ma20（yfinance）
+- [DELL_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-281.md): DELL_rsi14（yfinance）
+- [DELL_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-282.md): DELL_volstd20（yfinance）
+- [DELL_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-283.md): DELL_high20（yfinance）
+- [FTNT_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-284.md): FTNT_ma5（yfinance）
+- [FTNT_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-285.md): FTNT_ma10（yfinance）
+- [FTNT_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-286.md): FTNT_ma20（yfinance）
+- [FTNT_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-287.md): FTNT_rsi14（yfinance）
+- [FTNT_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-288.md): FTNT_volstd20（yfinance）
+- [FTNT_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-289.md): FTNT_high20（yfinance）
+- [HUM_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-290.md): HUM_ma5（yfinance）
+- [HUM_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-291.md): HUM_ma10（yfinance）
+- [HUM_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-292.md): HUM_ma20（yfinance）
+- [HUM_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-293.md): HUM_rsi14（yfinance）
+- [HUM_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-294.md): HUM_volstd20（yfinance）
+- [HUM_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-295.md): HUM_high20（yfinance）
+- [MPC_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-296.md): MPC_ma5（yfinance）
+- [MPC_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-297.md): MPC_ma10（yfinance）
+- [MPC_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-298.md): MPC_ma20（yfinance）
+- [MPC_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-299.md): MPC_rsi14（yfinance）
+- [MPC_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-300.md): MPC_volstd20（yfinance）
+- [MPC_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-301.md): MPC_high20（yfinance）
+- [MRNA_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-302.md): MRNA_ma5（yfinance）
+- [MRNA_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-303.md): MRNA_ma10（yfinance）
+- [MRNA_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-304.md): MRNA_ma20（yfinance）
+- [MRNA_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-305.md): MRNA_rsi14（yfinance）
+- [MRNA_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-306.md): MRNA_volstd20（yfinance）
+- [MRNA_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-307.md): MRNA_high20（yfinance）
+- [MRVL_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-308.md): MRVL_ma5（yfinance）
+- [MRVL_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-309.md): MRVL_ma10（yfinance）
+- [MRVL_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-310.md): MRVL_ma20（yfinance）
+- [MRVL_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-311.md): MRVL_rsi14（yfinance）
+- [MRVL_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-312.md): MRVL_volstd20（yfinance）
+- [MRVL_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-313.md): MRVL_high20（yfinance）
+- [MU_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-314.md): MU_ma5（yfinance）
+- [MU_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-315.md): MU_ma10（yfinance）
+- [MU_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-316.md): MU_ma20（yfinance）
+- [MU_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-317.md): MU_rsi14（yfinance）
+- [MU_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-318.md): MU_volstd20（yfinance）
+- [MU_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-319.md): MU_high20（yfinance）
+- [PANW_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-320.md): PANW_ma5（yfinance）
+- [PANW_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-321.md): PANW_ma10（yfinance）
+- [PANW_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-322.md): PANW_ma20（yfinance）
+- [PANW_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-323.md): PANW_rsi14（yfinance）
+- [PANW_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-324.md): PANW_volstd20（yfinance）
+- [PANW_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-325.md): PANW_high20（yfinance）
+- [PSX_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-326.md): PSX_ma5（yfinance）
+- [PSX_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-327.md): PSX_ma10（yfinance）
+- [PSX_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-328.md): PSX_ma20（yfinance）
+- [PSX_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-329.md): PSX_rsi14（yfinance）
+- [PSX_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-330.md): PSX_volstd20（yfinance）
+- [PSX_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-331.md): PSX_high20（yfinance）
+- [PYPL_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-332.md): PYPL_ma5（yfinance）
+- [PYPL_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-333.md): PYPL_ma10（yfinance）
+- [PYPL_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-334.md): PYPL_ma20（yfinance）
+- [PYPL_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-335.md): PYPL_rsi14（yfinance）
+- [PYPL_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-336.md): PYPL_volstd20（yfinance）
+- [PYPL_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-337.md): PYPL_high20（yfinance）
+- [SNDK_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-338.md): SNDK_ma5（yfinance）
+- [SNDK_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-339.md): SNDK_ma10（yfinance）
+- [SNDK_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-340.md): SNDK_ma20（yfinance）
+- [SNDK_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-341.md): SNDK_rsi14（yfinance）
+- [SNDK_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-342.md): SNDK_volstd20（yfinance）
+- [SNDK_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-343.md): SNDK_high20（yfinance）
+- [STX_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-344.md): STX_ma5（yfinance）
+- [STX_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-345.md): STX_ma10（yfinance）
+- [STX_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-346.md): STX_ma20（yfinance）
+- [STX_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-347.md): STX_rsi14（yfinance）
+- [STX_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-348.md): STX_volstd20（yfinance）
+- [STX_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-349.md): STX_high20（yfinance）
+- [TECH_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-350.md): TECH_ma5（yfinance）
+- [TECH_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-351.md): TECH_ma10（yfinance）
+- [TECH_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-352.md): TECH_ma20（yfinance）
+- [TECH_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-353.md): TECH_rsi14（yfinance）
+- [TECH_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-354.md): TECH_volstd20（yfinance）
+- [TECH_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-355.md): TECH_high20（yfinance）
+- [SMCI_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-356.md): SMCI_ma5（yfinance）
+- [SMCI_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-357.md): SMCI_ma10（yfinance）
+- [SMCI_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-358.md): SMCI_ma20（yfinance）
+- [SMCI_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-359.md): SMCI_rsi14（yfinance）
+- [SMCI_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-360.md): SMCI_volstd20（yfinance）
+- [SMCI_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-361.md): SMCI_high20（yfinance）
+- [ABT_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-362.md): ABT_ma5（yfinance）
+- [ABT_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-363.md): ABT_ma10（yfinance）
+- [ABT_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-364.md): ABT_ma20（yfinance）
+- [ABT_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-365.md): ABT_rsi14（yfinance）
+- [ABT_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-366.md): ABT_volstd20（yfinance）
+- [ABT_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-367.md): ABT_high20（yfinance）
+- [HPE_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-368.md): HPE_ma5（yfinance）
+- [HPE_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-369.md): HPE_ma10（yfinance）
+- [HPE_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-370.md): HPE_ma20（yfinance）
+- [HPE_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-371.md): HPE_rsi14（yfinance）
+- [HPE_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-372.md): HPE_volstd20（yfinance）
+- [HPE_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-373.md): HPE_high20（yfinance）
+- [VLO_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-374.md): VLO_ma5（yfinance）
+- [VLO_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-375.md): VLO_ma10（yfinance）
+- [VLO_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-376.md): VLO_ma20（yfinance）
+- [VLO_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-377.md): VLO_rsi14（yfinance）
+- [VLO_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-378.md): VLO_volstd20（yfinance）
+- [VLO_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-379.md): VLO_high20（yfinance）
+- [TRV_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-380.md): TRV_ma5（yfinance）
+- [TRV_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-381.md): TRV_ma10（yfinance）
+- [TRV_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-382.md): TRV_ma20（yfinance）
+- [TRV_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-383.md): TRV_rsi14（yfinance）
+- [TRV_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-384.md): TRV_volstd20（yfinance）
+- [TRV_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-385.md): TRV_high20（yfinance）
+- [CTAS_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-386.md): CTAS_ma5（yfinance）
+- [CTAS_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-387.md): CTAS_ma10（yfinance）
+- [CTAS_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-388.md): CTAS_ma20（yfinance）
+- [CTAS_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-389.md): CTAS_rsi14（yfinance）
+- [CTAS_volstd20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-390.md): CTAS_volstd20（yfinance）
+- [CTAS_high20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-391.md): CTAS_high20（yfinance）
+- [600519_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-392.md): 600519_close（astock）
+- [600519_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-393.md): 600519_ma5（astock）
+- [600519_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-394.md): 600519_ma10（astock）
+- [600519_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-395.md): 600519_ma20（astock）
+- [600519_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-396.md): 600519_rsi14（astock）
+- [000333_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-397.md): 000333_close（astock）
+- [000333_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-398.md): 000333_ma5（astock）
+- [000333_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-399.md): 000333_ma10（astock）
+- [000333_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-400.md): 000333_ma20（astock）
+- [000333_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-401.md): 000333_rsi14（astock）
+- [600036_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-402.md): 600036_close（astock）
+- [600036_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-403.md): 600036_ma5（astock）
+- [600036_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-404.md): 600036_ma10（astock）
+- [600036_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-405.md): 600036_ma20（astock）
+- [600036_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-406.md): 600036_rsi14（astock）
+- [000858_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-407.md): 000858_close（astock）
+- [000858_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-408.md): 000858_ma5（astock）
+- [000858_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-409.md): 000858_ma10（astock）
+- [000858_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-410.md): 000858_ma20（astock）
+- [000858_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-411.md): 000858_rsi14（astock）
+- [601318_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-412.md): 601318_close（astock）
+- [601318_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-413.md): 601318_ma5（astock）
+- [601318_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-414.md): 601318_ma10（astock）
+- [601318_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-415.md): 601318_ma20（astock）
+- [601318_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-416.md): 601318_rsi14（astock）
+- [000651_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-417.md): 000651_close（astock）
+- [000651_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-418.md): 000651_ma5（astock）
+- [000651_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-419.md): 000651_ma10（astock）
+- [000651_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-420.md): 000651_ma20（astock）
+- [000651_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-421.md): 000651_rsi14（astock）
+- [600276_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-422.md): 600276_close（astock）
+- [600276_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-423.md): 600276_ma5（astock）
+- [600276_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-424.md): 600276_ma10（astock）
+- [600276_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-425.md): 600276_ma20（astock）
+- [600276_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-426.md): 600276_rsi14（astock）
+- [002415_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-427.md): 002415_close（astock）
+- [002415_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-428.md): 002415_ma5（astock）
+- [002415_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-429.md): 002415_ma10（astock）
+- [002415_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-430.md): 002415_ma20（astock）
+- [002415_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-431.md): 002415_rsi14（astock）
+- [601012_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-432.md): 601012_close（astock）
+- [601012_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-433.md): 601012_ma5（astock）
+- [601012_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-434.md): 601012_ma10（astock）
+- [601012_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-435.md): 601012_ma20（astock）
+- [601012_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-436.md): 601012_rsi14（astock）
+- [600030_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-437.md): 600030_close（astock）
+- [600030_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-438.md): 600030_ma5（astock）
+- [600030_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-439.md): 600030_ma10（astock）
+- [600030_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-440.md): 600030_ma20（astock）
+- [600030_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-441.md): 600030_rsi14（astock）
+- [000001_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-442.md): 000001_close（astock）
+- [000001_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-443.md): 000001_ma5（astock）
+- [000001_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-444.md): 000001_ma10（astock）
+- [000001_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-445.md): 000001_ma20（astock）
+- [000001_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-446.md): 000001_rsi14（astock）
+- [600887_close](https://agent.finddatatech.cloud/generated/materials/official-data-ind-447.md): 600887_close（astock）
+- [600887_ma5](https://agent.finddatatech.cloud/generated/materials/official-data-ind-448.md): 600887_ma5（astock）
+- [600887_ma10](https://agent.finddatatech.cloud/generated/materials/official-data-ind-449.md): 600887_ma10（astock）
+- [600887_ma20](https://agent.finddatatech.cloud/generated/materials/official-data-ind-450.md): 600887_ma20（astock）
+- [600887_rsi14](https://agent.finddatatech.cloud/generated/materials/official-data-ind-451.md): 600887_rsi14（astock）
+- [CKAN Open Data](https://agent.finddatatech.cloud/generated/materials/official-data-src-1.md): Open data portals (data.gov, data.gov.uk, etc.) — configurable portal URL
+- [Chinese Statistics](https://agent.finddatatech.cloud/generated/materials/official-data-src-2.md): National Bureau of Statistics macro indicators — CPI, PMI, industrial output, retail sales
+- [World Bank](https://agent.finddatatech.cloud/generated/materials/official-data-src-3.md): World Bank Open Data — GDP, population, trade, education, health (1400+ indicators)
+- [MOT Data Hub Archive (交通运输部数据)](https://agent.finddatatech.cloud/generated/materials/official-data-src-9.md): Catalog of statistical / analysis / freight-index documents published by China's Ministry of Transport (交通运输部), crawled from the /shuju/ dat
+- [MOHURD Xinwen Archive (住建部新闻动态)](https://agent.finddatatech.cloud/generated/materials/official-data-src-10.md): 住房和城乡建设部 /xinwen/ archive — 部门动态/工作动态/地方信息. Paginated via jpaas API (paramJson={pageNo,pageSize:20}). ~21,000 docs total across 3 sections.
+- [MOF gkml Archive (财政部信息公开)](https://agent.finddatatech.cloud/generated/materials/official-data-src-11.md): 财政部 /gkml/ 信息公开 archive — 通知公告/财政数据/财政文告/财经论坛 (6 sub-archives). TRS WCM, index_{N-1}.htm pagination, t<YYYYMMDD>_ URL date token.
+- [MOA GovPublic Archive (农业农村部 机构分类)](https://agent.finddatatech.cloud/generated/materials/official-data-src-12.md): Create moa_govpublic_archive datasource
+- [PBC News Archive (人民银行新闻发布)](https://agent.finddatatech.cloud/generated/materials/official-data-src-13.md): Create pbc_xinwen_archive datasource
+- [NDRC Notice Archive (发改委通知公告)](https://agent.finddatatech.cloud/generated/materials/official-data-src-14.md): Create ndrc_tzgg_archive datasource
+- [SAFE News Archive (外汇局外汇新闻)](https://agent.finddatatech.cloud/generated/materials/official-data-src-15.md): Create safe_whxw_archive datasource
+- [MNR Notice Archive (自然资源部通知公告)](https://agent.finddatatech.cloud/generated/materials/official-data-src-16.md): Create mnr_tzgg_archive datasource
+- [MEE Notice Archive (生态环境部公示公告)](https://agent.finddatatech.cloud/generated/materials/official-data-src-17.md): Create mee_gsgg_archive datasource
+- [MEM Notice Archive (应急管理部通知公告)](https://agent.finddatatech.cloud/generated/materials/official-data-src-18.md): Create mem_tzgg_archive datasource
+- [MOFCOM News Preview (商务部新闻发布)](https://agent.finddatatech.cloud/generated/materials/official-data-src-19.md): Create mofcom_xwfb_archive datasource
+- [SEC EDGAR](https://agent.finddatatech.cloud/generated/materials/official-data-src-20.md): US Securities and Exchange Commission filings (10-K, 10-Q, 8-K, Form 4) via edgartools-mcp.
+- [Japan EDINET](https://agent.finddatatech.cloud/generated/materials/official-data-src-21.md): Japan FSA EDINET corporate disclosure system (有価証券報告書 and related forms) via edinet-mcp.
+- [Yahoo Finance](https://agent.finddatatech.cloud/generated/materials/official-data-src-22.md): Global market data via yfinance-mcp — prices, fundamentals, options, holders, news.
+- [Chinese Annual Reports](https://agent.finddatatech.cloud/generated/materials/official-data-src-23.md): A-share 年度报告 (annual reports) via cnreport-mcp — outline extraction, section text retrieval, LLM structured extraction, and Elasticsearch se
+- [Hong Kong Stock Exchange (HKEXnews + akshare)](https://agent.finddatatech.cloud/generated/materials/official-data-src-24.md): HK-listed company filings, financials, and disclosure calendar via hkreport-mcp.
+- [Massive.com](https://agent.finddatatech.cloud/generated/materials/official-data-src-25.md): Multi-asset financial data (stocks, options, forex, crypto, futures, fundamentals, analyst news, treasuries) via the mcp_massive 3-tool comp
+- [World Bank (world_bank_data)](https://agent.finddatatech.cloud/generated/materials/official-data-src-26.md): World Bank Open Data via the world_bank_data package — GDP, population, trade, education, health, environment indicators (yearly cadence)
+- [A股（akshare 客户侧直取）](https://agent.finddatatech.cloud/generated/materials/official-data-src-27.md): A-share daily bars fetched client-side via akshare (stock_zh_a_hist); prices stay in the local instance.
+
+## Skills (265)
+
+- [earnings-analysis](https://agent.finddatatech.cloud/generated/materials/skill-earnings-analysis.md): Create professional equity research earnings update reports (8-12 pages, 3,000-5,000 words) analyzing quarterly results for companies alread
+- [sector-overview](https://agent.finddatatech.cloud/generated/materials/skill-sector-overview.md): Create comprehensive industry and sector landscape reports covering market dynamics, competitive positioning, key players, and thematic tren
+- [comps-analysis](https://agent.finddatatech.cloud/generated/materials/skill-comps-analysis.md): Build institutional-grade comparable company analyses with operating metrics, valuation multiples, and statistical benchmarking in Excel/spr
+- [dcf-model](https://agent.finddatatech.cloud/generated/materials/skill-dcf-model.md): Real DCF (Discounted Cash Flow) model creation for equity valuation. Retrieves financial data from SEC filings and analyst reports, builds c
+- [3-statement-model](https://agent.finddatatech.cloud/generated/materials/skill-3-statement-model.md): Complete, populate and fill out 3-statement financial model templates (Income Statement, Balance Sheet, Cash Flow Statement) . Use when aske
+- [returns-analysis](https://agent.finddatatech.cloud/generated/materials/skill-returns-analysis.md): Build quick IRR/MOIC sensitivity tables for PE deal evaluation. Models returns across entry multiple, leverage, exit multiple, growth, and h
+- [ic-memo](https://agent.finddatatech.cloud/generated/materials/skill-ic-memo.md): Draft a structured investment committee memo for PE deal approval. Synthesizes due diligence findings, financial analysis, and deal terms in
+- [macro-rates-monitor](https://agent.finddatatech.cloud/generated/materials/skill-macro-rates-monitor.md): Build macroeconomic and rates dashboards combining macro indicators, yield curves, inflation breakevens, and swap rates. Use when monitoring
+- [company-valuation](https://agent.finddatatech.cloud/generated/materials/skill-company-valuation.md): Estimate the intrinsic value of a public company using DCF, relative (peer multiple) and sum-of-parts (SOTP) methods, then triangulate to an
+- [stock-correlation](https://agent.finddatatech.cloud/generated/materials/skill-stock-correlation.md): Analyze stock correlations to find related companies and trading pairs. Use when the user asks about correlated stocks, related companies, s
+- [earnings-preview](https://agent.finddatatech.cloud/generated/materials/skill-earnings-preview.md): Generate a pre-earnings briefing for any stock using Yahoo Finance data. Use this skill whenever the user wants to prepare for an upcoming e
+- [earnings-recap](https://agent.finddatatech.cloud/generated/materials/skill-earnings-recap.md): Generate a post-earnings analysis for any stock using Yahoo Finance data. Use when the user wants to review what happened after earnings, un
+- [akshare-stock](https://agent.finddatatech.cloud/generated/materials/skill-akshare-stock.md): All-in-one A-share analysis skill (real-time quotes, technicals, fundamentals, sectors, derivatives, and cross-market), built on akshare wit
+- [stock-analysis](https://agent.finddatatech.cloud/generated/materials/skill-stock-analysis.md): Analyze stocks with fundamental and technical analysis. Supports US, China A-shares, and Hong Kong markets. Generate investment reports with
+- [last30days](https://agent.finddatatech.cloud/generated/materials/skill-last30days.md): Research what people actually say about any topic in the last 30 days. Pulls posts and engagement from Reddit, X, YouTube, TikTok, Hacker Ne
+- [data-analysis](https://agent.finddatatech.cloud/generated/materials/skill-data-analysis.md): Analyze spreadsheet data, generate insights, create visualizations, and build reports from Excel/CSV data.
+- [exploratory-data-analysis](https://agent.finddatatech.cloud/generated/materials/skill-exploratory-data-analysis.md): Perform bounded, local exploratory analysis of explicitly supported scientific files. Use for redacted CSV/TSV/JSON profiles; optional NumPy
+- [statsmodels](https://agent.finddatatech.cloud/generated/materials/skill-statsmodels.md): Statistical models library for Python. Use when you need specific model classes (OLS, GLM, mixed models, ARIMA) with detailed diagnostics, r
+- [statistical-analysis](https://agent.finddatatech.cloud/generated/materials/skill-statistical-analysis.md): Guided statistical analysis for research data - test selection, assumption checking, effect sizes, power analysis, Bayesian alternatives, an
+- [legal-harness-init](https://agent.finddatatech.cloud/generated/materials/skill-legal-harness-init.md): Initialize or incrementally govern AGENTS.md/CLAUDE.md for legal practitioners: identify the current AI harness, distinguish user-level, pro
+- [legal-ocr](https://agent.finddatatech.cloud/generated/materials/skill-legal-ocr.md): Use this skill when the user needs OCR, scan recognition, text recognition from images, document recognition, or conversion of PDFs, images,
+- [pdf-organizer](https://agent.finddatatech.cloud/generated/materials/skill-pdf-organizer.md): Use when legal PDFs need organizing: detects the text layer, generates page indexes, organization drafts, and downstream handoff documents; 
+- [china-legal-skills](https://agent.finddatatech.cloud/generated/materials/skill-china-legal-skills.md): Chinese legal workflow skills for lawyers, legal counsel, litigation, criminal defense, labor disputes, bankruptcy, contract review, complia
+- [product-legal-compliance](https://agent.finddatatech.cloud/generated/materials/skill-product-legal-compliance.md): Product legal and compliance skill for the Chinese market. Used for product launches, feature compliance, default-on settings, customer logo
+- [investigation-stage-criminal-defense](https://agent.finddatatech.cloud/generated/materials/skill-investigation-stage-criminal-defense.md): Criminal defense skill for the investigation stage, covering the full client-meeting workflow, legal analysis of the case and sentencing pre
+- [preliminary-legal-analysis](https://agent.finddatatech.cloud/generated/materials/skill-preliminary-legal-analysis.md): Performs systematic legal analysis based on the fused framework of the "six-source system", the 6-step claim-basis method, and the nine-step
+- [labor-arbitration-case-management](https://agent.finddatatech.cloud/generated/materials/skill-labor-arbitration-case-management.md): Full-workflow management skill for labor dispute arbitration, covering mandatory arbitration-prerequisite detection, arbitration limitation-
+- [labor-dispute-evidence-system](https://agent.finddatatech.cloud/generated/materials/skill-labor-dispute-evidence-system.md): Dedicated evidence-management skill for labor dispute cases, covering burden-of-proof reversal rules, automatic generation of evidence colle
+- [labor-dispute-litigation](https://agent.finddatatech.cloud/generated/materials/skill-labor-dispute-litigation.md): Professional workflow-orchestration skill for labor dispute litigation. Integrates 17 sub-skills: reuses 14 existing general skills plus 3 l
+- [labor-relation-severance-calculator](https://agent.finddatatech.cloud/generated/materials/skill-labor-relation-severance-calculator.md): Core analysis tool for labor dispute cases, covering three-factor subordination analysis of the labor relation, automatic classification int
+- [pa1nrui1-contract-review](https://agent.finddatatech.cloud/generated/materials/skill-pa1nrui1-contract-review.md): Performs in-depth contract review based on Zhang Haiyan's four-step review method plus the He Li/Chang Jinguang three-perspective analysis m
+- [contract-drafting](https://agent.finddatatech.cloud/generated/materials/skill-contract-drafting.md): The single entry point for contract drafting: generating contracts, preparing agreements, writing contracts, forming contract text from tran
+- [engagement-contract-management](https://agent.finddatatech.cloud/generated/materials/skill-engagement-contract-management.md): Assists lawyers with signing engagement contracts and archiving case files. The signing stage covers confirmation of the fee arrangement, co
+- [prosecution-review-stage-defense](https://agent.finddatatech.cloud/generated/materials/skill-prosecution-review-stage-defense.md): A professional skill module covering all duties of the defense lawyer at the review-and-prosecution stage, including guidance on exercising 
+- [trial-report-generator](https://agent.finddatatech.cloud/generated/materials/skill-trial-report-generator.md): Extracts elements from existing case materials (complaints, defenses, hearing minutes, legal analyses, etc.) to generate a draft Word docume
+- [advertising-compliance-review](https://agent.finddatatech.cloud/generated/materials/skill-advertising-compliance-review.md): Advertising compliance review skill for checking whether advertising materials comply with China's Advertising Law and related regulations. 
+- [pretrial-preparation](https://agent.finddatatech.cloud/generated/materials/skill-pretrial-preparation.md): Pretrial preparation. Based on preceding documents such as complaints, legal analyses, litigation visualizations, case compilations, and cro
+- [trial-and-post-trial-work](https://agent.finddatatech.cloud/generated/materials/skill-trial-and-post-trial-work.md): Systematically supports the full workflow: pre-hearing check reminders, hearing minutes records, post-hearing review analysis, drafting of p
+- [juvenile-criminal-cases](https://agent.finddatatech.cloud/generated/materials/skill-juvenile-criminal-cases.md): Specialized defense skill for juvenile criminal cases, covering the education-influence-rescue principle for juvenile criminal cases, social
+- [case-intake-and-engagement](https://agent.finddatatech.cloud/generated/materials/skill-case-intake-and-engagement.md): Skill for taking on and engaging criminal defense cases. Assists lawyers with initial reception, case assessment, risk disclosure, engagemen
+- [client-communication-records](https://agent.finddatatech.cloud/generated/materials/skill-client-communication-records.md): Creates communication record documents for civil and commercial litigation cases. Following the requirements of the Litigation Refinement ma
+- [case-discussion-outline](https://agent.finddatatech.cloud/generated/materials/skill-case-discussion-outline.md): An AI-automated deep case analysis tool that integrates preceding materials to perform four-dimension self-question-and-answer analysis and 
+- [death-penalty-defense](https://agent.finddatatech.cloud/generated/materials/skill-death-penalty-defense.md): Specialized criminal defense skill for death penalty and death-with-reprieve cases, covering identification of cases that may carry the deat
+- [civil-first-instance-litigation](https://agent.finddatatech.cloud/generated/materials/skill-civil-first-instance-litigation.md): Professional workflow-orchestration skill for civil first-instance litigation and bankruptcy cases. Integrates 25 sub-skills: 14 civil litig
+- [civil-judgment-drafting](https://agent.finddatatech.cloud/generated/materials/skill-civil-judgment-drafting.md): A first-instance ordinary-procedure civil judgment drafting tool. Extracts elements from existing case materials (complaints, defenses, hear
+- [legal-wiki-lookup](https://agent.finddatatech.cloud/generated/materials/skill-legal-wiki-lookup.md): Searches Wiki knowledge pages by crime/charge, practice area, or keyword, returning knowledge cards or full-text content. Supports queries a
+- [legal-consultation-assistant](https://agent.finddatatech.cloud/generated/materials/skill-legal-consultation-assistant.md): Assists lawyers in handling legal consultations via WeChat and offline consultations, providing colloquial reply suggestions, intelligent fo
+- [legal-workflow-controller](https://agent.finddatatech.cloud/generated/materials/skill-legal-workflow-controller.md): General entry-point skill for the legal folder. Provides semantic routing, case isolation, source disclosure, file-read re-checking, statute
+- [legal-doc-pre-release-review](https://agent.finddatatech.cloud/generated/materials/skill-legal-doc-pre-release-review.md): Triggered after a legal business skill generates the body text or element-based fields and before legal document templates are exported to a
+- [legal-doc-templates-export](https://agent.finddatatech.cloud/generated/materials/skill-legal-doc-templates-export.md): Uniformly handles documents, reports, checklists, transcripts, opinions, letters, contracts, and formal deliverables in legal work that ulti
+- [legal-writing-deai-polish](https://agent.finddatatech.cloud/generated/materials/skill-legal-writing-deai-polish.md): Detects and removes AI-style phrasing patterns in articles; used for writing polish, text optimization, and removing the AI tone.
+- [statute-case-retrieval](https://agent.finddatatech.cloud/generated/materials/skill-statute-case-retrieval.md): Performs systematic retrieval of statutes and case law based on a three-layer retrieval method, links with the claim-basis paths of the prec
+- [special-criminal-procedures](https://agent.finddatatech.cloud/generated/materials/skill-special-criminal-procedures.md): Skill for defense and representation in special criminal procedures, covering the initiation conditions, material review, hearing or trial p
+- [employer-labor-compliance](https://agent.finddatatech.cloud/generated/materials/skill-employer-labor-compliance.md): Company-side labor and employment compliance skill. Used for the employer's day-to-day labor compliance, updates to employee handbooks/inter
+- [regulatory-monitoring](https://agent.finddatatech.cloud/generated/materials/skill-regulatory-monitoring.md): Skill for monitoring key regulatory developments in mainland China and assessing their compliance impact on clients. Used for regulatory dev
+- [bankruptcy-reconciliation](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-reconciliation.md): Provides full-process support for the bankruptcy composition procedure, covering the complete flow from the composition application, draftin
+- [bankruptcy-document-generator](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-document-generator.md): Generates all kinds of bankruptcy-procedure documents on demand based on the 165 document templates in the 'Model Styles of Legal Documents 
+- [bankruptcy-legal-analysis](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-legal-analysis.md): Performs systematic legal analysis of bankruptcy cases based on the Enterprise Bankruptcy Law and its judicial interpretations, supporting t
+- [bankruptcy-liquidation](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-liquidation.md): Covers the full bankruptcy liquidation procedure, from the declaration of bankruptcy to the closure of the proceeding. Primarily work for R1
+- [bankruptcy-filing-acceptance](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-filing-acceptance.md): Covers the full bankruptcy application process, including drafting the petition, preparing attachments, submission tracking, and initial wor
+- [case-filing-management](https://agent.finddatatech.cloud/generated/materials/skill-case-filing-management.md): Systematically guides the full first-instance civil case-filing process, including filing material checks, jurisdiction pre-checks, filing m
+- [simplified-summary-procedure](https://agent.finddatatech.cloud/generated/materials/skill-simplified-summary-procedure.md): Branch skill for criminal defense in the simplified procedure, the expedited procedure, and streamlined trial under the ordinary procedure, 
+- [bankruptcy-administrator-tasks](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-administrator-tasks.md): Skill exclusive to R1 (the administrator), covering all initial post-acceptance duties of the administrator, including seal and account mana
+- [case-closure-archive](https://agent.finddatatech.cloud/generated/materials/skill-case-closure-archive.md): After judgment/mediation is completed, systematically handles case-closure work including case file archiving, case summary, client hand-ove
+- [litigation-visualization](https://agent.finddatatech.cloud/generated/materials/skill-litigation-visualization.md): Generates litigation visualization charts in Mermaid syntax (legal-relationship diagram, timeline, issue tree, element analysis diagram, off
+- [litigation-document-drafting](https://agent.finddatatech.cloud/generated/materials/skill-litigation-document-drafting.md): Drafts litigation documents such as complaints, statements of defense, attorney arguments, cross-examination opinions, and preservation appl
+- [litigation-case-management](https://agent.finddatatech.cloud/generated/materials/skill-litigation-case-management.md): Case operations management skill shared by civil, criminal, and labor dispute litigation. Used for case updates, handling of summonses/trial
+- [evidence-collection-management](https://agent.finddatatech.cloud/generated/materials/skill-evidence-collection-management.md): Assesses evidence gaps based on claim-element analysis and systematically guides the full process of evidence collection, investigative evid
+- [mediation-and-settlement](https://agent.finddatatech.cloud/generated/materials/skill-mediation-and-settlement.md): Provides full-process support for mediation and settlement, including feasibility analysis, drafting mediation proposals, review of mediatio
+- [asset-investigation-management](https://agent.finddatatech.cloud/generated/materials/skill-asset-investigation-management.md): Skill exclusive to R1 (the administrator), covering comprehensive asset investigation in bankruptcy proceedings, recovery of voidable/invali
+- [bankruptcy-reorganization](https://agent.finddatatech.cloud/generated/materials/skill-bankruptcy-reorganization.md): Full-process management of the bankruptcy reorganization procedure, covering all stages: reorganization application and acceptance, manageme
+- [food-label-compliance](https://agent.finddatatech.cloud/generated/materials/skill-food-label-compliance.md): Prepackaged food label compliance review skill, used to review whether food labels conform to GB 7718 (General Standard for the Labeling of 
+- [case-dashboard](https://agent.finddatatech.cloud/generated/materials/skill-case-dashboard.md): Lawyer's case dashboard. A local zero-dependency dashboard service (case overview, three-state task board, deadline alerts, progress write-b
+- [case-progress](https://agent.finddatatech.cloud/generated/materials/skill-case-progress.md): Case progress and status ledger management. The sole write engine for a case's case.yaml (adding tasks, advancing tasks, recording deadlines
+- [code2patent](https://agent.finddatatech.cloud/generated/materials/skill-code2patent.md): Extracts technical implementation evidence from developed code projects, generates algorithm/software specification-style technical disclosu
+- [contract-copilot](https://agent.finddatatech.cloud/generated/materials/skill-contract-copilot.md): Contract drafting and review assistant. Based on layered analysis and a four-step process, it outputs actionable risk checklists, drafting s
+- [legal-case-analysis](https://agent.finddatatech.cloud/generated/materials/skill-legal-case-analysis.md): Use this skill when the user needs legal analysis, case assessment, risk evaluation, litigation strategy, criminal case assessment and revie
+- [legal-proposal-generator](https://agent.finddatatech.cloud/generated/materials/skill-legal-proposal-generator.md): Generates various legal service documents from case materials or communication records (litigation proposals, consultation reports, non-liti
+- [legal-qa-extractor](https://agent.finddatatech.cloud/generated/materials/skill-legal-qa-extractor.md): Extracts valuable legal Q&A pairs from lawyer-client communications to produce structured knowledge base content. Use this skill when the us
+- [legal-text-format](https://agent.finddatatech.cloud/generated/materials/skill-legal-text-format.md): Converts legal texts (statutes or cases) into well-formed Markdown and removes promotional redundant content. Use this skill when the user n
+- [legal-visualization](https://agent.finddatatech.cloud/generated/materials/skill-legal-visualization.md): Legal Visualization. A skill for legal diagrams and chart generation in legal business scenarios; use when the user asks to organize case ma
+- [litigation-analysis](https://agent.finddatatech.cloud/generated/materials/skill-litigation-analysis.md): Litigation analysis tool - deep analysis of judgment documents, producing appeal/retrial decision support.
+- [new-case](https://agent.finddatatech.cloud/generated/materials/skill-new-case.md): Organizes case/consultation/trademark/patent materials into a standardized directory structure. Four presets: litigation cases (12 directori
+- [opc-legal-counsel](https://agent.finddatatech.cloud/generated/materials/skill-opc-legal-counsel.md): A legal triage and judgment skill for OPC (One Person Company - single-person company / solo founder + AI collaboration) and small/micro bus
+- [patent-analysis](https://agent.finddatatech.cloud/generated/materials/skill-patent-analysis.md): A structured preliminary analysis tool for Chinese invention and utility model patents. Use this skill when the user needs to break down or 
+- [trademark-assistant](https://agent.finddatatech.cloud/generated/materials/skill-trademark-assistant.md): A skill for class planning, registrability pre-screening, and application material preparation for Chinese trademark applications. Based on 
+- [wechat-article-to-markdown](https://agent.finddatatech.cloud/generated/materials/skill-wechat-article-to-markdown.md): Converts legal texts (statutes or cases) into well-formed Markdown and removes promotional redundant content. Use this skill when the user n
+- [case-materials-to-legal-docs](https://agent.finddatatech.cloud/generated/materials/skill-case-materials-to-legal-docs.md): Generates various legal service documents from case materials or communication records (litigation proposals, consultation reports, non-liti
+- [litigation-analysis-tool](https://agent.finddatatech.cloud/generated/materials/skill-litigation-analysis-tool.md): Litigation analysis tool - supports folder batch processing and deep analysis of judgment documents, producing appeal/retrial decision suppo
+- [court-sms](https://agent.finddatatech.cloud/generated/materials/skill-court-sms.md): Use this skill when the user receives court SMS messages (document service, filing notifications, hearing reminders, etc.); it automatically
+- [tencent-ima-copilot-legal-consultation](https://agent.finddatatech.cloud/generated/materials/skill-tencent-ima-copilot-legal-consultation.md): Provides preliminary diagnosis and action strategies for legal questions in the staged case-handling mindset of a senior lawyer, combined wi
+- [elements-complaint-generator](https://agent.finddatatech.cloud/generated/materials/skill-elements-complaint-generator.md): Use when converting a lawyer's already-written ordinary complaint (md/docx) or a conversational description into a Word document conforming 
+- [patent-download](https://agent.finddatatech.cloud/generated/materials/skill-patent-download.md): Batch patent PDF download tool. Use when the user needs to download full-text patent PDFs, query patent information, or bulk-export patent f
+- [yuandian-law-search](https://agent.finddatatech.cloud/generated/materials/skill-yuandian-law-search.md): A mechanism-aware legal research middleware layer for Yuandian retrieval. Use this skill when Chinese statutes or cases need to be queried, 
+- [law-to-markdown](https://agent.finddatatech.cloud/generated/materials/skill-law-to-markdown.md): Converts statutes/regulatory documents (.txt/.docx/.pdf) to Markdown. Applies when the user asks for 'statutes to markdown' or 'pdf/docx to 
+- [first-instance-criminal-defense](https://agent.finddatatech.cloud/generated/materials/skill-first-instance-criminal-defense.md): Skill for first-instance criminal defense work, covering entrustment hand-over, supplementary case-file review, client meetings, pre-trial c
+- [second-instance-criminal-defense](https://agent.finddatatech.cloud/generated/materials/skill-second-instance-criminal-defense.md): Skill for second-instance criminal defense work, covering appeal-stage case intake, hand-over of first-instance materials, case-file review,
+- [creditors-meeting](https://agent.finddatatech.cloud/generated/materials/skill-creditors-meeting.md): Systematically supports the full workflow of creditors' meetings — preparation, convening, voting, and minutes — covering three roles: admin
+- [creditor-claim-filing-review](https://agent.finddatatech.cloud/generated/materials/skill-creditor-claim-filing-review.md): A full-workflow Skill for bankruptcy claim management, covering claim filing, claim review, and preparation of the schedule of claims. Appli
+- [legalskill-legal-consultation](https://agent.finddatatech.cloud/generated/materials/skill-legalskill-legal-consultation.md): Provides lawyers and in-house counsel with statute retrieval, regulation lookup, case study, precedent search, guiding-case lookup, judicial
+- [criminal-defense-coordinator](https://agent.finddatatech.cloud/generated/materials/skill-criminal-defense-coordinator.md): A criminal-defense workflow orchestration Skill that performs professional routing based on criminal-procedure stages and special tags, stag
+- [legal-industry-report](https://agent.finddatatech.cloud/generated/materials/skill-legal-industry-report.md): Takes an industry as input (with optional region and business focus) and produces a deliverable, finely typeset A4 PDF industry legal resear
+- [legal-abductive-reasoning](https://agent.finddatatech.cloud/generated/materials/skill-legal-abductive-reasoning.md): A legal abductive-reasoning skill for generating and evaluating the most plausible explanatory hypotheses when evidence is incomplete and fa
+- [normative-meaning-argumentation](https://agent.finddatatech.cloud/generated/materials/skill-normative-meaning-argumentation.md): Analyzes the purpose and value orientation of legal norms, and how facts should enter normative evaluation, determining the limits of subsum
+- [administrative-value-judgment](https://agent.finddatatech.cloud/generated/materials/skill-administrative-value-judgment.md): Assists legal staff of mainland Chinese administrative agencies in making value judgments and balancing interests under the fundamental prin
+- [analogical-reasoning](https://agent.finddatatech.cloud/generated/materials/skill-analogical-reasoning.md): Triggers when the AI agent needs to handle the following situations: 1. The current case/issue has no direct, explicit provision in existing
+- [argument-chain-construction](https://agent.finddatatech.cloud/generated/materials/skill-argument-chain-construction.md): Triggers when the AI agent needs to organize legal reasoning results into a complete, self-consistent, persuasive argument structure. Typica
+- [argument-strength-evaluation](https://agent.finddatatech.cloud/generated/materials/skill-argument-strength-evaluation.md): Triggers after the AI agent completes a piece of legal reasoning or argumentation and needs to self-assess the reasoning conclusion, gauge t
+- [billing-and-litigation-budget](https://agent.finddatatech.cloud/generated/materials/skill-billing-and-litigation-budget.md): Use this skill when the user needs to tally and manage attorney work hours, expert fees, and investigation costs; control litigation costs; 
+- [case-lifecycle-planning](https://agent.finddatatech.cloud/generated/materials/skill-case-lifecycle-planning.md): Case full-lifecycle planning skill. Triggers when the user needs to plan a case preparation timeline, create or ask about case preparation m
+- [case-retrieval](https://agent.finddatatech.cloud/generated/materials/skill-case-retrieval.md): Triggers when the user needs to find similar cases, related judgments, or adjudication rules relevant to the current legal issue. Typical tr
+- [conflict-resolution](https://agent.finddatatech.cloud/generated/materials/skill-conflict-resolution.md): Triggers when the AI agent encounters the following situations during legal reasoning: (1) multiple legal provisions can apply to the same f
+- [counterfactual-reasoning](https://agent.finddatatech.cloud/generated/materials/skill-counterfactual-reasoning.md): Triggers when one needs to assess "how the legal outcome would differ if a given fact/action/condition did not exist or changed". Typical tr
+- [deductive-reasoning](https://agent.finddatatech.cloud/generated/materials/skill-deductive-reasoning.md): Performs rigorous legal deductive reasoning based on formal logic. Use this skill when the user asks to "analyze case logic", "verify legal 
+- [dispute-and-performance-risk](https://agent.finddatatech.cloud/generated/materials/skill-dispute-and-performance-risk.md): Triggers when the user submits contract texts, transaction arrangements, commercial agreements, or descriptions of legal relations and needs
+- [dispute-issue-identification](https://agent.finddatatech.cloud/generated/materials/skill-dispute-issue-identification.md): Disputed-issue identification: after legal element extraction, it extracts the disputed issues from the legal facts and further converts cas
+- [evidence-argument-chain](https://agent.finddatatech.cloud/generated/materials/skill-evidence-argument-chain.md): Triggers when multiple pieces of evidence in a case need to be systematically mapped to legal argument claims. Typical trigger scenarios inc
+- [evidence-evaluation](https://agent.finddatatech.cloud/generated/materials/skill-evidence-evaluation.md): Triggers when the case's evidence materials need assessment of authenticity, legality, and relevance (the "three properties" of evidence) an
+- [formal-legal-consequence](https://agent.finddatatech.cloud/generated/materials/skill-formal-legal-consequence.md): Triggers when specific legal consequences must be derived from confirmed legal facts, identified legal relations, and matched legal norms — 
+- [inductive-reasoning](https://agent.finddatatech.cloud/generated/materials/skill-inductive-reasoning.md): Triggers when general legal rules, adjudication rules, or legal principles need to be distilled and summarized from one or more specific cas
+- [internal-compliance-risk-identification](https://agent.finddatatech.cloud/generated/materials/skill-internal-compliance-risk-identification.md): Triggers when the enterprise's internal compliance management system needs a systematic review to identify policy gaps, process defects, and
+- [judgment-document-generation](https://agent.finddatatech.cloud/generated/materials/skill-judgment-document-generation.md): Based on a description of case facts, coordinates and invokes 8 atomic capabilities to generate a complete criminal judgment with standard f
+- [judicial-value-judgment](https://agent.finddatatech.cloud/generated/materials/skill-judicial-value-judgment.md): Assists judges in making structured, reviewable, and arguable judicial value judgments in scenarios of rights conflicts, legal uncertainty, 
+- [legal-article-retrieval](https://agent.finddatatech.cloud/generated/materials/skill-legal-article-retrieval.md): Generates standardized legal research reports, suitable for case retrieval, statute retrieval, similar-case analysis, and other legal resear
+- [legal-concept-comprehension](https://agent.finddatatech.cloud/generated/materials/skill-legal-concept-comprehension.md): Triggers when the user asks to explain, distinguish, break down, or understand a legal concept. Typical trigger scenarios include but are no
+- [legal-document-formatting](https://agent.finddatatech.cloud/generated/materials/skill-legal-document-formatting.md): Drafts complete civil or criminal judgments based on the adjudication-document standards of the Chinese People's Courts. Use when the user a
+- [legal-document-summarization](https://agent.finddatatech.cloud/generated/materials/skill-legal-document-summarization.md): Triggers when structured summaries are needed for legal documents such as judgments, rulings, mediation agreements, arbitration awards, and 
+- [legal-element-extraction](https://agent.finddatatech.cloud/generated/materials/skill-legal-element-extraction.md): Triggers when legally significant facts need to be extracted from unstructured text such as case descriptions, party statements, chat record
+- [legal-interpretation-argument](https://agent.finddatatech.cloud/generated/materials/skill-legal-interpretation-argument.md): Triggers when the following situations arise during legal reasoning: (1) the meaning of a statutory text is ambiguous, with multiple possibl
+- [legal-judgment-prediction](https://agent.finddatatech.cloud/generated/materials/skill-legal-judgment-prediction.md): Based on a description of case facts, comprehensively invokes 8 atomic capabilities to predict the charged offense, applicable provisions, s
+- [legal-norm-validity-check](https://agent.finddatatech.cloud/generated/materials/skill-legal-norm-validity-check.md): Triggers when the AI agent, having retrieved specific legal provisions during reasoning, needs to verify their validity. Trigger conditions 
+- [legal-risk-assessment](https://agent.finddatatech.cloud/generated/materials/skill-legal-risk-assessment.md): Evaluates the regulatory penalty risk facing an enterprise along the four dimensions of licensing qualifications, regulatory compliance, and
+- [legal-terminology](https://agent.finddatatech.cloud/generated/materials/skill-legal-terminology.md): When the AI agent generates, reviews, or modifies any legal text (including but not limited to contracts, pleadings, legal opinions, adjudic
+- [multi-document-summarization](https://agent.finddatatech.cloud/generated/materials/skill-multi-document-summarization.md): Triggers when multiple related documents need comprehensive analysis, extraction of common viewpoints, identification of conflicts, and gene
+- [other-legal-retrieval](https://agent.finddatatech.cloud/generated/materials/skill-other-legal-retrieval.md): Triggers when the agent needs to retrieve auxiliary legal information beyond statutes, judicial interpretations, and typical cases. Specific
+- [strategic-risk-prioritization](https://agent.finddatatech.cloud/generated/materials/skill-strategic-risk-prioritization.md): When legal analysis contains multiple possible conclusions, risk points, or disputed issues, these risks need to be systematically ranked by
+- [structured-element-extraction](https://agent.finddatatech.cloud/generated/materials/skill-structured-element-extraction.md): When the AI agent needs to systematically analyze a legal issue, case facts, a legal provision, or a legal relation, it must first decompose
+- [systematic-interpretation](https://agent.finddatatech.cloud/generated/materials/skill-systematic-interpretation.md): Systematic interpretation addresses disputes over meaning or scope of application that arise after the literal interpretation of a legal nor
+- [teleological-interpretation](https://agent.finddatatech.cloud/generated/materials/skill-teleological-interpretation.md): Teleological interpretation skill. When literal interpretation of a legal provision still yields no definite conclusion, it systematically d
+- [trial-scheduling-and-deadline-monitoring](https://agent.finddatatech.cloud/generated/materials/skill-trial-scheduling-and-deadline-monitoring.md): Use this skill when the user needs to track, or be reminded of, the various statutory deadlines of a case — trial scheduling, enforcement sc
+- [demo-statement-brief](https://agent.finddatatech.cloud/generated/materials/skill-demo-statement-brief.md): Provides a brief note on earnings-report framing.
+- [spider-heal-protocol](https://agent.finddatatech.cloud/generated/materials/skill-spider-heal-protocol.md): External ticket protocol (SUBMIT/STATUS/QUEUE), inbox status file, deduplication and single-writer rules.
+- [spider-heal-repair](https://agent.finddatatech.cloud/generated/materials/skill-spider-heal-repair.md): Repair execution: shallow checkout, ticket reading and triage, targeted fixes, verification chain, opening PRs via curl, credential-redactio
+- [spider-heal-notify](https://agent.finddatatech.cloud/generated/materials/skill-spider-heal-notify.md): bot_notify usage for the four event types (ticket final state / PR opened / master-switch change / handoff to human) plus the master-switch 
+- [spider-heal-generate](https://agent.finddatatech.cloud/generated/materials/skill-spider-heal-generate.md): Generation execution: kind=generate greenfield creation of a new unit — scaffold from template, implement data fetching, golden-sample cross
+- [eco-skill-creator](https://agent.finddatatech.cloud/generated/materials/skill-eco-skill-creator.md): [Ecosystem] Create new SKILL.md skill packages using a structured process.
+- [eco-mcp-builder](https://agent.finddatatech.cloud/generated/materials/skill-eco-mcp-builder.md): [Ecosystem] Engineering guide and scaffolding for building MCP servers.
+- [eco-canvas-design](https://agent.finddatatech.cloud/generated/materials/skill-eco-canvas-design.md): [Ecosystem] Canvas/graphics design workflow.
+- [doc-studio](https://agent.finddatatech.cloud/generated/materials/skill-doc-studio.md): Document workshop — Word/Excel/PPT business document generation and editing. Use when the user asks to generate reports, spreadsheets, prese
+- [case-retrieval-report](https://agent.finddatatech.cloud/generated/materials/skill-case-retrieval-report.md): Similar-case retrieval and adjudication-rule report. Use when the user wants to search similar cases, produce a case retrieval report, look 
+- [civil-nine-step-workflow](https://agent.finddatatech.cloud/generated/materials/skill-civil-nine-step-workflow.md): Conversational version of the nine-step method for civil cases (basis of claim + nine-step element-based adjudication + norm theory). Use wh
+- [contract-review-cn](https://agent.finddatatech.cloud/generated/materials/skill-contract-review-cn.md): Contract review under Chinese law. After determining that the contract is governed by mainland China law, loads general principles plus five
+- [criminal-defense-workflow](https://agent.finddatatech.cloud/generated/materials/skill-criminal-defense-workflow.md): End-to-end controller for the criminal defense process (entry skill of the 识律 criminal defense suite). Use when the user provides criminal c
+- [criminal-plea-and-nonprosecution](https://agent.finddatatech.cloud/generated/materials/skill-criminal-plea-and-nonprosecution.md): Plea leniency and non-prosecution argumentation (atomic skill of the 识律 criminal defense suite). For the review-for-prosecution stage: use w
+- [criminal-trial-examination-outline](https://agent.finddatatech.cloud/generated/materials/skill-criminal-trial-examination-outline.md): Court examination and evidence-challenge outlines (atomic skill of the 识律 criminal defense suite). For the first-instance stage: use when th
+- [evidence-card-organizer](https://agent.finddatatech.cloud/generated/materials/skill-evidence-card-organizer.md): Evidence card extraction and material list organization (case-filing material organization skill). Use when the user submits a batch of case
+- [labor-arbitration-workflow](https://agent.finddatatech.cloud/generated/materials/skill-labor-arbitration-workflow.md): Full labor dispute arbitration process (entry skill of the 识律 labor law suite). Use when the user describes a labor dispute (unlawful termin
+- [labor-compensation-calculator](https://agent.finddatatech.cloud/generated/materials/skill-labor-compensation-calculator.md): Labor compensation and severance calculator (atomic skill of the 识律 labor law suite, one of the two calculators). Use when the user asks to 
+- [legal-concept-map](https://agent.finddatatech.cloud/generated/materials/skill-legal-concept-map.md): Structured diagramming of legal concepts. Use when the user wants an explanation of a legal concept or institution ('what is good-faith acqu
+- [litigation-drafting](https://agent.finddatatech.cloud/generated/materials/skill-litigation-drafting.md): Civil and commercial litigation document drafting (complaints/defense statements/evidence lists). Use when the user provides case facts or c
+- [personal-injury-calculator](https://agent.finddatatech.cloud/generated/materials/skill-personal-injury-calculator.md): Personal injury damages calculator (atomic skill of the 识律 labor law suite, one of the two calculators). Use when the user asks to compute p
+- [statute-validity-check](https://agent.finddatatech.cloud/generated/materials/skill-statute-validity-check.md): Statute retrieval and validity verification. Use when the user wants the original text of a statute, to check whether a provision is current
+- [mission-protocol](https://agent.finddatatech.cloud/generated/materials/skill-mission-protocol.md): Brief parsing; GET polling / POST write-back with five kinds; idempotency-key discipline; a state-machine map; and a per-turn action table.
+- [mission-planning](https://agent.finddatatech.cloud/generated/materials/skill-mission-planning.md): Goal to a plan of at most 8 steps; step agents must be actually looked up via search_agents, and if none is found execute yourself; the plan
+- [mission-execution](https://agent.finddatatech.cloud/generated/materials/skill-mission-execution.md): Serial execution of steps with status write-back; window/budget/retry discipline; fall back to self-execution when delegation is unavailable
+- [mission-reporting](https://agent.finddatatech.cloud/generated/materials/skill-mission-reporting.md): Final-state reports (complete/partial delivery) and bot_notify notification discipline.
+- [screenplay-structure-analysis](https://agent.finddatatech.cloud/generated/materials/skill-screenplay-structure-analysis.md): Script structure analysis: maps the act/scene (zhe/chu) skeleton and plot progression of public-domain classic dramas. Data is retrieved in 
+- [screenplay-character-search](https://agent.finddatatech.cloud/generated/materials/skill-screenplay-character-search.md): Script character search and analysis: looks up a character's lines, appearance passages, and characterization features (dialogue aggregation
+- [screenplay-scene-search](https://agent.finddatatech.cloud/generated/materials/skill-screenplay-scene-search.md): Script scene search and close reading: locates scenes by description and closely reads the full scene (scene function, staging features, dra
+- [screenplay-similar-passages](https://agent.finddatatech.cloud/generated/materials/skill-screenplay-similar-passages.md): Script similar-passage search and comparison: uses a reference text to find semantically similar passages elsewhere, for cross-play comparis
+- [paper-literature-search](https://agent.finddatatech.cloud/generated/materials/skill-paper-literature-search.md): Academic literature search (text engine · papers pack entry skill). Use when the user wants to find papers on a research direction, build a 
+- [paper-method-tracking](https://agent.finddatatech.cloud/generated/materials/skill-paper-method-tracking.md): Paper method tracking (text engine · papers pack). Use when the user wants to know how a method/technique (e.g. transformer, contrastive lea
+- [paper-related-work](https://agent.finddatatech.cloud/generated/materials/skill-paper-related-work.md): Paper related-work and similar-literature search (text engine · papers pack). Use when the user provides an abstract/title/research idea and
+- [wx-wizard-check](https://agent.finddatatech.cloud/generated/materials/skill-wx-wizard-check.md): Acceptance placeholder skill.
+- [quick-look](https://agent.finddatatech.cloud/generated/materials/skill-quick-look.md): Quick-look placeholder.
+- [brief-draft](https://agent.finddatatech.cloud/generated/materials/skill-brief-draft.md): Brief placeholder.
+- [macro-cycle-analysis](https://agent.finddatatech.cloud/generated/materials/skill-macro-cycle-analysis.md): Macro cycle and business-climate analysis. Use when the user asks to locate the current position in the economic cycle (recovery/overheating
+- [industry-chain-analysis](https://agent.finddatatech.cloud/generated/materials/skill-industry-chain-analysis.md): Industry climate and value-chain transmission analysis. Use when the user wants to determine where an industry sits in the business cycle, m
+- [regional-economy-compare](https://agent.finddatatech.cloud/generated/materials/skill-regional-economy-compare.md): Regional economic comparison: multi-dimensional indicator rankings, percentile positioning, growth-structure decomposition, and similar-city
+- [corporate-fundamental-analysis](https://agent.finddatatech.cloud/generated/materials/skill-corporate-fundamental-analysis.md): Corporate fundamentals and financial quality analysis (柏讯 line). Use when the user asks for a quick three-statement review, DuPont decomposi
+- [panel-econometrics](https://agent.finddatatech.cloud/generated/materials/skill-panel-econometrics.md): Panel data econometrics. Use when the user wants inference on a two-dimensional 'unit × time' structure — fixed/random effects with the Haus
+- [statistical-inference](https://agent.finddatatech.cloud/generated/materials/skill-statistical-inference.md): Statistical testing and exploratory analysis. Use when the user asks for descriptive statistics and distribution diagnostics, hypothesis tes
+- [equity-valuation](https://agent.finddatatech.cloud/generated/materials/skill-equity-valuation.md): Equity valuation (DCF + comparable companies + three-statement linkage). Use when the user asks for intrinsic or relative valuation of an A-
+- [earnings-cycle-analysis](https://agent.finddatatech.cloud/generated/materials/skill-earnings-cycle-analysis.md): Earnings cycle analysis (preview + recap). Use when the user asks for an earnings preview for a company (type and timing of the coming discl
+- [mb-business-checkup](https://agent.finddatatech.cloud/generated/materials/skill-mb-business-checkup.md): Business checkup core entry (Facet · sole proprietors and micro-enterprises): four-stage diagnostic intake and profiling → single-store acco
+- [mb-breakeven-calculator](https://agent.finddatatech.cloud/generated/materials/skill-mb-breakeven-calculator.md): Break-even calculator (Facet · sole proprietors): computes monthly break-even revenue, break-even customer count/order volume, safety margin
+- [mb-margin-structure-calculator](https://agent.finddatatech.cloud/generated/materials/skill-mb-margin-structure-calculator.md): Gross margin structure calculator (Facet · sole proprietors): fixed/variable cost split, each cost as a share of revenue, gross margin and c
+- [mb-cashflow-terms-calculator](https://agent.finddatatech.cloud/generated/materials/skill-mb-cashflow-terms-calculator.md): Cash flow and payment-terms calculator (Facet · sole proprietors): timing and size of cash-flow gaps, capital tied up in payment terms, mini
+- [mb-signal-catering](https://agent.finddatatech.cloud/generated/materials/skill-mb-signal-catering.md): Catering industry signal pack (Facet · business checkup companion): food-cost trends (DCE futures), commercial-district activity proxy (专资办 
+- [mb-signal-retail](https://agent.finddatatech.cloud/generated/materials/skill-mb-signal-retail.md): Retail industry signal pack (Facet · business checkup companion): wholesale price reference (Kunming flower auction), city fundamentals (cit
+- [market-flash-briefing](https://agent.finddatatech.cloud/generated/materials/skill-market-flash-briefing.md): Condenses a piece of financial news/announcement/commentary into a one-page quick look: a three-line conclusion, five key points, and one op
+- [mat-probe-skill](https://agent.finddatatech.cloud/generated/materials/skill-mat-probe-skill.md): 物化探针技能
+- [fd-vaas-login](https://agent.finddatatech.cloud/generated/materials/skill-fd-vaas-login.md): VAAS login manager: scan-QR login for 6 video + 11 article platforms; login states stay on the user's machine
+- [fd-vaas-publish-videos](https://agent.finddatatech.cloud/generated/materials/skill-fd-vaas-publish-videos.md): Publish videos to 6 platforms (Douyin/Xiaohongshu/Bilibili/Kuaishou/WeChat Channels/YouTube); vendored social-auto-upload + patchright; manu
+- [fd-vaas-pull-from-cloud](https://agent.finddatatech.cloud/generated/materials/skill-fd-vaas-pull-from-cloud.md): Pull tenant-owned VAAS assets to local publish dirs
+- [format-conversion-elementized](https://agent.finddatatech.cloud/generated/materials/skill-format-conversion-elementized.md): 要素式格式转换。当用户上传或粘贴一份传统式法律文书（起诉状、答辩状等），希望转换为法院推广的要素式示范文本格式时使用。识别案由并匹配最高院示范文本，逐要素从原文提取填充，逐要素标注来源（取自原文/原文缺失/需补充），原文事实保真不改写；案由无法识别或示范文本未收录时如实说明，不以
+- [equity-research-data](https://agent.finddatatech.cloud/generated/materials/skill-equity-research-data.md): 个股投研的取数与口径纪律层。当用户要求为某家 A 股/港股公司取财务科目、公告披露、行业财务指标或公司面板变量，或需要交代某个数字的来源工具、数据期数、币种与单位时使用。财务与披露一律走柏讯服务端通道 A，价格与市值一律走本地 DAAS 通道 B，两条通道不混用、不互相替代；取不
+- [equity-research-peers](https://agent.finddatatech.cloud/generated/materials/skill-equity-research-peers.md): 个股投研的同业与竞争层。当用户要求为某家 A 股/港股公司挑可比公司、给同业规模与增速带对照、做可比性说明或跑倍数对照表时使用。候选池用 GTA 公司面板按规模带与增速带筛选（通道 A），价格类输入与倍数只走本地 DAAS（通道 B）；同业之间的可比性差异必须逐项标注，不得抹平。
+- [equity-research-modeling](https://agent.finddatatech.cloud/generated/materials/skill-equity-research-modeling.md): 个股投研的估值建模与计算层。当用户要求给某家 A 股/港股公司做 DCF、DDM、可比倍数、Monte Carlo 或敏感性分析，或要求算基本面比率、跑红旗检测、把多种估值方法合成目标价时使用。全部算术一律调 fd-quant 确定性计算面（通道 Q），本技能只组织输入、标注来源
+- [equity-research-thesis](https://agent.finddatatech.cloud/generated/materials/skill-equity-research-thesis.md): 个股论点综合与方向判定（Rating 契约实例）。当用户要求给某只股票下方向结论、写投资论点、列催化剂与风险、给目标价，或把取数/同行/建模三段结果收敛成一个可入决策账本的判定时使用。产出 side / conviction / price_target（可 null）/ bas
+- [equity-research-report](https://agent.finddatatech.cloud/generated/materials/skill-equity-research-report.md): 个股投研报告装配（本套件入口技能）。当用户要求"给某只股票出一份完整研究报告""写一份研报""跑一遍个股投研流程"时从这里进入。按固定 13 章装配报告、执行六项叙述审计自检、保留缺数据章并写明原因、末尾给数据期数汇总行。串起取数与口径、同行比较、财务建模叙述、论点综合四段子流程
+- [decision-review-log](https://agent.finddatatech.cloud/generated/materials/skill-decision-review-log.md): 柏讯决策落账纪律（复盘套件入口）。当用户要求把一条判定（Rating）或目标权重（TargetWeights）记入决策账本、要求"再记一次"、要求修改或"更正"已落账的判定、或需要查回某标的的历史判定与教训时使用。账本是追加式的：幂等键 (as_of, symbol, pack,
+- [decision-review-settlement](https://agent.finddatatech.cloud/generated/materials/skill-decision-review-settlement.md): 柏讯到期结算复盘。当用户要求结算某条已落账的判定、想知道某判定"后来怎么样了"、要求汇总待结算记录、或要看原始收益与相对基准 alpha 时使用。流程为待结算汇总 → 取结算窗序列（价格走本地 DAAS 通道 B）→ 触发账本结算 → 三段式输出（判定理由回顾 + 结算结果 + 
+- [decision-review-reflection](https://agent.finddatatech.cloud/generated/materials/skill-decision-review-reflection.md): 柏讯决策反思提炼。当用户要求为一条已结算（或已落账）的判定写复盘反思、要求"总结这次教训"、或询问为什么反思不该出现在其他角色的输出里时使用。反思固定 2–4 句，针对决策本身而非市场走势，区分"判断错"与"运气差"，并含可执行的改进项；反思由账本存储、只注入最终决策者的上下文，
+- [decision-review-portfolio](https://agent.finddatatech.cloud/generated/materials/skill-decision-review-portfolio.md): 柏讯持仓体检。当用户要求体检当前模拟账户持仓、看集中度（HHI/前 N 权重）、期间回撤、行业暴露，或核查"持仓是否偏离了最近一次判定"时使用。持仓与账户取自柏讯模拟交易服务（paper-only，模拟盘，无真实资金），统计量一律交给 fd-quant 计算面，缺失数据如实标注，
+- [strategy-design](https://agent.finddatatech.cloud/generated/materials/skill-strategy-design.md): 柏讯策略工坊 · 策略设计。当用户想把一个投资想法变成可回测的多标的策略（universe + 目标权重 + 调仓频率）、想理解权重语义（和为 1、非负、余量现金）、想取舍调仓频率与换手、或想知道哪些表达不被支持（做空/杠杆/盘中调仓）时使用。产出：一份可创建的 weight 模
+- [strategy-backtest-interpretation](https://agent.finddatatech.cloud/generated/materials/skill-strategy-backtest-interpretation.md): 柏讯策略工坊 · 回测解读。当用户拿到一份回测结果（尤其 walk-forward 分窗、开启成本模型、带基准对比、参数扫描）想知道"这个数字说明什么"、要求解读权益曲线与统计、或问"这能当作未来收益预期吗"时使用。核心纪律：历史模拟不预示未来；单次回测不下有效结论；不忽略成本与
+- [strategy-risk-controls](https://agent.finddatatech.cloud/generated/materials/skill-strategy-risk-controls.md): 柏讯策略工坊 · 风控参数。当用户问"单票最多买多少""止损设多少""换手太高怎么办""设了会自动执行吗"——即想理解单票上限/集中度/换手/止损/冷却期这些风控参数的含义、量级参考、代价与局限时使用。核心纪律：风控参数是策略层参数，不是引擎保证。
+- [strategy-paper-supervision](https://agent.finddatatech.cloud/generated/materials/skill-strategy-paper-supervision.md): 柏讯策略工坊 · 模拟盘督导。当用户已启动权重模式的纸面实盘（paper run），想知道"为什么没下单""权重怎么和目标对不上""缩量是什么意思""停了会平仓吗"、需要查看运行事件与权重快照、或要区分信号未触发与数据缺口时使用。
+- [rotation-regime](https://agent.finddatatech.cloud/generated/materials/skill-rotation-regime.md): 柏讯自适应轮动 · 市场状态判定（套件入口）。当用户要求判断当前 A 股市场处于进攻/中性/防守状态、要求给出轮动的择时前提、或问"现在该不该加仓/降仓"时使用。产出：带证据的 risk_on / neutral / risk_off 判定 + 波动率输入说明 + 参数重标表。本
+- [rotation-ranking](https://agent.finddatatech.cloud/generated/materials/skill-rotation-ranking.md): 柏讯自适应轮动 · 组与组内排序。当用户要求"哪些行业值得配""组内选哪几只""为什么这个组落选"时使用。组 = 申万 L1（31 类）成分股合成的行业指数；组强度用信息比排序，组内用残差动量 + 稳健 Z。产出：组排序表 + 组内排序表 + 落选原因。不建仓（交给 rotati
+- [rotation-portfolio](https://agent.finddatatech.cloud/generated/materials/skill-rotation-portfolio.md): 柏讯自适应轮动 · 风险预算建仓与风控参数。当用户要求"按排序结果给个仓位方案""组之间怎么分配""止损怎么设"时使用。产出：TargetWeights 契约实例（组权重 → 资产权重）+ 风险预算依据 + 风控参数（并明确止损须在策略内表达、引擎不自动执行）。
+- [rotation-run](https://agent.finddatatech.cloud/generated/materials/skill-rotation-run.md): 柏讯自适应轮动 · 闭环运行与解读。当用户要"把这份权重跑一下""回测结果怎么看""模拟盘为什么没成交/权重为什么偏了"时使用。产出：权重模式回测结果（含成本与基准）+ 权重快照解读 + 偏离归因。终产物是可执行权重与运行记录，不是一段买入建议。
+- [factor-library](https://agent.finddatatech.cloud/generated/materials/skill-factor-library.md): 柏讯因子选股 · 因子库与口径。当用户问"有哪些基本面因子可用""这个因子怎么算""为什么这两个因子不能同时用""某个因子在 A 股跑不跑得动"时使用。收录 FinRL-X 的 52 个基本面因子（九类），逐因子给出分子、分母、所用报表、期别、取值来源、数据可得性档位与 A 股适
+- [factor-exposure](https://agent.finddatatech.cloud/generated/materials/skill-factor-exposure.md): 柏讯因子选股 · 因子暴露与分层。当用户要求"算某只/某组标的的因子暴露""按因子分层看收益差""给我这个因子的 IC""这个因子在横截面上有没有区分度"时使用。暴露、分层、IC 与秩变换全部经 fd-quant 计算面完成，不在对话里手算；层数、极端值处理、样本门槛三处必须显式
+- [factor-screening](https://agent.finddatatech.cloud/generated/materials/skill-factor-screening.md): 柏讯因子选股 · 选股应用。当用户要求"按这些因子筛一批股票""多因子打分选前 N 只""把因子结论变成可回测的持仓"时使用。把 factor-exposure 的暴露与 IC 结果变成候选 universe 与目标权重，权重或规则显式写出，筛选条件逐条可解释，缺失因子按声明规则
+- [factor-backtest-protocol](https://agent.finddatatech.cloud/generated/materials/skill-factor-backtest-protocol.md): 柏讯因子选股 · 无未来函数回测协议。当用户要把因子策略送进回测、要核对"这次回测有没有偷看未来"、要区分样本内与样本外、或要验某条未来数据会不会被拦住时使用。把四条点内纪律写成可核验的断言（财报按披露日、universe 用当期成分、价格止于决策日、断言必须开启），并用注入未来
+- [event-detection](https://agent.finddatatech.cloud/generated/materials/skill-event-detection.md): 柏讯事件驱动 · 事件识别与分类。当用户要求"这家公司最近有什么公告/大事""近三个月事件梳理""哪些公司发了业绩预告""把公告按事件类型分一下"时使用。三路检索（公告列表 / 分类字典 / 全文检索），把公告归入六组事件类型（业绩类、融资类、股权变动、监管类、经营类、互动类），
+- [event-reading](https://agent.finddatatech.cloud/generated/materials/skill-event-reading.md): 柏讯事件驱动 · 事件解读。当用户要求"这条公告到底说了什么""这个定增/减持/业绩预告怎么看""把公告关键条款摘出来"时使用。读公告正文（get_filing），抽取金额、比例、期限、主体、生效条件五类要素，把结论分成"正文要素直接支撑（明确）"与"需看条件"两栏，每条结论引用
+- [event-history](https://agent.finddatatech.cloud/generated/materials/skill-event-history.md): 柏讯事件驱动 · 历史反应统计。当用户要求"这类事件历史上发生后表现如何""业绩预增公告后 20 天一般怎么走""帮我看看这个事件类型的历史分布"时使用。对同类事件做多窗口（默认 5/10/20 个交易日）的历史反应统计：样本量、分位数、均值与离散度，并强制给出反例比例与样本门槛
+- [event-watch](https://agent.finddatatech.cloud/generated/materials/skill-event-watch.md): 柏讯事件驱动 · 事件跟踪。当用户要求"帮我盯住这几家公司""每天把公告按类型筛一遍""按标的或事件类型给我一张事件跟踪表"时使用。按标的与事件类型筛选公告流，输出事件清单、分类计数与期间对比（本周 vs 上周等），并明确标注检索口径与数据截至日期。不做预告、不做推荐、不预测影响
+- [portfolio-budget](https://agent.finddatatech.cloud/generated/materials/skill-portfolio-budget.md): 柏讯组合风险 · 风险预算。当用户要求"资金怎么分到这些标的/行业""单票最多放多少""按上限重新分配一遍"时使用。产出：一份**生成即合规**的 TargetWeights 契约实例（单票上限 + 板块上限 + 迭代重分配，迭代上限显式，未收敛如实报告）+ 约束满足表。只管权重
+- [portfolio-drawdown-review](https://agent.finddatatech.cloud/generated/materials/skill-portfolio-drawdown-review.md): 柏讯组合风险 · 回撤与波动体检。当用户要求"看看这个组合的回撤有多深""波动多大""是不是太集中了""和沪深300比怎么样"时使用。产出：组合级指标（最大回撤含峰谷日、年化波动、HHI、前 N 占比、板块集中度、有效标的数）+ 基准对比（超额与跟踪误差）。指标一律来自 fd-q
+- [portfolio-stop-discipline](https://agent.finddatatech.cloud/generated/materials/skill-portfolio-stop-discipline.md): 柏讯组合风险 · 止损纪律。当用户要求"止损设多少""移动止损怎么定""止损设了会自动执行吗""帮我看看哪些已经跌破线了"时使用。产出：一份用户既定的止损规则（绝对止损 / 移动止损 / 冷却期，含量级起点与按波动重标的方法与依据）+ 触发检查的状态呈现（当前值 vs 阈值 + 
+- [portfolio-rebalance-plan](https://agent.finddatatech.cloud/generated/materials/skill-portfolio-rebalance-plan.md): 柏讯组合风险 · 再平衡方案。当用户要求"从现在的持仓调到这个目标权重，具体买什么卖什么""每只调多少股""调仓成本大概多少""这套再平衡规则历史上表现如何"时使用。产出：逐标的差额 / 方向 / 整数股数（向下取整，与权重模式引擎同口径）+ 成本预估（佣金 / 印花税 / 滑点
+- [chain-mapping](https://agent.finddatatech.cloud/generated/materials/skill-chain-mapping.md): 柏讯产业链联动 · 链条映射。当用户要求"把这个行业拆成上下游""这几家公司分别在产业链哪一环""这条链的结构和关键变量是什么"时使用。产出：环节结构（上/中/下游，可多级）+ 代表标的（逐家给可解释的归属依据）+ 每环关键变量与来源 + 两档映射置信度（分类体系支持 / 公开资
+- [chain-transmission](https://agent.finddatatech.cloud/generated/materials/skill-chain-transmission.md): 柏讯产业链联动 · 传导验证。当用户说"上游涨价能不能传到中游毛利""这条链的滞后有多长""这个传导到底成不成立"时使用。产出：逐环传导检验表——每环给相关系数、时滞扫描、样本量与窗口；无数据的环节明示"未验证"，不显著的结果如实呈现，频度差显式处理。结论是历史统计关系，不是因果
+- [chain-beneficiary](https://agent.finddatatech.cloud/generated/materials/skill-chain-beneficiary.md): 柏讯产业链联动 · 环节受益分析。当用户说"这条链里哪个环节该配""毛利承压环节选哪几只""把传导结论变成可回测的候选"时使用。产出：可执行候选 universe 与目标权重（可进权重模式回测），每个候选回指某条已验证的传导结论；未验证环节不作依据。不预测价格、不给涨跌判断。
+- [chain-watch](https://agent.finddatatech.cloud/generated/materials/skill-chain-watch.md): 柏讯产业链联动 · 链条景气跟踪。当用户要求"盯一下这条链最近怎么样""按环节给我看关键变量的最新走势""哪些数据好久没更新了"时使用。产出：按环节分组的变量走势表（来源 + 最新期数 + 缺口标注 + 变化方向），不含预测、不含建议。宿主 cron 可定时触发（本技能只给方法与
+- [ic-adjudication](https://agent.finddatatech.cloud/generated/materials/skill-ic-adjudication.md): 柏讯投委会 · 裁决（套件入口技能）。当用户要求"开投委会""对某只股票做一次多空辩论并给结论""裁决多头空头的分歧""把辩论结论落账"时使用。本技能是套件入口：调度 ic-bull-case 与 ic-bear-case 双方立论，然后按四条裁决纪律（冲突不给 hold 须指强
+- [ic-bull-case](https://agent.finddatatech.cloud/generated/materials/skill-ic-bull-case.md): 柏讯投委会 · 多头立论。当用户要求对某只股票构建看多论证、写多头观点、准备投委会辩论的多方意见、把证据集收敛成"为什么该买"的最强论证，或作为 ic-adjudication 的立论阶段被调度时使用。本技能不取数、不计算、不裁决——数字只能引用证据集的 evidence_id，
+- [ic-bear-case](https://agent.finddatatech.cloud/generated/materials/skill-ic-bear-case.md): 柏讯投委会 · 空头立论（辩论三角色之一，与 ic-bull-case 完全对称）。当用户在投委会辩论流程中需要空头方论证、问「有什么理由不买」「多头论证哪里站不住」「估值凭什么下修」，或作为 ic-adjudication 的立论阶段被调度时使用。本技能不取数、不计算、不裁决—
+- [sentiment-document-review](https://agent.finddatatech.cloud/generated/materials/skill-sentiment-document-review.md): 柏讯舆情驱动 · 公告舆情审读。当用户要求"看看这家公司最近的公告口径怎么样""给这几篇公告做个舆情判断""这些公告偏正面还是负面""公告里有什么值得注意的表述"时使用。取公告全文（巨潮面）→ 逐篇打分（fd-sentiment，分数必带原文引用）→ 呈现分数/band/置信度/
+- [sentiment-trend-watch](https://agent.finddatatech.cloud/generated/materials/skill-sentiment-trend-watch.md): 柏讯舆情驱动 · 舆情转向追踪。当用户要求"这家公司最近舆情是在变好还是变差""这段时间公告口径有没有转向""按月看公告情绪的分布变化""找出情绪转折点对应的公告"时使用。按公告发布日排布分数，给逐期分布与转向点（附对应文档），并强制报告覆盖面与置信度两栏。样本不足时明示不下转向
+- [sentiment-signal-bridge](https://agent.finddatatech.cloud/generated/materials/skill-sentiment-signal-bridge.md): 柏讯舆情驱动 · 舆情与价格/持仓的描述性对照。当用户要求"舆情和股价是什么关系""情绪是不是领先价格""看看公告情绪和我持仓的对应""舆情能不能当信号用"时使用。做的是描述性对照：把分数分布的时间位置与价格/持仓的时间位置并排放，说清先后与是否同期，并强制标注样本是否足以做描述
+- [lex-console-tour](https://agent.finddatatech.cloud/generated/materials/skill-lex-console-tour.md): 识律控制台五页导览与路由表——每页管什么、用户问题该去哪页、何时发起 navigate 意图
+- [lex-credentials-guide](https://agent.finddatatech.cloud/generated/materials/skill-lex-credentials-guide.md): 识律凭据管理指引——创建、轮换、泄露处置的通用流程与安全纪律；不代用户执行
+- [lex-intent-protocol](https://agent.finddatatech.cloud/generated/materials/skill-lex-intent-protocol.md): 宿主页面动作协议——确认纪律、被拒后的改口规则、什么算动作什么不算；信封的字面形状见 persona
+- [lex-quota-billing](https://agent.finddatatech.cloud/generated/materials/skill-lex-quota-billing.md): 识律配额与账单的解读方法——口径以页面为准、硬停恢复途径、常见问题话术，绝不编造数字
+- [legal-corpus-explorer](https://agent.finddatatech.cloud/generated/materials/skill-legal-corpus-explorer.md): 五源法律语料检索与口径对照。当用户要查部门规章/地方规章、条约、纪检监察法规、人民法院案例库案例、党内法规，或要在多个语料源之间对照同一问题的规范口径、找某领域除法律外的细化规定（"部门规章怎么规定的""有没有条约""党内法规怎么要求""案例库里类似案件"）时使用。按封闭词表指定
+- [statute-lifecycle-tracker](https://agent.finddatatech.cloud/generated/materials/skill-statute-lifecycle-tracker.md): 法规效力生命周期追踪与所在层级查证。当用户要了解某部法规的效力状态（有效/已修改/已废止/尚未生效/未知）、核对一部法规是否被后续修法改动、盘点某一领域的现行有效法规存量、或要判断"某个规定还有效吗""这部法改过几版"时使用。以效力状态为权威口径逐条核验；如实声明发布日期与失效日
+- [crm-desk-reception-merchant](https://agent.finddatatech.cloud/generated/materials/skill-crm-desk-reception-merchant.md): 客服接待（商家自带 Chatwoot 租户）：发现你的账号、读未处理会话、读消息与联系人、在对话里出回复草稿；默认只草不发——发送必须经 propose_action 提议动作（crm.message.send）并等用户批准后由平台执行；任何工具失败原样上报并按四分类说明原因。
+- [shock-detection](https://agent.finddatatech.cloud/generated/materials/skill-shock-detection.md): 柏讯信息冲击 · 冲击识别。当用户要求"最近有什么新公告/新信息""把今天的信息流筛一遍""找出可能构成信息冲击的条目"时使用。先查来源健康度，再按游标拉信息流（list_since），按来源三型（公告/部委/互动）与七组冲击类型做初筛，逐条附 item_id、发布时间、正文状态
+- [shock-reading](https://agent.finddatatech.cloud/generated/materials/skill-shock-reading.md): 柏讯信息冲击 · 冲击解读。当用户要求"这条公告/这条信息说了什么""把关键条款摘出来""这个消息的具体金额和条件"时使用。读条目正文，抽取金额/比例/期限/主体/生效条件五类要素，结论分"明确（正文要素直接支撑）"与"需看条件"两栏；每条结论附证据块：item_id、as_of
+- [shock-window](https://agent.finddatatech.cloud/generated/materials/skill-shock-window.md): 柏讯信息冲击 · 影响窗口统计。当用户要求"这类公告发布前后一般怎么走""这条信息的历史前后窗口表现""前后窗口指标偏离多大"时使用。对同类信息冲击做多窗口（默认前窗 5 日基准 + 后窗 5/10/20 个交易日）的历史统计：样本量、分位、离散度与必选的反例比例；样本不足时整表
+- [shock-watch](https://agent.finddatatech.cloud/generated/materials/skill-shock-watch.md): 柏讯信息冲击 · 信息流跟踪。当用户要求"帮我盯着信息流""每天把新条目按来源和类型筛一遍""给我一张信息流跟踪表"时使用。按来源与冲击类型筛选条目流，输出条目清单、来源计数、期间对比与来源健康度水位；滞后与不可用如实标注"信息可能不完整"。不做预告、不预测影响、不做窗口统计；定
+- [wire-artifact-build](https://agent.finddatatech.cloud/generated/materials/skill-wire-artifact-build.md): 柏讯产物构建。当用户要用对话把数据变成柏讯里看得见的东西——建看板（dashboard）、建正文文档（doc）、建数据录入表单（form）、建单记录扫码页（record-view）、给已有产物改 spec、发布或归档产物——时使用。所有写入一律落草稿，发布必须是独立的第二次显式调
+- [wire-data-steward](https://agent.finddatatech.cloud/generated/materials/skill-wire-data-steward.md): 柏讯数据治理。当用户要读表单收上来的数据、改错一条记录、撤销一次改错、查改错历史或导出 CSV 时使用。写修正必须带来源标记（source），不得代填；撤销只置回滚标记、原始行永不改写；导出结果带 truncated 字段，true 表示被上游行数闸截断而非全量——必须如实转述。
+- [corpus-company](https://agent.finddatatech.cloud/generated/materials/skill-corpus-company.md): 企业语料：寻数是谁、双星一底座的产品定位与核心概念
+- [corpus-projects](https://agent.finddatatech.cloud/generated/materials/skill-corpus-projects.md): 项目语料：双星路线图里程碑状态、出口判据、在途变更
+- [corpus-capabilities](https://agent.finddatatech.cloud/generated/materials/skill-corpus-capabilities.md): 能力语料：谦面在架垂类、萬星服务形态、能拿来做什么
+- [facade-builder-guide](https://agent.finddatatech.cloud/generated/materials/skill-facade-builder-guide.md): 分身采访与生成流程：四步采访、素材整理纪律、manifest 组装规则、发布指引
+- [facade-manifest-template](https://agent.finddatatech.cloud/generated/materials/skill-facade-manifest-template.md): 分身 manifest 骨架：可直填的完整结构，含分身配置块与语料/接待的最小示例
+- [corpus-hello](https://agent.finddatatech.cloud/generated/materials/skill-corpus-hello.md): 演示语料：占位说明
+- [corpus-p2](https://agent.finddatatech.cloud/generated/materials/skill-corpus-p2.md): p2 的演示语料：这个分身的来历
+- [eco-academy-guide](https://agent.finddatatech.cloud/generated/materials/skill-eco-academy-guide.md): [生态] 回答「Claude 怎么用」时推荐对应课程
+- [eco-algorithmic-art](https://agent.finddatatech.cloud/generated/materials/skill-eco-algorithmic-art.md): [生态] 用 p5.js 做带随机种子的生成艺术
+- [eco-brand-guidelines](https://agent.finddatatech.cloud/generated/materials/skill-eco-brand-guidelines.md): [生态] Anthropic 官方品牌色与字体规范
+- [eco-discernment-nudge](https://agent.finddatatech.cloud/generated/materials/skill-eco-discernment-nudge.md): [生态] 交出可执行结论前补一句「哪些地方该自己核」
+- [eco-frontend-design](https://agent.finddatatech.cloud/generated/materials/skill-eco-frontend-design.md): [生态] 新界面或改版时的视觉方向、字体与版式判断
+- [eco-internal-comms](https://agent.finddatatech.cloud/generated/materials/skill-eco-internal-comms.md): [生态] 内部沟通文体（状态报告、周报、公告）写作模板
+- [eco-slack-gif-creator](https://agent.finddatatech.cloud/generated/materials/skill-eco-slack-gif-creator.md): [生态] 做 Slack 用的动图（尺寸与体积约束 + 校验工具）
+- [eco-theme-factory](https://agent.finddatatech.cloud/generated/materials/skill-eco-theme-factory.md): [生态] 给幻灯片、文档、网页套统一主题（10 套预设）
+- [eco-web-artifacts-builder](https://agent.finddatatech.cloud/generated/materials/skill-eco-web-artifacts-builder.md): [生态] 用 React/Tailwind/shadcn 搭建多组件 HTML 产物
+- [eco-webapp-testing](https://agent.finddatatech.cloud/generated/materials/skill-eco-webapp-testing.md): [生态] 用 Playwright 驱动本地 Web 应用做功能验证与 UI 排查
+
+## MCP servers (22 — 784 public tools embedded per page)
+
+- [AI Registry tools](https://agent.finddatatech.cloud/generated/materials/mcp-airegistry-tools.md): Provides tools to discover and list servers, agents, and skills in the AI Registry. Includes intelligent tool finder which uses semantic sea · endpoint: https://mcp.finddatatech.cloud/airegistry-tools/mcp
+- [网页抓取（托管版）](https://agent.finddatatech.cloud/generated/materials/mcp-eco-mcp-fetch.md): [生态] modelcontextprotocol 官方参考实现（MIT） · endpoint: https://mcp.finddatatech.cloud/eco-mcp-fetch/mcp
+- [时间与时区（托管版）](https://agent.finddatatech.cloud/generated/materials/mcp-eco-mcp-time.md): [生态] modelcontextprotocol 官方参考实现（MIT） · endpoint: https://mcp.finddatatech.cloud/eco-mcp-time/mcp
+- [谦面市场](https://agent.finddatatech.cloud/generated/materials/mcp-facet-market-mcp.md): 谦面市场操作 MCP（C1.1-A）：发布/浏览/版本/可见性/策展，facet /api/packs* 六工具，用户委托鉴权（市场 app token） · endpoint: https://mcp.finddatatech.cloud/facet-market-mcp/mcp
+- [谦面网关操作](https://agent.finddatatech.cloud/generated/materials/mcp-facet-ops-mcp.md): 谦面市场操作 MCP（五线 AI 操作面 C1）：目录/详情/发布/更新/上下架/查重，用户委托鉴权 · endpoint: https://mcp.finddatatech.cloud/facet-ops-mcp/mcp
+- [健康巡检配置](https://agent.finddatatech.cloud/generated/materials/mcp-fd-health-config.md): finddata 中央库健康巡检配置(总闸/限流)只读 MCP — fd_open_data.public.health_config · endpoint: https://mcp.finddatatech.cloud/fd-health-config/mcp
+- [信息流索引](https://agent.finddatatech.cloud/generated/materials/mcp-fd-info.md): 柏讯信息流索引 MCP：list_since/get_item/search_info/locate_evidence/stream_health 五工具（公告/部委/SSE互动三源） · endpoint: https://mcp.finddatatech.cloud/fd-info/mcp
+- [法律检索](https://agent.finddatatech.cloud/generated/materials/mcp-fd-legal-search-mcp.md): 识律法律检索 MCP（lex-platform-v1）：法条检索与条级引用解析（law_db 全目录 + Qdrant law_chunks_v2 语义检索）、类案检索（wenshu_db 裁判文书，RustFS zstd 块正文）、指导案例检索、五源法律语料——每个结果携带 p · endpoint: https://mcp.finddatatech.cloud/fd-legal-search-mcp/mcp
+- [模拟交易](https://agent.finddatatech.cloud/generated/materials/mcp-fd-paper-trading.md): 柏讯模拟交易 MCP（paper-only）：多租户账户/订单/持仓 + 行情（概念族可配） + 策略双轨与回测。调用者身份逐请求委托（进站 Authorization 转发）。 · endpoint: https://mcp.finddatatech.cloud/fd-paper-trading/mcp
+- [量化计算](https://agent.finddatatech.cloud/generated/materials/mcp-fd-quant.md): fd-quant deterministic compute plane + decision ledger (50 commercial tools · endpoint: https://mcp.finddatatech.cloud/fd-quant/mcp
+- [文档情绪打分](https://agent.finddatatech.cloud/generated/materials/mcp-fd-sentiment.md): 柏讯文档情绪打分 MCP：8 工具/5 组全 commercial。evidence_spans 必填且 quote 为原文逐字子串；幂等键 (doc_id, content_hash, prompt_version, model)；聚合视图明确非情绪指数；金标评测含置信度校准。 · endpoint: https://mcp.finddatatech.cloud/fd-sentiment/mcp
+- [政心参照系](https://agent.finddatatech.cloud/generated/materials/mcp-fd-zhengxin-reference.md): 政心参照系 MCP（lex 第四模块）：政体指标时序（V-Dem v2x_* 聚合指数，国家×年，附口径与 provenance）、思潮坐标（Wikidata+MARPOR 立场）、政治概念（SEP 只链不抄+中国线）、思想关系边、六源状态台账。全只读；空结果必带 reason， · endpoint: https://mcp.finddatatech.cloud/fd-zhengxin-reference/mcp
+- [识律账户与凭据](https://agent.finddatatech.cloud/generated/materials/mcp-lex-ops-mcp.md): 识律线操作 MCP（C4）：线全景导览（self-describing）+账户视图（me/usage/billing/quota）+检索凭据生命周期（list/mint/revoke，owner-only 上游判定）；Logto ID token 原样转发 · endpoint: https://mcp.finddatatech.cloud/lex-ops-mcp/mcp
+- [萬星生成](https://agent.finddatatech.cloud/generated/materials/mcp-vaas-wanxing.md): VAAS generation plane (Wanxing pilot): voice/image/video/cover generation, asset store, registry discovery. Multi-tenant; assets owner-scope · endpoint: https://mcp.finddatatech.cloud/vaas-wanxing/mcp
+- [萬星智能体操作](https://agent.finddatatech.cloud/generated/materials/mcp-wanxing-ops-mcp.md): 萬星舰队操作 MCP（C2）：公开目录/AgentCard/允许清单/启停 7 调用型（平台令牌用户委托）+A2A 回合（caller key 计费门）；回执不冒充结果 · endpoint: https://mcp.finddatatech.cloud/wanxing-ops-mcp/mcp
+- [柏讯建造与治理](https://agent.finddatatech.cloud/generated/materials/mcp-wire-build-mcp.md): 柏讯产物构建 MCP：form（录入表单）与 record-view（单记录扫码页）的创建/更新/发布，看板（dashboard）与正文文档（doc）创建，产物与版本读取，数据集列事实与按需建集。写入默认落草稿、发布必须独立显式调用；spec 引用不存在的列时错误文案带该数据集真 · endpoint: https://mcp.finddatatech.cloud/wire-build-mcp/mcp
+- [柏讯客户操作](https://agent.finddatatech.cloud/generated/materials/mcp-wire-ops-mcp.md): 柏讯客户面操作 MCP（C3）：需求单/数据面读/市场订阅十工具，双轨鉴权透传（Logto ID token / wdk_ key），viewer 只读与合规门上游判定 · endpoint: https://mcp.finddatatech.cloud/wire-ops-mcp/mcp
+- [启材目录](https://agent.finddatatech.cloud/generated/materials/mcp-edu-catalog.md): 启材线（教育）目录查询/订阅 MCP：跨论文/播客/课程检索、条目详情（卡层明示未取正文）、许可层概况、订阅盯梢（唯一写面=订阅两工具，只碰订阅表）。空结果与通道故障严格区分（reason 枚举）。 · endpoint: https://mcp.finddatatech.cloud/edu-catalog/mcp
+- [基础设施遥测](https://agent.finddatatech.cloud/generated/materials/mcp-infra-telemetry.md): 基础设施只读遥测 MCP：五工具闭集（GitOps 漂移/工作负载健康/服务存活/爬取汇总/成本），每返回带 as-of 与逐通道状态，零写面零凭据。 · endpoint: https://mcp.finddatatech.cloud/infra-telemetry/mcp
+- [柏讯 cell · drillcust001](https://agent.finddatatech.cloud/generated/materials/mcp-fd-wire-cell-drillcust001.md): fd-wire cell entry (managed by cell-manager) · endpoint: https://mcp.finddatatech.cloud/fd-wire-cell-drillcust001/mcp
+- [柏讯 cell · pgauto001](https://agent.finddatatech.cloud/generated/materials/mcp-fd-wire-cell-pgauto001.md): fd-wire cell entry (managed by cell-manager) · endpoint: https://mcp.finddatatech.cloud/fd-wire-cell-pgauto001/mcp
+- [柏讯 cell · wiretester2](https://agent.finddatatech.cloud/generated/materials/mcp-fd-wire-cell-wiretester2.md): fd-wire cell entry (managed by cell-manager) · endpoint: https://mcp.finddatatech.cloud/fd-wire-cell-wiretester2/mcp
+
+## For humans
+
+- [The plaza site](https://agent.finddatatech.cloud/): five-locale narrative face — what materials exist, how they are supplied, live inventory.
+- [Market actions](https://agent.finddatatech.cloud/#/packs): browse, subscribe, install — the action layer on the same truth.

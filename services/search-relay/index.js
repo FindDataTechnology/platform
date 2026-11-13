@@ -1,6 +1,6 @@
 // ── Search relay (operator-side, zero-dependency single file) ────────────────
 //
-// Reference implementation of the /v1/search contract documented in the ops runbook
+// Reference implementation of the /v1/search contract documented in DEPLOY.md
 // ("Web search relay"). The platform's websearch MCP client is the only
 // intended caller; this service fronts the gateway's websearch lane so no
 // customer deployment ever holds an upstream credential.

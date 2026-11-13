@@ -887,6 +887,17 @@ export function FleetsPage() {
                       >
                         {t("fleets.addMember")}
                       </Button>
+                      {/* Team console (add-pack-console): the team's own face —
+                          the blocks its pack declared, read-only. Separate from
+                          the cockpit: this row manages, the console shows. */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="fleet-console-open"
+                        onClick={() => navigate(`/fleets/${encodeURIComponent(selected.id)}/console`)}
+                      >
+                        {t("console.title")}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

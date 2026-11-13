@@ -78,10 +78,8 @@ export function registerCronRoutes(ctx) {
     }
   });
 
-  // A pause from THIS face is an owner's stop, not the fleet's: it must survive
-  // the fleet reconcile's converge pass (fix-fleet-operator-pause-durability).
   router.post("/:id/pause", async (req, res) => {
-    res.json({ ok: await cron.pauseJob(req.params.id, { by: "operator" }) });
+    res.json({ ok: await cron.pauseJob(req.params.id) });
   });
 
   // In-place edit (add-cron-automation-parity 2.1): id, execution history and

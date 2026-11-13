@@ -9,12 +9,19 @@
 // (pack-marketplace v1 scope) and the deploy dialog's honest-boundary wording
 // covers the run-domain account requirement (spec: 部署动作的诚实边界).
 //
+// Routing (overhaul-facet-shell-ia-and-space D4): the router is scoped — a
+// route table holding the creation face and nothing else. Before it, the page
+// mounted with no table at all, so its own back/team/market navigations were
+// silent no-ops on this host (supply-studio: 不存在静默无操作). Every
+// destination leaves through `handleNavigate`: run-domain targets open real
+// links to 壹座, 壹座-page targets become the host's own view change, and only
+// the creation face's own ?doc= deep links stay inside the local router.
+//
 // Chat store: the page reads the model roster for the judge-model picker; on
 // the facet host no chat plane feeds it, so the roster stays empty and the
 // judge lane resolves through the deployment env route (LLM_BASE_URL route —
 // same posture the 壹座 cell processes already run with an empty roster).
-import { MemoryRouter } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AgentStudioPage } from "@/pages/AgentStudioPage";
 import { useAuthStoreShim } from "./studioAuthShim";
 
@@ -41,23 +48,42 @@ export function studioQueryFromHash(hash: string): string {
   return s ? `?${s}` : "";
 }
 
-export function StudioView() {
+export function StudioView({ onExit }: { onExit?: () => void } = {}) {
   // Hook call (add-supply-studio-migration 1.6): the shim mirrors the facet
   // session into the shared auth store. It was previously rendered as
   // `<useAuthStoreShim />` — lowercase JSX is a DOM tag to React, so the
   // mount effect never ran; call it as the hook it is.
   useAuthStoreShim();
-  const { t } = useTranslation();
   const query = studioQueryFromHash(window.location.hash);
+
+  /** Claim a destination that has no page on this host. Returns false for the
+   *  creation face's own doc deep links, which the local table serves. */
+  const handleNavigate = (to: string): boolean => {
+    // Run-domain surfaces (a freshly deployed team) live in 壹座: open it for
+    // real so the URL is copyable and the back button works.
+    if (to.startsWith("/fleets/")) {
+      window.open(`${RUN_ORIGIN}${to}`, "_blank", "noopener,noreferrer");
+      return true;
+    }
+    // 壹座's own pages — the market is this host's packs view.
+    if (to.startsWith("/agents")) {
+      onExit?.();
+      return true;
+    }
+    return false;
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col" data-testid="facet-studio-face">
       <MemoryRouter initialEntries={[`/studio${query}`]}>
-        <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            {t("facetShell.studioTitle")}
-          </span>
-        </div>
-        <AgentStudioPage runOrigin={RUN_ORIGIN} />
+        {/* Scoped route table: the creation face only. Nothing else on this
+            host can be reached by a borrowed view's navigation. */}
+        <Routes>
+          <Route
+            path="/studio"
+            element={<AgentStudioPage runOrigin={RUN_ORIGIN} onExit={onExit} onNavigate={handleNavigate} />}
+          />
+        </Routes>
       </MemoryRouter>
     </div>
   );

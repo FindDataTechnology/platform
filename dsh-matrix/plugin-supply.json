@@ -1,0 +1,13 @@
+{
+  "//": "Supply whitelist for dsh plugin bundles (openspec: harden-plugin-supply-gates).",
+  "//contributes": "Allowed classes: skill / ui / service. Forbidden: tool / llm / credential / channel (each refusal carries its reason in lib/plugin-contribution-spec.js).",
+  "//enforced": "scripts/check-plugin-supply.mjs — every bundle in dsh-profile-template's dsh.profile.bundles must be declared here (an undeclared bundle is not assumed harmless), and every entry here must be composed there (a declaration that composes nowhere is dead).",
+  "bundles": [
+    {
+      "name": "@platform/supply-probe-bundle",
+      "version": "0.0.1",
+      "contributes": ["service"],
+      "note": "Inert sample that proves the supply chain end to end; its apply() does nothing."
+    }
+  ]
+}

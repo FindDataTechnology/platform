@@ -227,6 +227,22 @@ jobs:
             for i in $(seq 1 60); do curl -sf -m 2 -H "x-forwarded-email: mobile@corp.com" -H "x-forwarded-groups: users" -H "accept: application/json" http://127.0.0.1:9412/api/mp/bindcode -o /tmp/app-mock2/code.json && break; sleep 1; done
             cat /tmp/app-mock2/code.json
             (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test -e CHARTS_INSTANCE=http://10.0.2.2:9412 -e CHARTS_CODE=$(python3 -c 'import json;print(json.load(open("/tmp/app-mock2/code.json"))["code"])') .maestro/charts.yaml) || { adb exec-out screencap -p > /tmp/app-mock/charts-fail.png; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml /tmp/app-mock/charts-ui.xml >/dev/null 2>&1; curl -s http://127.0.0.1:3288/__chaos/requests -o /tmp/app-mock/chaos-requests.json; adb logcat -d > /tmp/app-mock/charts-logcat.txt; exit 1; }
+            # 5) Zhiyu room lane (openspec 7.2): a THIRD instance, because the
+            #    room kernel lives at the GATEWAY, not in the cell — server.js has
+            #    no /api/zhiyu/* at all, so neither mock above can show a room.
+            #    e2e/zhiyu-gateway-mock.mjs mounts the REAL kernel and seeds 60
+            #    messages (61 rows) — deliberately more than the app's
+            #    tailCount:30 window, or the whole room would arrive in one page
+            #    and "load earlier" would never render. It prints its own bind
+            #    code, so nothing is minted here. `pm clear` first: the pairing
+            #    token persists in AsyncStorage, and this lane must pair against
+            #    9413 rather than inherit 9411's instance.
+            mkdir -p /tmp/zy-mock/data
+            (PORT=9413 HOST=0.0.0.0 MOCK_DATA_DIR=/tmp/zy-mock/data nohup node e2e/zhiyu-gateway-mock.mjs > /tmp/zy-mock/out.json 2>&1 &)
+            for i in $(seq 1 60); do grep -q '"roomId"' /tmp/zy-mock/out.json && break; sleep 1; done
+            cat /tmp/zy-mock/out.json
+            adb shell pm clear com.finddata.platform
+            (cd app && MAESTRO_DRIVER_STARTUP_TIMEOUT=300000 $HOME/.maestro/bin/maestro test -e OUTPUT_INSTANCE=http://10.0.2.2:9413 -e PAIRING_CODE=$(python3 -c 'import json;print(json.load(open("/tmp/zy-mock/out.json"))["code"])') .maestro/zhiyu.yaml) || { adb exec-out screencap -p > /tmp/zy-mock/fail.png; adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1; adb pull /sdcard/ui.xml /tmp/zy-mock/ui.xml >/dev/null 2>&1; adb logcat -d > /tmp/zy-mock/logcat.txt; exit 1; }
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -243,6 +259,10 @@ jobs:
             /tmp/app-mock/chaos.log
             /tmp/app-mock2/server.log
             /tmp/app-mock2/code.json
+            /tmp/zy-mock/out.json
+            /tmp/zy-mock/fail.png
+            /tmp/zy-mock/ui.xml
+            /tmp/zy-mock/logcat.txt
             /home/runner/.maestro/tests/
           retention-days: 7
           if-no-files-found: ignore

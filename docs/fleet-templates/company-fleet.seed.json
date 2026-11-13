@@ -321,7 +321,7 @@
   "i18n": {
     "en": {
       "name": "AI Company",
-      "description": "Official fleet-template exemplar: a CEO patrol ({{fleetContext}} injection) + three real-data posts (open-source/investment) + an assistant reference post + two connector empty-state posts (e-commerce/content, demonstrating the vacant-post downgrade) + a Wanxing cluster a2a optional member (degrading when the demo dependency is absent). The pack ships at most 3 agents of its own (measured at minting), which is why the assistant is an existing-persona reference post; the orchestration section is supervisor-style dispatch — the CEO can hand work to each division (explicit dispatch edges, not a fleet-wide implicit channel). When minting and listing, packId/placeholders are filled in by the minting script; this file is the source of truth for the manifest and the test pins that it must pass fleet pre-validation.",
+      "description": "Official fleet-template exemplar: a CEO patrol ({{fleetContext}} injection) + three real-data posts (open-source/investment) + an assistant reference post + two connector empty-state posts (e-commerce/content, demonstrating the vacant-post downgrade) + a Wanxing runner-seat reference post.",
       "agents": {
         "company-ceo": {
           "name": "CEO"

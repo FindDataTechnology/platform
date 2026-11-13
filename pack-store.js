@@ -28,6 +28,7 @@ import * as credentialRefs from "./credential-refs.js";
 import { isMarketInstallableEntry } from "./registry-bridge.js";
 import * as bots from "./server/bots.js";
 import { validatePackManifest, skillScriptFiles } from "./lib/pack-manifest.js";
+import { checkPluginSupply, describePluginSupplyFailure, pluginSupplyOk } from "./lib/pack-plugins.js";
 import { mcpBudgetCheck } from "./lib/cell-mcp-budget.js";
 import {
   PACK_BOT_CREDENTIAL_KEY,
@@ -336,13 +337,52 @@ async function installMcpRef(ref, { user }) {
 // add-packaged-skills: a pack whose skills carry script files installs only
 // with an explicit `confirm` (D5 — one upfront acknowledgment, enforced here
 // so both request shapes, body manifest and server-side fetch, are gated).
-export async function installPack({ packId, version, manifest, user, confirm = false, hooks = {}, source = "market" }) {
+export async function installPack({
+  packId,
+  version,
+  manifest,
+  user,
+  confirm = false,
+  hooks = {},
+  source = "market",
+  // Team plugin references (add-fleet-plugin-declaration D1/D4): a pack may
+  // DECLARE the baked plugins its team needs, never install them. Only a caller
+  // that can read this deployment's roster may prove the declaration, so the
+  // resolver is injected — and its absence is a refusal, not a skip.
+  pluginSupply = null,
+}) {
   if (!packId || !manifest?.name || !Number.isInteger(Number(version))) {
     throw Object.assign(new Error("packId, version, and manifest are required"), { status: 400 });
   }
   const errors = validatePackManifest(manifest);
   if (errors.length > 0) {
     throw Object.assign(new Error("Invalid manifest"), { status: 400, details: errors });
+  }
+  // Plugin references, checked before anything is materialized: a pack whose
+  // team cannot work must not install "successfully" and then quietly run
+  // without its plugins (the silent state this gate exists to prevent).
+  const declaredPlugins = Array.isArray(manifest.plugins) ? manifest.plugins.filter((p) => p && typeof p.id === "string") : [];
+  if (declaredPlugins.length > 0) {
+    const supply = typeof pluginSupply === "function" ? await pluginSupply({ manifest, declared: declaredPlugins }) : pluginSupply;
+    if (!supply || !Array.isArray(supply.roster)) {
+      throw Object.assign(
+        new Error(
+          "This pack declares team plugins but this deployment cannot read its plugin roster — refusing to install a pack whose plugins cannot be verified",
+        ),
+        { status: 409, code: "plugin-roster-unavailable", details: { plugins: declaredPlugins.map((p) => p.id) } },
+      );
+    }
+    const result = checkPluginSupply({
+      declared: declaredPlugins,
+      roster: supply.roster,
+      bakedVersions: supply.bakedVersions ?? null,
+    });
+    if (!pluginSupplyOk(result)) {
+      throw Object.assign(
+        new Error(`This pack needs plugins this deployment cannot supply — ${describePluginSupplyFailure(result)}`),
+        { status: 409, code: "plugin-supply-missing", details: result },
+      );
+    }
   }
   // Cell MCP budget (D8 ④ 容量面): dsh initialises MCP servers serially inside a
   // hard 60s budget, and nothing used to cap how many a cell accumulated. Past

@@ -96,7 +96,7 @@ test("shadow drops out-of-allowlist registrations at every generation; the rest 
   }
 });
 
-test("shadow records the 0.2.0 scope-attribution contract (isolation moved upstream)", async () => {
+test("shadow preserves scoped registration attribution", async () => {
   writeFilter({ alpha: ["lookup"] });
   const { app, inst } = await bootTools();
   try {
@@ -107,43 +107,13 @@ test("shadow records the 0.2.0 scope-attribution contract (isolation moved upstr
     await handle.await?.();
 
     const disp = capture.ctx.tools.register(mkTool("mcp__beta__scoped_tool"));
+    const globalNames = inst.schemas().map((s) => s.name);
+    assert.ok(!globalNames.includes("mcp__beta__scoped_tool"), "a scoped registration never leaks to the global layer");
     const scopedNames = inst.schemas(scopeOf(capture.ctx)).map((s) => s.name);
     assert.ok(scopedNames.includes("mcp__beta__scoped_tool"), "the scoped registration stays visible in its scope");
 
-    // ── DECISION RECORD (2026-11-10, openspec fix-tool-scope-scope-attribution) ──
-    // dsh-tools 0.1.1-rc.2 → 0.2.0-rc.2 moved receiver/scope attribution: a
-    // service view's method now runs with the RAW instance as `this`, so
-    // `this.ctx` is the root context. Two consequences, both asserted below so
-    // that ANY upstream change (isolation restored, or restrict usable again)
-    // turns this test red and forces the decision to be revisited:
-    //
-    //   1. a scoped registration lands in the shared/global layer and is visible
-    //      from another agent's roster (measured: scope B sees scope A's tool);
-    //   2. `tools.restrict({ deny })` — the roster-narrowing escape hatch — is
-    //      unusable from an agent scope: it throws "requires a scoped context
-    //      (agent.ctx)" because it cannot see the caller's scope (measured).
-    //
-    // Mitigations still standing (and NOT weakened by this record): the
-    // registration-time allowlist filter (case 1 of this file) and the
-    // pre-execute guard, which deny *calls* even when a name is visible.
-    const second = createScope(app, { seam: "agent-two" });
-    const other = {};
-    const h2 = second.ctx.plugin(toolsUserPlugin(other));
-    await h2.await?.();
-    assert.ok(
-      other.ctx.tools.schemas().map((s) => s.name).includes("mcp__beta__scoped_tool"),
-      "as of 0.2.0-rc.2 a scoped registration IS visible to another agent's roster (isolation moved upstream)",
-    );
-    assert.throws(
-      () => other.ctx.tools.restrict({ deny: ["mcp__beta__scoped_tool"] }),
-      /requires a scoped context/,
-      "as of 0.2.0-rc.2 tools.restrict() cannot be called from an agent scope, so roster narrowing is unavailable",
-    );
-
     disp();
-    h2.dispose?.();
     handle.dispose?.();
-    await second.dispose();
     await scope.dispose();
   } finally {
     delete inst.register;

@@ -282,6 +282,16 @@ export default function HistoryDrawer({
                 </Group>
               ) : null}
 
+              <Group title="◈ 智语空间">
+                <View
+                  className="grp-sec-link"
+                  data-testid="mp-zhiyu-entry"
+                  onClick={() => Taro.navigateTo({ url: "/pages/zhiyu/list/index" })}
+                >
+                  <Text>进入房间列表 ›</Text>
+                </View>
+              </Group>
+
               <Group title="🧭 指挥台">
                 <View
                   className="grp-sec-link"

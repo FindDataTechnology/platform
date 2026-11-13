@@ -1677,7 +1677,7 @@ test("residency: a spontaneously-exiting child drops its entry via the exit hook
 
 // ── add-runner-fleet-sharding: the hosting filter ───────────────────────────
 // An entry tagged runner_id belongs to that runner; untagged entries belong
-// to the fleet's DEFAULT runner (runner-a, the seeded legacy row). A sharded
+// to the fleet's DEFAULT runner (cheap-1, the seeded legacy row). A sharded
 // runner points AGENT_RUNNER_DEFAULT_ID at the fleet default and takes only
 // its own slice.
 
@@ -1688,16 +1688,16 @@ test("sharding: listServedAgents hosts only the assigned slice", async () => {
     supported_protocol: "a2a",
     metadata: { packId: "p", ...(runnerId ? { runner_id: runnerId } : {}) },
   });
-  const doc = { agents: [mk(), mk("runner-b"), mk("runner-a"), { is_enabled: false }, { supported_protocol: "mcp" }] };
+  const doc = { agents: [mk(), mk("runner-b"), mk("cheap-1"), { is_enabled: false }, { supported_protocol: "mcp" }] };
   const fetchImpl = async () => ({ ok: true, json: async () => doc });
-  const legacy = createRegistryClient({ registryUrl: "https://r", registryToken: "t", fetchImpl, runnerId: "runner-a", defaultRunnerId: "runner-a" });
+  const legacy = createRegistryClient({ registryUrl: "https://r", registryToken: "t", fetchImpl, runnerId: "cheap-1", defaultRunnerId: "cheap-1" });
   const rows = await legacy.listServedAgents();
   assert.deepEqual(
     rows.map((a) => a.metadata.runner_id ?? "(untagged)"),
-    ["(untagged)", "runner-a"],
+    ["(untagged)", "cheap-1"],
     "the default runner keeps untagged legacy entries plus its own tagged slice",
   );
-  const shard = createRegistryClient({ registryUrl: "https://r", registryToken: "t", fetchImpl, runnerId: "runner-b", defaultRunnerId: "runner-a" });
+  const shard = createRegistryClient({ registryUrl: "https://r", registryToken: "t", fetchImpl, runnerId: "runner-b", defaultRunnerId: "cheap-1" });
   const shardRows = await shard.listServedAgents();
   assert.deepEqual(shardRows.map((a) => a.metadata.runner_id), ["runner-b"], "a sharded runner takes only its own slice");
   // Pre-fleet contract: no runnerId wired = host everything qualifying.

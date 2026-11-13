@@ -98,6 +98,66 @@ assert.equal(search.setSemanticOptIn(true, { acknowledged: true }).ok, true);
   assert.ok(db.listDocIdsMissingVectors({ model: "test-model", dim: 8 }).length < before);
 }
 
+// ── document-management：摄取不得等待嵌入（关键性质此前无断言）───────────
+// 现在代码里是 `void scheduleEmbed(id)`。若有人把 void 换成 await，所有既有
+// 测试仍会全绿——只有线上摄取会随嵌入通道变慢。这条断言就是防这个。
+{
+  let resolveEmbed = null;
+  const hanging = {
+    embedBatch: () => new Promise((resolve) => { resolveEmbed = resolve; }),
+  };
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), "fd-nonblock-"));
+  db.upsertDocument({ id: "nb-1", name: "nb.md", type: "md", status: "ready",
+    added_at: new Date().toISOString(), source_text: "不阻塞用例" });
+  db.replaceDocumentChunks("nb-1", "nb.md", search.chunkText("不阻塞用例"));
+
+  const t0 = Date.now();
+  const pending = search.scheduleEmbed("nb-1", { embedder: hanging });
+  // 调度立即返回（不等嵌入完成）
+  assert.ok(Date.now() - t0 < 200, "scheduleEmbed 必须立即返回，不得等待通道");
+
+  // 通道还挂着的时候，文档照常可被词法检索命中
+  const hits = search.searchLibrary("不阻塞用例");
+  assert.ok(hits.some((h) => h.docId === "nb-1"), "嵌入未完成不得影响词法可用性");
+
+  // 链是异步推进的：等 embedBatch 真的被调用（resolveEmbed 被赋值）再放行，
+  // 否则直接调用会撞上「赋值还没发生」的竞态，pending 永远不 settle。
+  for (let i = 0; i < 40 && !resolveEmbed; i++) await new Promise((r) => setTimeout(r, 25));
+  assert.ok(resolveEmbed, "embedBatch 应已被调用");
+  resolveEmbed({ vectors: Array.from({ length: 8 }, () => new Array(8).fill(0)), model: "test-model", dim: 8 });
+  await pending;
+
+  // 单次抛错不得 poison 整条链：下一次调度仍要能跑
+  const exploding = { embedBatch: async () => { throw new Error("boom"); } };
+  await search.scheduleEmbed("nb-1", { embedder: exploding }).catch(() => {});
+  const after = await search.scheduleEmbed("nb-1", { embedder: fakeEmbedder() });
+  assert.equal(after.status, "ok", "前一次崩溃后链必须仍可用（不得 poison）");
+  fs.rmSync(dir2, { recursive: true, force: true });
+}
+
+// ── 回填必须按批限速，不是一次性打满 ───────────────────────────────────────
+{
+  const dir2 = fs.mkdtempSync(path.join(os.tmpdir(), "fd-gap-"));
+  for (let i = 0; i < 3; i++) {
+    const id = `gap-${i}`;
+    db.upsertDocument({ id, name: `${id}.md`, type: "md", status: "ready",
+      added_at: new Date().toISOString(), source_text: `限速用例 ${i}` });
+    db.replaceDocumentChunks(id, `${id}.md`, search.chunkText(`限速用例 ${i}`));
+  }
+  const t0 = Date.now();
+  const out = await search.backfillVectors({ max: 3, gapMs: 200, embedder: fakeEmbedder() });
+  const elapsed = Date.now() - t0;
+  assert.ok(out.done >= 2, "应回填多篇");
+  // 3 篇之间至少两次 200ms 间隔
+  assert.ok(elapsed >= 350, `回填必须批间限速，实测仅 ${elapsed}ms`);
+
+  // gapMs=0 时不应人为拖延（证明延迟来自限速而不是别处）
+  const t1 = Date.now();
+  await search.backfillVectors({ max: 1, gapMs: 0, embedder: fakeEmbedder() });
+  assert.ok(Date.now() - t1 < 300, "单篇不应被限速拖慢");
+  fs.rmSync(dir2, { recursive: true, force: true });
+}
+
 // ── 关闭后不再回填，但已有向量保留 ─────────────────────────────────────────
 {
   const kept = db.countChunkVectors({ model: "test-model", dim: 8 });

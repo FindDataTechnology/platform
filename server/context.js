@@ -21,6 +21,7 @@ import * as cron from "../cron.js";
 import * as extensionStore from "../extension-store.js";
 import * as skillMaterialize from "../skill-materialize.js";
 import * as catalog from "../catalog.js";
+import { createTeamDispatch } from "./team-dispatch.js";
 
 // Split a bundle-manifest permissions policy ("mcp:<name>"/"skill:<name>" →
 // { allow?, deny?, locked? }) into the extensions-DB columns: the locked flag
@@ -128,6 +129,28 @@ export function attachTurnStateModule(c) {
     buf.bytes += size;
   };
   c.appendTurnBufferFor = appendTurnBuffer;
+  return c;
+}
+
+// Team a2a dispatch (openspec: add-team-as-a2a-agent, 3.4). Attached here for
+// the same reason everything else is: `server/routes/team-cards.js` mounts the
+// whole call door only when `ctx.teamDispatch` is a function, and before this
+// nothing assigned it — on a real cell `/api/teams/:handle/a2a` was never
+// registered and every call read `not_serving`. The capability now exists, so
+// the door registers; a team whose reception cannot answer still refuses by
+// name (`server/team-dispatch.js` says why) instead of returning an empty
+// success.
+//
+// ownerEmail/cloudMode are GETTERS, not values: the cell runtime stamps
+// `ctx.cellUserEmail` after the context is built, and the credential choice
+// (per-user vs deployment) is made per call from that field.
+export function attachTeamDispatch(c) {
+  if (typeof c.teamDispatch === "function") return c; // already attached (idempotence)
+  c.teamDispatch = createTeamDispatch({
+    ownerEmail: () => c.cellUserEmail ?? null,
+    cloudMode: () => !!c.CLOUD_MODE,
+    log: console,
+  });
   return c;
 }
 
@@ -399,6 +422,8 @@ export function createAppContext(config) {
       return false;
     }
   };
+
+  attachTeamDispatch(ctx);
 
   return ctx;
 }

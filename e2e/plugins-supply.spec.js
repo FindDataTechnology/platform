@@ -161,3 +161,38 @@ test("a catalogue failure names the problem and offers a retry", async ({ page }
   await alert.getByRole("button").click();
   await expect(page.getByTestId("plugin-catalog")).toBeVisible();
 });
+
+// Curation evidence is a SECOND dimension (openspec: curation-evidence). The
+// server derives it from the catalogue entry, so the client only renders what it
+// was handed — but a dimension that exists in the payload and never reaches the
+// row is the same as not having it. These two cases are that mount.
+test("evidence state renders beside supply state and never replaces it", async ({ page }) => {
+  const catalog = [
+    {
+      id: "@e2e/cat-enabled",
+      name: "Enabled bundle",
+      description: "supplied and on",
+      evidence: { state: "complete", reviewValidUntil: "2027-11-01" },
+    },
+    { id: "@e2e/cat-available", name: "Off bundle", description: "lapsed review", evidence: { state: "stale" } },
+    { id: "@e2e/cat-protected", name: "Protected bundle", description: "never reviewed", evidence: { state: "missing" } },
+    { id: "@e2e/cat-unsupplied", name: "Not supplied", description: "catalogued only" },
+  ];
+  await openPluginsTab(page, { catalog });
+
+  // both dimensions on one row: supply = enabled, evidence = complete + deadline
+  const enabled = page.getByTestId("plugin-row-@e2e/cat-enabled");
+  await expect(enabled).toHaveAttribute("data-state", "enabled");
+  const pill = page.getByTestId("plugin-evidence-@e2e/cat-enabled");
+  await expect(pill).toHaveAttribute("data-evidence", "complete");
+  await expect(pill).toContainText("Reviewed");
+  await expect(page.getByTestId("plugin-evidence-until-@e2e/cat-enabled")).toContainText("2027-11-01");
+
+  // the lapsed one says so, and it is not silently reported as reviewed
+  await expect(page.getByTestId("plugin-evidence-@e2e/cat-available")).toHaveAttribute("data-evidence", "stale");
+  await expect(page.getByTestId("plugin-evidence-@e2e/cat-available")).toContainText("Re-review due");
+
+  // an entry with no evidence block invents nothing: no pill at all
+  await expect(page.getByTestId("plugin-evidence-@e2e/cat-unsupplied")).toHaveCount(0);
+  await expect(page.getByTestId("plugin-row-@e2e/cat-unsupplied")).toHaveAttribute("data-state", "unsupplied");
+});

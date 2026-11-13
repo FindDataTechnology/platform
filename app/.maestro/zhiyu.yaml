@@ -1,0 +1,80 @@
+# Zhiyu room flow on a real Android runtime (openspec: add-zhiyu-mobile-clients,
+# task 7.2). What this covers from docs/zhiyu-mobile-device-walkthrough.md is
+# exactly the three items that are about the RUNTIME rather than the logic:
+#
+#   1 进房    — the tab, the list, and the tap into a room
+#   2 看流    — the first screen is the TAIL, not row 1 (a 31-row room must not
+#               open on 第 1 条; that regression shipped once on web)
+#   3 翻页    — "加载更早" prepends an ADJACENT older window
+#
+# It runs against e2e/zhiyu-gateway-mock.mjs, which mounts the REAL room kernel,
+# so the tail/cursor rules under test are production's, not a mock's imitation.
+# Everything else in the walkthrough is covered by a node/Playwright gate or is
+# human-only — see the matrix at the top of that document.
+#
+# Run with (the harness prints its own bind code):
+#   (cd app && maestro test -e OUTPUT_INSTANCE=http://10.0.2.2:9413 \
+#                            -e PAIRING_CODE=<code> .maestro/zhiyu.yaml)
+appId: com.finddata.platform
+---
+- launchApp
+# A release cold start on the software-rendered CI emulator can take far longer
+# than the default assert window before the first JS frame renders.
+- extendedWaitUntil:
+    visible:
+      text: '连接你的壹座|Connect to your Yizuo'
+    timeout: 90000
+- tapOn:
+    id: 'server-input'
+- inputText: ${OUTPUT_INSTANCE}
+- hideKeyboard
+- tapOn:
+    id: 'code-input'
+- inputText: ${PAIRING_CODE}
+- hideKeyboard
+# By id, never by text: the text form matched a subtitle once and submit never
+# ran (run 38157370263).
+- tapOn:
+    id: 'bind-button'
+- extendedWaitUntil:
+    visible:
+      text: '.*智语|.*Zhiyu'
+    timeout: 30000
+
+# ── 1 进房 ────────────────────────────────────────────────────────────────
+- tapOn:
+    text: '.*智语|.*Zhiyu'
+- extendedWaitUntil:
+    visible:
+      id: 'app-zy-list'
+    timeout: 30000
+- assertVisible: '真机走查房'
+- tapOn: '真机走查房'
+- extendedWaitUntil:
+    visible:
+      id: 'app-zy-stream'
+    timeout: 30000
+
+# ── 2 看流：尾部起播 ──────────────────────────────────────────────────────
+# The app opens a room with `tailCount: 30` over a seeded 61-row room
+# (system + 第1…第60), so the tail window is 第31…第60. Both assertions matter:
+# the newest row must be on screen AND the first row must not be — "shows
+# something" would pass even if the room replayed from the top, which is the
+# failure this item names.
+- extendedWaitUntil:
+    visible: '第 60 条消息'
+    timeout: 20000
+- assertNotVisible: '第 1 条消息'
+
+# ── 3 翻页：加载更早 ──────────────────────────────────────────────────────
+- tapOn:
+    id: 'app-zy-load-earlier'
+# pageSize is 20, so "load earlier" asks for before=32&limit=20 → 第11…第30. The
+# prepended page sits ABOVE the viewport and its NEWEST row (第 30) is adjacent
+# to the tail's oldest (第 31): finding it after one upward scroll is what proves
+# an adjacent window was prepended, not the same window re-rendered.
+- scrollUntilVisible:
+    element:
+      text: '第 30 条消息'
+    direction: UP
+    timeout: 20000

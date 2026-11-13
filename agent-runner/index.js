@@ -4,7 +4,7 @@
 // Multi-tenant runner for deployed Agent Services (ADR-0004). Boots inert —
 // polls the registry, hosts nothing — then serves A2A for whatever deploy
 // actions registered. One dsh child per role, private DSH_HOME, runner-level
-// model. Runbook: see the agent-runner design (docs/adr/0004).
+// model. Runbook: DEPLOY.md § agent-runner.
 
 import http from "node:http";
 import path from "node:path";
@@ -109,10 +109,47 @@ const registryClient = createRegistryClient({
     runnerId: config.fleetRunnerId,
     defaultRunnerId: config.defaultRunnerId,
   });
+// 披露闸客户端（design D8）：两个 env 都齐才注入。缺一个就保持 null ——
+// 闸门会以 no_verdict_client 失败关闭，与打补丁前完全一致。
+const mandateVerdictClient =
+  config.mandateVerdictUrl && config.mandateVerdictToken
+    ? async ({ domain, text, declaredSources, channelRevocable }) => {
+        // 超时即失败关闭：宁可不发，也不要在网上挂着等。
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 5000);
+        try {
+          const r = await fetch(`${config.mandateVerdictUrl}/api/actions/mandate-verdict`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${config.mandateVerdictToken}`,
+            },
+            body: JSON.stringify({ domain, text, declaredSources, channelRevocable }),
+            signal: ctl.signal,
+          });
+          // 非 2xx 一律不成「放行」：503（未配置）/401（错 token）/5xx 都算拒绝。
+          if (!r.ok) return { ok: false, reason: `verdict_http_${r.status}` };
+          const j = await r.json();
+          if (!j || typeof j !== "object") return { ok: false, reason: "bad_verdict" };
+          return {
+            ok: j.ok === true,
+            decision: j.decision,
+            reason: j.reason ?? null,
+            violations: Array.isArray(j.violations) ? j.violations : [],
+          };
+        } catch (e) {
+          return { ok: false, reason: `verdict_error: ${e?.message || e}` };
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+    : null;
+
 const manager = new ChildManager({
   config,
   registryClient,
   clientFactory: wrappedFactory,
+  mandateVerdictClient,
 });
 
 // Fleet observability (add-fleet-event-backbone 3.1): direct-post reporter +

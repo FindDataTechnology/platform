@@ -59,6 +59,46 @@ export async function listDeployerMemoryEntries(rootKey: string, q: MemoryQuery 
   return { items: Array.isArray(doc.items) ? doc.items : [] };
 }
 
+// Pack memory policy (add-pack-memory-declaration 3.4): the four-column read
+// face for the pack root a team shares. The row set is the MEMORY SERVICE's
+// answer, not ours — this client only names the shape, so a column added
+// upstream arrives here as data rather than as a code change.
+export interface PolicyRow {
+  declared: string | number | null;
+  inherited_from: string | null;
+  effective: string | number | null;
+  executed: boolean;
+  // Present only when the STORED row could not be parsed (out-of-band write,
+  // older version, restore). When set, `effective` is not a declaration in
+  // force — the panel must say so rather than render a number.
+  invalid?: { code: string; message: string; level: string };
+}
+
+export interface PackPolicy {
+  rootKey: string;
+  project?: string;
+  rows: Record<string, PolicyRow>;
+  not_executed?: string[];
+  deployment_default?: Record<string, string | number>;
+  // Keys nobody knows: they produce no row at all, so this list is the only
+  // place they can appear.
+  stored_invalid?: Array<{ level: string; key: string; code: string; message: string }>;
+  // Where the policy lives. The scope is the PACK root, shared by every team
+  // landed from it — never render it as "this team only".
+  policy_root?: string;
+  scope?: string;
+}
+
+export async function getPackPolicy(packId: string): Promise<PackPolicy> {
+  const res = await fetch(`/api/memory/policy?packId=${encodeURIComponent(packId)}`, { credentials: "same-origin" });
+  if (!res.ok) {
+    let code = "memory_read_failed";
+    try { code = ((await res.json()) as { code?: string }).code ?? code; } catch { /* non-JSON */ }
+    throw Object.assign(new Error(code), { code });
+  }
+  return (await res.json()) as PackPolicy;
+}
+
 // Tier promotion proposals (add-tier-promotion-candidates 5.1): AI proposes
 // draft→stable but never applies it — the owner sees each pending proposal
 // here and accepts or ignores. Reusing the /api/memory proxy identity seam.

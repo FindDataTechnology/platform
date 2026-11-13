@@ -27,7 +27,10 @@ import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
 import { atomicWriteTextSync, normalizeBaseUrl } from "./lib/persistence.js";
 import { effectiveMcpTools } from "./lib/pack-manifest.js";
-import { publishReportContracts } from "./server/report-contract.js";
+import { findRouteExclusivityViolations, throwRouteViolations } from "./lib/llm-route-exclusivity.js";
+import { applyRouteExceptions, loadRouteExceptions } from "./lib/route-exceptions.js";
+import { effectiveRows, ledgerFromPlan } from "./lib/fleet-plugin-rows.js";
+import { platformCredentialKeysIn } from "./lib/platform-credential-keys.js";
 import { deriveFullModeToolScope, customPresetToolScope, capByOperatorFace } from "./lib/full-mode-tool-scope.js";
 import { OPERATOR_TOOL_FACES } from "./lib/operator-tool-face.js";
 import { describeInjectionSurface } from "./lib/injection-surface.js";
@@ -40,7 +43,7 @@ import { repoRoot } from "./paths.js";
 const DSH_HOME = process.env.DSH_HOME || join(homedir(), ".dsh");
 const MCP_CONFIG_PATH = resolve(process.env.MCP_CONFIG_PATH || "mcp.json");
 
-// Model gateway catalog (2026-09-30 refresh): every id
+// token.finddatatech.cloud gateway model catalog. 2026-09-30 refresh: every id
 // on GET /v1/models (33) was probed with a real 1-token chat completion — that
 // endpoint lists *recognized* ids, not *serving* ones, and the gateway's
 // account groups authorize only a subset. Kept here: the ids that served.
@@ -59,6 +62,14 @@ const MCP_CONFIG_PATH = resolve(process.env.MCP_CONFIG_PATH || "mcp.json");
 // because dshModels[0] is the fallback default when no DEFAULT_MODEL binding
 // applies. gemma-4-26b and laguna-xs were rate-limited (not down) at probe
 // time; they keep their seats.
+//
+// 与词元能力快照（/v1/ciyuan/capabilities）的关系，2026-11-10 起明确：
+//   这张表仍是**生成 dsh profile 的种子目录**（选型/排序/元数据都来自它），
+//   快照目前**只**用于模型同步时缩小探测集合（llm-providers.planSyncProbeSet），
+//   **不参与**选模与排序。所以它不是「回退锚」，而是当下的主目录；把它降成回退锚
+//   需要先改选模路径并拿到「快照 serving 与探测一致率」的数据（charter 3.5a/3.5b）。
+//   前提别搞反：若将来改成从快照取目录，务必保留本表作为快照不可用时的回落，
+//   否则词元一次滚版就会让模型选择器变空。
 const VOLCES_MODELS = [
   { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", contextWindow: 128000, maxTokens: 32768 },
   { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", contextWindow: 128000, maxTokens: 32768 },
@@ -293,6 +304,107 @@ export function inlineTokensBudget(env = process.env) {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : DSH_MAX_INLINE_TOKENS_DEFAULT;
 }
 
+// ── Team plugin rows (add-fleet-plugin-declaration 2.1 / 2.2 / D2) ──────────
+//
+// The patch file has ONE author (this module): the llm route owns two ids, the
+// team plugin rows own a ledger-recorded set, and both are written through the
+// same read → filter → append → atomic-write path. Two authors editing the same
+// YAML would each filter with their own rules and erase the other's rows — that
+// accident has happened elsewhere and is not repeated here.
+//
+// Row shape is a plain loader entry (`{ id, name }`), because that is the only
+// shape cordis' patch layer understands; the "who declared this" answer lives
+// in the sibling ledger (`fleet-plugins.json`), NOT as an extra key on the row.
+// Deviation from design D2's literal `origin:` field, for a concrete reason:
+// an unknown key on a loader entry is a load-time risk, while a sidecar cannot
+// be mis-parsed by the loader at all.
+const FLEET_PLUGINS_LEDGER = "fleet-plugins.json";
+
+function readPatchRows(patchPath) {
+  try {
+    const loaded = yaml.load(readFileSync(patchPath, "utf8"));
+    return Array.isArray(loaded) ? loaded : [];
+  } catch (err) {
+    if (err?.code !== "ENOENT") console.warn("[dsh-profile] profile patch unreadable:", err.message);
+    return [];
+  }
+}
+
+function readFleetLedger(ledgerPath) {
+  try {
+    const doc = JSON.parse(readFileSync(ledgerPath, "utf8"));
+    return doc && typeof doc === "object" && doc.plugins && typeof doc.plugins === "object" ? doc : null;
+  } catch (err) {
+    if (err?.code !== "ENOENT") console.warn("[dsh-profile] fleet plugin ledger unreadable:", err.message);
+    return null;
+  }
+}
+
+/** Rows the profile currently composes for teams, with their declaring fleets. */
+export function readFleetPluginRows(dirs) {
+  const patchPath = targetPaths(dirs).settings;
+  const ledgerPath = join(dirname(patchPath), FLEET_PLUGINS_LEDGER);
+  const rows = readPatchRows(patchPath).flatMap((entry) =>
+    entry && Array.isArray(entry.insert) ? entry.insert : entry && typeof entry === "object" ? [entry] : [],
+  );
+  return effectiveRows({ patchRows: rows, ledger: readFleetLedger(ledgerPath) });
+}
+
+/**
+ * Recompute the team plugin rows for this profile (design D3): remove every row
+ * the ledger recorded, then insert exactly `rows` and rewrite the ledger.
+ * @param {{ dirs?: object, rows?: {id: string, name: string, fleets: string[]}[] }} opts
+ */
+export function writeFleetPluginRows({ dirs, rows = [] } = {}) {
+  const patchPath = targetPaths(dirs).settings;
+  const ledgerPath = join(dirname(patchPath), FLEET_PLUGINS_LEDGER);
+  const doc = readPatchRows(patchPath);
+  const ledger = readFleetLedger(ledgerPath);
+  // Managed = previously recorded ∪ about-to-be-written. A first run has no
+  // ledger and therefore removes nothing (it never guesses at ownership).
+  const managed = new Set([...(ledger ? Object.keys(ledger.plugins ?? {}) : []), ...rows.map((row) => row.id)]);
+
+  const cleaned = [];
+  for (const entry of doc) {
+    if (!entry || typeof entry !== "object") {
+      cleaned.push(entry);
+      continue;
+    }
+    if (Array.isArray(entry.insert)) {
+      const kept = entry.insert.filter((row) => !(row && typeof row === "object" && managed.has(row.id)));
+      const others = Object.keys(entry).filter((key) => key !== "insert");
+      if (kept.length === 0 && others.length === 0) continue; // entry existed only for team rows
+      cleaned.push({ ...entry, insert: kept });
+      continue;
+    }
+    if (managed.has(entry.id)) continue; // a bare (override) row we own
+    cleaned.push(entry);
+  }
+
+  if (rows.length > 0) {
+    let insertEntry = cleaned.find((entry) => entry && typeof entry === "object" && Array.isArray(entry.insert));
+    if (!insertEntry) {
+      insertEntry = { insert: [] };
+      cleaned.unshift(insertEntry);
+    }
+    for (const row of rows) insertEntry.insert.push({ id: row.id, name: row.name });
+  }
+
+  // The same gate the model routes pass: a "plugin" that registers a model
+  // route is exactly the bypass the supply gates exist to stop.
+  const violations = findRouteExclusivityViolations(cleaned);
+  if (violations.length > 0) {
+    const loaded = loadRouteExceptions();
+    const { violations: remaining } = applyRouteExceptions(violations, loaded.exceptions);
+    if (remaining.length > 0) throwRouteViolations(remaining);
+  }
+
+  mkdirSync(dirname(patchPath), { recursive: true });
+  atomicWriteTextSync(patchPath, yaml.dump(cleaned));
+  atomicWriteTextSync(ledgerPath, JSON.stringify(ledgerFromPlan({ rows }), null, 2) + "\n");
+  return { patchPath, ledgerPath, count: rows.length };
+}
+
 export async function writeLlmProfile(opts = {}) {
   const { dirs, ...buildOpts } = opts;
   const patchPath = targetPaths(dirs).settings;
@@ -324,6 +436,40 @@ export async function writeLlmProfile(opts = {}) {
     name: "@deepseek-ai/dsh-spill-policy",
     config: { maxInlineTokens: inlineTokensBudget() },
   });
+  // Route exclusivity (harden-plugin-supply-gates D2): the filter above
+  // deliberately preserves every row we do not own, so a supplied bundle can
+  // contribute a second model route — bypassing 萬星词元 and the metering lane.
+  // Assert on the composition, before it reaches disk.
+  //
+  // Fail closed by default. DSH_ROUTE_EXCLUSIVITY=warn exists for the one
+  // observation run the change's task list calls for (prove zero violations on a
+  // real deployment before enforcing); it is not a supported long-term mode.
+  const violations = findRouteExclusivityViolations(kept);
+  if (violations.length > 0) {
+    // Operator exceptions (task 4.3): each entry is a decision with an expiry and
+    // an approver, matched by bundle package name, so a legitimate deployment is
+    // not forced to run with the gate switched off.
+    const loaded = loadRouteExceptions();
+    for (const problem of loaded.errors) console.warn(`[dsh-profile] exception file: ${problem}`);
+    const { violations: remaining, allowed, expired } = applyRouteExceptions(violations, loaded.exceptions);
+    for (const { exception, violation } of allowed) {
+      console.warn(
+        `[dsh-profile] route EXCEPTED '${exception.name}' until ${new Date(exception.expiresAt).toISOString()} (approved by ${exception.approvedBy}): ${violation.reason}`,
+      );
+    }
+    for (const exception of expired) {
+      console.warn(`[dsh-profile] EXPIRED route exception for '${exception.name}' — re-review or remove it`);
+    }
+    if (remaining.length > 0) {
+      if (String(process.env.DSH_ROUTE_EXCLUSIVITY ?? "").toLowerCase() === "warn") {
+        console.warn(
+          `[dsh-profile] route exclusivity WARN (not enforced): ${remaining.map((v) => v.reason).join("; ")}`,
+        );
+      } else {
+        throwRouteViolations(remaining); // throws with code + violations
+      }
+    }
+  }
   atomicWriteTextSync(patchPath, yaml.dump(kept));
 
   if (Object.keys(providers).length === 0) {
@@ -467,10 +613,19 @@ export async function ensureCredentialsStore(opts = {}) {
 // Returns null when no upstream keys are configured (no scrubbing needed —
 // caller passes null and HarnessClient inherits process.env as before).
 export function buildScrubbedEnv() {
-  const hasAny = CREDENTIAL_REFS.some((r) => process.env[r]?.trim());
+  // Two scrubs, one purpose: the child must not be able to act as the platform.
+  //   · CREDENTIAL_REFS — the user provider keys, so dsh-credentials-local's
+  //     .credentials.yaml stays the winning layer (design D3);
+  //   · platform credential material (supply-gates 3.3) — the platform's own
+  //     tokens/URLs. A bundle runs INSIDE this child; leaving these inherited
+  //     would hand every supplied bundle the platform's identity, and the build
+  //     gate that refuses them in declarations would be decorative.
+  const platformKeys = platformCredentialKeysIn(process.env);
+  const hasAny = CREDENTIAL_REFS.some((r) => process.env[r]?.trim()) || platformKeys.length > 0;
   if (!hasAny) return null;
   const env = { ...process.env };
   for (const ref of CREDENTIAL_REFS) delete env[ref];
+  for (const key of platformKeys) delete env[key];
   return env;
 }
 
@@ -1271,6 +1426,20 @@ export async function writeMcpPatch({ mcpOverlay, userGroups = null, ownerEmail 
     servers.actions = {
       ...servers.actions,
       env: { ...(servers.actions.env || {}), ACTIONS_MCP_PROPOSER_EMAIL: String(ownerEmail).trim().toLowerCase() },
+    };
+  }
+
+  // Owner identity for the input-request bridge (add-input-request-cards): 同一
+  // 条纪律——子进程没有会话，owner 由 per-user profile 注入。没有 owner 的
+  // 输入请求永远没人能答（owner-only），所以机器 owner 的 profile 宁可让工具
+  // 报「未配置」，也不落一行死记录。会话 id 由 dsh 自己的 DSH_SESSION_ID 兜底。
+  if (servers["input-request"]?.command && ownerEmail) {
+    servers["input-request"] = {
+      ...servers["input-request"],
+      env: {
+        ...(servers["input-request"].env || {}),
+        INPUT_REQUEST_OWNER_EMAIL: String(ownerEmail).trim().toLowerCase(),
+      },
     };
   }
 
@@ -2301,16 +2470,8 @@ export function writePresetsPatchSync({ dirs, default: defaultPreset = DEFAULT_A
     },
   ];
   atomicWriteTextSync(presetsPatchPath, yaml.dump(patch));
-  // Delivery contract (enforce-report-contract): the persona text is RIGHT HERE
-  // (defs[].persona) at the only moment it is authoritative. Publish the verdict
-  // into the process that will later settle these very turns, so settlement
-  // reads a fact instead of re-parsing prose (and does not depend on the catalog,
-  // which is empty in a live cell).
-  const contracts = publishReportContracts(defs);
-  const required = Object.values(contracts).filter((v) => v === "required").length;
   console.log(
-    `[dsh-profile] wrote preset overlay (registry default: ${defaultPreset}, ${presetRows.length} preset row(s)) → ${presetsPatchPath}`
-    + `; report contracts: ${required}/${Object.keys(contracts).length} posts require a report`,
+    `[dsh-profile] wrote preset overlay (registry default: ${defaultPreset}, ${presetRows.length} preset row(s)) → ${presetsPatchPath}`,
   );
   return presetsPatchPath;
 }
@@ -3104,11 +3265,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.assert(!catalogEntryPersona({ id: AGENT_ID, name: "自检官" }).includes("聚焦模式"), "non-pack persona must not");
     console.log("OK catalog persona focus note");
 
-    // Cleanup: no self-check pack root or DB survives. (There is no preset DIR
-    // to remove any more: presets are rows in the preset overlay, not files —
-    // the old `rmSync(presetDir, …)` named a variable this script never declared
-    // and would have thrown on every self-check run.)
+    // Cleanup: no self-check pack root, preset dir, or DB survives.
     sm.removePackSkills(PACK_ID);
+    rmSync(presetDir, { recursive: true, force: true });
     extensionStore.removeMcpServer("scope-extra");
     db.deleteInstalledPack(PACK_ID);
     // Leave the conventional full-mode patches behind.

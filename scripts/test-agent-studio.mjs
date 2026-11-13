@@ -114,8 +114,11 @@ test("deep links: doc / fork / new all seeded from search params; skills ride th
   assert.match(page, /searchParams\.get\("doc"\)/, "?doc= opens a document");
   assert.match(page, /searchParams\.get\("fork"\)/, "?fork= seeds from a pack");
   assert.match(page, /searchParams\.get\("new"\)/, "?new= mints one document");
-  // A reload of a seeded URL must not mint a second record.
-  assert.match(page, /navigate\(`\/studio\?doc=.*replace: true/, "seeded URLs canonicalize to ?doc= (no double mint)");
+  // A reload of a seeded URL must not mint a second record. The call goes
+  // through the page's `go()` wrapper now (it lets an embedding host intercept
+  // navigation before falling through to `navigate`), so pin the invariant —
+  // a replace-navigation to the canonical ?doc= URL — not the helper's name.
+  assert.match(page, /(?:navigate|go)\(`\/studio\?doc=.*replace: true/, "seeded URLs canonicalize to ?doc= (no double mint)");
   // 4.3: skills live in the persisted content now — the bucket is editable and
   // the emit ports read the document (assembleManifest carries skills).
   assert.match(page, /\bshowSkills\b(?!=\{false\})/, "the skills bucket is enabled");

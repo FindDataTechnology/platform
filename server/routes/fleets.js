@@ -12,7 +12,8 @@ import { fetchLexUsageFor, fetchWireUsageFor } from "../../lib/board-adapters.js
 import * as cron from "../../cron.js";
 import * as catalog from "../../catalog.js";
 import * as chatHistory from "../../chat-history.js";
-import { rosterPresetId } from "../../dsh-profile.js";
+import { rosterPresetId, readFleetPluginRows } from "../../dsh-profile.js";
+import { materializeFleetPlugins, declaredPluginsForFleet, composeFleetPluginView } from "../fleet-plugins.js";
 import { resolveDispatchTarget } from "../../server/fleet-chat-context.js";
 import { getClusterDatabase } from "./clusters-db.js";
 import {
@@ -24,6 +25,7 @@ import {
 import { reconcileFleet, deriveMemberStatus, cronPeriodMs, staleWindowMs } from "../fleet-reconcile.js";
 import { validateOrchestration, expandedEdges, dispatchAllowed, constraintsOf, CARRIERS } from "../fleet-orchestration.js";
 import { validateFleetDraft, applyFleetDraft } from "../fleet-architect.js";
+import { buildConsoleViewModel } from "../console-blocks/index.js";
 import { splitToolTarget } from "../tool-turn.js";
 import { resolveServerEndpoint, resolveStdioServerConfig } from "../../lib/action-executor.js";
 import { classifyProvenance } from "../../lib/precedent-grade.js";
@@ -31,6 +33,39 @@ import { auditorAllowedFor, validateAuditorToolFace, AUDITOR_VERDICTS, isVerdict
 import { domainFor } from "../../lib/personal-domain-map.js";
 import { validateRule } from "../../lib/precedent-candidate.js";
 import { agentMayHandle } from "../../lib/personal-mandate.js";
+
+// Team plugin landing (add-fleet-plugin-declaration 2.1). Called after a team is
+// born from a template and after a state change: the row set is RECOMPUTED from
+// every live team's declaration, so both add and remove land in one write. A
+// failure here is logged and never fails the fleet action — the team exists
+// either way, and the next landing reconciles the patch.
+// 一个团队的生效插件视图（3.1）：唯一事实是补丁层 + 台账，二者都每次读现算；
+// 声明来自来源模板的已装包，规则在 server/fleet-plugins.js（可注入、可测）。
+export function fleetPluginsForView(fleet, ctx, dirs) {
+  try {
+    const effective = readFleetPluginRows(dirs);
+    const declared = declaredPluginsForFleet({ fleet, getInstalledPack: dbModule.getInstalledPack });
+    return composeFleetPluginView({
+      fleetId: fleet?.id,
+      declaredPlugins: declared.plugins,
+      effective,
+      roster: Array.isArray(ctx?.pluginBundles) ? ctx.pluginBundles : [],
+    });
+  } catch (err) {
+    console.warn(`[fleets] plugin read face failed: ${err?.message || err}`);
+    return [];
+  }
+}
+
+function syncFleetPlugins(db, log = console) {
+  try {
+    const fleets = typeof db?.listFleets === "function" ? db.listFleets() : [];
+    return materializeFleetPlugins({ fleets, getInstalledPack: dbModule.getInstalledPack, log });
+  } catch (err) {
+    log.warn(`[fleets] plugin landing failed: ${err?.message || err}`);
+    return null;
+  }
+}
 import { assessPersonalAgent } from "../../lib/personal-agent-readiness.js";
 import { fleetModelChoiceError, resolveModelChain, validateConfigDims, effortUnionFrom } from "../fleet-model.js";
 import { fetchWithTimeout } from "../../lib/fetch-with-timeout.js";
@@ -40,6 +75,7 @@ import {
   floodWindowMs,
   checkFlood,
   buildLatestView,
+  reportTimelineEntry,
 } from "../fleet-reports.js";
 import {
   validateEscalatePayload,
@@ -473,17 +509,42 @@ function sourceBlueprintId(fleet) {
 
 // One timeline row (drawer): value snapshot, blockers, the source-session
 // jump link, and the self/derived provenance badge.
-function reportTimelineEntry(report) {
-  return {
-    id: report.id,
-    at: report.createdAt,
-    summary: report.summary,
-    metrics: report.metrics,
-    blockers: report.blockers,
-    resources: report.resources,
-    source: report.source,
-    sessionId: report.sessionId ?? null,
-  };
+// ── Console publication (add-pack-console D5) ───────────────────────────────
+// A share link has to be a readable address, and it must never be a name the
+// owner chose: user-chosen slugs invite squatting and impersonation of another
+// team. So the server derives one from the team name and disambiguates against
+// the unique index; the owner can publish or unpublish, not pick.
+const CONSOLE_SLUG_MAX = 40;
+
+function consoleSlugBase(name) {
+  // Unicode letters/digits stay: this is a Chinese-first product and 电商团队
+  // must be able to read its own link. NFKD folds Latin accents, the URL layer
+  // percent-encodes the rest, and the unique index handles collisions.
+  return Array.from(
+    String(name ?? "")
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, "-")
+      .replace(/^-+|-+$/g, ""),
+  )
+    .slice(0, CONSOLE_SLUG_MAX)
+    .join("");
+}
+
+// Deterministic candidate ladder: "<base>", "<base>-<id tail>", ... — the tail
+// comes from the fleet id, so two teams with the same name never fight over one
+// address and the result is stable across retries.
+function deriveConsoleSlug(db, fleet) {
+  const base = consoleSlugBase(fleet.name) || "team";
+  const tail = String(fleet.id).replace(/[^a-z0-9]/gi, "").slice(-4).toLowerCase() || "team";
+  const candidates = [base, `${base}-${tail}`];
+  for (let i = 2; i <= 5; i++) candidates.push(`${base}-${tail}-${i}`);
+  for (const candidate of candidates) {
+    const owner = typeof db.getFleetByConsoleSlug === "function" ? db.getFleetByConsoleSlug(candidate) : null;
+    if (!owner || owner.id === fleet.id) return candidate;
+  }
+  return `${base}-${tail}-${Date.now().toString(36)}`;
 }
 
 // ── Route registration ───────────────────────────────────────────────────────
@@ -1832,6 +1893,115 @@ export function createFleetRoutes(app, ctx = null) {
     }
   });
 
+  // ── Team console (add-pack-console) ─────────────────────────────────────────
+  // The team's own face: the pack's `console` declaration selects which blocks
+  // this fleet shows, on which surface. ONE view model serves both hosts (the
+  // platform page and the facet share page) — the share cut happens HERE, in
+  // the response, not in the client.
+  //
+  // Two addresses, one handler: the owner page knows the fleet id; a share page
+  // knows only the published slug (handing out ids would let a visitor probe
+  // other teams by id). Authority:
+  //   · `surface=platform` is owner (or admin) only;
+  //   · `surface=share` is anonymous only for a PUBLISHED fleet, and an
+  //     unpublished one answers exactly like a missing one (404) — a guess
+  //     cannot even confirm that the team exists.
+  const serveConsole = (req, res, fleet) => {
+    try {
+      const surface = req.query?.surface === "share" ? "share" : "platform";
+      const db = getFleetDatabase();
+      if (!fleet) return res.status(404).json({ error: "Fleet not found" });
+
+      if (surface === "platform") {
+        const user = resolveUser(req);
+        if (!user) return res.status(401).json({ error: "Authentication required" });
+        if (fleet.ownerEmail !== user.email && !ctx?.isAdminUser?.(user)) {
+          return res.status(403).json({ error: "Not your fleet" });
+        }
+      } else {
+        const slug = typeof req.query?.slug === "string" ? req.query.slug.trim() : "";
+        if (!fleet.consoleSlug || !slug || slug !== fleet.consoleSlug) {
+          return res.status(404).json({ error: "Not published" });
+        }
+      }
+
+      // The declaration rides the pack the fleet was instantiated from. A fleet
+      // with no template lineage has no console: an honest empty block list.
+      const templatePackId = fleet.sourceTemplate?.packId ?? null;
+      const installed = templatePackId ? dbModule.getInstalledPack(templatePackId) : null;
+      const section = installed?.manifest?.console ?? null;
+      if (!section) {
+        return res.json({
+          v: 1,
+          fleet: { id: fleet.id, name: fleet.name, state: fleet.state, published: Boolean(fleet.consoleSlug) },
+          surface,
+          headline: null,
+          blocks: [],
+          sampledAt: Date.now(),
+        });
+      }
+
+      const view = buildConsoleViewModel({
+        section,
+        surface,
+        db,
+        fleet,
+        tasks: taskIndexFor(fleet.id),
+        model: modelCtx(),
+        memberView,
+      });
+      // Publication state rides the view so the owner page can render its
+      // publish/unpublish control without a second round-trip.
+      view.fleet.published = Boolean(fleet.consoleSlug);
+      view.fleet.slug = fleet.consoleSlug ?? null;
+      res.json(view);
+    } catch (err) {
+      console.error("[fleets] console error:", err.message);
+      res.status(500).json({ error: err.message || "internal error" });
+    }
+  };
+
+  router.get("/:id/console", (req, res) => serveConsole(req, res, getFleetDatabase().getFleet(req.params.id)));
+  // Publish / unpublish (owner or admin). Publishing requires the fleet to
+  // actually carry a console declaration — a slug for a team with no declared
+  // blocks would be a link to an empty page.
+  router.post("/:id/console/publish", (req, res) => {
+    try {
+      const owned = requireOwnedFleet(req, res);
+      if (!owned) return;
+      const db = getFleetDatabase();
+      const templatePackId = owned.fleet.sourceTemplate?.packId ?? null;
+      const installed = templatePackId ? dbModule.getInstalledPack(templatePackId) : null;
+      if (!installed?.manifest?.console) {
+        return res.status(400).json({ error: "This team declares no console" });
+      }
+      const slug = owned.fleet.consoleSlug ?? deriveConsoleSlug(db, owned.fleet);
+      db.updateFleet(owned.fleet.id, { consoleSlug: slug, consolePublishedAt: owned.fleet.consolePublishedAt ?? Date.now() });
+      res.json({ slug, publishedAt: owned.fleet.consolePublishedAt ?? Date.now() });
+    } catch (err) {
+      console.error("[fleets] console publish error:", err.message);
+      res.status(500).json({ error: err.message || "internal error" });
+    }
+  });
+
+  router.post("/:id/console/unpublish", (req, res) => {
+    try {
+      const owned = requireOwnedFleet(req, res);
+      if (!owned) return;
+      getFleetDatabase().updateFleet(owned.fleet.id, { consoleSlug: null, consolePublishedAt: null });
+      res.json({ slug: null });
+    } catch (err) {
+      console.error("[fleets] console unpublish error:", err.message);
+      res.status(500).json({ error: err.message || "internal error" });
+    }
+  });
+
+  router.get("/by-slug/:slug/console", (req, res) => {
+    const db = getFleetDatabase();
+    const fleet = typeof db.getFleetByConsoleSlug === "function" ? db.getFleetByConsoleSlug(req.params.slug) : null;
+    serveConsole(req, res, fleet);
+  });
+
   // Instantiate a fleet from an installed pack's template section. Install
   // never auto-runs: the fleet is born all-paused with a 待启动 banner.
   router.post("/from-template", async (req, res) => {
@@ -1885,6 +2055,9 @@ export function createFleetRoutes(app, ctx = null) {
         }
         return res.status(400).json({ error: out.error });
       }
+      // Team plugins land with the team (2.1): recomputed from every live
+      // declaration, so a re-provision of an existing team is also a repair.
+      syncFleetPlugins(db);
       res.status(out.deduped ? 200 : 201).json(out);
     } catch (err) {
       console.error("[fleets] from-template error:", err.message);
@@ -1926,7 +2099,8 @@ export function createFleetRoutes(app, ctx = null) {
       if (!owned) return;
       const db = getFleetDatabase();
       const members = db.listMembers(owned.fleet.id);
-      const manifest = exportFleetToTemplate(owned.fleet, members);
+      const declared = declaredPluginsForFleet({ fleet: owned.fleet, getInstalledPack: dbModule.getInstalledPack });
+      const manifest = exportFleetToTemplate(owned.fleet, members, { plugins: declared.plugins });
       res.setHeader("content-disposition", `attachment; filename="fleet-${owned.fleet.id}.json"`);
       res.json(manifest);
     } catch (err) {
@@ -3294,6 +3468,9 @@ export function createFleetRoutes(app, ctx = null) {
           results.push({ id, ok: false, error: err.message || "internal error" });
         }
       }
+      // One recompute after the whole batch: a bulk archive must not recompute
+      // per item (N writes) nor leave the intermediate states on disk.
+      if (results.some((r) => r.ok) && targetState !== "active") syncFleetPlugins(db);
       const summary = {
         ok: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
@@ -3436,6 +3613,10 @@ export function createFleetRoutes(app, ctx = null) {
         // add-agent-builder-workspace 7.2（D7 回链）：来源蓝图 id 从已装包的
         // 铸造追溯读出——只读投影，非新数据形状；无来源包时缺席。
         blueprintId: sourceBlueprintId(owned.fleet),
+        // 生效插件（add-fleet-plugin-declaration 3.1/3.2）：从补丁层实时派生，
+        // 不落库（D5）——补丁行改了，下一次读就是新值。`source` 区分「团队声明」
+        // 与「部署默认启用」；声明了但不在生效集合里的（例如未供给）不显示。
+        plugins: fleetPluginsForView(owned.fleet, ctx),
       });
     } catch (err) {
       console.error("[fleets] detail error:", err.message);
@@ -3493,6 +3674,7 @@ export function createFleetRoutes(app, ctx = null) {
       if (contextBudget !== undefined) updates.contextBudget = dims.contextBudget;
 
       const updated = getFleetDatabase().updateFleet(fleet.id, updates, auditMeta(req, `PATCH /api/fleets/${fleet.id}`));
+      if (updates.state !== undefined) syncFleetPlugins(getFleetDatabase());
       const reconcile = await runReconcile(fleet.id);
       res.json({ fleet: updated, reconcile });
     } catch (err) {
@@ -3513,6 +3695,9 @@ export function createFleetRoutes(app, ctx = null) {
         }
       }
       const updated = getFleetDatabase().updateFleet(fleet.id, { state: "archived" }, auditMeta(req, `DELETE /api/fleets/${fleet.id}`));
+      // Archive is terminal: the fleet now declares nothing, so a recompute is
+      // the whole removal path (no separate delete-the-row code to drift).
+      syncFleetPlugins(getFleetDatabase());
       res.json({ fleet: updated, dissolved: true });
     } catch (err) {
       console.error("[fleets] delete error:", err.message);

@@ -1,0 +1,18 @@
+# Tasks: fix-web-signout-dead-route
+
+## 1. Cell env contract
+
+- [x] 1.1 In `gateway/spawner.js` cell env block, add `AUTH_LOGOUT_PATH: "/api/auth/logout"` and `AUTH_LOGIN_PATH: "/auth/login"` with a comment stating the invariant (cells live behind the gateway; the gateway owns the auth entry/exit routes; revisit if an `/oauth2/*` edge ever returns). Verify: env lines present; `node --check gateway/spawner.js` clean.
+- [x] 1.2 Unit-check the contract if the env construction is importable without spawning (assert the override beats the forward-auth default); if not importable, record the deliberate skip in this task note. Verify: `npm run test:unit` (or the specific script) green, or skip note present. Note: env construction is closure-internal (not importable), so used the established stub-dump harness — new `scripts/test-cell-auth-paths.mjs` boots the real registry against an env-dumping stub and asserts both paths, including that a gateway-level stale `/oauth2/sign_out` env loses to the spawner's values. Green in 1.3s.
+
+## 2. Regression safety
+
+- [x] 2.1 Run existing auth e2e (`npx playwright test e2e/auth-catalog.spec.js --project=fast`) — forward_auth default assertions must stay green. Verify: suite passes with no modifications to those assertions. Note: suite 12/12 green after fixing a PRE-EXISTING stale assertion (line 280 authenticated /api/auth/me lacked the adminGroups field added in 083889a; 90cff68's assertion catch-up missed it — stash-verified the failure predates this change).
+- [x] 2.2 Confirm single-process behavior is untouched: boot a dev server with `AUTH_MODE=forward_auth` and no override, `GET /api/auth/me` still reports `/oauth2/sign_out`. Verify: curl output matches the default.
+
+## 3. Deploy + live verification (fd-prod)
+
+- [x] 3.1 Ship via the standard line (TCR image + GitOps `platform.yaml` needs no change — env is code-side) and roll the gateway pod. Verify: new image sha live in `kubectl get deploy platform -n fd-prod`.
+- [x] 3.2 Browser chain on 壹座: PASS 2026-10-06 via composite live evidence. (a) Live UI renders the fixed href `/api/auth/logout?rd=%2Flogin` in Settings → Account. (b) Real click → the redirect chain `/api/auth/logout` → 302 `…/oidc/session/end?client_id=asfg4j882f48axmygilhw&post_logout_redirect_uri=…` was observed. (c) `/api/auth/me` returned 401 right after — the session is dead. (d) The end-session → 303-back-to-root leg is proven for this exact client via the cookie-jar confirm walk; the same leg was additionally exercised live end-to-end by the 萬星 cycle this session. (e) Post-sign-out landing observed: the site root bounces unauthenticated visitors to `/auth/login` → Logto sign-in form for this app_id. The only un-screenshotted moment is the root flash between (d) and (e) — unreachable to re-drive because re-login needs credentials we don't hold.
+- [x] 3.3 SSO session really dead: PASS 2026-10-06, proven tenant-wide — after the completed end-session from the 萬星 cycle, visiting platform.finddatatech.cloud lands on `auth.finddatatech.cloud/sign-in?app_id=asfg4j882f48axmygilhw` with the credential form (Username/Email + password). No silent bounce-back for either app on the shared tenant.
+- [x] 3.4 Cross-check 谦面 and 萬星: PASS 2026-10-06 with one honest gap. 萬星 got the full cycle (login → 退出 → homepage signed out → re-login demands credentials) — far beyond a smoke. 谦面 (untouched by this deploy: single-process, different deployment) could not get a logged-in smoke because its browser session had expired and re-login needs credentials; its logout chain (button → `/api/auth/logout` → end-session with its own client_id → 303-back) was already proven by the cookie-jar probes and has no interaction with the gateway cell env this change shipped.

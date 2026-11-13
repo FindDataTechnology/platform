@@ -1,0 +1,252 @@
+# ── Platform single-container Deployment (cheap-cluster live layout) ──────────
+#
+# ⚠️ DRIFT WARNING (2026-09-18): the LIVE platform now runs in the `fd-prod`
+# namespace (Harbor image …:sha-<short>, env via envFrom → ConfigMap
+# `platform-config` + Secret `platform-secrets`). This `default`-namespace
+# manifest describes the earlier hostNetwork layout and is scaled to zero in
+# the cluster; it is kept as the documented single-container design. For
+# operating the LIVE deployment (incl. the registry market wiring) see
+# DEPLOY.md → "Registry market token (live layout: fd-prod namespace)".
+#
+# This manifest mirrors the LIVE deployment on the cheap k3s cluster (as of
+# 2026-09-07). Key differences from the earlier PVC/harbor design:
+#
+# - Runs in the `default` namespace, pinned to node cheap-5 via nodeName.
+# - hostNetwork: the pod listens on the node itself. PORT=3100 because cheap-5
+#   also runs a law-craw pod whose hostPort 3000 would otherwise DNAT-intercept
+#   every local connect to :3000 (including the platform's own self-checks).
+# - External entry: cheap-5 runs rrev-cheap1.service, a reverse SSH tunnel to
+#   cheap-1 (the public forward server), carrying 127.0.0.1:3100 → cheap-1's
+#   127.0.0.1:3000 and 127.0.0.1:32080 (sub2api NodePort) → cheap-1:32080.
+#   Caddy on cheap-1 routes craw.finddatatech.cloud → 127.0.0.1:3000 and
+#   token.finddatatech.cloud → 127.0.0.1:32080 (Safeline WAF fronts 80/443).
+# - LLM traffic goes to the sub2api gateway over the SAME tunnel
+#   (LLM_BASE_URL=http://127.0.0.1:32080). ClusterIP services are not
+#   reachable from a hostNetwork pod on cheap-5, so this loopback path is the
+#   deliberate design, not a workaround.
+# - Data lives on hostPath dirs (no PVC): /opt/platform → /data (SQLite +
+#   documents) and /opt/patch-dsh-home → /opt/dsh-home (dsh profile home).
+#
+# Image distribution (documented design — the LIVE manifest lives in the
+# fd-infra-deploy GitOps repo, see DEPLOY.md): the canonical pipeline is
+# GitHub Actions → Tencent TCR personal registry
+# (.github/workflows/image-tcr.yml → ccr.ccs.tencentyun.com/yizuo/platform),
+# pulled with node-level registries.yaml auth (no TCR imagePullSecret; the harbor-pull
+# pattern). The internal-Harbor path via Jenkins remains the fallback; both
+# pipelines tag images sha-<7> of the built revision, so the GitOps manifest
+# can reference either registry's tag interchangeably.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform
+  namespace: default
+  labels:
+    app: platform
+spec:
+  replicas: 1
+  strategy:
+    # Stateful singleton: kill the old pod before starting the new one so the
+    # hostPath data and the single agent session are never double-mounted.
+    type: Recreate
+  selector:
+    matchLabels:
+      app: platform
+  template:
+    metadata:
+      labels:
+        app: platform
+    spec:
+      # Pin to cheap-5: the data hostPath and the reverse tunnel live there.
+      nodeName: cheap-5
+      hostNetwork: true
+      # Let hostNetwork pods still resolve cluster-internal names.
+      dnsPolicy: ClusterFirstWithHostNet
+      # The shared browser lane attributes each cell session from the CONNECTION's
+      # peer process (socket inode → pid → cwd/cmdline), so its container must be
+      # able to see the cell processes — which live in the platform container.
+      # Without a shared PID namespace /proc shows only the lane's own processes
+      # and every session would fall back to an unowned scratch dir (artifacts
+      # would then never appear in the cell's workspace). Both containers run as
+      # the same image user, so /proc/<pid>/cwd is readable.
+      shareProcessNamespace: true
+      # TCR pulls ride node-level registries.yaml auth (org rollout
+      # 2026-09-30) — no TCR imagePullSecret; harbor-finddata-pull below is
+      # the Harbor fallback channel's credential (see DEPLOY.md → Image
+      # pipeline).
+      imagePullSecrets:
+        - name: harbor-finddata-pull
+      containers:
+        - name: platform
+          # Canonical pipeline tag (GitHub Actions → TCR). Bump on every
+          # rebuild; the Jenkins → internal-Harbor fallback's sha-<7> tags are
+          # interchangeable here.
+          image: ccr.ccs.tencentyun.com/yizuo/platform:sha-0000000
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOST
+              value: "0.0.0.0"
+            # 3100, not 3000: cheap-5 hostPort 3000 is taken by law-craw and
+            # CNI DNAT-intercepts local connects (see header).
+            - name: PORT
+              value: "3100"
+            - name: PLATFORM_DATA_DIR
+              value: /data
+            # Writable workspace pin (fix-agent-workspace): produced files must
+            # land under the /api/files serving root. /data is a hostPath mount,
+            # so the node must pre-create /opt/platform/workspace with the image
+            # user's ownership (see DEPLOY.md → Agent workspace).
+            - name: AGENT_WORKSPACE
+              value: /data/workspace
+            # Task worker slots (worker-pool): fd-prod stays serial — the
+            # node's 4GB budget does not fit parallel dsh children yet.
+            - name: TASK_WORKER_MAX
+              value: "0"
+            # Shared browser lane (slim-browser-lane-footprint): point every
+            # cell at the pod's single browser service instead of letting each
+            # cell spawn a stdio shim + @playwright/mcp pair. Unset = the old
+            # per-cell shape (the rollback face).
+            - name: BROWSER_SHARED_MCP_URL
+              value: http://127.0.0.1:9310/mcp
+            # The service's shared --output-dir; its per-cell routing moves each
+            # call's artifacts into the calling cell's workspace.
+            - name: BROWSER_SHARED_OUTPUT_ROOT
+              value: /data/browser-lane
+            # sub2api gateway through the reverse tunnel loopback.
+            - name: LLM_BASE_URL
+              value: http://127.0.0.1:32080
+            - name: DEFAULT_MODEL
+              value: deepseek-v4-flash-0731
+            # Create once:
+            #   kubectl -n default create secret generic platform-secrets \
+            #     --from-literal=llm-api-key=sk-...
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: llm-api-key
+                  optional: true
+            # Registry market source (registry-bridge): without REGISTRY_URL the
+            # bridge logs "registry source disabled" and the Store serves only
+            # the bundled catalog. The value also derives install endpoints
+            # ({REGISTRY_URL}/{path}/mcp), so keep it in sync with the registry.
+            - name: REGISTRY_URL
+              value: https://mcp.finddatatech.cloud
+            # Create / update once (admin-issued token from the registry UI):
+            #   kubectl -n default patch secret platform-secrets \
+            #     -p '{"stringData":{"market-registry-token":"<token>"}}'
+            # Optional: without the key the pod still boots and the bridge
+            # degrades to last-good (empty) — Store keeps bundled entries only.
+            - name: MARKET_REGISTRY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: market-registry-token
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: dshhome
+              mountPath: /opt/dsh-home
+            # Hot-fix overlay for the image's /opt/dsh tree: the shipped image
+            # was built with legacy-peer-deps, which skipped 19 transitive peer
+            # packages the dsh runtime needs at boot (ERR_MODULE_NOT_FOUND on
+            # @deepseek-ai/dsh-sandbox first). /opt/dsh-fixed/dsh on cheap-5 is
+            # a complete linux-native install (npmmirror, same pins as the
+            # Dockerfile). Drop this mount once an image built with the fixed
+            # Dockerfile (explicit package list) is deployed.
+            - name: dshroot
+              mountPath: /opt/dsh
+          # startupProbe gates liveness until server.js + the dsh agent finish
+          # cold start. Liveness is deliberately lax (the supervisor restarts
+          # children internally; k8s should only intervene on true hangs).
+          startupProbe:
+            httpGet:
+              path: /api/config
+              port: 3100
+            periodSeconds: 5
+            timeoutSeconds: 1
+            failureThreshold: 40
+          livenessProbe:
+            httpGet:
+              path: /api/config
+              port: 3100
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 100
+        # ── Pod-level shared browser service (slim-browser-lane-footprint) ──
+        # ONE @playwright/mcp + one chromium for the whole pod. Before this, each
+        # cell carried server/browser-mcp.js (~50MB) + @playwright/mcp (~120MB)
+        # while zero chromium ran — ~640MB of a 4Gi pod on four idle cells.
+        #
+        # Same image, different entry: the service needs the app tree (it imports
+        # the MCP SDK, the lane libs and dsh) but not the platform's data dirs
+        # beyond the shared artifact root and the cell roots it attributes
+        # connections against.
+        #
+        # Isolation: one upstream SSE session per cell session, --isolated (no
+        # on-disk profile), and --shared-browser-context is NEVER passed — the
+        # per-session browser context IS the cell boundary (tests 1.1/4.1).
+        #
+        # Failure posture: if this container is down, every cell's browser tools
+        # grey out through dsh's ordinary MCP failure path. Nothing falls back to
+        # a per-cell playwright (that would silently restore the old footprint).
+        - name: browser-lane
+          image: ccr.ccs.tencentyun.com/yizuo/platform:sha-0000000
+          imagePullPolicy: IfNotPresent
+          command: ["node", "server/browser-lane-service.js"]
+          env:
+            - name: NODE_ENV
+              value: production
+            # Loopback only: cells reach it over the pod's network namespace.
+            - name: BROWSER_SHARED_HOST
+              value: "127.0.0.1"
+            - name: BROWSER_SHARED_PORT
+              value: "9310"
+            - name: BROWSER_SHARED_UPSTREAM_PORT
+              value: "9311"
+            - name: BROWSER_SHARED_OUTPUT_ROOT
+              value: /data/browser-lane
+            # Cell attribution root: the same tree the gateway spawns cells
+            # under. Artifacts land in <root>/<cellId>/workspace/browser.
+            - name: CELL_DATA_ROOT
+              value: /data/cells
+            - name: BROWSER_MCP_CLI
+              value: /opt/browser-mcp/node_modules/@playwright/mcp/cli.js
+            - name: PLAYWRIGHT_BROWSERS_PATH
+              value: /opt/browser-mcp/ms-playwright
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              # Must name loopback explicitly: this pod is hostNetwork and the
+              # service deliberately binds 127.0.0.1 only, while kubelet probes
+              # the pod IP (= the node IP) by default. Without `host` the pod
+              # sits at 1/2 ready forever and the Service has no endpoints —
+              # found live on fd-prod 2026-11-08, not by the unit lane.
+              host: 127.0.0.1
+              port: 9310
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 200Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: data
+          hostPath:
+            path: /opt/platform
+            type: Directory
+        - name: dshhome
+          hostPath:
+            path: /opt/patch-dsh-home
+            type: Directory
+        - name: dshroot
+          hostPath:
+            path: /opt/dsh-fixed/dsh
+            type: Directory

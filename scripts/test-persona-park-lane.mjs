@@ -90,28 +90,24 @@ function parkCtx({ streaming = false } = {}) {
     sessionVersion: 1,
     broadcast: () => {},
     onRuntimeIdle: () => {},
-    // Fleet-tagged jobs MUST carry a model plan (113233eb / ledger E28): a round
-    // that cannot resolve its post's model is a FAILED round, not a licence to
-    // run on whatever is live. `fleetJob()` here carries sourceTag.fleetId, so
-    // without these two seams every case died inside normalizeModelForJob —
-    // before the park/fallback decision under test was ever reached (measured:
-    // `modeled={"ok":false,"err":"post model resolution unavailable …"}` right
-    // after the readiness gate). Same minimal shape as test-empty-turn-billing.
-    resolveFleetModel: async () => ({
-      memberId: "m-1",
-      candidates: [{ model: "declared-model" }],
-      explicitChain: false,
-      notices: [],
-      budgetBlocked: [],
-      effort: null,
-      contextBudget: null,
-    }),
-    switchModelTo: async () => ({ ok: true }),
     reserveRuntime: () => {
       ctx.reservations += 1;
       return () => {};
     },
     reservations: 0,
+    // The job carries `sourceTag.fleetId`, so the round goes through
+    // normalizeModelForJob; a fleet-attributed round with no model plan is
+    // refused before it runs (ledger E28). Without the plan every case below
+    // read the refusal as "the park path did not park".
+    resolveFleetModel: async (preset) => ({
+      memberId: "m-1",
+      preset,
+      candidates: [{ model: "harness-model" }],
+      notices: [],
+      explicitChain: false,
+    }),
+    switchModelTo: async () => ({ ok: true }),
+    recordFleetModelNotices: () => {},
     switchPresetTo: async (p) => {
       await new Promise((r) => setTimeout(r, 5)); // a real restart costs time — keep spinUpMs measurable
       ctx.switches.push(p);

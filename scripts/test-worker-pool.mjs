@@ -975,6 +975,15 @@ test("worker 回合把 reported / contextWindow / inputTokens 交给结算层", 
   // lastInputTokens = input + cacheRead（本回合没给 cacheRead，故等于 input），
   // 不含 output —— 断言的是"采集器记的那个量"，不是我自己算的量。
   assert.equal(out.inputTokens, 130000, "撞墙时的输入量必须穿过重建（input+cacheRead 高水位，不含 output）");
+
+  // 链条最后一环：这些事实到得了**结算层**吗？派上产时 `detail.windowFull`
+  // 24h 0 条，而比值 ≥95% 有 75 条——缺的就是这一段（facts → settlement → detail）。
+  const { shapeTurnOutcome } = await import("../server/fleet-events.js");
+  const shaped = shapeTurnOutcome(out, { reportContract: "required" });
+  assert.equal(shaped.detail?.windowFull, true,
+    "130000/128000 = 101% 必须让结算写出 detail.windowFull（否则可观测等于没上）");
+  assert.equal(shaped.detail?.missingReport, undefined,
+    "本回合交了报（reported=true）→ 不得被判欠报");
   releaseAll();
   engine.setSlotDispatcher(null);
   process.env.TASK_WORKER_MAX = "2";

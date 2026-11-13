@@ -1768,14 +1768,17 @@
     }
   },
   "facetShell": {
-    "tabs": {
+    "entries": {
       "intro": "紹介",
-      "packs": "エージェント",
-      "mcp": "MCP サービス",
-      "mine": "マイエージェント",
-      "curate": "キュレーション",
-      "docs": "ドキュメント",
-      "studio": "Studio"
+      "packs": "エージェント市場",
+      "mcp": "MCP とスキル",
+      "docs": "ガイド",
+      "studio": "作成スタジオ"
+    },
+    "account": {
+      "menuLabel": "アカウント",
+      "mine": "マイ公開",
+      "curate": "コンテンツ運用"
     },
     "langLabel": "言語",
     "packsFootnote": "匿名で閲覧可能、ログイン後に公開と購読。CLI の使い方：",
@@ -1786,17 +1789,17 @@
       "retry": "再ログイン",
       "dismiss": "閉じる"
     },
-    "loggedInAs": "ログイン中：{{email}}",
-    "studioTitle": "Studio"
+    "loggedInAs": "ログイン中：{{email}}"
   },
   "facetDocs": {
-    "title": "ドキュメント",
+    "title": "ガイド",
     "subtitle": "エージェントの id から使える状態まで——インストール・接続・作成のすべて。",
     "packageNote": "公開済み CLI パッケージ：",
     "nav": {
       "install": "インストール",
-      "mcp": "MCP 接続",
-      "create": "作成"
+      "mcp": "接続",
+      "create": "作成",
+      "site": "サイトマップ"
     },
     "install": {
       "title": "エージェントをインストール",
@@ -1820,23 +1823,39 @@
     "clients": {
       "claude-code": {
         "label": "Claude Code",
-        "body": "スキルはバージョンスナップショットとして導入；呼び出しキーを保存すると、MCP 参照をネイティブ MCP 設定へ書き込めます。"
+        "body": "スキルはバージョンスナップショットとして導入；呼び出しキーを保存すると、MCP 参照をネイティブ MCP 設定へ書き込めます。",
+        "pitfall1": "ユーザー階層は ~/.claude.json に書き、--project を付けたときだけプロジェクト階層の .mcp.json に書きます。両者は別物です。",
+        "pitfall2": "MCP の設定は新しいセッションから有効で、開いているセッションは古い設定のままです。"
       },
       "cursor": {
         "label": "Cursor",
-        "body": "スキルは Cursor のスキルディレクトリへ；MCP エントリは Cursor 自身の設定ファイルへ書き込みます。"
+        "body": "スキルは Cursor のスキルディレクトリへ；MCP エントリは Cursor 自身の設定ファイルへ書き込みます。",
+        "pitfall1": "スキルディレクトリを再走査させるには Cursor の再起動が必要です。",
+        "pitfall2": "~/.cursor/mcp.json とプロジェクト側の .cursor/mcp.json は別ファイルで、ユーザー階層への導入はプロジェクト階層では使えません。"
       },
       "zcode": {
         "label": "ZCode",
-        "body": "スキルは ZCode のスキルディレクトリへ；MCP エントリは ZCode の CLI 設定へ書き込みます。"
+        "body": "スキルは ZCode のスキルディレクトリへ；MCP エントリは ZCode の CLI 設定へ書き込みます。",
+        "pitfall1": "設定は ~/.zcode/cli/config.json の mcp.servers 配下に書き、トップレベルの mcpServers ではありません。",
+        "pitfall2": "新しいスキルは次のセッションで認識され、現在のセッションでは見えません。"
       },
       "codex": {
         "label": "Codex CLI",
-        "body": "スキルは Codex のスキルディレクトリへ；MCP エントリは TOML として Codex の設定へ書き込みます。"
+        "body": "スキルは Codex のスキルディレクトリへ；MCP エントリは TOML として Codex の設定へ書き込みます。",
+        "pitfall1": "MCP の設定は TOML（~/.codex/config.toml）で、JSON ではありません。",
+        "pitfall2": "[mcp_servers.<name>] を JSON 記法で書くと設定ファイル全体が読めなくなります。"
       },
       "gemini-cli": {
         "label": "Gemini CLI",
-        "body": "スキルは Gemini CLI のスキルディレクトリへ；MCP エントリは httpUrl 形式を使います。"
+        "body": "スキルは Gemini CLI のスキルディレクトリへ；MCP エントリは httpUrl 形式を使います。",
+        "pitfall1": "フィールドは url ではなく httpUrl です。誤るとエラーにならずツール一覧が空になります。",
+        "pitfall2": "変更後は Gemini CLI を再起動しないと新しい設定が読み込まれません。"
+      },
+      "workbuddy": {
+        "label": "WorkBuddy",
+        "body": "スキルは WorkBuddy のスキルディレクトリに入り、MCP の設定は専用の mcp.json に書きます。",
+        "pitfall1": "ユーザー階層の mcp.json はヘッダーキー（wgk- 呼び出しキー）のみ対応で、キーがないと自動再ログインは働きません。",
+        "pitfall2": "スキルも MCP も ~/.workbuddy 配下です（~/.codebuddy ではありません）。"
       }
     },
     "mcp": {
@@ -1865,7 +1884,7 @@
       "routesTitle": "3 つの作成経路",
       "route1": "壹座内：設定 → エージェント → 新規作成——スキル・MCP 参照・ペルソナをドラフトとして構成。",
       "route2": "ワンクリック変換：カスタムプリセットをエージェントのドラフトへ（設定 → カスタムプリセット → 公開）——引き継いだ内容と要差し替えの報告付き。",
-      "route3": "作者コンソール（#/mine）：manifest を公開エンドポイントへ直接送信、検証エラーはそのまま表示。",
+      "route3": "マイ公開（#/mine）：manifest を公開エンドポイントへ直接送信、検証エラーはそのまま表示。",
       "disciplineTitle": "公開の規律",
       "versions": "公開のたびに不変のバージョンが追加；各バージョンに短い説明（500 字以内）を添付できます。",
       "subscribe": "購読とインストールは別の行為：購読はマーケットに記録され、インストールは確定したバージョンスナップショットを取ります。",
@@ -1883,6 +1902,35 @@
       "verified": "実環境検証",
       "note": "各セルはコード事実または実環境記録に基づく。",
       "deepDoc": "出典付きの完全マトリクス →"
+    },
+    "searchPlaceholder": "このガイドを検索",
+    "searchEmpty": "一致する内容がありません",
+    "searchResults": "{{count}} 件一致",
+    "intentTitle": "どこから始めるか",
+    "intent": {
+      "install": "エージェントを1つ入れたい",
+      "publish": "公開したい",
+      "mcp": "MCP を接続したい",
+      "site": "このサイトの使い方を知りたい"
+    },
+    "site": {
+      "title": "サイトマップ",
+      "lead": "各入口の役割と、どの道を通るか。この節はクライアントではなくサイト自体の説明です。",
+      "entries": {
+        "intro": "製品が何をするか、購読とインストールが別の行為である理由、1行のクイックスタート。",
+        "packs": "エージェントを閲覧・検索し、内容を確認して購読または取得します。",
+        "mcp": "プラットフォームの MCP サービスとスキルカタログ。各サービスのツール面も見られます。",
+        "docs": "このページ：インストール、接続、作成、そして各機能の置き場所。",
+        "studio": "ログイン後に表示：草稿（スキル / MCP 参照 / ロール）を組み立て、検証して公開します。",
+        "mine": "アカウントメニュー内：公開したエージェントの管理（バージョン、可視性、取り下げ）。",
+        "curate": "アカウントメニュー内（管理者のみ）：カテゴリ、領域、注目、英語カバレッジの点検。"
+      }
+    },
+    "client": {
+      "configTitle": "ネイティブ設定の形",
+      "configNote": "<server-name> と呼び出しキーは自分の値に置き換えてください。CLI がこのブロックを書くので、手編集は切り分け用です。",
+      "afterInstall": "導入後にクライアントを再起動してください。開いているセッションは新しいスキルを読み込みません。",
+      "pitfallsTitle": "よくある誤り"
     }
   },
   "facetIntro": {
@@ -3501,19 +3549,16 @@
     "sourceBlueprint": "元ブループリント"
   },
   "facetCurate": {
-    "title": "キュレーションボード",
+    "title": "コンテンツ運用",
     "subtitle": "カテゴリと注目は表示レベルの管理です（可視性・バージョン・インストール可否には影響しません）。使用量はプラットフォーム集計（直近 7 日）から取得します。",
-    "loading": "ボードを読み込み中…",
     "empty": "ボードにまだエージェントがありません——公開されたエージェントはここに表示されます。",
     "errorLoad": "一覧の読み込みに失敗しました：{{message}}",
     "saved": "保存しました：{{name}}",
     "saveFailed": "保存に失敗しました：{{name}} — {{message}}",
-    "usageDegraded": "使用量ソースが利用できません（キュレーションには影響しません）：{{message}}",
+    "usageDegraded": "使用量ソースが利用できません（コンテンツ運用には影響しません）：{{message}}",
     "unlisted": "非公開",
     "private": "プライベート",
     "usage": "週間アクティブ {{users}} / {{turns}} ターン",
-    "categoryPlaceholder": "カテゴリスラッグ（例：legal）",
-    "setCategory": "カテゴリを設定",
     "feature": "注目に追加",
     "unfeature": "注目を解除",
     "allPacks": "すべて",
@@ -3522,13 +3567,29 @@
     "unclassifiedCount": "未分類 {{count}} / {{total}}",
     "lineResolved": "ライン：{{line}}",
     "domainsLabel": "領域",
-    "saveDomains": "領域を保存",
     "vocabUnavailable": "ボキャブラリを利用できません",
     "onlyGaps": "英語欠项のみ",
-    "coverageBadge": "en {{covered}}/{{total}}"
+    "coverageBadge": "en {{covered}}/{{total}}",
+    "searchPlaceholder": "名前で検索",
+    "loadMore": "残り {{remaining}} 件を読み込む",
+    "loadingMore": "読み込み中…",
+    "loadMoreFailed": "追加の読み込みに失敗しました：{{message}}",
+    "loadedOf": "{{loaded}} / {{total}} 件を表示",
+    "gapCount": "不足 {{count}}",
+    "selectHint": "左の一覧からエージェントを選ぶと、ここでカテゴリ・領域・注目を編集できます。",
+    "categoryLabel": "カテゴリ",
+    "categoryNone": "未分類",
+    "categoryLegacy": "保存値：{{value}}",
+    "featuredLabel": "注目",
+    "coverageLabel": "英語カバレッジ",
+    "coverageFull": "英語カバレッジは完全です",
+    "usageNone": "直近 7 日の利用記録はありません",
+    "dirty": "未保存の変更",
+    "save": "保存",
+    "saving": "保存中…"
   },
   "facetMine": {
-    "title": "マイエージェント",
+    "title": "マイ公開",
     "subtitle": "ここで公開したエージェントを管理します：バージョン・公開状態・可視性。実行環境へのインストールは壹座の機能のままです（設定 → エージェント → マイエージェント）。サービス契約付きの公開エージェントは万星カタログに流れます——外部のデプロイヤーが従量ターンで実行し、あなたの取り分が自動的に蓄積されます。",
     "loading": "エージェントを読み込み中…",
     "empty": "まだ公開はありません——下の公開ボックスを使いましょう。",
@@ -3708,7 +3769,23 @@
       "room_renamed": "ルーム名が変わりました",
       "guest_joined": "訪問者がルームに入りました",
       "guest_identified": "訪問者の身元が確認されました",
-      "guest_greeting": "ようこそ——当番シートが質問を受け付けています"
+      "guest_greeting": "ようこそ——当番シートが質問を受け付けています",
+      "route_decision": {
+        "mention": "配信：名指しのため {{to}} へ",
+        "attribution": "配信：発話者本人のチームへ（{{to}}）",
+        "intent": "配信：内容から {{to}} へ（候補 {{n}}）",
+        "needs_confirmation": "配信しません：話者が不明のため確認待ちに入れました",
+        "broadcast": "一斉確認：名指しも身元も無いため {{to}} へ",
+        "fallback": "{{to}} へ配信しました"
+      },
+      "route_cancelled": "配信を停止しました：{{n}} 席は未開始で課金なし",
+      "route_reassigned": "{{to}} へ再配信しました",
+      "route_action": {
+        "cancel": "配信を止める",
+        "reassign": "再配信",
+        "pickTarget": "席を選択…",
+        "reassignReason": "ルーム所有者による手動の再配信"
+      }
     },
     "fleet": {
       "title": "チーム購読",
@@ -3764,6 +3841,19 @@
       "close": "閉じる",
       "empty": "このポストにはまだ記憶がありません。",
       "noPack": "このエージェントチームにはエージェント座標がありません。"
+    },
+    "policy": {
+      "title": "メモリ宣言（pack ルート）",
+      "degraded": "Servicio de memoria no disponible",
+      "scope": "スコープ: {{root}}",
+      "col": {
+        "key": "キー",
+        "declared": "宣言値",
+        "inherited": "継承元",
+        "effective": "有効値"
+      },
+      "unset": "未設定",
+      "notExecuted": "未実行"
     }
   },
   "blueprints": {
@@ -4034,7 +4124,8 @@
     "views": {
       "overview": "サマリー",
       "manage": "管理",
-      "owner": "経営"
+      "owner": "経営",
+      "directory": "ディレクトリ"
     },
     "overview": {
       "summaryTitle": "全エージェントチーム",
@@ -4149,7 +4240,7 @@
     },
     "market": {
       "subtitle": "能力の取得と管理：エージェント・ツール・スキル・プラグイン",
-      "openStudio": "Studio を開く",
+      "openStudio": "作成スタジオを開く",
       "installed": "このマシンのインストール済みパック"
     }
   },
@@ -4204,6 +4295,12 @@
         "enabled": "有効",
         "unsupplied": "未供給"
       },
+      "evidence": {
+        "complete": "審査済み",
+        "stale": "再審査待ち",
+        "missing": "未審査",
+        "until": "{{date}} まで審査有効"
+      },
       "request": "供給を申請",
       "requested": "供給を申請しました：{{name}}",
       "requestPending": "申請済み・次回供給待ち",
@@ -4216,6 +4313,384 @@
     "agents": {
       "unavailableTitle": "この配備ではエージェント市場が無効です",
       "unavailableBody": "市場が接続されていません。導入済みのパックは「マイ」にあり、そのまま利用できます。"
+    }
+  },
+  "inputInbox": {
+    "title": "記入待ち",
+    "count": "{{count}} 件",
+    "empty": "記入待ちはありません",
+    "refresh": "更新",
+    "error": "読み込み失敗：{{message}}"
+  },
+  "inputRequest": {
+    "title": "入力が必要です",
+    "waitingHint": "送信後に会話が続きます",
+    "submit": "送信",
+    "cancel": "リクエストを取消",
+    "answered": "送信済み",
+    "cancelled": "取消済み",
+    "expired": "期限切れ（無応答）",
+    "escalated": "エスカレーション済み",
+    "expiresIn": "残り {{minutes}} 分",
+    "fillRequired": "次を入力してください：{{fields}}",
+    "filePlaceholder": "リソース参照またはリンク",
+    "yes": "はい",
+    "no": "いいえ"
+  },
+  "teamDirectory": {
+    "title": "チームディレクトリ",
+    "refresh": "更新",
+    "searchPlaceholder": "チーム・ポスト・ハンドルを検索",
+    "openOnly": "直接呼び出し可のみ",
+    "sampled": "{{at}} 時点 · {{cells}} スペースが応答、{{degraded}} 件到達不可",
+    "stale": "ディレクトリのキャッシュを更新中です。以下は前回の結果です。",
+    "degraded": "{{n}} スペースが今回応答しませんでした。そのチームは表示されません。",
+    "truncated": "上限を超えたため、先頭 200 チームのみ表示しています。",
+    "unavailable": "ディレクトリを読めません（{{error}}）",
+    "noMatch": "一致するチームがありません",
+    "empty": "まだどのチームもディレクトリに公開されていません",
+    "emptyHint": "チームのコックピットで「ディレクトリに公開」を開き、公開範囲を選んで保存します。",
+    "emptyAction": "チームへ",
+    "clearFilters": "絞り込みを解除",
+    "availability": {
+      "accepting": "受付中",
+      "paused": "一時停止",
+      "unavailable": "利用不可"
+    },
+    "pricing": {
+      "title": "1日の上限",
+      "calls": "呼び出し回数",
+      "tokens": "トークン",
+      "usd": "金額（USD）",
+      "billedTo": "呼び出し費用はチーム所有者のデプロイキーに課金されます。",
+      "compact": "1日 {{calls}} 回 · ${{usd}}"
+    },
+    "posts": {
+      "title": "受注できるポスト",
+      "empty": "对外ポストがなく、まだ呼び出せません",
+      "truncated": "先頭 20 件のみ表示。カードを開くと全件表示"
+    },
+    "trust": "スペース {{cell}} · 公開 {{at}}",
+    "callDoorNotHere": "ディレクトリは発見専用です。呼び出しは別の機能で、ここから会話・委任・課金は始まりません。",
+    "backToTeams": "チーム一覧へ戻る",
+    "callOpenHint": "「直接呼び出し可」：許可リストの人は承認不要です。",
+    "callListedHint": "「見える」：呼び出す前に所有者の承認が必要です。"
+  },
+  "teamCard": {
+    "open": "ディレクトリに公開",
+    "title": "チームディレクトリに公開",
+    "subtitle": "このカードは他の人から見えます。呼び出しは別の扉です。",
+    "loadFailed": "公開状態を読めませんでした：{{error}}",
+    "receipt": {
+      "saved": "保存しました。自分にはすぐ見え、他の人には最大 60 秒後に表示されます。",
+      "withdrawn": "ディレクトリから取り下げました。チーム本体・メンバー・データはそのままです。"
+    },
+    "fields": {
+      "handle": "ハンドル",
+      "handleHint": "小文字・数字・ハイフン。公開後は変更できません。",
+      "name": "公開名",
+      "description": "一言説明",
+      "descriptionPlaceholder": "何を、どう受けるチームか"
+    },
+    "visibility": {
+      "title": "誰に見えるか",
+      "private": {
+        "label": "非公開",
+        "hint": "未公開と同じ。どの読み取り面にも出ません"
+      },
+      "listed": {
+        "label": "見える",
+        "hint": "見つけてもらえるが、呼び出しは毎回あなたの承認が必要"
+      },
+      "open": {
+        "label": "直接呼び出し可",
+        "hint": "許可リストの人は承認なしで呼べる。費用はあなたに課金"
+      }
+    },
+    "openGate": {
+      "hint": "「直接呼び出し可」は、許可リストの人があなたの承認なしで呼び出せ、費用があなたのデプロイキーに課金されることを意味します。",
+      "acknowledge": "理解して確認します"
+    },
+    "quota": {
+      "title": "1日の上限",
+      "calls": "呼び出し回数",
+      "tokens": "トークン",
+      "usd": "金額（USD）",
+      "hint": "空欄なら既定値（200 回 / 200 万トークン / $5）。「無制限」は選べません。",
+      "fallback": "{{field}} は無制限にできないため {{value}} に戻しました"
+    },
+    "callers": {
+      "title": "呼び出し元の許可リスト",
+      "hint": "1 行 1 メールアドレス。「直接呼び出し可」にのみ効きます。「見える」では誰でもあなたの承認が必要です。"
+    },
+    "preview": {
+      "title": "カードのプレビュー（確定まで書き込みません）",
+      "loading": "プレビューを生成中…",
+      "invalid": "まだ不正な値があります：{{error}}"
+    },
+    "actions": {
+      "withdraw": "ディレクトリから取り下げ",
+      "close": "閉じる",
+      "saving": "保存中…",
+      "update": "変更を保存",
+      "publish": "公開"
+    },
+    "withdraw": {
+      "title": "このカードをディレクトリから取り下げますか？",
+      "description": "次の読み取りから表示されなくなります。チーム・ポスト・履歴は消えません。",
+      "confirm": "取り下げ"
+    }
+  },
+  "teamCall": {
+    "open": "呼び出す",
+    "title": "「{{name}}」を呼び出す",
+    "subtitle": "入口は一つだけ。誰が受け、どうまとめるかはチームが決めます。",
+    "quota": "1日の上限 {{calls}} 回（使用 {{usedCalls}}）· ${{usd}}（使用 ${{usedUsd}}）· {{reset}} にリセット",
+    "needApproval": "このチームは「見える」設定です。呼び出す前に所有者の承認が必要です。",
+    "requestApproval": "承認を申請",
+    "requesting": "送信中…",
+    "approvalState": {
+      "none": "未申請",
+      "pending": "申請済み・所有者の承認待ち",
+      "approved": "承認済み",
+      "rejected": "拒否されました",
+      "expired": "承認が期限切れ",
+      "unknown": "状態不明"
+    },
+    "taskLabel": "チームへの依頼内容",
+    "taskPlaceholder": "何が必要か、どんな形で返すかを書いてください",
+    "send": "呼び出す",
+    "calling": "呼び出し中…",
+    "close": "閉じる",
+    "answerTitle": "チームの返答",
+    "errorTitle": "呼び出せませんでした",
+    "blockedUntilApproved": "承認されるとボタンが使えます。",
+    "errors": {
+      "unauthorized": "身元を確認できません。再ログインしてお試しください。",
+      "not_found": "このチームは存在しないか、取り下げられています。",
+      "not_listed": "許可リストに入っておらず、申請も受け付けていません。",
+      "needs_approval": "所有者の承認が必要です。",
+      "quota_exceeded": "本日の割当を使い切りました。明日リセットされます。",
+      "depth_exceeded": "呼び出しの連鎖が深すぎるため拒否されました。",
+      "no_reception": "受付できるポストがまだありません。",
+      "team_paused": "このチームは一時停止中です。",
+      "not_serving": "この配備はまだチーム呼び出しに対応していません。",
+      "incomplete": "返答が途中で終わりました。再試行してください。",
+      "internal_error": "呼び出しに失敗しました。後ほど再試行してください。"
+    }
+  },
+  "teamApprovals": {
+    "open": "承認待ちの呼び出し",
+    "title": "「{{name}}」の承認待ち",
+    "subtitle": "「見える」設定のチームでは、呼び出し元がここで申請し、あなたが許可します。",
+    "grantFor": "承認の有効期間",
+    "duration": {
+      "oneoff": "都度（長期有効）",
+      "24h": "24 時間",
+      "7d": "7 日",
+      "30d": "30 日"
+    },
+    "pending": "承認待ち",
+    "empty": "現在、承認待ちの申請はありません。",
+    "requestedAt": "{{at}} に申請",
+    "approve": "承認",
+    "reject": "拒否",
+    "approvedTitle": "承認済み",
+    "approvedEmpty": "承認済みの呼び出し元はまだいません。",
+    "standing": "長期有効",
+    "rejectTitle": "この呼び出し元を拒否しますか？",
+    "rejectDescription": "{{caller}} はこのチームを呼び出せなくなります（再申請は可能です）。"
+  },
+  "voiceCapture": {
+    "open": "音声キャプチャ",
+    "title": "音声キャプチャ",
+    "subtitle": "会議をまるごと録音：録りながら文字起こしし、終了後に訂正・書き出し・ルームへの送信ができます。",
+    "defaultTitle": "会議キャプチャ {{time}}",
+    "start": "録音を開始",
+    "starting": "起動中…",
+    "restart": "新しいキャプチャ",
+    "stop": "録音を停止",
+    "finish": "終了して結合",
+    "finishing": "結合中…",
+    "elapsed": "録音 {{at}} · 予定 {{planned}} スライス",
+    "finishHint": "結合する前に録音を停止してください。",
+    "waitUploads": "まだ {{n}} スライスがアップロード中または文字起こし中です。完了後に結合してください。",
+    "progressTitle": "スライスの進捗",
+    "progressSummary": "{{done}}/{{total}} スライス · {{pct}}%",
+    "transcribed": "文字起こし済み {{minutes}} 分",
+    "recordingSlice": "スライス {{seq}} · 録音中",
+    "rowLabel": "スライス {{seq}}",
+    "state": {
+      "pending": "待機中",
+      "transcribing": "文字起こし中",
+      "done": "完了",
+      "failed": "失敗"
+    },
+    "retry": "再試行",
+    "retrying": "再試行中…",
+    "retryGaveUp": "再試行の上限に達しました",
+    "retryClosed": "キャプチャは終了済みのため再試行できません",
+    "mergedTitle": "結合テキスト",
+    "mergedHint": "保存前に編集できます。訂正は一度だけ可能で、機械結合の原文は保持されます",
+    "save": "訂正を保存",
+    "saving": "保存中…",
+    "saved": "訂正を保存しました",
+    "correctionSpent": "訂正は保存済みのため変更できません",
+    "export": "プレーンテキストを書き出す",
+    "segmentsTitle": "セグメント",
+    "roomLabel": "送信先ルーム ID",
+    "roomPlaceholder": "智語ルームのセッション ID",
+    "toRoom": "ルームへ送信",
+    "roomNeedId": "先にルーム ID を入力してください。",
+    "roomConfirmTitle": "この会議メモをルームへ送信しますか？",
+    "roomConfirmDescription": "ルームにシステムメッセージを 1 行書き込みます。エージェントは起動せず、ターン枠も消費しません。",
+    "roomConfirm": "送信する",
+    "roomSent": "ルーム {{sessionId}} へ送信しました",
+    "roomAlready": "このルームには既にこのキャプチャがあります（{{sessionId}}）",
+    "abandon": "キャプチャを破棄",
+    "abandonTitle": "このキャプチャを破棄しますか？",
+    "abandonDescription": "文字起こし済みのテキストと一時保存中の音声は削除され、復元できません。",
+    "abandonConfirm": "破棄",
+    "abandoned": "キャプチャを破棄しました",
+    "close": "閉じる",
+    "micDenied": "マイクを使用できません（{{error}}）。ブラウザの権限を確認してください。",
+    "micUnsupported": "このブラウザは録音に対応していません（MediaRecorder と安全なオリジンが必要です）。",
+    "unavailable": {
+      "title": "音声キャプチャを利用できません",
+      "disabled": "音声機能は無効です。",
+      "no_key": "音声の認証情報が未設定です。",
+      "generic": "音声サービスは一時的に利用できません。"
+    },
+    "stoppedTitle": "予算の上限に達しました",
+    "stopped": {
+      "minutes": "分数の上限に達したため、以降のスライスは文字起こしされません。",
+      "usd": "金額の上限に達したため、以降のスライスは文字起こしされません。",
+      "buffered": "上限以降の音声は一時保存のみで未変換です。上限を解除すれば変換できます。"
+    },
+    "errors": {
+      "network": "ネットワークが利用できず、リクエストはサーバーに届きませんでした。",
+      "internal_error": "操作に失敗しました。後でもう一度お試しください。",
+      "voice_disabled": "音声機能は無効です。",
+      "voice_not_configured": "音声の認証情報が未設定です。",
+      "not_found": "キャプチャが存在しないか、あなたのものではありません。",
+      "capture_not_recording": "キャプチャは終了しており、スライスを受け付けません。",
+      "chunk_busy": "このスライスは文字起こし中です。少しお待ちください。",
+      "chunk_retry_exhausted": "このスライスは再試行の上限に達しました。",
+      "chunk_exists": "このスライスは既に存在し、完了として扱われます。",
+      "timeline_conflict": "スライスの時刻が既存のスライスと矛盾しています。",
+      "chunk_audio_gone": "このスライスの音声は削除済みです。再アップロードしてください。",
+      "chunk_too_large": "スライスがサイズ上限を超えています。",
+      "bad_seq": "スライス番号が無効です。",
+      "bad_start_ms": "スライスの開始時刻が無効です。",
+      "bad_duration_ms": "スライスの長さが無効です。",
+      "missing_audio": "音声ファイルがありません。",
+      "bad_upload": "アップロード形式が無効です。",
+      "not_finished": "キャプチャはまだ終了していません。",
+      "already_corrected": "このキャプチャは既に一度訂正されています。",
+      "empty_capture": "送信できるテキストがありません。",
+      "confirmation_required": "ルームへの送信には確認が必要です。",
+      "forbidden": "このルームへの権限がありません。",
+      "bad_text": "訂正テキストが無効です。",
+      "bad_session": "ルーム ID が無効です。",
+      "chat_history_unavailable": "会話履歴を利用できません。"
+    }
+  },
+  "speakerAttribution": {
+    "title": "話者归属",
+    "summary": "{{total}} 区間 · 確定 {{named}} · 確認待ち {{pending}}",
+    "separation": {
+      "none": "本収録は分離していません：上流が話者情報を返さないため、全区間を未確定として表示します。",
+      "partial": "一部のみ分離：前半は分離できましたが、後半はテキストのみでした。未分離の区間に推測の話者を割り当てません。",
+      "full": "分離済み：区間は匿名クラスタでまとめています。名前が付いていないクラスタは未確定のままです。",
+      "not_needed": "個人端末での単独録音：全区間が録音者本人なので分離は不要です。"
+    },
+    "unset": "未確定",
+    "sliceCount": "{{n}} 区間",
+    "name": "名前を付ける",
+    "unbind": "名前を外す",
+    "noCandidates": "選択できる同席メンバーがいません",
+    "overridden": "セッション身元で归属",
+    "conflictNotice": "{{n}} 区間で分離結果がセッション身元と一致しませんでした。身元を優先し、その不一致を記録しました。",
+    "pendingHint": "未確定の区間は自動送信されません。確認は既存の「やること」に並び、回答するとここへ反映されます。",
+    "trail": "変更履歴（{{n}}）",
+    "empty": "まだ归属できる区間がありません（録音中、または未終了）。",
+    "op": {
+      "bind": "命名",
+      "rebind": "変更",
+      "unbind": "解除"
+    },
+    "errors": {
+      "loadFailed": "归属を読み込めませんでした。再試行してください。",
+      "memberRequired": "先にメンバーを選択してください。",
+      "member_not_present": "そのメンバーは本収録に同席していません。",
+      "bad_binding": "クラスタまたはメンバーが不正です。",
+      "not_bound": "そのクラスタはまだ命名されていません。",
+      "internal_error": "操作に失敗しました。再試行してください。"
+    }
+  },
+  "console": {
+    "title": "チームコンソール",
+    "block": {
+      "team": "ポスト",
+      "stream": "最新レポート",
+      "kpi": "指標",
+      "decisions": "承認待ち",
+      "spend": "コスト",
+      "orchestration": "構造",
+      "unknown": "利用不可のブロック",
+      "needsNewerClient": "このブロックには新しいバージョンが必要です。"
+    },
+    "absent": {
+      "no_members": "まだポストがありません。",
+      "no_reports": "まだレポートがありません。",
+      "no_reported_kpis": "指標の報告はまだありません。",
+      "no_open_decisions": "承認待ちはありません。",
+      "no_run_records": "実行記録はまだありません。",
+      "not_declared": "このチームは構造を宣言していません。",
+      "declaration_unreadable": "構造の宣言を読み取れません。",
+      "unknown_block": "このブロックはここでは利用できません。",
+      "unknown": "表示する内容がありません。"
+    },
+    "states": {
+      "forbidden": "このチームコンソールへのアクセス権がありません。",
+      "notPublished": "このコンソールは公開されていません。",
+      "unavailable": "コンソールは一時的に利用できません。"
+    },
+    "team": {
+      "lastReport": "最終レポート"
+    },
+    "stream": {
+      "noSummary": "このレポートに要約はありません。"
+    },
+    "decisions": {
+      "untitled": "無題の項目",
+      "expires": "期限",
+      "severity": {
+        "high": "高",
+        "normal": "通常",
+        "low": "低"
+      }
+    },
+    "spend": {
+      "rounds": "実行回",
+      "turns": "ターン",
+      "cost": "コスト",
+      "pricedTurns": "課金対象ターン"
+    },
+    "orchestration": {
+      "summary": "宣言 {{declared}} 件 · 有効 {{total}} 件",
+      "derived": "派生"
+    },
+    "page": {
+      "subtitle": "このチームが表示すると宣言した内容"
+    },
+    "publish": {
+      "published": "公開中",
+      "private": "非公開",
+      "privateHint": "公開するとこのコンソールに外部リンクが付きます。アドレスは自動生成され、指定できません。",
+      "action": "コンソールを公開",
+      "unpublish": "公開を停止",
+      "failed": "公開状態を変更できませんでした。"
     }
   }
 }

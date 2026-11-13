@@ -76,6 +76,13 @@ test.after(() => {
 const db = await import("../db.js");
 const registryCredentials = await import("../registry-credentials.js");
 const connectorCredentials = await import("../connector-credentials.js");
+// The injected row name is NOT the slot: `bindingServerName()` mangles it into
+// the mcp-client alphabet (`connector_<slug>_<hash8>`, ≤32 chars) because
+// `connector:<pack>:<key>` fails dsh's /^[A-Za-z0-9_-]{1,32}$/ validation and
+// the row then never starts at all (fix-mcp-server-name-validation,
+// 9b3491068). That commit updated the other two binding fixtures and missed
+// this file, so three expectations below kept pinning a name nothing emits.
+const bindingNames = await import("../connector-bindings.js");
 const credentialRefs = await import("../credential-refs.js");
 const extensionStore = await import("../extension-store.js");
 const { writeMcpPatch } = await import("../dsh-profile.js");
@@ -329,12 +336,12 @@ test("2.5b a 401 on a connector binding row marks only that binding (add-connect
   const fire = (toolName) =>
     ctx.handleDshEvent(toolEvent("c9", toolName, "HTTP 401 Unauthorized"));
 
-  // The row name the 401 arrives under is `bindingServerName(slot)` — the 401
-  // handler resolves the slot through that SAME definition (never by parsing),
-  // and legacy colon names resolve to null, so a colon-shaped tool name here
-  // would silently mark nothing.
-  const ROW_A = bindings.bindingServerName(bindings.bindingSlot("pack-a", "kingdee-cloud"));
-  fire(`mcp__${ROW_A}__kingdee_list_bills`);
+  // The row name is the synthesized config: `bindingServerName(slot)`. Fire the
+  // name the injector actually emits — the 401 handler resolves the slot by
+  // matching that same definition against the owner's live bindings, so a
+  // hand-built `connector:<slot>` name is simply not one of ours and the
+  // invalidation never runs.
+  fire(`mcp__${bindings.bindingServerName(bindings.bindingSlot("pack-a", "kingdee-cloud"))}__kingdee_list_bills`);
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(updateCalls.length, 1, "profile re-applied once");
   assert.equal(broadcasts.some((m) => m.type === "connector_credential_stale"), true, "clients pinged");
@@ -351,7 +358,7 @@ test("2.5b a 401 on a connector binding row marks only that binding (add-connect
   );
 
   // A second 401 on the same row is not a second re-apply.
-  fire(`mcp__${ROW_A}__kingdee_list_bills`);
+  fire("mcp__connector:pack-a:kingdee-cloud__kingdee_list_bills");
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(updateCalls.length, 1, "already stale ⇒ no second re-apply");
 });
@@ -370,19 +377,13 @@ test("2.6 a 401 from a non-binding server leaves binding credentials alone", asy
 });
 
 test("3.2 the connector injects as the built-in binding row, not a global row", async () => {
-  const bindings = await import("../connector-bindings.js");
   const email = "inject@x.test";
   const row = JSON.parse(fs.readFileSync(process.env.MCP_CONFIG_PATH, "utf8")).mcpServers.connector;
   // add-connector-bindings D4: the mcp.json `connector` row is a TEMPLATE, and
   // every injected row is a binding. The built-in free-exploration binding is
-  // the slot the active account mirrors into.
-  //
-  // The row NAME is `bindingServerName(slot)`, not `connector:<slot>`: dsh
-  // rejects colons in MCP server names, so the ledger moved to a folded
-  // slug+hash and `slotForServerName` refuses legacy colon names outright
-  // ("those rows are dead on this dsh" — test-mcp-server-name.mjs). Ask the
-  // generator instead of hardcoding a hash: a re-fold must not turn this file red.
-  const EXPLORE_ROW = bindings.bindingServerName("chat:explore");
+  // the slot the active account mirrors into; its server name is the injector's
+  // mangling of that slot, not the slot itself.
+  const EXPLORE_ROW = bindingNames.bindingServerName("chat:explore");
 
   // No credential ⇒ nothing to inject (warning path), the template intact, and
   // the retired global row is gone even though mcp.json still carries it.
@@ -419,8 +420,7 @@ test("3.2 the connector injects as the built-in binding row, not a global row", 
 
 test("2.3 registry and connector inject independently in one patch write", async () => {
   const email = "both-inject@x.test";
-  const bindings = await import("../connector-bindings.js");
-  const EXPLORE_ROW = bindings.bindingServerName("chat:explore"); // 同上：名字由生成器给
+  const EXPLORE_ROW = bindingNames.bindingServerName("chat:explore");
   connectorCredentials.store({ email, token: PAT });
   registryCredentials.store({ email, token: REG_TOKEN });
   extensionStore.addMcpServer({

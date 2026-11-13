@@ -30,6 +30,8 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { storeDir } from "../../paths.js";
 import { deriveRequestState, loadPluginCatalog, pluginSupplyState } from "../plugin-catalog.js";
+// The outward projection (design D5) — never assembled by hand here.
+import { evidenceSummary } from "../../lib/curation-evidence.js";
 
 const DEFAULT_DEPLOYMENT_ID = "local";
 
@@ -134,7 +136,12 @@ export function registerPluginSupplyRoutes(ctx = {}, opts = {}) {
         const state = pluginSupplyState(entry, bundles);
         const row = store.find(entry.id, deploymentId);
         const requestState = deriveRequestState(row, state);
-        const view = { ...entry, state };
+        // Two orthogonal dimensions (design D2): `state` is this deployment's
+        // supply, `evidence.state` is the curation verdict. Both are derived per
+        // read; neither is stored, and neither may hide the other.
+        // evidenceSummary() derives the state itself — no separate call, so the
+        // two dimensions can never disagree within one response.
+        const view = { ...entry, state, evidence: evidenceSummary(entry) };
         if (requestState) view.requestState = requestState;
         if (requestState === "declined") view.declineReason = row.declineReason ?? null;
         return view;

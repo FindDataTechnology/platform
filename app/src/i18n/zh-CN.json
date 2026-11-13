@@ -2,7 +2,8 @@
   "tabs": {
     "chat": "对话",
     "cron": "定时任务",
-    "resources": "资源库"
+    "resources": "资源库",
+    "zhiyu": "智语"
   },
   "pair": {
     "title": "连接你的壹座",
@@ -35,7 +36,29 @@
     "stop": "停止",
     "attach": "附件",
     "regenerate": "重新生成",
-    "fileDefault": "文件"
+    "fileDefault": "文件",
+    "voiceHold": "按住说话",
+    "voiceRelease": "松手结束，上滑取消",
+    "voiceRecording": "录音中 · 上滑取消",
+    "voiceTranscribing": "转写中…",
+    "voiceFailed": "语音转写失败",
+    "voiceTooLarge": "录音超过 25 MB 上限，请分段录制"
+  },
+  "voiceCapture": {
+    "entry": "长录音",
+    "hint": "会议、课程边录边转写",
+    "title": "长录音",
+    "progress": "已转写 {{minutes}} 分钟 / {{total}} 片",
+    "retry": "重试 {{n}} 片",
+    "stop": "停止并整理",
+    "resultTitle": "转写结果",
+    "close": "关闭",
+    "empty": "没有识别到文字",
+    "denied": "麦克风权限被拒绝，请在设置中允许录音",
+    "startFailed": "发起长录音失败",
+    "audioFailed": "录音启动失败",
+    "noAudio": "没有录到声音，已停止",
+    "budget": "已达转写预算上限，后续分片只暂存"
   },
   "cron": {
     "placeholderTitle": "定时任务",
@@ -131,5 +154,33 @@
     "verifyText": "帮我查证一个技术问题，并给出信息来源",
     "write": "整理写作",
     "writeText": "帮我把下面的要点整理成一份简洁的周报：\n- 要点一\n- 要点二"
+  },
+  "zhiyu": {
+    "untitled": "未命名空间",
+    "active": "进行中",
+    "ended": "已结束",
+    "emptyList": "还没有房间。在电脑上创建后，这里就会出现。",
+    "loadFailed": "读取房间失败",
+    "loadEarlier": "加载更早",
+    "loading": "正在读取…",
+    "placeholder": "说点什么…",
+    "send": "发送",
+    "sending": "发送中",
+    "sendFailed": "发送失败",
+    "talk": "按住说话",
+    "talkRelease": "松开发送",
+    "shortPoll": "网络较慢，已改为短轮询，消息仍会到达",
+    "handoffCopied": "链接已复制（只能用一次），请到电脑上打开",
+    "handoffFailed": "链接生成失败：{{message}}",
+    "handoff": {
+      "private_window": "私窗（电脑上完成）",
+      "invite": "邀请成员（电脑上完成）",
+      "subscription": "团队订阅（电脑上完成）"
+    },
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前",
+    "presenceNone": "暂无人在场"
   }
 }

@@ -24,6 +24,14 @@ import { readJsonOr, atomicWriteJsonSync, createWriteChain, normalizeBaseUrl } f
 // dsh-profile imports THIS module only lazily (inside buildLlmProfile), so
 // however the load order starts, the other side is never mid-evaluation.
 import { RETRY_POLICY } from "./dsh-profile.js";
+// 词元能力快照消费侧（add-ciyuan-capability-contract）：快照只缩小「要探哪些 id」，
+// 不替代判定——探到才算 serving。读不到（404/503/超时/形状不符）就退回 /models
+// 全量探测，行为不比现状更差。
+import {
+  capabilitiesDiscoveryEnabled,
+  fetchCapabilities,
+  planProbeSet,
+} from "./lib/ciyuan-capabilities.js";
 
 const STORE_PATH = storeDir("llm-providers.json", process.env.LLM_PROVIDERS_STORE);
 const DEFAULT_PATH = storeDir("llm-default.json", process.env.LLM_DEFAULT_STORE);
@@ -743,6 +751,61 @@ export async function classifyModels(baseUrl, apiKey, ids, { fetchImpl = global.
 // write lock; the merge itself additionally goes through tryWithWriteLock.
 let syncInFlight = false;
 
+// Decide which ids a sync should probe.
+//
+// 词元（ciyuan）能力快照优先：`GET /v1/ciyuan/capabilities` 按调用者的 key 给出
+// serving（可调度账号映射并集）与 permitted_only（看得见但没有账号能服务）。
+// 后者今天在 /models 里也列出来、探一次必然 unauthorized——纯白探。
+//
+// 纪律（契约 ciyuan-capability-endpoint）：快照**只缩小探测集合，不替代判定**。
+// 探到才算 serving，所以快照任何错误只会让集合保守：
+//  - 快照不可用 → 退回 /models 全量探测（与启用本机制前完全一致）
+//  - serving 空但有 permitted_only → 仍探这些（账号可能刚上线，快照未刷新）
+//  - serving 非空 → 只探 serving，跳过 permitted_only（记入 skipped 供日志归因）
+async function planSyncProbeSet(baseUrl, apiKey, { fetchImpl, auth = "bearer" } = {}) {
+  const fallback = async () => ({
+    ids: await fetchModelIds(baseUrl, apiKey, { fetchImpl, auth }),
+    source: "models",
+    snapshotServing: null,
+    skipped: [],
+  });
+  if (!capabilitiesDiscoveryEnabled()) return fallback();
+
+  const snapshot = await fetchCapabilities(baseUrl, apiKey, { fetchImpl, auth });
+  if (!snapshot) return fallback();
+
+  const plan = planProbeSet(snapshot, []);
+  if (plan.source !== "capabilities" || plan.ids.length === 0) return fallback();
+  return {
+    ids: plan.ids,
+    source: "capabilities",
+    snapshotServing: snapshot.serving,
+    skipped: plan.skipped || [],
+  };
+}
+
+// 快照说能服务、探测说不能 ＝ 两侧判据分歧。探测是实测，结论以它为准；
+// 这里只让分歧可观测，不静默吞掉（契约要求：分歧必须告警）。
+function capabilityDivergences(snapshotServing, classified) {
+  if (!Array.isArray(snapshotServing) || snapshotServing.length === 0) return [];
+  return snapshotServing.filter((id) => classified?.[id] && classified[id].status !== "serving");
+}
+
+function logProbePlan(name, id, plan, classified) {
+  const probed = Object.keys(classified || {}).length;
+  const parts = [`source=${plan.source}`, `probed=${probed}`];
+  if (plan.skipped.length > 0) parts.push(`skipped=${plan.skipped.length}`);
+  const diverged = capabilityDivergences(plan.snapshotServing, classified);
+  if (diverged.length > 0) parts.push(`diverged=${diverged.length}`);
+  console.log(`[llm-providers] probe plan "${name}" (${id}): ${parts.join(" ")}`);
+  if (diverged.length > 0) {
+    console.warn(
+      `[llm-providers] capability/probe divergence "${name}" (${id}): ` +
+        `${diverged.join(",")} — snapshot called them serving, probe did not; probe wins`
+    );
+  }
+}
+
 // Reconcile a provider's roster against its own gateway (design D1–D8).
 // Classification happens BEFORE the write lock; inside it: merge `serving`
 // ids (append + family metadata, never touch existing entries' fields),
@@ -757,12 +820,14 @@ export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}
     if (!apiKey) throw new ProviderError("invalid", "reserved route has no API key configured");
     syncInFlight = true;
     let classified;
+    let plan;
     let baseUrl;
     try {
       const dshProfile = await import("./dsh-profile.js");
       baseUrl = (await dshProfile.effectiveVolcesRoute()).baseURL;
-      const ids = await fetchModelIds(baseUrl, apiKey, { fetchImpl });
-      classified = await classifyModels(baseUrl, apiKey, ids, { fetchImpl });
+      plan = await planSyncProbeSet(baseUrl, apiKey, { fetchImpl });
+      classified = await classifyModels(baseUrl, apiKey, plan.ids, { fetchImpl });
+      logProbePlan("Volces", id, plan, classified);
     } finally {
       syncInFlight = false;
     }
@@ -797,9 +862,11 @@ export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}
 
   syncInFlight = true;
   let classified;
+  let plan;
   try {
-    const ids = await fetchModelIds(record.baseUrl, record.apiKey, { fetchImpl, auth: record.auth });
-    classified = await classifyModels(record.baseUrl, record.apiKey, ids, { fetchImpl, auth: record.auth });
+    plan = await planSyncProbeSet(record.baseUrl, record.apiKey, { fetchImpl, auth: record.auth });
+    classified = await classifyModels(record.baseUrl, record.apiKey, plan.ids, { fetchImpl, auth: record.auth });
+    logProbePlan(record.name, id, plan, classified);
   } finally {
     syncInFlight = false;
   }

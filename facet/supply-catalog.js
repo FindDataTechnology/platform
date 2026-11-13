@@ -30,6 +30,10 @@
 // (source_absent: true) — never a boot failure, never a fabricated row.
 
 import { resolveLocale } from "../lib/pack-locale.js";
+// Curation evidence (add-curation-evidence-gate 2.2): the outward projection is
+// owned by lib/curation-evidence.js — this file never picks evidence fields by
+// hand, so a new internal field cannot leak here by being added upstream.
+import { evidenceSummary } from "../lib/curation-evidence.js";
 
 const FIVE_LOCALES = ["zh", "en", "ja", "es", "fr"];
 
@@ -63,6 +67,20 @@ export function zhFallbackAnnotation({ name, summary, whenToUse = null, source, 
     whenToUse,
     provenance: { source, updatedAt },
   };
+}
+
+/**
+ * Attach the outward evidence summary to a catalogue row (task 2.2). Absent
+ * evidence leaves the row untouched — the market face keeps rendering, and the
+ * absence is visible as `state: "missing"` at the cell's supply face rather than
+ * as a hole here.
+ *
+ * Reviewer identity never crosses this line (design D5).
+ */
+export function attachEvidenceSummary(row, raw, { species = "pack", today = new Date() } = {}) {
+  if (!raw || raw.evidence === undefined || raw.evidence === null) return row;
+  row.evidence = evidenceSummary({ evidence: raw.evidence, species: raw.species ?? species }, { today });
+  return row;
 }
 
 // ── TTL-fed source state (registry-bridge pattern, one adapter per source) ───
@@ -200,6 +218,7 @@ export function registerSupplyCatalogRoutes(app, {
           chatable: a.chatable === true,
           deployment: dep, // {packId, agentId, deployedAt} | null — provenance join
         };
+        attachEvidenceSummary(row, a, { species: "facade", today: asOf });
         row.annotation = a.annotation ?? zhFallbackAnnotation({
           name: row.name,
           summary: row.description,
@@ -230,6 +249,8 @@ export function registerSupplyCatalogRoutes(app, {
           summary: a.summary || "",
           source: a.source ?? null,
         };
+        attachEvidenceSummary(row, a, { species: "data-anchor", today: asOf });
+
         row.annotation = a.annotation ?? zhFallbackAnnotation({
           name: row.name,
           summary: row.summary,

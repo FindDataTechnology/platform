@@ -1,0 +1,179 @@
+{
+  "$comment": "Conformance fixtures for the curation-evidence contract (paas/lib/curation-evidence.js). A collector in another repo must satisfy every case here; scripts/test-curation-evidence.mjs replays them against the real validator, so this file cannot drift from the code. `code` values are the validator's own error codes.",
+  "contract": "curation-evidence@1",
+  "valid": [
+    {
+      "name": "plugin — every axis passes, pinned to a commit, allowlisted egress",
+      "species": "plugin",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读面，无写接口" },
+          "licence": { "verdict": "pass", "reason": "LICENSE 原文为 MIT-0" },
+          "quality": { "verdict": "pass", "reason": "带用例与 CI" },
+          "P1": { "verdict": "pass", "reason": "只暴露读取类工具" },
+          "P2": { "verdict": "pass", "reason": "运行期不下载任何产物" }
+        },
+        "pin": { "repo": "github.com/acme/pdf-kit", "commit": "9f2c1d4e5a6b7c8d9e0f1a2b3c4d5e6f708192a3" },
+        "licence": "MIT-0",
+        "egress": "allowlist(api.acme.example, cdn.acme.example)",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-11-01",
+        "reviewValidUntil": "2027-11-01"
+      },
+      "expect": { "state": "complete" }
+    },
+    {
+      "name": "facade — the three base axes only (a plugin axis here would be a shape error)",
+      "species": "facade",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "部署面只读" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有人工验收记录" }
+        },
+        "pin": { "repo": "github.com/acme/facade", "tag": "v2.3.1" },
+        "licence": "MIT",
+        "egress": "none",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-10-20"
+      },
+      "expect": { "state": "complete" }
+    },
+    {
+      "name": "empty reviewValidUntil means no expiry — never stale",
+      "species": "facade",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读" },
+          "licence": { "verdict": "pass", "reason": "Apache-2.0" },
+          "quality": { "verdict": "pass", "reason": "有用例" }
+        },
+        "pin": { "repo": "github.com/acme/forever", "tag": "v1.0.0" },
+        "licence": "Apache-2.0",
+        "egress": "open",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-01-05",
+        "reviewValidUntil": ""
+      },
+      "expect": { "state": "complete" }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "an unfinished axis is incomplete evidence",
+      "species": "plugin",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "needs-human", "reason": "还没人看注入口" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有用例" },
+          "P1": { "verdict": "pass", "reason": "只读" },
+          "P2": { "verdict": "pass", "reason": "无下载" }
+        },
+        "pin": { "repo": "github.com/acme/x", "tag": "v1.0.0" },
+        "licence": "MIT",
+        "egress": "none",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-11-01"
+      },
+      "expect": { "state": "missing", "code": "evidence_axis_incomplete" }
+    },
+    {
+      "name": "a floating branch is not a pin",
+      "species": "plugin",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有用例" },
+          "P1": { "verdict": "pass", "reason": "只读" },
+          "P2": { "verdict": "pass", "reason": "无下载" }
+        },
+        "pin": { "repo": "github.com/acme/x", "branch": "main" },
+        "licence": "MIT",
+        "egress": "none",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-11-01"
+      },
+      "expect": { "state": "missing", "code": "evidence_pin_ref" }
+    },
+    {
+      "name": "an egress typo is refused, not shipped",
+      "species": "plugin",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有用例" },
+          "P1": { "verdict": "pass", "reason": "只读" },
+          "P2": { "verdict": "pass", "reason": "无下载" }
+        },
+        "pin": { "repo": "github.com/acme/x", "tag": "v1.0.0" },
+        "licence": "MIT",
+        "egress": "allowlist()",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-11-01"
+      },
+      "expect": { "state": "missing", "code": "evidence_egress" }
+    },
+    {
+      "name": "a plugin axis declared on a facade suggests a review step that does not exist",
+      "species": "facade",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有用例" },
+          "P1": { "verdict": "pass", "reason": "多写的轴" }
+        },
+        "pin": { "repo": "github.com/acme/x", "tag": "v1.0.0" },
+        "licence": "MIT",
+        "egress": "none",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2026-11-01"
+      },
+      "expect": { "state": "missing", "code": "evidence_axis_unexpected" }
+    },
+    {
+      "name": "an unsigned review is not a review",
+      "species": "facade",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有用例" }
+        },
+        "pin": { "repo": "github.com/acme/x", "tag": "v1.0.0" },
+        "licence": "MIT",
+        "egress": "none",
+        "reviewedAt": "2026-11-01"
+      },
+      "expect": { "state": "missing", "code": "evidence_reviewed_by" }
+    },
+    {
+      "name": "a review past its reviewValidUntil is stale, not complete and not missing",
+      "species": "facade",
+      "evidence": {
+        "axes": {
+          "security": { "verdict": "pass", "reason": "只读" },
+          "licence": { "verdict": "pass", "reason": "MIT" },
+          "quality": { "verdict": "pass", "reason": "有用例" }
+        },
+        "pin": { "repo": "github.com/acme/x", "tag": "v1.0.0" },
+        "licence": "MIT",
+        "egress": "none",
+        "reviewedBy": "ops@acme.example",
+        "reviewedAt": "2025-01-01",
+        "reviewValidUntil": "2026-01-01"
+      },
+      "today": "2026-11-13",
+      "expect": { "state": "stale" }
+    },
+    {
+      "name": "no evidence block at all — unreviewed, and never silently treated as reviewed",
+      "species": "plugin",
+      "evidence": null,
+      "expect": { "state": "missing", "code": "evidence_missing" }
+    }
+  ]
+}

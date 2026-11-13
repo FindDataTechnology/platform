@@ -23,6 +23,7 @@
 import { HarnessClient, TransportClosedError } from "@deepseek-ai/dsh-sdk-client";
 import { dshClientRuntime } from "./lib/dsh-client-launch.js";
 import { existsSync } from "node:fs";
+import { guardProfileRouteExclusivity } from "./lib/profile-route-guard.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -124,6 +125,11 @@ export class DshBridge {
   #userQuestionsPatchPath;
   #pluginSupplyPatchPath;
   #saveLibraryPatchPath;
+  // The profile's own patch layer (cordis.patch.yml), passed in by the caller
+  // that owns the profile. The bridge never resolves DSH_HOME itself: importing
+  // dsh-profile here would freeze its module-level path constants earlier in
+  // the graph (the env-freeze incident) and add a second reader of one path.
+  #profilePatchPath;
   #agentPreset;
   #env;
   // Preset roster cache, per child generation: null until the first successful
@@ -144,7 +150,7 @@ export class DshBridge {
   #restarting = false;
   #generation = 0;
 
-  constructor({ onEvent, provider, model, effort, cwd, mcpPatchPath, skillsPatchPath, presetsPatchPath, permissionsPatchPath, toolSearchPatchPath, chartBindPatchPath, userQuestionsPatchPath, pluginSupplyPatchPath, saveLibraryPatchPath, agentPreset, env } = {}) {
+  constructor({ onEvent, provider, model, effort, cwd, mcpPatchPath, skillsPatchPath, presetsPatchPath, permissionsPatchPath, toolSearchPatchPath, chartBindPatchPath, userQuestionsPatchPath, pluginSupplyPatchPath, saveLibraryPatchPath, profilePatchPath, agentPreset, env } = {}) {
     if (onEvent) this.#onEvent = onEvent;
     this.#provider = provider || "deepseek-official";
     this.#model = model || "deepseek-v4-flash";
@@ -162,6 +168,7 @@ export class DshBridge {
     this.#userQuestionsPatchPath = userQuestionsPatchPath || null;
     this.#pluginSupplyPatchPath = pluginSupplyPatchPath || null;
     this.#saveLibraryPatchPath = saveLibraryPatchPath || null;
+    this.#profilePatchPath = profilePatchPath || null;
     this.#agentPreset = agentPreset || null;
     // When provided, the dsh child is spawned with this env instead of the
     // inherited process env — used to scrub upstream API keys (LLM_API_KEY /
@@ -253,6 +260,19 @@ export class DshBridge {
   }
 
   async #spawn() {
+    // Route exclusivity at boot (harden-plugin-supply-gates D5, fail closed):
+    // the write path already refuses to COMPOSE a foreign model route, but the
+    // patch file is also hand-editable, so assert on what is on disk before the
+    // child starts. A profile that routes models outside the platform loses the
+    // 萬星词元 lane AND the metering lane — a half-working boot is worse than a
+    // loud failure, so this throws and the caller sees a failed start.
+    //
+    // Scope, stated honestly: this inspects the profile's patch layer, which is
+    // the whole composition the platform owns. Entries a bundle contributes
+    // from its own package are not visible here; that half is covered by the
+    // supply whitelist's contribution classes.
+    this.#assertProfileRouteExclusivity();
+
     // Build CLI args: profile + optional patch overlays (dsh-profile generators).
     // The flag order is load-bearing (see patchArgs).
     const args = [...COMMAND_ARGS, "--profile", PROFILE, ...patchArgs(this.#patchPaths())];
@@ -503,6 +523,13 @@ export class DshBridge {
 
   getCwd() {
     return this.#cwd;
+  }
+
+  // DSH_ROUTE_EXCLUSIVITY=warn runs the observation pass the change's task list
+  // requires (prove zero violations on a real deployment before enforcing);
+  // =off skips it entirely for one-off diagnostics. Anything else enforces.
+  #assertProfileRouteExclusivity() {
+    guardProfileRouteExclusivity(this.#profilePatchPath);
   }
 
   // The overlay paths this instance spawns with, as patchArgs expects them.

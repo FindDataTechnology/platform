@@ -102,3 +102,62 @@
 4. 用户侧：已烘入 → 可启用/已启用；未烘入 → 显示「申请供应」，申请落 `plugin-supply-requests.json`，由下一次出片消化。
 
 **永远不做**：运行期下载、构建、安装插件包；申请动作本身也不做（它只写一行记录）。
+
+### 7.1 贡献类别与越界即拒（2026-11-12）
+
+过审的插件包不止"能加载"，还要说清**它往平台里加的是什么**。每个合成进 profile 的 bundle 在 `dsh-matrix/plugin-supply.json` 里必须写明 `contributes[]`：
+
+- v1 允许：`skill`（提示/流程）、`ui`（面板与视图）、`service`（后台服务）。
+- v1 禁止：`tool`、`llm`、`credential`、`channel`。拒绝不是保守，是**接缝不存在**：工具闸只按 MCP server 名索引，插件原生工具没有 server 键也没有清单，声明了也管不住；模型路由、平台凭据、消息通道各有自己的独占契约（萬星词元、S6、会话存档），不是插件可以分走的东西。
+- **越界即拒，拒在出片期**：`scripts/check-plugin-supply.mjs` 双向校验（合成而未声明＝未审；声明而合成无处＝死账），`scripts/check-bundle-credentials.mjs` 扫声明里的平台凭据键名；两个门都在 `predist` 与镜像构建里，红即不出片。判据见 `openspec/specs/plugin-supply-gates/`（change `harden-plugin-supply-gates`）。
+### 7.3 证据字段（2026-11-12）
+
+"这条过没过、凭什么过、谁签的、审的是哪个上游"以前只在台账里用散文记，机器读不到。现在它是条目的一部分：
+
+```json
+{ "id": "pdf-kit", "species": "plugin",
+  "evidence": {
+    "axes": { "security": {"verdict":"pass","reason":"只读"},
+              "licence":  {"verdict":"pass","reason":"MIT-0"},
+              "quality":  {"verdict":"pass","reason":"有用例"},
+              "P1": {"verdict":"pass","reason":"供给面只读"},
+              "P2": {"verdict":"pass","reason":"无运行期下载"} },
+    "pin": { "repo": "github.com/acme/x", "tag": "v1.0.0" },
+    "licence": "MIT-0", "egress": "allowlist(api.example.com)",
+    "reviewedBy": "ops@acme", "reviewedAt": "2026-11-01",
+    "reviewValidUntil": "2027-11-01" } }
+```
+
+规则（`lib/curation-evidence.js` 一处定义）：
+
+- **轴**：MCP/技能等＝安全 / 许可证 / 质量；插件另加 P1 / P2。任一轴 `needs-human` 即**证据不完整**——停在半路的审不是审。给错 species 的多余轴也拒。
+- **钉点**：`repo` + `commit` 或 `tag`。浮动分支不是钉点。
+- **出网**：`none` / `open` / `allowlist(host, …)`；拼错即拒（不是"大概通过"）。
+- **审校人必填**：无签名的审不算审。`reviewValidUntil` 留空＝永久有效；有日期则过期转 `待复审`。
+- **三态**：`已审` / `待复审` / `缺证据`。**证据态与供给态正交**：`未供给` 与 `缺证据` 可以同时成立，读面两维都显示，互不掩盖。
+- **采集器不在本仓**：许可证识别、advisory 扫描、出网分类、注入面启发式归属外部 `mcp-gateway-registry` 的评审流水线。人工填写的同形证据**同样合法**，不会因为"没接流水线"被拒。
+
+门在三处，都是**阻断**：`scripts/check-curation-evidence.mjs`（默认判本部署供给的条目，`--all` 判全目录，`--candidate` 判候选文件且只读）接进 `predist`、镜像构建与 CI gates job。今天仓里没有目录文件，三条都是"没东西可判"退出 0——但**第一条条目落地时它就已经在判**，不靠人记得去删某个 flag。台账由 `scripts/gen-curation-ledger.mjs` 生成标记块、CI 比对摘要。
+
+**上屏**：平台面板的插件目录（`/agents?tab=plugins`）在每行**同时**显示两个维度的徽标——供给态（已启用 / 可启用 / 未供应）与证据态（审校完整 / 待复审 / 未审校），完整时另附"复审至 <日期>"。证据是条目自己的属性，所以它跟着条目走，不跟着供给走；没有证据块的条目**不显示**徽标，而不是显示一个编出来的状态。`e2e/plugins-supply.spec.js` 的同名用例钉住这一点（含"未供给且无证据"那一行）。
+
+**广场导出这一跳也带上**：`scripts/plaza-export.mjs` 的 facade / data-anchor 两个 annotator 把证据**逐字段投影**进公开 JSON（只 `state` / `licence` / `reviewValidUntil`，审校人与各轴理由永不出内部），`buildCatalog` 的物料投影也保留它；没有证据的物料**不带这个键**。这一跳最容易被漏：服务面算好了、路由也返回了，投影的白名单一忘，整维就在 API 与市场之间消失（`test-plaza-export.mjs` 有用例钉住，且摘掉投影会立刻红）。
+
+**边界**：这道闸判的是**构建上下文里的那份目录**（默认 `packs/plugin-catalog.json`）。若某个部署用 `PLUGIN_CATALOG_FILE` 指向仓外文件，那份文件不走这三道门——要么把它烘进仓（推荐），要么在提供那份文件的一侧自己跑 `--catalog`。
+
+### 7.2 三封信封同源（2026-11-12）
+
+一份 pack 的**能力**（技能正文、岗位人设、MCP 引用名）是跨 harness 可移植的，编排不是。出货现在只有一个源：
+
+`packs/projections.json`（不可变快照）→ `server/pack-projection.js`（IR + 边界）→ 三个信封：
+
+| 信封 | 内容 | 边界 |
+|---|---|---|
+| `.yizpack` | 完整清单，装到另一台壹座/桌面 | 平台信封，可带 `fleet` 模板 |
+| dsh bundle | `skills/**` + `presets/**` + `package.json`（`dsh.compat` 范围） | **只含能力**：无 patch 层（不接管加载顺序）、无端点、无凭据 |
+| 桌面预置清单 | `{bundles:[{file,sha256}]}` | 只有文件名与摘要 |
+
+生成器是**唯一来源**：`node scripts/project-pack-bundles.mjs` 重算全部产出，`--check` 只读比对并由 CI 执行（`ci.yml` 的 gates job）。
+
+- 需要例外时走 `dsh-matrix/route-exceptions.json`：必须写 `name`／`reason`／`approvedBy`／`expiresAt`（epoch ms），**到期自动失效并报复审**，不写到期日等于不放行。
+

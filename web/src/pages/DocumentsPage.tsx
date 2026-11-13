@@ -11,7 +11,7 @@
 // UI shape: hero card with collection summary, then two cards (ingest, list),
 // then a card per collection. Each section is a Card primitive so the page
 // reads as a stack of distinct actions rather than a flat form.
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { showToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useNavigate } from "react-router-dom";
@@ -213,6 +213,8 @@ export function DocumentsPage({ send }: { send: (m: ClientMessage) => void }) {
         }}
       />
 
+      <RetrievalSection />
+
       <CollectionsSection onConverse={startConversation} />
     </main>
   );
@@ -260,7 +262,11 @@ function RetrievalSection() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [backfillNote, setBackfillNote] = useState<string | null>(null);
 
-  const load = () => {
+  // Stable identity on purpose: `load` is the retry button's handler AND the
+  // mount effect's body. An inline arrow would re-run the effect on every
+  // render (the fetch loop the hook's warning was pointing at); a callback with
+  // no reactive inputs is exactly what both call sites want.
+  const load = useCallback(() => {
     setLoadError(false);
     fetch("/api/library/semantic-rung")
       .then((r) => {
@@ -269,12 +275,11 @@ function RetrievalSection() {
       })
       .then((d: RungPayload) => setPayload(d))
       .catch(() => setLoadError(true));
-  };
+  }, []);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional, same as the `[enabled]` effect above — `load` is redefined per render, so depending on it would refetch on every render; this is the mount-time read.
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const apply = async (enabled: boolean) => {
     setPending(true);
@@ -453,8 +458,6 @@ function RetrievalSection() {
     </section>
   );
 }
-
-      <RetrievalSection />
 
 function IngestSection({ onAdded }: { onAdded: () => void }) {
   const { t } = useTranslation();

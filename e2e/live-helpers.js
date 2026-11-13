@@ -1,7 +1,7 @@
 // Live-service test helpers.
 //
 // The `live` Playwright project targets the *deployed* k3s NodePort
-// (http://127.0.0.1:3000 by default) instead of a locally-launched
+// (http://23.144.68.246:30950 by default) instead of a locally-launched
 // `node server.js`. These tests are read-only: they assert the deployed app
 // boots, routes resolve, the WS connects, and the embedded panels mount -
 // without writing chat history, uploading documents, or spending LLM tokens
@@ -11,7 +11,7 @@
 // exact same contract (status-text "Connected", testids) as the local suite.
 
 export const LIVE_SERVICE_URL =
-  process.env.LIVE_SERVICE_URL || "http://127.0.0.1:3000";
+  process.env.LIVE_SERVICE_URL || "http://23.144.68.246:30950";
 
 // Truthy when the @live-smoke chat-turn should run (spends one LLM token).
 // Read lazily so a `LIVE_SMOKE=1` set on the playwright CLI is honored.

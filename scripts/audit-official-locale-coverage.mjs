@@ -18,10 +18,6 @@
 // <file> or every *.json under <dir> shaped { packs: [{ manifest, official }] }.
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-// Snapshot-directory mode joins paths below; without this import the audit threw
-// `ReferenceError: path is not defined` the moment it was pointed at a directory
-// snapshot instead of a single file.
-import path from "node:path";
 import { localeCoverage } from "../lib/pack-locale-coverage.js";
 
 const arg = (name, dflt) => {

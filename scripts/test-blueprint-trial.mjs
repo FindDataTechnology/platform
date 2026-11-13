@@ -228,13 +228,13 @@ test("judge 阶段：llm-judged 非 pass 即不绿；全 pass 才绿（双钥匙
     blueprint: { ownerEmail: "a@x", castPackId: "pk", castPackVersion: 1, content: { acceptance } },
     deps: {
       ...base,
-      judge: async () => ({ verdict: "pass", reason: "证据支持", audit: { assertionId: "semantic", model: "runner-a", verdict: "pass" } }),
+      judge: async () => ({ verdict: "pass", reason: "证据支持", audit: { assertionId: "semantic", model: "cheap-1", verdict: "pass" } }),
     },
   });
   assert.equal(pass.green, true);
   assert.equal(pass.judged.length, 1);
   assert.equal(pass.judged[0].verdict, "pass");
-  assert.equal(pass.judged[0].audit.model, "runner-a");
+  assert.equal(pass.judged[0].audit.model, "cheap-1");
 
   const insufficient = await runTrial({
     blueprint: { ownerEmail: "a@x", castPackId: "pk", castPackVersion: 1, content: { acceptance } },

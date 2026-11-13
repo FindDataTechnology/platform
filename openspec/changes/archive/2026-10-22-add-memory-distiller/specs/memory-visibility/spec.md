@@ -1,0 +1,38 @@
+## Purpose
+
+部署者（owner）对自己记忆的可读与可忘：按 scope / 层（L0-L2）/ 时间的筛选读取面，与带审计、可确认的逻辑删除（forget）——agent 面不扩权，可见性只对人。
+
+## ADDED Requirements
+
+### Requirement: owner 可按 scope / 层 / 时间筛读自己的记忆
+
+fd-memory SHALL 暴露 owner 范围的记忆读取面（HTTP，person 令牌）：按 scope（project 名）、层（L0 观测 / L1 交接与笔记 / L2 事实与经验）、时间区间过滤，分页返回条目摘要（类型、标题、时间、layer、sources、project）；person 令牌 MUST 只见自己 owner root 下的内容。agent（deployment / pod）令牌 MUST NOT 使用该面——agent 的读取仍走各自 MCP 面，不因可见性面获得 owner 级枚举能力。
+
+#### Scenario: 部署者筛出某项目的 L2 经验
+
+- **WHEN** person 令牌以 scope=<project>&layer=L2 查询
+- **THEN** 返回该项目全部 fact / experience 摘要，含时间与 sources，不含其他 project 条目
+
+#### Scenario: agent 令牌被拒
+
+- **WHEN** 一枚 deployment 令牌调用可见性读取面
+- **THEN** 结构化拒绝，无内容返回
+
+### Requirement: forget 是带确认的逻辑删除且审计可查
+
+fd-memory SHALL 提供 `forget`：对指定页面做逻辑删除——frontmatter 落 `forgotten_at`、派生索引剔除该页（查询 / recent 不再返回）、markdown 真源文件保留（审计与申诉依据）；MUST 要求显式确认参数（防误删），每次 forget MUST 落审计行（主体、scope、页面、时间）。被 forget 的页 MUST NOT 再被任何面返回；蒸馏 MUST NOT 以被 forget 的页为候选或来源续写。
+
+#### Scenario: forget 后查询不现
+
+- **WHEN** owner 对一条 experience 执行 forget 后以 query / recent / 可见性面检索
+- **THEN** 该页不再出现在任何结果中，其 markdown 真源与审计行仍在
+
+#### Scenario: 无确认参数拒绝
+
+- **WHEN** forget 调用不带确认参数
+- **THEN** 结构化拒绝，无任何变更
+
+#### Scenario: 蒸馏不吃被忘条目
+
+- **WHEN** 某经验被 forget 后该 scope 再蒸馏
+- **THEN** 候选集不含该页，也不以其为 supersedes 目标

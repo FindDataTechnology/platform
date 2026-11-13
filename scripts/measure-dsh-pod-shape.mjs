@@ -15,10 +15,7 @@
 // Output: CSV on stdout (round, live_sessions, turns_done, rss_mb), summary
 // JSON on stderr. The numbers land in docs/wanxing-multi-harness-runtime-explore.md.
 
-// copyFileSync/readFileSync: the scaffold copy and the dsh version read both
-// needed them and neither was imported — the probe died with
-// `ReferenceError: copyFileSync is not defined` before measuring anything.
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";

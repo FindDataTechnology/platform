@@ -328,31 +328,6 @@ export async function applyBillingKey(home, keyValue) {
   writeFileSync(credentialsPath, yaml.dump(doc, YAML_DUMP_OPTS), { mode: 0o600 });
 }
 
-// The key the child will actually bill with: whatever the private home's
-// credentials file holds right now. `applyBillingKey` is the only writer and
-// it only runs when a per-agent ref was fetched, so a home materialized under
-// an earlier deploy keeps ITS key — and that is the credential the child
-// sends. Probing any other key says nothing about this child (2026-11-10: the
-// turn answered 403 SUBSCRIPTION_NOT_FOUND on the home's key while the
-// route's own key answered 200 — "the probe passed" was evidence about a
-// credential nobody was using).
-export function billingKeyFromHome(home) {
-  if (!home) return null;
-  let doc = {};
-  try {
-    doc = yaml.load(readFileSync(path.join(home, ".credentials.yaml"), "utf8")) ?? {};
-  } catch { return null; }
-  const refs = doc?.refs && typeof doc.refs === "object" ? doc.refs : {};
-  // Named refs are what the provider route resolves (`apiKeyEnv`); the generic
-  // one is the fallback applyBillingKey also writes.
-  for (const ref of apiKeyEnvRefs(home)) {
-    const v = refs[ref];
-    if (typeof v === "string" && v) return v;
-  }
-  const generic = refs.LLM_API_KEY;
-  return typeof generic === "string" && generic ? generic : null;
-}
-
 // Every `apiKeyEnv` string in the private home's llm-pi-ai patch row — the
 // env-var names the provider routes resolve through the credentials store.
 // (0.2.0 D7.1: the routes ride the profile patch row, not home-root

@@ -58,7 +58,12 @@ async function mintViaStub(request) {
 
 async function gotoStore(page) {
   await gotoExtensions(page);
-  await page.getByRole("button", { name: /store/i }).click();
+  // The installed/market switch is a TAB (`role="tab"`, testid
+  // `extensions-tab-market`): the page renders inside /agents and uses the
+  // foundation Tabs bar. This used to look for getByRole("button", {name:/store/i})
+  // — the control from before the tab idiom — so it waited 60s on a button that
+  // cannot exist. press() rather than click(): the tab is a real keyboard target.
+  await page.getByTestId("extensions-tab-market").click();
   await expect(page.getByTestId("mcp-market-section")).toBeVisible();
 }
 

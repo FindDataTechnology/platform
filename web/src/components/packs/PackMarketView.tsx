@@ -31,10 +31,15 @@ const AGENT_SIZE_FILTERS = [
 ] as const;
 
 /** Card-grid skeleton matching the loaded market rows (polish-facet-usability
- *  state contract): title+version line, two description lines, tag row. */
-function MarketSkeleton() {
+ *  state contract): title+version line, two description lines, tag row. The
+ *  column count follows the host's layout so the skeleton does not reflow into
+ *  a different shape when the data lands. */
+function MarketSkeleton({ tiled = false }: { tiled?: boolean }) {
   return (
-    <div className="grid gap-3" data-testid="pack-market-skeleton">
+    <div
+      className={tiled ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid gap-3"}
+      data-testid="pack-market-skeleton"
+    >
       {[0, 1, 2].map((i) => (
         <div key={i} className="border border-border rounded-lg p-4">
           <div className="flex items-center justify-between">
@@ -61,6 +66,8 @@ export function PackMarketView({
   onUsePrompt,
   installSurface = true,
   initialDetailId,
+  layout = "row",
+  filters = "top",
 }: {
   onSubscribed?: () => void;
   // The report footer's open-chat hook. Hosts without a conversation view
@@ -90,6 +97,15 @@ export function PackMarketView({
   // deployments/billing probes there instead of firing requests that can
   // never carry data on that host. Defaults to true (壹座 mounts unchanged).
   installSurface?: boolean;
+  /** Card shape (overhaul-facet-shell-ia-and-space D2). `row` is the original
+   *  horizontal card and the default; `tile` stacks it for a multi-column
+   *  grid, which is how the facet shell spends a wide viewport. */
+  layout?: "row" | "tile";
+  /** Where the filter block lives (same change, D5). `top` keeps the search
+   *  row and the chip axes above the list (壹座); `rail` moves them into a
+   *  sticky left column and lets the cards tile — the facet shell's shape.
+   *  Both keep the same testids and the same URL-lived filter state. */
+  filters?: "top" | "rail";
 }) {
   const { t, i18n } = useTranslation();
   const [packs, setPacks] = useState<PackSummary[]>([]);
@@ -293,48 +309,62 @@ export function PackMarketView({
         : `/chat?preset=${encodeURIComponent(installedAgents[0]!.id)}`
       : "/chat";
   const chatClusterMode = installedAgents.length >= 2;
+  const tiled = layout === "tile";
+  const rail = filters === "rail";
+  const listGrid = tiled ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid gap-3";
 
   return (
-    <section data-testid="pack-market-section">
+    <section
+      data-testid="pack-market-section"
+      className={rail ? "grid items-start gap-x-6 lg:grid-cols-[16rem_minmax(0,1fr)]" : undefined}
+    >
       {guideUnfocused && (
         <p
           data-testid="pack-market-guide-hint"
-          className="mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning"
+          className={`mb-3 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning ${
+            rail ? "lg:col-span-2" : ""
+          }`}
         >
           {t("packs.market.assistantHint")}
         </p>
       )}
-      <div className="flex items-center gap-2 mb-4">
+      <div
+        data-testid="pack-filters"
+        className={rail ? "space-y-3 lg:sticky lg:top-0 lg:col-start-1 lg:row-start-2" : ""}
+      >
+      <div className={rail ? "flex flex-col gap-2 mb-4" : "flex items-center gap-2 mb-4"}>
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && void refresh(search)}
           placeholder={t("packs.market.searchPlaceholder")}
-          className="max-w-sm"
+          className={rail ? "w-full" : "max-w-sm"}
           data-testid="pack-search-input"
         />
-        <Button variant="outline" size="sm" onClick={() => void refresh(search)}>
-          {t("packs.market.search")}
-        </Button>
-        <select
-          value={sizeKey}
-          onChange={(e) => setSizeKey(e.target.value)}
-          aria-label={t("packs.market.agentSize")}
-          data-testid="pack-agent-size-filter"
-          className="h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground"
-        >
-          {AGENT_SIZE_FILTERS.map((f) => (
-            <option key={f.key || "all"} value={f.key}>
-              {f.key
-                ? t("packs.market.agentSizeValue", { value: f.key })
-                : t("packs.market.agentSizeAny")}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => void refresh(search)}>
+            {t("packs.market.search")}
+          </Button>
+          <select
+            value={sizeKey}
+            onChange={(e) => setSizeKey(e.target.value)}
+            aria-label={t("packs.market.agentSize")}
+            data-testid="pack-agent-size-filter"
+            className={`h-8 rounded-md border border-border bg-background px-2 text-xs text-foreground ${rail ? "flex-1" : ""}`}
+          >
+            {AGENT_SIZE_FILTERS.map((f) => (
+              <option key={f.key || "all"} value={f.key}>
+                {f.key
+                  ? t("packs.market.agentSizeValue", { value: f.key })
+                  : t("packs.market.agentSizeAny")}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {(facets || hasOfficialRows) && (
-        <div className="space-y-1.5 mb-3" data-testid="pack-facets">
+        <div className={rail ? "space-y-3" : "space-y-1.5 mb-3"} data-testid="pack-facets">
           {/* Axis 1 · lines — always the full declared set, declared order, with
               counts. A zero-count line stays put and greys out: the strip is
               spatial memory, not a live projection of the current rows. */}
@@ -413,6 +443,9 @@ export function PackMarketView({
           )}
         </div>
       )}
+      </div>
+
+      <div className={rail ? "min-w-0 lg:col-start-2 lg:row-start-2" : ""}>
       {localeStale && (
         <p
           data-testid="pack-market-locale-stale"
@@ -425,16 +458,16 @@ export function PackMarketView({
         visiblePacks.filter((p) => p.featured).length > 0 && (
           <div className="mb-4" data-testid="pack-featured-rail">
             <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("packs.market.featured")}</p>
-            <div className="grid gap-3">
+            <div className={listGrid}>
               {visiblePacks
                 .filter((p) => p.featured)
                 .map((p, i) => (
-                  <PackCard key={p.id} pack={p} index={i} audienceLabels={domainLabels} tone="gallery" relation={relationFor(p)} testId={`pack-featured-card-${p.id}`} onOpen={() => setDetailId(p.id)} />
+                  <PackCard key={p.id} pack={p} index={i} layout={layout} audienceLabels={domainLabels} tone="gallery" relation={relationFor(p)} testId={`pack-featured-card-${p.id}`} onOpen={() => setDetailId(p.id)} />
                 ))}
             </div>
           </div>
         )}
-      {loading && <MarketSkeleton />}
+      {loading && <MarketSkeleton tiled={tiled} />}
       {error && (
         // StatesKit (polish-material-market-tabs 3.1): the failure names the
         // problem and offers the way forward, in the same shape the rest of the
@@ -462,7 +495,7 @@ export function PackMarketView({
         </div>
       )}
 
-      <div className="grid gap-3">
+      <div className={listGrid}>
         {officialOnly && visiblePacks.length > 0 && (
           <p className="text-xs font-medium text-muted-foreground" data-testid="pack-gallery-title">
             {t("packs.market.galleryTitle")}
@@ -517,9 +550,10 @@ export function PackMarketView({
               }
             </PackCard>
           ) : (
-            <PackCard key={pack.id} pack={pack} index={i} audienceLabels={domainLabels} relation={relationFor(pack)} testId={`pack-card-${pack.id}`} onOpen={() => setDetailId(pack.id)} />
+            <PackCard key={pack.id} pack={pack} index={i} layout={layout} audienceLabels={domainLabels} relation={relationFor(pack)} testId={`pack-card-${pack.id}`} onOpen={() => setDetailId(pack.id)} />
           )
         )}
+      </div>
       </div>
 
       <PackDetailDialog
