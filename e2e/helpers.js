@@ -330,3 +330,79 @@ export async function lastFacetViewer(id, version) {
   if (!call?.headers?.["x-facet-user"]) return null;
   return JSON.parse(Buffer.from(call.headers["x-facet-user"], "base64url").toString("utf8"));
 }
+
+// ── Active agent preset (2026-11-13) ────────────────────────────────────────
+// Switching the active preset rewrites BOTH patches through the preset's scope
+// (a pack role narrows the MCP surface to what the role declares) and restarts
+// the dsh child. That state is deployment-global and survives the spec that set
+// it, so any spec that changes it must put it back — otherwise every later file
+// reads a narrowed profile. The failure that surfaced this: packs.spec
+// subscribes "订阅包" (agentId pack-sub-reviewer); the next catalog sync makes it
+// the current preset, and websearch.spec's boot-level test then finds a patch
+// with three servers and no websearch — red in a file that never touched packs.
+//
+// Idempotent on purpose: the server sends current_preset on connect
+// (server/ws.js), so a call whose target is already active resolves without
+// sending set_preset — no restart. That is what makes it safe in an afterEach
+// over a file whose tests mostly did not switch agents.
+//
+// The CONFIRMATION is authoritative, not the error frame. This helper used to
+// reject on any `error` message that arrived after set_preset, which is exactly
+// how the leak it now guards against was born (measured 2026-11-13): on a loaded
+// runner the dead-LLM stub answers a background turn with 401, the server sends
+// `{type:"error"}`, the helper rejected — but set_preset was already in flight
+// and DID land. The test failed, its cleanup never restored the preset, and every
+// later file read a narrowed profile. An error frame now only shortens the
+// deadline; only a missing confirmation is a failure.
+export function switchPreset(page, id) {
+  return page.evaluate(
+    (presetId) =>
+      new Promise((resolve, reject) => {
+        const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
+        let sent = false;
+        let seenError = null;
+        let timer = null;
+        const done = (fn) => {
+          clearTimeout(timer);
+          ws.close();
+          fn();
+        };
+        timer = setTimeout(() => done(() => reject(new Error(`set_preset(${presetId}) timeout`))), 90_000);
+        ws.onmessage = (ev) => {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === "error" && sent && !seenError) {
+            // Record it, then give the confirmation a short window of its own:
+            // an unrelated turn error must not outlive the switch it landed on,
+            // and a genuine switch failure still fails with the server's words.
+            seenError = msg.message;
+            clearTimeout(timer);
+            timer = setTimeout(
+              () => done(() => reject(new Error(`${seenError} (no current_preset confirmation)`))),
+              15_000,
+            );
+            return;
+          }
+          if (msg.type !== "current_preset") return;
+          if (msg.id === presetId) {
+            done(() => resolve(msg.id));
+            return;
+          }
+          // First non-matching reading is the connect-time state: only now is a
+          // switch actually needed.
+          if (!sent) {
+            ws.send(JSON.stringify({ type: "set_preset", id: presetId }));
+            sent = true;
+          }
+        };
+      }),
+    id,
+  );
+}
+
+// Put the runtime back to the built-in preset. Call it from an afterEach in any
+// spec that selects a pack/custom role; ignoring the failure keeps cleanup from
+// masking the real assertion (a failed restore still shows up as the NEXT file's
+// narrowing, which is where it belongs).
+export async function restoreStandardPreset(page) {
+  await switchPreset(page, "standard").catch(() => {});
+}

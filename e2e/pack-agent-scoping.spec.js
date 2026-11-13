@@ -19,7 +19,7 @@ import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import yaml from "js-yaml";
-import { gotoChat, tempStoreDirs, waitForIdle } from "./helpers.js";
+import { gotoChat, switchPreset, tempStoreDirs, waitForIdle } from "./helpers.js";
 
 const PACK_ID = "pack-scope-e2e";
 const AGENT_ID = "scope-reviewer-e2e";
@@ -66,39 +66,6 @@ const mcpServersOf = (file = "mcp.patch.yml") =>
 const skillDirsOf = () =>
   yaml.load(fs.readFileSync(patchPath("skills.patch.yml"), "utf8"))[0].config.customSkillDirs;
 
-// Switch presets through a raw WS connection; resolves on the server's
-// current_preset confirmation (after the child restarts).
-function switchPreset(page, id) {
-  return page.evaluate(
-    (presetId) =>
-      new Promise((resolve, reject) => {
-        const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-        const timer = setTimeout(() => {
-          ws.close();
-          reject(new Error(`set_preset(${presetId}) timeout`));
-        }, 90000);
-        let sent = false;
-        ws.onmessage = (ev) => {
-          const msg = JSON.parse(ev.data);
-          if (msg.type === "error" && sent) {
-            clearTimeout(timer);
-            ws.close();
-            reject(new Error(msg.message));
-          }
-          if (msg.type === "current_preset" && msg.id === presetId && sent) {
-            clearTimeout(timer);
-            ws.close();
-            resolve(msg.id);
-          }
-        };
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: "set_preset", id: presetId }));
-          sent = true;
-        };
-      }),
-    id,
-  );
-}
 
 async function installPack(page, version, extra) {
   const r = await page.request.post("/api/mypacks/install", {

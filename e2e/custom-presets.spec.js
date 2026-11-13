@@ -19,7 +19,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
-import { tempStoreDirs, waitForIdle } from "./helpers.js";
+import { switchPreset, tempStoreDirs, waitForIdle } from "./helpers.js";
 
 const PACK_ID = "cp-e2e-pack";
 const PACK_SKILL_A = "cp-pack-skill-a-e2e";
@@ -53,37 +53,6 @@ const skillDirsOf = () =>
 
 // Switch presets through a raw WS connection; resolves on the server's
 // current_preset confirmation (the pack-agent-scoping helper).
-function switchPreset(page, id) {
-  return page.evaluate(
-    (presetId) =>
-      new Promise((resolve, reject) => {
-        const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-        const timer = setTimeout(() => {
-          ws.close();
-          reject(new Error(`set_preset(${presetId}) timeout`));
-        }, 90000);
-        let sent = false;
-        ws.onmessage = (ev) => {
-          const msg = JSON.parse(ev.data);
-          if (msg.type === "error" && sent) {
-            clearTimeout(timer);
-            ws.close();
-            reject(new Error(msg.message));
-          }
-          if (msg.type === "current_preset" && msg.id === presetId && sent) {
-            clearTimeout(timer);
-            ws.close();
-            resolve(msg.id);
-          }
-        };
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: "set_preset", id: presetId }));
-          sent = true;
-        };
-      }),
-    id,
-  );
-}
 
 async function idleSwitch(page, id, attempts = 15) {
   for (let i = 0; ; i++) {

@@ -23,8 +23,22 @@ import {
   lastFacetViewer,
   pinLocaleEn,
   resetFacetStub,
+  restoreStandardPreset,
   seedFacetPack,
 } from "./helpers.js";
+
+// Subscribing a pack that ships an agent makes that agent the runtime's current
+// preset (the "subscriber inspects, subscribes…" test below subscribes
+// agentId pack-sub-reviewer), and the preset is deployment-global: it survives
+// this file. A pack role is FOCUSED, so every later file then reads a narrowed
+// MCP patch, and a spec that expects a baseline server fails for a reason it
+// cannot express — measured 2026-11-13, this file alone turned
+// websearch.spec.js:223 and :241 red (2 failed / 32 passed). Restore the
+// built-in preset after each test; the helper is a no-op when it is already
+// standard, so this costs one WS round-trip per test.
+test.afterEach(async ({ page }) => {
+  await restoreStandardPreset(page);
+});
 
 // The stateful gateway stand-in. Route handlers below read/write this.
 function makeGatewayState() {

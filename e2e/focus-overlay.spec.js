@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import yaml from "js-yaml";
-import { tempStoreDirs, waitForIdle } from "./helpers.js";
+import { switchPreset, tempStoreDirs, waitForIdle } from "./helpers.js";
 
 const PACK_ID = "focus-overlay-e2e";
 const AGENT_ID = "overlay-tuner-e2e";
@@ -65,38 +65,6 @@ const mcpServersOf = (file = "mcp.patch.yml") =>
 const skillDirsOf = () =>
   yaml.load(fs.readFileSync(patchPath("skills.patch.yml"), "utf8"))[0].config.customSkillDirs;
 
-// Switch presets through a raw WS connection (the pack-agent-scoping helper).
-function switchPreset(page, id) {
-  return page.evaluate(
-    (presetId) =>
-      new Promise((resolve, reject) => {
-        const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-        const timer = setTimeout(() => {
-          ws.close();
-          reject(new Error(`set_preset(${presetId}) timeout`));
-        }, 90000);
-        let sent = false;
-        ws.onmessage = (ev) => {
-          const msg = JSON.parse(ev.data);
-          if (msg.type === "error" && sent) {
-            clearTimeout(timer);
-            ws.close();
-            reject(new Error(msg.message));
-          }
-          if (msg.type === "current_preset" && msg.id === presetId && sent) {
-            clearTimeout(timer);
-            ws.close();
-            resolve(msg.id);
-          }
-        };
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: "set_preset", id: presetId }));
-          sent = true;
-        };
-      }),
-    id,
-  );
-}
 
 // A switch may race a still-draining turn (the dead-LLM guard probe retries
 // with backoff before its error lands) — retry on the streaming guard until

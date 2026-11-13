@@ -33,6 +33,19 @@ const FLAKE_BUDGET = 10;
 
 // Spec files observed to fail under load and pass alone. Adding a file here is a
 // decision to tolerate its reds; the count still has to stay inside the budget.
+//
+// Three files came OFF this list on 2026-11-13 (packs, registry-connect,
+// websearch). They were not flakes: they were victims of a state leak, and the
+// leak is now fixed at its source — the active agent preset is deployment-global
+// and a pack-role focus narrows the MCP surface to three servers, so every file
+// after packs.spec read a profile without websearch (see the e2e/helpers.js
+// switchPreset comment). Evidence: two full local runs after the fix, 6 and 5
+// reds, in both cases ZERO of the 137 spec files ended with a narrowed profile
+// (it was 6/137), packs/registry-connect/websearch green in both, and the
+// public CI run 43423955544 reddened only fleets / plugins-supply /
+// session-navigation-streaming / session-open. If one of these three reds again,
+// put it back AND read the leak first — the file that fails is usually not the
+// file that caused it.
 // Playwright reports `spec.file` relative to the configured testDir, i.e.
 // "websearch.spec.js" — never "websearch.spec.js". Comparing repo-relative
 // paths (the first version did) marks EVERY file as unknown, so the gate fails
@@ -49,12 +62,9 @@ const KNOWN_FLAKY = new Set([
   "onboarding.spec.js",
   "pack-agent-scoping.spec.js",
   "pack-usage.spec.js",
-  "packs.spec.js", // registry-credential install path; 25/25 three times standalone 2026-11-13
   "plugins-supply.spec.js",
-  "registry-connect.spec.js",
   "session-navigation-streaming.spec.js",
   "session-open.spec.js",
-  "websearch.spec.js",
 ]);
 
 const file = process.argv[2];

@@ -229,6 +229,15 @@ test.describe("websearch bundled wiring (boot-level)", () => {
     const row = servers.find((s) => s.name === "websearch");
     expect(row).toMatchObject({ origin: "bundled", enabled: true });
 
+    // The patch is written fire-and-forget and rewritten on every runtime
+    // mutation, so a single read can land mid-write (measured 2026-11-13: the
+    // read caught a half-written file). Poll for the row, then assert on one
+    // settled read — a genuinely missing server still fails, only the race
+    // stops deciding the verdict.
+    await expect
+      .poll(() => fs.readFileSync(patchPath(), "utf8").includes("serverName: websearch"), { timeout: 20_000 })
+      .toBe(true);
+
     const patch = fs.readFileSync(patchPath(), "utf8");
     expect(patch).toContain("serverName: websearch");
     // envRefs forwarding: the relay pair must ride the patch entry's explicit
