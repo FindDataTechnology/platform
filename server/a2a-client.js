@@ -12,6 +12,32 @@
 
 export const DELEGATION_DEPTH_BOUND = 3;
 
+/**
+ * The depth to stamp on an OUTBOUND delegated turn (add-team-as-a2a-agent 1.1).
+ *
+ * `inbound` is the chain position of the request that CAUSED this turn, read
+ * from `origin.fleet.depth` (absent = 0 = top level). The rule is arithmetic,
+ * not judgement: a turn that arrived as a delegation continues the chain, so it
+ * ships inbound + 1; a turn with no inbound stops being a delegation and ships
+ * the lane's own baseline.
+ *
+ * The baseline differs by lane, and that difference is the whole point of the
+ * `topLevel` parameter:
+ *   - cron/manual a2a work is delegated traffic by definition → 1 (a header).
+ *   - a human chat with a remote agent is NOT delegated traffic → 0 (no header
+ *     at all; spec: agent-delegation-a2a, and `runA2aTurn` only sends the header
+ *     for depth ≥ 1).
+ *
+ * Before this existed, cron shipped a hardcoded 1 and the chat lane shipped
+ * nothing, so a second hop still looked like a first one and the bound could
+ * never trip. Junk (NaN, negative, non-number) reads as "no inbound" rather than
+ * poisoning the chain.
+ */
+export function outboundDelegationDepth(inbound, { topLevel = 1 } = {}) {
+  const n = Number.isFinite(inbound) && inbound > 0 ? Math.floor(inbound) : 0;
+  return n > 0 ? n + 1 : topLevel;
+}
+
 import * as registryCredentials from "../registry-credentials.js";
 
 export function a2aCredentials() {

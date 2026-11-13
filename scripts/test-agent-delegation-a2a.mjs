@@ -14,7 +14,7 @@
 import assert from "node:assert/strict";
 import express from "express";
 import { createServer } from "node:http";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -131,28 +131,41 @@ test("engine: persisted reload keeps the a2a target type", async () => {
   await engine.initTaskEngine({ broadcast: () => {}, isBusy: () => false, runTurn: async () => ({ ok: true }) });
   engine.createManualTask({ prompt: "again", agent: "a2a-demo" });
   // The tasks file is written by a fire-and-forget atomic write chain
-  // (enqueueExecution → void saveTasks()), so a fixed sleep IS the race:
-  // under CI load the write can exceed it and the reload reads a stale file
-  // (observed 2026-10-07, add-agent-service-config run). Poll the reload
-  // instead — deterministic, still bounded.
+  // (enqueueExecution → void saveTasks()), so any sleep IS the race: under CI
+  // load the write outlives the number you picked while the reload reads a
+  // stale file. Two bounds were measured and both lost — 40×25ms=1s, then
+  // 200×50ms=10s (2026-11-13: red on the 2-core runner, 11/11 green locally).
   //
-  // The bound was 40×25ms = 1s, which a 2-core runner still blows through
-  // (2026-11-13: red on every CI run of the sharded lane, green in isolation
-  // and 11/11 locally). A longer bound does not weaken the claim — the
-  // assertion still fails if the write never lands — it only stops "this
-  // runner's disk was slow" from being reported as "a2a is lost".
-  let t = null;
-  for (let i = 0; i < 200 && !t; i++) {
-    await new Promise((r) => setTimeout(r, 50));
-    await engine.initTaskEngine({ broadcast: () => {}, isBusy: () => false, runTurn: async () => ({ ok: true }) });
-    t = engine.listTasks().find((x) => x.target?.type === "a2a");
-  }
+  // Wait on the queue instead of guessing: whenTasksPersisted() resolves when
+  // everything queued SO FAR has landed, and queues nothing itself — so this
+  // still fails if createManualTask never asked for a save (a version of this
+  // test that called saveTasks() itself would pass without any product
+  // persistence, which is the false green worth avoiding).
+  await engine.whenTasksPersisted();
+  // Disk first: "persisted" is a claim about the FILE. Asserting only on the
+  // in-memory list after a reload is a false green — with no file at all
+  // loadTasks() returns false and the live map survives untouched, so the test
+  // passed even with saveTasks() injected as a no-op (measured 2026-11-13).
+  const onDisk = JSON.parse(readFileSync(path.join(tmpRoot, "jobs.json"), "utf8"));
+  assert.ok(
+    onDisk.some((r) => r.targetType === "a2a" && r.prompt === "again"),
+    `the a2a task reached the tasks file, not just memory: ${JSON.stringify(onDisk)}`,
+  );
+
+  await engine.initTaskEngine({ broadcast: () => {}, isBusy: () => false, runTurn: async () => ({ ok: true }) });
+  const t = engine.listTasks().find((x) => x.target?.type === "a2a");
   assert.ok(t, "a2a task survives the engine reload");
 });
 
 // ── delegation route: unknown agent, persona intact, discovery ───────────────
 
-import { registerDelegationRoutes } from "../server/routes/delegation.js";
+// Imported HERE, not at the top: a static import is hoisted above the env
+// setup, and this module's chain reaches task-engine.js, which freezes
+// TASK_STORAGE_DIR at import time. Frozen too early, the engine read and WROTE
+// the repository's own cron-store/jobs.json (115 live tasks) instead of this
+// test's tmp dir — so the "persisted reload" case was exercising the wrong
+// file, and no tmpRoot/jobs.json existed to assert on (found 2026-11-13).
+const { registerDelegationRoutes } = await import("../server/routes/delegation.js");
 
 function routeApp() {
   const app = express();

@@ -44,22 +44,68 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 //     node --test scripts/test-session-resume.mjs
 // 若本机没有完整矩阵安装，先 `npm install`（dsh-matrix/），或用
 // `dsh plugin --profile platform install` 把 bundle 装进 profile。
-const RUNTIME_HINT = (() => {
-  const bin = process.env.DSH_BIN || "";
-  return bin.includes("dsh-matrix") ? null : bin;
-})();
-if (RUNTIME_HINT === "" && !fs.existsSync(path.join(ROOT, "node_modules", "@platform", "supply-probe-bundle"))) {
+//
+// Resolution order — production's, not "whatever PATH has":
+//   1. DSH_BIN (explicit override always wins);
+//   2. this checkout's dsh-matrix install (`npm ci --prefix dsh-matrix`, 8s,
+//      gitignored — the same tree the image freezes at /opt/dsh);
+//   3. the CI bootstrap's $HOME/.dsh-matrix (ci.yml installs the matrix there);
+//   4. none of the above → skip LOUDLY with the one command that fixes it.
+//
+// Step 4 matters as much as the others. Before this resolver existed, rule 2/3
+// were missing, so a dev box whose ~/.dsh still carried an old GLOBAL dsh had
+// the shared-probe green light (it only asks "is some shared tree there?") and
+// then ran the four cases on the wrong generation: measured 2026-11-11, four
+// reds reading "persisted session not detected" (A) and "Cannot read properties
+// of undefined (reading 'slice')" (B/C/D) — messages that name nothing
+// environmental, because the mismatch is in the runtime, not the assertions.
+// Running them for real is better than either red or skip, and both matrix
+// locations are local, so the honest end state is "run", with skip only when
+// the tree genuinely is not installed.
+const PINNED_RUNTIME = [
+  process.env.DSH_BIN,
+  path.join(ROOT, "dsh-matrix", "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js"),
+  path.join(os.homedir(), ".dsh-matrix", "node_modules", "@deepseek-ai", "dsh", "lib", "bin.js"),
+].find((p) => p && fs.existsSync(p));
+
+if (!PINNED_RUNTIME) {
   console.warn(
-    "[test-session-resume] 本仓 node_modules 没有 @platform/supply-probe-bundle；" +
-      "若下面四条全红并报 cannot resolve profile bundle，请按文件头注释设 DSH_BIN 指向 dsh-matrix 的 dsh。",
+    "[skip] no pinned dsh matrix runtime found (checked $DSH_BIN, ./dsh-matrix, ~/.dsh-matrix) — the four\n" +
+      "       resume cases cannot run on a PATH dsh: the profile's @platform/supply-probe-bundle only\n" +
+      "       resolves from the matrix tree. Install it (8s, gitignored) and re-run:\n" +
+      "         NODE_OPTIONS=--max-old-space-size=8192 npm ci --prefix dsh-matrix",
   );
+  process.exit(0);
+}
+if (!process.env.DSH_BIN) {
+  // dsh-profile.js derives RUNTIME_NODE_MODULES from DSH_BIN at MODULE LOAD
+  // (dsh-profile.js:599), so this must be set before the import below.
+  process.env.DSH_BIN = PINNED_RUNTIME;
+  console.log(`[test-session-resume] DSH_BIN → ${path.relative(ROOT, PINNED_RUNTIME)} (pinned matrix generation)`);
 }
 
 // ── Hermetic dsh home + stores (before dsh-profile.js is imported: it reads
 //    DSH_HOME / the store paths at module scope) ─────────────────────────────
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "paas-resume-"));
 process.env.DSH_HOME = path.join(TMP, "dsh-home");
-process.env.DSH_SHARED_HOME = process.env.DSH_SHARED_HOME || path.join(os.homedir(), ".dsh");
+// ── HOME isolation (2026-11-11) ────────────────────────────────────────────
+// This suite used to take the SHARED tree from the real ~/.dsh
+// (`process.env.DSH_SHARED_HOME || join(homedir(), ".dsh")`) — so it ran against
+// whatever generation that home happened to hold (measured: a legacy
+// 0.1.1-rc.2 global install) and, worse, pointed the profile's module links at
+// a tree it shares with the developer's own runtime. The whole shared home is
+// now built inside TMP from the PINNED matrix tree, which is the image's shape
+// (profiles/<name>/node_modules is one link onto the frozen tree) — no borrowed
+// generation, and nothing this suite does can reach the real ~/.dsh.
+const MATRIX_MODULES = path.dirname(path.dirname(path.dirname(path.dirname(PINNED_RUNTIME))));
+const ISO_HOME = path.join(TMP, "home");
+const SHARED = path.join(ISO_HOME, ".dsh");
+fs.mkdirSync(path.join(SHARED, "profiles", "platform"), { recursive: true });
+for (const level of [path.join("profiles", "node_modules"), path.join("profiles", "platform", "node_modules")]) {
+  fs.symlinkSync(MATRIX_MODULES, path.join(SHARED, level), "dir");
+}
+process.env.HOME = ISO_HOME;
+process.env.DSH_SHARED_HOME = SHARED;
 process.env.LLM_PROVIDERS_STORE = path.join(TMP, "llm-providers.json");
 process.env.LLM_DEFAULT_STORE = path.join(TMP, "llm-default.json");
 process.env.LLM_API_KEY = "sk-resume-test";
@@ -115,11 +161,21 @@ function childEnv(extra = {}) {
 
 const booted = new Set();
 
+// The file header tells you to point DSH_BIN at the matrix install — but this
+// function used to hardcode `command: "dsh"`, so it always ran whatever PATH
+// resolved (on a dev machine that is the GLOBAL homebrew dsh, 0.1.1-rc.2, while
+// the repo and dsh-matrix are pinned to 0.2.0-rc.2). That skew is not cosmetic:
+// the global build's healProfilesModuleFallback rejects the shared tree shape
+// this suite creates ("…/@deepseek-ai/dsh exists and is not a symlink"), so all
+// four cases failed on a machine where the documented remedy had been applied.
+// Honour DSH_BIN here the same way dsh-bridge.js does (explicit override wins).
+const DSH_COMMAND = process.env.DSH_BIN || "dsh";
+
 async function boot(extraPatches = [], extraEnv = {}) {
   const client = new HarnessClient(
     {},
     dshClientRuntime({
-      command: "dsh",
+      command: DSH_COMMAND,
       args: ["--profile", "platform", ...basePatches.flatMap((p) => ["--patch", p]), ...extraPatches.flatMap((p) => ["--patch", p])],
       cwd: ROOT,
       env: childEnv(extraEnv),
@@ -225,9 +281,19 @@ const inject = ["sessionPersistence"];
 function apply(ctx) {
   (async () => {
     const out = {};
+    const p = ctx.sessionPersistence;
     for (const id of String(process.env.PROBE_IDS || "").split(",").filter(Boolean)) {
-      try { out[id] = (await ctx.sessionPersistence.loadStored(id)) !== undefined; }
-      catch (e) { out[id] = "ERR:" + (e?.message || e); }
+      // Probe the seam THIS dsh generation exposes, in the same order the
+      // product does (platform-preset-bridge.js isPersisted): 0.2.0 renamed
+      // the face -- loadStored is gone and stat(id) is the native existence
+      // probe. Probing the dead name degrades silently to "not persisted",
+      // which is exactly the collision this case exists to catch
+      // (docs/wanxing-multi-harness-runtime-explore.md section 4, fix 8c3a44b).
+      try {
+        if (typeof p.stat === "function") out[id] = (await p.stat(id)) !== undefined;
+        else if (typeof p.loadStored === "function") out[id] = (await p.loadStored(id)) !== undefined;
+        else out[id] = "ERR:no persistence probe on this dsh (neither stat nor loadStored)";
+      } catch (e) { out[id] = "ERR:" + (e?.message || e); }
     }
     writeFileSync(process.env.PROBE_OUT, JSON.stringify(out));
   })();

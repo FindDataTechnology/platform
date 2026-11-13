@@ -147,8 +147,9 @@ test("no facet-owned surface uses the retired term 功能集", () => {
   // 「功能集」 was retired on 2026-10-27 (docs/creating-packs.md §1.5: the
   // distributable unit is 能力包, the market is 能力市场). It survived in the
   // shell's own browser-tab title and in every CLI message — surfaces no
-  // locale-key guard looks at, because they are not in common.json. 壹座's
-  // remaining uses (agents.market.*) are that product's copy, not ours.
+  // locale-key guard looks at, because they are not in common.json. 壹座's own
+  // copy is covered by the next test (2026-11-11: both 壹座 strings shipped to
+  // production still saying 功能集 — this guard had deliberately skipped them).
   const retired = "功能集";
   const surfaces = [
     "facet/web/index.html",
@@ -196,4 +197,29 @@ test("the unit is called 智能体 everywhere a reader can see it", () => {
       );
     });
   }
+});
+
+test("no user-facing zh-CN string carries a retired unit name", () => {
+  // 2026-11-11 shipped a facet bundle whose 壹座 copy still read
+  // 「本机已装功能集」 / 「已装的功能集仍在…」 — the guards above scan the shell's
+  // own files, so nothing looked at common.json values. Scan every zh-CN value
+  // (recursively) for the retired unit names; the glossary is CONTEXT.md, not
+  // locale copy, so it is out of scope by construction rather than allowlisted.
+  const retired = ["功能集", "功集", "能力包"];
+  const walk = (node, trail) => {
+    if (typeof node === "string") {
+      for (const term of retired) {
+        assert.equal(
+          node.includes(term),
+          false,
+          `zh-CN common.json ${trail} still says ${JSON.stringify(term)}: ${JSON.stringify(node.slice(0, 60))}`,
+        );
+      }
+      return;
+    }
+    if (node && typeof node === "object") {
+      for (const [k, v] of Object.entries(node)) walk(v, trail ? `${trail}.${k}` : k);
+    }
+  };
+  walk(load("zh-CN"), "");
 });

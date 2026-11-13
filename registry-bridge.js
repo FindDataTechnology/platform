@@ -669,7 +669,7 @@ export function getRegistryLoginPath() {
   return (process.env.MARKET_REGISTRY_LOGIN_PATH || "/login").trim();
 }
 
-// The per-user token mint contract, as recorded in DEPLOY.md against the
+// The per-user token mint contract, as recorded in the ops runbook against the
 // deployed registry: GET {csrfPath} → a CSRF token, then POST {tokensPath} with
 // that value in the X-CSRF-Token header. Both calls ride the user's registry
 // session cookie, which is why only the browser (the connect popup) can make

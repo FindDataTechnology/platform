@@ -204,6 +204,26 @@ test("gateway assembly smoke: the full route surface assembles in test mode with
     "the bot relay regex lane must be registered",
   );
 
+  // 5b. Disclosure-gate machine door (fix-disclosure-gate-reachability): the
+  // verdict channel is machine-to-machine, so it CANNOT live behind the
+  // cell-proxy catch-all — that catch-all resolves a user first and refuses
+  // machine callers (measured 2026-11-11: correct bearer → 401, forever).
+  // Asserted here because only the assembled app knows where a route sits
+  // relative to the catch-all; the ordering rule below then pins it.
+  assert.ok(
+    findRoute(routes, "POST", "/api/actions/mandate-verdict"),
+    "the disclosure-gate machine door must be registered before the catch-all",
+  );
+
+  // 5c. Input-request machine door (add-acp-input-request-owner): same reason as
+  // 5b — the ACP lane is machine-to-machine with a shared bearer, so it cannot
+  // live behind the cell-proxy catch-all either (measured 2026-11-12: the mount
+  // was there, a correct bearer still answered 401).
+  assert.ok(
+    findRoute(routes, "POST", "/api/mcp/input-request/mcp"),
+    "the input-request machine door must be registered before the catch-all",
+  );
+
   // 6. Shape invariants: the pre-login SPA shell is served by a static mount
   // plus a negative-lookahead SPA fallback, and the cell-proxy catch-all is
   // the LAST layer — every face above sits before it, or a cell could never

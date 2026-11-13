@@ -266,7 +266,7 @@ test("reconcile: materializes once, second pass is a no-op", async () => {
   assert.equal(task.preset, "r-persona-a", "catalog id → roster preset id");
 
   const second = await reconcileFleet({ fleetId: fleet.id, db: fleetDb, cronApi: cron, resolveTarget: resolver, rosterPresetId: rosterFn });
-  assert.deepEqual(second, { created: [], updated: [], paused: [], resumed: [], removed: [] });
+  assert.deepEqual(second, { created: [], updated: [], paused: [], resumed: [], removed: [], respectedPause: [] });
 });
 
 test("reconcile: cadence edit rewrites the SAME task (no orphan); withdrawal removes it", async () => {
@@ -326,7 +326,7 @@ test("reconcile: passive posts never materialize", async () => {
     fleetId: fleet.id, db: fleetDb, cronApi: cron,
     resolveTarget: makeResolver({ "persona-a": {} }), rosterPresetId: rosterFn,
   });
-  assert.deepEqual(out, { created: [], updated: [], paused: [], resumed: [], removed: [] });
+  assert.deepEqual(out, { created: [], updated: [], paused: [], resumed: [], removed: [], respectedPause: [] });
   assert.equal(fleetTasks(fleet.id).length, 0);
 });
 
@@ -360,6 +360,118 @@ test("reconcile: two-layer pause — member pause survives fleet resume", async 
   const t2 = tasks.find((t) => t.sourceTag.memberId === m2.id);
   assert.equal(t1.paused, false);
   assert.equal(t2.paused, true, "member pause outlives the fleet cycle");
+});
+
+// ── operator pause vs fleet converge (fix-fleet-operator-pause-durability) ───
+//
+// Live 2026-11-10: an owner paused a member's rhythm task through the cron face
+// and it came back within minutes of the next catalog refresh, with nobody
+// touching it — reconcile resumed on `desiredPaused` alone. The five tests below
+// pin the split: the owner's stop is its own layer, the fleet's parking is not.
+
+test("operator pause: survives a converge pass that wants the post running", async () => {
+  const fleet = fixtureFleet(fleetDb);
+  const member = fixtureMember(fleetDb, fleet.id);
+  const run = () => reconcileFleet({ fleetId: fleet.id, db: fleetDb, cronApi: cron, resolveTarget: makeResolver({ "persona-a": {} }), rosterPresetId: rosterFn });
+  await run();
+  const task = fleetTasks(fleet.id)[0];
+
+  assert.equal(await cron.pauseJob(task.id, { by: "operator" }), true);
+  assert.equal(fleetTasks(fleet.id)[0].pausedBy, "operator", "the source rides the record");
+
+  const out = await run();
+  assert.deepEqual(out.resumed, [], "the owner's stop is not undone");
+  assert.deepEqual(out.respectedPause, [task.id], "and the receipt says so");
+  const after = fleetTasks(fleet.id)[0];
+  assert.equal(after.paused, true);
+  assert.equal(after.pausedBy, "operator", "marker survives the pass");
+  assert.equal(after.status, "paused");
+  assert.equal(member.id, after.sourceTag.memberId);
+});
+
+test("operator pause: an explicit resume hands the decision back to the fleet", async () => {
+  const fleet = fixtureFleet(fleetDb);
+  fixtureMember(fleetDb, fleet.id);
+  const run = () => reconcileFleet({ fleetId: fleet.id, db: fleetDb, cronApi: cron, resolveTarget: makeResolver({ "persona-a": {} }), rosterPresetId: rosterFn });
+  await run();
+  const task = fleetTasks(fleet.id)[0];
+
+  await cron.pauseJob(task.id, { by: "operator" });
+  await run();
+  assert.equal(fleetTasks(fleet.id)[0].paused, true);
+
+  assert.equal(await cron.resumeJob(task.id), true);
+  const resumed = fleetTasks(fleet.id)[0];
+  assert.equal(resumed.pausedBy, null, "the marker clears on an explicit resume");
+
+  // From here the converge pass owns it: parking it for the fleet works again.
+  fleetDb.updateFleet(fleet.id, { state: "paused" });
+  const out = await run();
+  assert.deepEqual(out.paused, [task.id]);
+  assert.equal(fleetTasks(fleet.id)[0].pausedBy, "fleet");
+});
+
+test("fleet-side pause is untouched: the marker says fleet and it resumes on its own", async () => {
+  const fleet = fixtureFleet(fleetDb);
+  fixtureMember(fleetDb, fleet.id);
+  const run = () => reconcileFleet({ fleetId: fleet.id, db: fleetDb, cronApi: cron, resolveTarget: makeResolver({ "persona-a": {} }), rosterPresetId: rosterFn });
+  await run();
+  const task = fleetTasks(fleet.id)[0];
+
+  fleetDb.updateFleet(fleet.id, { state: "paused" });
+  const parked = await run();
+  assert.deepEqual(parked.paused, [task.id]);
+  assert.equal(fleetTasks(fleet.id)[0].pausedBy, "fleet", "converge's own pause is not an owner stop");
+
+  fleetDb.updateFleet(fleet.id, { state: "active" });
+  const out = await run();
+  assert.deepEqual(out.resumed, [task.id], "fleet park/unpark still works");
+  assert.deepEqual(out.respectedPause, []);
+  assert.equal(fleetTasks(fleet.id)[0].pausedBy, null);
+});
+
+test("legacy record without a marker is read as fleet, not as an owner stop", async () => {
+  // Pre-split records carry `paused` and no `pausedBy`. Defaulting them to
+  // "operator" would freeze every post parked before the upgrade, so the loader
+  // backfills "fleet" — the old, resumable interpretation.
+  const jobsFile = path.join(tmpRoot, "jobs.json");
+  const legacy = [{
+    id: "job_legacy_paused", trigger: "schedule", type: "recurring",
+    cron: "0 * * * *", tz: "Asia/Shanghai", prompt: "老任务", preset: "r-persona-a",
+    targetType: "persona", sessionId: "cron-job_legacy_paused",
+    status: "paused", state: "failed", paused: true,
+    createdAt: new Date().toISOString(), history: [],
+  }];
+  fs.mkdirSync(path.dirname(jobsFile), { recursive: true });
+  fs.writeFileSync(jobsFile, JSON.stringify(legacy, null, 2));
+
+  await cron.initCron({ broadcast: () => {}, runJobTurn: async () => ({ ok: true }) });
+
+  const backfilled = cron.listJobs().find((j) => j.id === "job_legacy_paused");
+  assert.ok(backfilled, "legacy record loaded");
+  assert.equal(backfilled.pausedBy, "fleet");
+  // And it is written back, so the next boot does not re-derive it.
+  const persisted = JSON.parse(fs.readFileSync(jobsFile, "utf8")).find((j) => j.id === "job_legacy_paused");
+  assert.equal(persisted.pausedBy, "fleet", "backfill reaches disk");
+});
+
+test("operator pause is durable across a reload", async () => {
+  const fleet = fixtureFleet(fleetDb);
+  fixtureMember(fleetDb, fleet.id);
+  await reconcileFleet({ fleetId: fleet.id, db: fleetDb, cronApi: cron, resolveTarget: makeResolver({ "persona-a": {} }), rosterPresetId: rosterFn });
+  const task = fleetTasks(fleet.id)[0];
+  await cron.pauseJob(task.id, { by: "operator" });
+
+  const jobsFile = path.join(tmpRoot, "jobs.json");
+  const onDisk = JSON.parse(fs.readFileSync(jobsFile, "utf8")).find((j) => j.id === task.id);
+  assert.equal(onDisk.pausedBy, "operator", "persisted with the record");
+  assert.equal(onDisk.paused, true);
+
+  // Same read the converge pass does after a restart.
+  await cron.initCron({ broadcast: () => {}, runJobTurn: async () => ({ ok: true }) });
+  const reloaded = cron.listJobs().find((j) => j.id === task.id);
+  assert.equal(reloaded.paused, true);
+  assert.equal(reloaded.pausedBy, "operator", "a restart does not launder an owner's stop");
 });
 
 test("reconcile: a vacant post's task is parked, restaff re-arms it", async () => {

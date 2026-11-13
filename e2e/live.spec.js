@@ -6,7 +6,7 @@ import { LIVE_SERVICE_URL, liveSmokeEnabled } from "./live-helpers.js";
 //
 // These run via the `live` Playwright project (`npm run test:e2e:live` /
 // `make test-live`). They connect to an already-running external URL
-// (LIVE_SERVICE_URL, default http://23.144.68.246:30950) and never spawn a
+// (LIVE_SERVICE_URL, default http://127.0.0.1:3000) and never spawn a
 // local server. All assertions are read-only: no chat prompts, no document
 // uploads, no model switches, no LLM tokens spent - except the opt-in
 // @live-smoke chat-turn gated behind LIVE_SMOKE=1.

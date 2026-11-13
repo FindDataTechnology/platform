@@ -190,8 +190,50 @@ export class AcpHarnessAdapter {
       }
       return;
     }
-    if (msg.method === "session/update") this.#onUpdate(msg.params);
+    if (msg.method === "session/update") return this.#onUpdate(msg.params);
+    // ── Inbound REQUESTS from the agent (has both `method` and `id`) ─────────
+    // Until 2026-11-12 these were silently dropped, which made every ACP tool
+    // call hang forever: claude-code-acp runs with permissionMode "default", so
+    // its canUseTool() issues `session/request_permission` to the CLIENT and
+    // blocks on the verdict. Nobody answered ⇒ no verdict ⇒ the tool never ran
+    // (observed: a turn that asks the agent to call request_input returned no
+    // response at all for 200+s, with zero rows created on the platform side).
+    // Not a card-specific bug: it applies to Bash/Read/Edit and every MCP tool
+    // alike, so ACP agents could not use ANY tool.
+    if (msg.method !== undefined && msg.id !== undefined) return this.#answerAgentRequest(msg);
   }
+
+  // Answer one inbound agent → client request. Unknown methods get a real
+  // JSON-RPC error so the harness degrades instead of waiting out its own
+  // timeout.
+  #answerAgentRequest(msg) {
+    const reply = (result, error) => {
+      const body = error
+        ? { jsonrpc: "2.0", id: msg.id, error }
+        : { jsonrpc: "2.0", id: msg.id, result };
+      try {
+        this.#proc?.stdin.write(JSON.stringify(body) + "\n");
+      } catch { /* child gone — its exit path settles the turn */ }
+    };
+    if (msg.method === "session/request_permission") {
+      const options = Array.isArray(msg.params?.options) ? msg.params.options : [];
+      // Policy: the runner is the sandbox (hostNetwork container, per-agent
+      // workspace). A human is not in this loop — an ACP turn has no answerer
+      // for permission prompts, exactly as it has none for harness asks — so
+      // the default is "allow", recorded per tool. AGENT_RUNNER_ACP_PERMISSION=deny
+      // turns the lane read-only-ish for deployments that want that.
+      const allow = String(process.env.AGENT_RUNNER_ACP_PERMISSION ?? "allow").toLowerCase() !== "deny";
+      const pick = options.find((o) => String(o?.kind || "").startsWith("allow"));
+      if (allow && pick) {
+        this.log.log?.(`[agent-runner:${this.key}] ACP permission allow: ${pick.optionId} (${msg.params?.toolCall?.title ?? "tool"})`);
+        return reply({ outcome: { outcome: "selected", optionId: pick.optionId } });
+      }
+      this.log.log?.(`[agent-runner:${this.key}] ACP permission deny: ${msg.params?.toolCall?.title ?? "tool"}`);
+      return reply({ outcome: { outcome: "cancelled" } });
+    }
+    reply(null, { code: -32601, message: `"Method not found": ${msg.method}` });
+  }
+
 
   // Streaming deltas ride here; the per-turn collector (registered in turn())
   // consumes them. Unknown update kinds are ignored — the wire is additive by

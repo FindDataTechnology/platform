@@ -7,7 +7,11 @@ Defines the serving contract on pack roles and the lifecycle of Agent Services d
 
 ### Requirement: Deploy action composes registry-native assets
 
-The platform SHALL offer a deploy action (「部署为服务」) on published pack versions whose agents carry a serving contract, gated to pack creators and admins for public packs and to the pack's owner for private packs (openspec: pack-visibility), idempotent per (pack version, agent id), and admitted only when the deployer's billing balance passes the platform-billing gate. The action SHALL: publish each of the pack's skills as a registry skill entry under a pack-scoped path with restricted visibility; register one registry agent entry per serving-contract agent with `supported_protocol: "a2a"`, the runner's backend URL as the proxy backend, and a `metadata` deployment descriptor limited to small fields (persona, MCP references, skill paths, serving contract, effective work rhythm, effective turn budget, effective model, billing key reference); compose the AgentCard from the serving contract's manual card fields, defaulting to values derived from the agent's name/description/tags when absent; and mint the per-agent billing key per platform-billing. The deployer's rhythm and budget overrides, and any deploy-time model choice, SHALL be recorded as the deployment's initial service config (openspec: agent-service-config) — rewritable afterwards on the serving config surface — not as one-shot request parameters; the descriptor records the resulting effective values. A deploy-time model choice SHALL pass the same write-time lane validation as any later config write. The action SHALL NOT embed the full manifest, skill bodies, or any key secret in the agent entry.
+The platform SHALL offer a deploy action (「部署为服务」) on published pack versions whose agents carry a serving contract, gated to pack creators and admins for public packs and to the pack's owner for private packs (openspec: pack-visibility), idempotent per (pack version, agent id), and admitted only when the deployer's billing balance passes the platform-billing gate. The action SHALL: publish each of the pack's skills as a registry skill entry under a pack-scoped path with restricted visibility; register one registry agent entry per serving-contract agent with `supported_protocol: "a2a"`, the runner's backend URL as the proxy backend, and a `metadata` deployment descriptor limited to small fields (persona, MCP references, skill paths, serving contract, effective work rhythm, effective turn budget, effective model, billing key reference, **deployer identity**); compose the AgentCard from the serving contract's manual card fields, defaulting to values derived from the agent's name/description/tags when absent; and mint the per-agent billing key per platform-billing.
+
+The descriptor's `metadata.deployer_email` SHALL be the email of the session that performed the deploy, taken from the action's existing authorization context — MUST NOT be read from a caller-supplied request field, and SHALL be absent (not empty-string) when that identity is unavailable, so entries written before this field existed keep their exact shape. Runner-carried harnesses read it as the agent's owner for owner-scoped tools (openspec: input-request-cards).
+
+The deployer's rhythm and budget overrides, and any deploy-time model choice, SHALL be recorded as the deployment's initial service config (openspec: agent-service-config) — rewritable afterwards on the serving config surface — not as one-shot request parameters; the descriptor records the resulting effective values. A deploy-time model choice SHALL pass the same write-time lane validation as any later config write. The action SHALL NOT embed the full manifest, skill bodies, or any key secret in the agent entry.
 
 A deploy request MAY carry an `agents` array naming a non-empty subset of the pack's serving-contract agent ids; the deploy then registers, configures, and records ONLY the named agents. An omitted `agents` key deploys every serving-contract agent exactly as before. Unknown, duplicate, or non-serving ids in the array SHALL be refused with a reason naming the id. When a subset is deployed, the billing-key admission rule (every deployed serving agent ends up bound) SHALL apply only to the selected agents: unselected serving agents keep their existing key and secret bindings untouched — not revalidated, not required, not dropped — because their live registry entries are not being replaced. A pasted billing key or an explicit secret-unbind aimed at a serving agent outside the selection SHALL be refused with a reason naming the agent, never silently ignored.
 
@@ -15,6 +19,13 @@ A deploy request MAY carry an `agents` array naming a non-empty subset of the pa
 
 - **WHEN** a creator triggers deploy on a pack version whose agent carries a serving contract
 - **THEN** the registry gains one a2a agent entry and one skill entry per pack skill, and a second trigger for the same (version, agent) changes nothing
+
+#### Scenario: Deploy records the deployer identity
+
+- **WHEN** user A deploys a pack
+- **THEN** the registered agent entry's descriptor carries `metadata.deployer_email = A` (lower-cased)
+- **AND** a request body claiming a different deployer does not change it
+- **AND** an entry deployed before this field existed simply has no such key
 
 #### Scenario: Deploy is refused without the contract
 
@@ -317,8 +328,6 @@ The deploy gate SHALL admit the pack author, users in the configured creator gro
 
 - **WHEN** the facet `whoami` route is read
 - **THEN** the response carries `accessMode` reflecting the deployment's effective setting
-
-
 
 ### Requirement: Port-occupancy listing degradation is visible
 

@@ -155,3 +155,61 @@ test("isGatewayUrl only matches the gateway host", () => {
   assert.equal(creds.isGatewayUrl(""), false);
   assert.equal(creds.isGatewayUrl(undefined), false);
 });
+
+// ── Shared-token upstream (gateway-reach-for-shared-token-mcp) ──────────────
+//
+// law-bench-mcp authenticates every caller with ONE deployment token, so it is
+// not a per-user credential — but it needs the same dual shape through the
+// gateway: the gateway strips the caller's auth, and the upstream reads only
+// its own token. Without this the call arrives anonymous and 401s.
+
+test("shared-token ref on the gateway => gateway identity + deployment token", () => {
+  seed(EMAIL);
+  const servers = {
+    "law-bench": {
+      url: "https://mcp.finddatatech.cloud/law-bench/mcp",
+      credentialRef: "law-bench-mcp",
+    },
+  };
+  process.env.LAW_BENCH_MCP_TOKEN = "shared-law-bench-token";
+  const { servers: out, omitted } = creds.resolveCredentials(servers, EMAIL);
+  assert.deepEqual(omitted, []);
+  assert.equal(out["law-bench"].headers.Authorization, "Bearer gateway-token");
+  assert.equal(out["law-bench"].headers["X-Authorization"], "Bearer shared-law-bench-token");
+  delete process.env.LAW_BENCH_MCP_TOKEN;
+});
+
+test("shared-token ref without the deployment token => server omitted (fail closed)", () => {
+  seed(EMAIL);
+  delete process.env.LAW_BENCH_MCP_TOKEN;
+  const servers = {
+    "law-bench": {
+      url: "https://mcp.finddatatech.cloud/law-bench/mcp",
+      credentialRef: "law-bench-mcp",
+    },
+  };
+  const { servers: out, omitted } = creds.resolveCredentials(servers, EMAIL);
+  assert.equal(out["law-bench"], undefined);
+  assert.deepEqual(omitted.map((o) => o.names).flat(), ["law-bench"]);
+});
+
+test("shared-token ref decides the shape by ref alone — no per-server flag needed", () => {
+  // The deployment token is not tied to an email, so installing the server should
+  // not require a "connect law-bench" step: the ref itself is the switch. (A
+  // brand-new identity still needs the *gateway* credential — that is the
+  // ordinary per-user login, not a law-bench one.)
+  assert.equal(
+    creds.needsRelayedCallerCredential(
+      { url: "https://mcp.finddatatech.cloud/law-bench/mcp" },
+      "law-bench-mcp",
+    ),
+    true,
+  );
+  assert.equal(
+    creds.needsRelayedCallerCredential(
+      { url: "http://cheap6.mesh.finddata.cn:31898/mcp" },
+      "law-bench-mcp",
+    ),
+    false,
+  );
+});

@@ -81,6 +81,13 @@
         "server/actions-mcp.js"
       ],
       "_comment": "跨面动作提案面(add-line-boards-and-action-gate):propose_action 单工具,写面唯一入口=提案→拍板→已批准执行;loopback 桥身份=cell owner,提案人由 ACTIONS_MCP_PROPOSER_EMAIL 注入"
+    },
+    "input-request": {
+      "command": "node",
+      "args": [
+        "server/input-request-mcp.js"
+      ],
+      "_comment": "结构化输入面(add-input-request-cards):request_input 单工具,提卡→等人填→工具返回 {state,values};挂起在平台侧,任何能调 MCP 的 harness 都能用;owner 由 INPUT_REQUEST_OWNER_EMAIL 注入"
     }
   },
   "skills": [

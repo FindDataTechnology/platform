@@ -14,7 +14,7 @@
     "test:markdown": "node --test src/lib/markdown.test.mjs",
     "test:pagesets": "node --test src/pagesets/pagesets.test.mjs",
     "test:confirm-gate": "node --test src/components/ConfirmGate/confirm-gate.test.mjs src/pagesets/surfaces.test.mjs",
-    "test:unit": "node --test src/lib/markdown.test.mjs src/lib/showcase.test.mjs src/pagesets/pagesets.test.mjs src/pagesets/ue-pages.test.mjs src/components/ConfirmGate/confirm-gate.test.mjs src/pagesets/surfaces.test.mjs"
+    "test:unit": "node --test src/lib/markdown.test.mjs src/lib/showcase.test.mjs src/pagesets/pagesets.test.mjs src/pagesets/ue-pages.test.mjs src/pagesets/mounting.test.mjs src/components/ConfirmGate/confirm-gate.test.mjs src/pagesets/surfaces.test.mjs"
   },
   "dependencies": {
     "@babel/runtime": "^7.24.4",

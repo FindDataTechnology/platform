@@ -221,6 +221,42 @@ export function registerBotRoutes(ctx) {
     }
 
     if (!message) {
+      // Events are not messages: they have no conversation and must not occupy a
+      // turn key. Ask the adapter to surface one before declaring the payload
+      // noise. WeCom's consent change (`Event=msg_audit_approved`) arrives
+      // exactly here — it used to be logged as "non-text" and dropped, which
+      // left the archive writing for up to the 5-minute consent-cache TTL after
+      // a customer revoked consent (compliance, not latency).
+      if (typeof entry.adapter.parseEvent === "function") {
+        let evt = null;
+        try {
+          evt = await entry.adapter.parseEvent(adapterReq, entry.bot.credentials);
+        } catch (err) {
+          // Signature/decrypt failure — the request is forged or undecryptable.
+          // Same 403 as verifyWebhook; the content is never logged.
+          console.warn(`[bots] "${entry.bot.name}" rejected an unverified event: ${err.message}`);
+          return done(403, "Forbidden");
+        }
+        if (evt) {
+          let outcome = null;
+          try {
+            // Dynamic import keeps node:sqlite + the archive schema off the bot
+            // hot path; most installs never enable archive.
+            const { handleInboundEvent } = await import("../archive/consent-ingress.js");
+            outcome = handleInboundEvent({ event: evt });
+          } catch (err) {
+            // Never surface as 5xx: the platform retries non-2xx, and a retry
+            // cannot make the archive database writable — it only widens the
+            // outage for every other lane sharing this webhook.
+            outcome = { handled: false, reason: `ingress_throw:${err.message}` };
+          }
+          console.log(
+            `[bots] "${entry.bot.name}" inbound event ${evt.event} from ${evt.from || "?"} → ${JSON.stringify(outcome)}`,
+          );
+          done(200, "success");
+          return;
+        }
+      }
       // Forensics (fd-prod lesson): the canonical text XML parsed locally but
       // not in prod — the length, content-type and first bytes name the
       // culprit (empty body vs gzip magic vs unexpected shape).

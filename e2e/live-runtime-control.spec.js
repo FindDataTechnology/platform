@@ -27,7 +27,10 @@ test.describe("live runtime control: latch, usage, web-search toggle", () => {
           const parsed = JSON.parse(data);
           if (parsed) window.__sent.push(parsed);
         } catch {
-          parsed = null;
+          // Non-JSON frame: nothing to record. (The old `parsed = null` here
+          // assigned to a name declared CONST inside the try, which threw a
+          // ReferenceError out of the hook — an unparseable frame broke the
+          // capture instead of being skipped.)
         }
         return origSend.call(this, data);
       };

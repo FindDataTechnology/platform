@@ -117,6 +117,10 @@ export function registerOverlayRoutes(ctx) {
         .map(([name]) => name),
     );
     for (const name of baselineNames()) if (available.has(name)) effectiveMcp.add(name);
+    // The platform's own bundled bridges (see PLATFORM_BASELINE_MCP): they are
+    // part of the runtime, not a business face, so focusing never drops them and
+    // this GET must report the same set the patch writer keeps.
+    for (const name of dshProfile.PLATFORM_BASELINE_MCP) if (available.has(name)) effectiveMcp.add(name);
     for (const name of scope.mcpKeep ?? []) if (available.has(name)) effectiveMcp.add(name);
     if (overlay) {
       for (const name of overlay.addMcp ?? []) if (available.has(name)) effectiveMcp.add(name);

@@ -8,6 +8,7 @@
 
 import Database from "better-sqlite3";
 import { assessPersonalAgent } from "../lib/personal-agent-readiness.js";
+import { probeMandateVerdict } from "../lib/mandate-verdict-probe.js";
 import { normalizeMandatePolicy } from "../lib/personal-mandate.js";
 
 const argv = process.argv.slice(2);
@@ -87,11 +88,20 @@ for (const d of Object.keys(mandate.domains ?? {})) {
   consistency[d] = { samples, agrees, rate: samples === 0 ? null : agrees / samples };
 }
 
+// 裁决通道真探一次（fix-disclosure-gate-reachability D4）：doctor 是"配置到底行不行"
+// 的那张嘴，只报「令牌已注入」会让人以为通道能用——今晚就是这么骗过一轮的。
+const verdictProbe = await probeMandateVerdict({
+  url: process.env.MANDATE_VERDICT_URL,
+  token: process.env.MANDATE_VERDICT_TOKEN,
+  owner: process.env.MANDATE_VERDICT_OWNER,
+});
+
 const result = assessPersonalAgent({
   mandate,
   domainMap,
   hasAuditor,
   verdictTokenConfigured: Boolean(String(process.env.MANDATE_VERDICT_TOKEN ?? "").trim()),
+  verdictReachable: verdictProbe.reachable === true,
   citablePrecedents: citable,
   levelSamples,
   consistency,

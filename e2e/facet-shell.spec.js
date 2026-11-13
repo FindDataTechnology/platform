@@ -371,6 +371,38 @@ test("a signed-in viewer gets an explicit logged-in chip", async ({ page }) => {
   await expect(page.getByTestId("facet-account-menu")).toHaveCount(0);
 });
 
+test("the account menu stays inside the viewport at every width", async ({ page }) => {
+  // The panel is absolutely positioned and 224px wide. With a fixed `right-0`
+  // anchor it clipped its OWN first characters off the left edge whenever the
+  // header wrapped the chip toward the middle of a narrow screen — measured in
+  // production at 390px: chip 124..207 ⇒ panel left = −17px, so 「已登录: …」、
+  // 「我的发布」、「内容运营」、「退出登录」 each lost their first glyph. scrollWidth
+  // stayed 0 the whole time, so a plain "no horizontal scroll" guard cannot see
+  // it: the text was outside the screen without widening the document. Assert
+  // the panel's own box instead, at every width a phone or a laptop uses.
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "ops@e2e.local", groups: ["creators"], admin: true, creator: true } }),
+  );
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  const widths = [320, 360, 390, 414, 768, 1024, 1440];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`${base}/#/`);
+    await page.getByTestId("facet-user-chip").click();
+    const menu = page.getByTestId("facet-account-menu");
+    await expect(menu).toBeVisible();
+    const box = await menu.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, vw: document.documentElement.clientWidth };
+    });
+    expect(box.left, `${width}px: panel left ${box.left} must be on screen`).toBeGreaterThanOrEqual(-1);
+    expect(box.right, `${width}px: panel right ${box.right} must be on screen`).toBeLessThanOrEqual(box.vw + 1);
+    // And it must not hide behind its own trigger: the label row is readable.
+    await expect(menu).toContainText("ops@e2e.local");
+    await page.keyboard.press("Escape");
+  }
+});
+
 test("data plane: publish, curate, versions, visibility, unpublish with real forwarded identity", async ({ request }) => {
   const creator = forwarded("creator@e2e.local", ["creators"]);
   const admin = forwarded("ops@e2e.local", ["admin"]);

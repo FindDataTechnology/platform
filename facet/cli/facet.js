@@ -1193,6 +1193,9 @@ async function update(opts) {
     return;
   }
   let upgraded = 0;
+  // 失败也要计数：原来只打印 ✗ 就 continue，退出码仍是 0，脚本用 $? 会把失败当成功
+  // （fix-supply-machine-faces 0.4.1）。
+  let failed = 0;
   for (const rec of targets) {
     const label = `${rec.name ?? rec.packId}（${rec.target}${rec.scope === "项目级" ? " · 项目级" : ""}）`;
     // 按记录解析来源（fix-supply-machine-faces 6.2）：显式 --base 覆盖一切；
@@ -1210,6 +1213,7 @@ async function update(opts) {
     const detail = await fetchJson(`${base}/api/packs/${encodeURIComponent(rec.packId)}`).catch(() => null);
     if (!detail?.id) {
       console.log(`✗ ${label} — 智能体已不可解析（下架/私有/网络），记录保持 v${rec.version}；${fromNote}`);
+      failed += 1;
       continue;
     }
     if (detail.version === rec.version) {
@@ -1223,7 +1227,13 @@ async function update(opts) {
     await recordInstall({ ...rec, base, version: detail.version, installedAt: new Date().toISOString() });
     upgraded += 1;
   }
-  console.log(upgraded > 0 ? `完成：${upgraded} 笔更新（无订阅副作用——快照模型）。` : "没有需要更新的安装。");
+  if (failed > 0) {
+    // 退出码必须反映失败：脚本化调用靠它判断「这轮是否全成功」。
+    console.log(`${upgraded > 0 ? `完成：${upgraded} 笔更新` : "没有需要更新的安装"}；${failed} 笔失败（见上方 ✗）。`);
+    process.exitCode = 1;
+  } else {
+    console.log(upgraded > 0 ? `完成：${upgraded} 笔更新（无订阅副作用——快照模型）。` : "没有需要更新的安装。");
+  }
 }
 
 // ── list / search (fix-supply-machine-faces 5.x): 不知道 id 也能走到 install ──

@@ -8,11 +8,17 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs";
 import schedule from "node-schedule";
-import * as engine from "../task-engine.js";
 
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "cron-parity-"));
 process.env.CRON_STORAGE_PATH = tmpRoot;
 process.env.DB_PATH = path.join(tmpRoot, "app.db");
+
+// Dynamic, because a STATIC import is hoisted above the two lines above:
+// task-engine.js freezes TASK_STORAGE_DIR at import time, so loading it first
+// read and WROTE the repository's own cron-store/jobs.json (measured
+// 2026-11-13: 120 → 121 live tasks, repo file mtime bumped) instead of this
+// test's tmp dir.
+const engine = await import("../task-engine.js");
 
 const cron = await import("../cron.js");
 

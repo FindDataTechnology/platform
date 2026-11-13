@@ -16,7 +16,7 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { deputyToolErrorText, decisionResolveErrorText } from "./fleet-mcp-hints.js";
+import { deputyToolErrorText, decisionResolveErrorText, selfIdentityFrom } from "./fleet-mcp-hints.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -212,11 +212,20 @@ function errOut(message) {
   return { content: [{ type: "text", text: `Error: ${message}` }], isError: true };
 }
 
-export async function toolReport({ metrics, resources, blockers, summary }) {
+// 岗位身份：解析规则住在 server/fleet-mcp-hints.js（纯函数、可被单测 import——
+// 本模块顶层就 `await server.connect(...)`，测试进不来）。
+export async function toolReport({ metrics, resources, blockers, summary, ...rest }) {
+  const selfIdentity = selfIdentityFrom(rest);
   const res = await fetchWithTimeout(`${bridgeOrigin()}/api/fleets/report`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ metrics, resources, blockers, summary }),
+    body: JSON.stringify({
+      metrics,
+      resources,
+      blockers,
+      summary,
+      ...(selfIdentity ? { selfIdentity } : {}),
+    }),
   }, { timeoutMs: BRIDGE_TIMEOUT_MS(10_000) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return errOut(data.error || `report failed (${res.status})`);
@@ -380,11 +389,16 @@ async function toolAuditorSubmitVerdict({ itemId, verdict, note }) {
   );
 }
 
-async function toolDispatch({ to, brief }) {
+async function toolDispatch({ to, brief, ...rest }) {
+  // 派发与报数同一条信任边界（2026-11-13）：岗位坐标必须由服务端写进 patch 的
+  // header 里带下来，否则并发时服务端只能按"唯一在飞回合"猜，猜不出就 409
+  // attribution_ambiguous——幕僚长每天那一轮正好是多舰队 cadence 齐响的时候，
+  // 少了这一项，派活会时灵时不灵。解析规则与 report_status 共用 selfIdentityFrom。
+  const selfIdentity = selfIdentityFrom(rest);
   const res = await fetchWithTimeout(`${bridgeOrigin()}/api/fleets/dispatch`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ to, brief }),
+    body: JSON.stringify({ to, brief, ...(selfIdentity ? { selfIdentity } : {}) }),
   }, { timeoutMs: BRIDGE_TIMEOUT_MS(10_000) });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) return errOut(data.error || `dispatch failed (${res.status})`);

@@ -37,6 +37,10 @@ export interface LlmProvider {
   hasKey: boolean;
   reserved?: boolean;
   models: string[];
+  // Per-entry metadata the runtime actually resolves for each id in `models`
+  // (family-table reconciliation applied server-side). The editor prefills from
+  // this instead of its own mirror so a pinned window survives a save.
+  modelMeta?: Record<string, { contextWindow: number; maxTokens: number; pinned?: boolean }>;
   // Thinking levels this provider's models accept (identity wire values).
   reasoningEfforts?: string[];
   lastTest: LastTest | null;
@@ -74,10 +78,15 @@ export interface ModelEntryInput {
 const CLIENT_MODEL_FAMILIES: Array<{
   prefix: string;
   rank: number;
+  contextWindow?: number;
   maxTokens?: number;
   reasoningEfforts?: string[];
 }> = [
-  { prefix: "deepseek-v4", rank: 0, maxTokens: 32768, reasoningEfforts: ["low", "medium", "high"] },
+  // Verified 1M lane (2026-11-11: prompt=1,000,038 → 200/stop). Omitting the
+  // window here meant the editor prefilled the conservative 128k for every id
+  // and the roster save wrote that default straight back — the panel was
+  // actively re-creating the squeeze it inherited.
+  { prefix: "deepseek-v4", rank: 0, contextWindow: 1_000_000, maxTokens: 32768, reasoningEfforts: ["low", "medium", "high"] },
   { prefix: "deepseek", rank: 0, maxTokens: 32768 },
   { prefix: "glm-5.3-flash", rank: 1, maxTokens: 32768 },
   { prefix: "glm", rank: 1 },
@@ -93,7 +102,7 @@ export function clientModelFamilyMeta(id: string) {
   const bare = id.split("/").pop() ?? id;
   const family = CLIENT_MODEL_FAMILIES.find((f) => bare.startsWith(f.prefix));
   return {
-    contextWindow: CLIENT_MODEL_FAMILY_DEFAULTS.contextWindow,
+    contextWindow: family?.contextWindow ?? CLIENT_MODEL_FAMILY_DEFAULTS.contextWindow,
     maxTokens: family?.maxTokens ?? CLIENT_MODEL_FAMILY_DEFAULTS.maxTokens,
     reasoningEfforts: family?.reasoningEfforts ?? [],
   };

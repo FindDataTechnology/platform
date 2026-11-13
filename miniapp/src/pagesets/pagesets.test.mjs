@@ -16,12 +16,12 @@ import {
 import { PAGESETS, pageByPath, pagesetByPagePath, pagesetByKey } from "./registry.ts";
 import { DEFAULT_TIMEOUT_MESSAGE } from "../components/ConfirmGate/confirm-gate.ts";
 
-test("registry integrity: four pagesets, 12/10/8/8 pages, all paths unique and namespaced", () => {
+test("registry integrity: four pagesets, 12/11/8/8 pages, all paths unique and namespaced", () => {
   assert.equal(PAGESETS.length, 4);
   const byKey = Object.fromEntries(PAGESETS.map((p) => [p.key, p.pages.length]));
   assert.deepEqual(byKey, {
     "supply-chain.ue": 12,
-    "supply-chain.se": 10,
+    "supply-chain.se": 11,
     "supply-chain.sp": 8,
     "supply-chain.cp": 8,
   });

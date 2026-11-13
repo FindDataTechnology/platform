@@ -17,18 +17,23 @@ import { updateProvider, clientModelFamilyMeta, type ModelEntryInput } from "@pl
 interface Props {
   providerId: string;
   models: string[];
+  /** Per-entry metadata the server actually resolves (includes a pinned window). */
+  modelMeta?: Record<string, { contextWindow: number; maxTokens: number; pinned?: boolean }>;
   onSaved: () => void;
 }
 
 interface Row extends ModelEntryInput {}
 
-export function ModelListEditor({ providerId, models, onSaved }: Props) {
+export function ModelListEditor({ providerId, models, modelMeta, onSaved }: Props) {
   const { t } = useTranslation();
-  // Seed rows from the current roster; contextWindow/maxTokens fall back to
-  // the family table server-side, so the client only sends explicit values.
+  // Seed rows from what the server resolves for this provider; only fall back to
+  // the client mirror when the server sent nothing (older payload, brand-new
+  // provider). Prefilling from the mirror alone meant a save rewrote every
+  // entry with the conservative default — undoing the family-table correction
+  // and discarding an operator's pinned window.
   const [rows, setRows] = useState<Row[]>(
     models.map((id) => {
-      const meta = clientModelFamilyMeta(id);
+      const meta = modelMeta?.[id] ?? clientModelFamilyMeta(id);
       return { id, contextWindow: meta.contextWindow, maxTokens: meta.maxTokens };
     }),
   );
@@ -77,7 +82,9 @@ export function ModelListEditor({ providerId, models, onSaved }: Props) {
           ...(r.maxTokens ? { maxTokens: r.maxTokens } : {}),
         })),
       });
-      showToast({ severity: "error", title: t("modelsPage.settingsUpdated") });
+      // A successful save used to be announced as severity "error" — red edge,
+      // no auto-dismiss. Same path, wrong verdict.
+      showToast({ severity: "success", title: t("modelsPage.settingsUpdated") });
       onSaved();
     } catch (e) {
       setError((e as Error).message);

@@ -13,7 +13,7 @@
   "i18n": {
     "en": {
       "name": "Team Architect (official seed)",
-      "description": "The in-chat natural-language orchestration face for Yizuo agent teams: it compiles what you say into a team-structure draft, shows a validation-checked diff with cost estimates, and lands it only after your approval. Roster, not runtime command. packId/placeholders are filled by the minting script; tests pin this manifest.",
+      "description": "The in-chat natural-language orchestration face for Yizuo agent teams: it compiles what you say into a team-structure draft, shows a validation-checked diff with cost estimates, and lands it only after your approval. Roster, not runtime command. When minting and listing, packId/placeholders are filled in by the minting script; this file is the source of truth for the manifest, and the test pins that it must pass the pack manifest validator.",
       "agents": {
         "fleet-architect": {
           "name": "Team Architect"

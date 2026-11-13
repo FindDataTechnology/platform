@@ -94,6 +94,35 @@ test("a scheduled fire that waited past the staleness bound is dropped as skippe
   }
 });
 
+test("a DAILY cron fire is not aged out however long it waits", async () => {
+  // The regression this pins (measured 2026-11-13): the staleness bound dropped
+  // a `30 8 * * *` round as "waited 10min > 10min". `skipped` neither retries
+  // nor counts as missed, so the whole day's round vanished with no failure
+  // recorded — the exemption existed for exactly this case and never applied
+  // because cron rounds reported an unknown period.
+  const started = [];
+  await boot((task) => { started.push(task.id); return Promise.resolve({ ok: true }); });
+  process.env.QUEUE_MAX_AGE_MS = "50";
+  try {
+    engine.insertTask({ id: "daily", name: "daily", prompt: "p", trigger: "schedule", cron: "30 8 * * *", tz: "Asia/Shanghai", targetType: "persona" });
+    engine.enqueueExecution("daily");
+    const daily = engine.getRecord("daily");
+    daily.firstQueuedAt = Date.now() - 60_000;
+    daily.queuedAt = Date.now() - 60_000;
+
+    await new Promise((r) => setTimeout(r, 300));
+    const rec = engine.getRecord("daily");
+    // Either outcome is fine (it may get the slot immediately); what must never
+    // happen is the silent drop, which leaves no failure and no retry.
+    assert.notEqual(rec.state, "skipped",
+      "a daily round must never be dropped — losing it loses the whole day");
+    assert.doesNotMatch(rec.error ?? "", /queue staleness/,
+      "no staleness verdict may be recorded against a daily round");
+  } finally {
+    delete process.env.QUEUE_MAX_AGE_MS;
+  }
+});
+
 test("a manual run is never aged out (a human asked for that round)", async () => {
   const started = [];
   await boot((task) => { started.push(task.id); return Promise.resolve({ ok: true }); });
@@ -339,7 +368,14 @@ test("schedulePeriodMs: interval table, and null when it cannot be established",
   assert.equal(schedulePeriodMs({}), null);
   assert.equal(schedulePeriodMs({ interval: { number: 1, unit: "year" } }), null);
   assert.equal(schedulePeriodMs({ interval: { number: 0, unit: "day" } }), null);
-  assert.equal(schedulePeriodMs({ cron: "0 3 * * *" }), null, "cron tasks have no interval — unknown, not exempt");
+  // Cron form is the dominant one for fleet cadence, and it used to return null,
+  // which silently switched the exemption off for every post. Resolved through
+  // the same parser the scheduler fires with.
+  assert.equal(schedulePeriodMs({ cron: "0 3 * * *" }), 86_400_000, "a daily cron round is a day long");
+  assert.equal(schedulePeriodMs({ cron: "30 8 * * *", tz: "Asia/Shanghai" }), 86_400_000, "cron + tz resolves");
+  assert.equal(schedulePeriodMs({ cron: "0 * * * *" }), 3_600_000, "hourly cron stays droppable");
+  assert.equal(schedulePeriodMs({ cron: "0 0 1 1 *" }), 365 * 86_400_000, "yearly cron is a year long");
+  assert.equal(schedulePeriodMs({ cron: "not a cron" }), null, "unparseable schedule is unknown, not exempt");
 });
 
 test("isAgeExemptQueued: exempt iff the period is long enough to matter", () => {

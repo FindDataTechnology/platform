@@ -834,3 +834,65 @@ test("REAL seam: re-entering ignition for the same turn creates nothing the seco
   const a3 = await igniteFleetEdges({ db: fleetDb, engine, job: { ...bJob, roundSeq: 8 }, out: { ok: true, text: "x" } });
   assert.equal(a3.length, 2, "the next execution is the next turn");
 });
+
+// ── 派发也认自报身份（2026-11-13）──────────────────────────────────────────────
+//
+// 起因：幕僚长的每日回合现在会向评审官/侦查官/书记派活，而 08:30 正是多舰队
+// cadence 齐响的窗口。`/report` 早就有"服务端写入的岗位坐标"这条路，`/dispatch`
+// 没有——并发时它只能靠"唯一在飞回合"，被判 ambiguous 就 409，派活时灵时不灵。
+// 这两条钉住：并发下带自报坐标的派发被采纳；伪造坐标不被采纳。
+
+test("dispatch bridge: 并发下自报身份仍能定位发起岗（与 /report 同一条优先级）", async () => {
+  const f = fixtureFleet(fleetDb, {
+    id: "f_attr",
+    members: [P("m_a"), P("m_b")],
+    orchestration: { mode: "supervisor" },
+  });
+  chatHistory.setSessionManager({ getSessionId: () => "sess-x" });
+
+  // 两个"在飞回合" ⇒ 旧的唯一回合判定必然弃权（ambiguous）。
+  const { server, base } = await startServer({
+    authEnabled: false,
+    cellUserEmail: "owner@test",
+    currentPreset: null,
+    // 两个在飞回合：路由从 ctx.fleetTurnLedger.openTurns() 取，不是从 ctx 上直接读函数。
+    fleetTurnLedger: {
+      openTurns: () => [
+        { fleetId: f.id, memberId: "m_a", turnId: "turn_1" },
+        { fleetId: f.id, memberId: "m_b", turnId: "turn_2" },
+      ],
+    },
+    fleetTargetResolver: (m) => ({ alive: true, label: m.targetId, clusterName: null }),
+  });
+  const call = (body) =>
+    fetch(`${base}/api/fleets/dispatch`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })
+      .then(async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }));
+
+  try {
+    // 不带自报 ⇒ 并发下必须拒（不是猜）
+    const bare = await call({ to: "m_b", brief: "x" });
+    assert.equal(bare.status, 409, "并发 + 无自报 ⇒ 拒收");
+    assert.match(String(bare.body.error || ""), /several rounds are in flight|in flight/i);
+
+    // 带正确自报 ⇒ 采纳，发起岗就是自报的那个
+    const self = await call({
+      to: "m_b",
+      brief: "x",
+      selfIdentity: { fleetId: f.id, memberId: "m_a", persona: P("m_a").targetId },
+    });
+    assert.equal(self.status, 201, "并发 + 正确自报 ⇒ 采纳");
+    const task = engine.getTaskRecord(self.body.taskId);
+    // 落库的是归一后的 roster id（点号/下划线都折成连字符），不是原始 targetId。
+    assert.equal(task.initiatorPreset, "t-m-a", "汇总结论要说发起岗的话");
+
+    // 伪造（memberId 存在但 persona 对不上）⇒ 当作没自报，回到拒收
+    const forged = await call({
+      to: "m_b",
+      brief: "x",
+      selfIdentity: { fleetId: f.id, memberId: "m_a", persona: "somebody-else" },
+    });
+    assert.equal(forged.status, 409, "坐标与岗位不符时不得采纳");
+  } finally {
+    server.close();
+  }
+});

@@ -108,6 +108,23 @@ export const registry = {
     return null;
   },
 
+  // 事件回调（`MsgType=event`）。会话存档的同意变更（`Event=msg_audit_approved`）
+  // 走的是这里，不是消息路径——它没有会话内容、不该建回合。
+  //
+  // 这个方法存在的理由是一个**已经发生过的静默丢弃**：`parseMessage` 把非 text
+  // 一律判成"非文本"回 null，路由只打一行 `non-text payload ignored` 就回 200。
+  // 于是客户撤回同意的通知到了门口却被当成噪音，存档侧继续按旧结论写最多 5 分钟
+  // （consent 缓存 TTL）。修复的关键不是"加个 if"，而是让适配器**交出**事件：
+  // 它只认平台格式、不认业务语义——换一个事件类型（enter_agent、通讯录变更）
+  // 也照样原样交出去，要不要消费由上层决定。
+  async parseEvent(req, cred) {
+    const { message } = decrypt(cred.encodingAesKey, xmlField(req.raw, "Encrypt"));
+    if (xmlField(message, "MsgType") !== "event") return null;
+    const event = xmlField(message, "Event");
+    if (!event) return null;
+    return { event, xml: message, from: xmlField(message, "FromUserName") };
+  },
+
   async parseMessage(req, cred) {
     const { message } = decrypt(cred.encodingAesKey, xmlField(req.raw, "Encrypt"));
     if (xmlField(message, "MsgType") !== "text") return null;

@@ -206,3 +206,76 @@ The four untested core execution modules SHALL each carry a minimum contract tes
 
 - **WHEN** the gateway app assembles in test mode
 - **THEN** an assertion on the OpenAPI paths shape passes (assembly regression guard)
+
+### Requirement: Harness credentials never persist in a harness config directory
+
+An ACP harness's credentials SHALL reach the child process only through the spawn environment the runner injects
+(`AGENT_RUNNER_ACP_ENV`, plus a deployment's own credential override) — the channel the harness actually reads, per
+add-harness-adapter D9. Whenever the spawn names a harness config directory (`CLAUDE_CONFIG_DIR`) that directory SHALL NOT
+retain credential values: at every spawn the runner SHALL inspect its `settings.json` and, when it carries a credential
+value — `env.ANTHROPIC_AUTH_TOKEN`, `env.ANTHROPIC_API_KEY`, or a top-level `apiKey` / `primaryApiKey` — SHALL rewrite the
+file without those keys at mode 0600, logging the dropped key names and never their values. The guard SHALL act only on a
+directory the spawn names explicitly, and MUST NOT fall back to the CLI's default `$HOME/.claude`, because that is also where
+an operator's own harness configuration lives in exactly that shape. A file that cannot be parsed, read, or rewritten SHALL
+be left as found and reported by path; the runner MUST NOT treat an unsanitized file as sanitized, and MUST NOT fail or
+refuse the spawn because of this guard — a dirty config file is a disclosure to log, not a reason to take the agent down.
+Removing credentials SHALL NOT by itself create a settings file: the only reason the runner writes a file it did not find is
+the model declaration required by "The runner declares the harness model in the config directory it names".
+
+#### Scenario: A settings file carrying the live token is stripped at spawn
+
+- **WHEN** the runner spawns an ACP child whose named config directory's `settings.json` carries `env.ANTHROPIC_AUTH_TOKEN`
+- **THEN** the file is rewritten without that key at mode 0600, the log line names the dropped key only (never the value),
+  and the child still authenticates from the injected environment
+
+#### Scenario: A clean config directory is left untouched
+
+- **WHEN** the named config directory has no `settings.json`, or one whose settings carry no credential value
+- **THEN** no credential key is written, and a file that was already clean is not rewritten for the credential pass's sake —
+  a file may still be created or corrected by the model declaration in "The runner declares the harness model in the
+  config directory it names", which is the only reason the runner writes a file it did not find
+
+#### Scenario: Only the directory the spawn names is guarded
+
+- **WHEN** the spawn sets no `CLAUDE_CONFIG_DIR`, and a `$HOME/.claude/settings.json` carries a credential value
+- **THEN** that file is neither rewritten nor re-moded, and nothing is logged — the runner does not reach into a home
+  directory it was not pointed at
+
+#### Scenario: An unparseable file degrades open and is named
+
+- **WHEN** the named config directory's `settings.json` is not valid JSON, or cannot be read or rewritten
+- **THEN** the file is left as found, the runner reports it by path, and the spawn still proceeds
+
+### Requirement: The runner declares the harness model in the config directory it names
+
+When the spawn names a harness config directory (`CLAUDE_CONFIG_DIR`) and the injected spawn environment declares
+`ANTHROPIC_MODEL`, the runner SHALL ensure that directory's `settings.json` declares that model in its top-level `model`
+field — creating the file at mode 0600 when it is absent, and updating only that field when it differs. When the injected
+environment also declares `ANTHROPIC_BASE_URL`, the runner SHALL mirror it into the file's `env.ANTHROPIC_BASE_URL`, because
+the file's own copy is what the harness resolves first. Every other setting in the file SHALL be preserved as found, no
+credential key may be introduced by this write, and the declaration SHALL be idempotent: a file that already declares the
+injected model and base URL is left byte-identical. When the injected environment declares no `ANTHROPIC_MODEL`, the runner
+SHALL invent none and leave an absent file absent. As with the credential pass, the runner MUST NOT fall back to
+`$HOME/.claude`, MUST NOT fail or refuse the spawn because of this declaration, and SHALL report a file it could not write by
+path without echoing its contents.
+
+#### Scenario: A runner with no settings file gets the declared model
+
+- **WHEN** the named config directory has no `settings.json` and the injected env declares `ANTHROPIC_MODEL`
+- **THEN** the runner creates it at mode 0600 declaring that model, and the injected `ANTHROPIC_BASE_URL` when declared
+
+#### Scenario: A settings file declaring another model is corrected, not replaced
+
+- **WHEN** the file declares a different model from the injected `ANTHROPIC_MODEL` and carries other settings
+- **THEN** only `model` and `env.ANTHROPIC_BASE_URL` (when the env declares one) change, every other setting survives, and
+  the log names the correction without dumping the file
+
+#### Scenario: An already-correct declaration is left byte-identical
+
+- **WHEN** the file already declares the injected model and base URL
+- **THEN** nothing is written
+
+#### Scenario: No declared model means no invention
+
+- **WHEN** the named config directory has no `settings.json` and the injected env declares no `ANTHROPIC_MODEL`
+- **THEN** no file is created and the spawn proceeds unchanged

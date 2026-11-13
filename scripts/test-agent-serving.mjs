@@ -1698,6 +1698,45 @@ test("facade descriptor: non-reception roles and facade-less packs carry no mark
   assert.equal("facade" in plain, false);
 });
 
+// ── add-acp-input-request-owner: the descriptor carries the deployer ────────
+
+test("deployer email rides the descriptor, normalized, and is absent when unknown", async () => {
+  const { composeDescriptor } = await import("../lib/agent-serving.js");
+  const manifest = {
+    name: "p", description: "d",
+    skills: [{ name: "corpus", description: "c", content: "# c" }],
+    mcpServers: [],
+    agents: [{ id: "a", name: "A", persona: "x", serving: { protocol: "a2a" } }],
+  };
+  const base = { packId: "pk", version: 1, manifest, agent: manifest.agents[0] };
+
+  // Present ⇒ lowercase, trimmed key on the descriptor.
+  const withOwner = composeDescriptor({ ...base, deployerEmail: "  Owner@Example.COM " });
+  assert.equal(withOwner.deployer_email, "owner@example.com");
+
+  // Absent / blank ⇒ the key is NOT emitted at all. Entries written before this
+  // field existed must keep their exact shape (the runner's deployment-level
+  // fallback is what applies then).
+  for (const value of [undefined, null, "", "   "]) {
+    const d = composeDescriptor({ ...base, deployerEmail: value });
+    assert.equal("deployer_email" in d, false, `deployer_email leaked for ${JSON.stringify(value)}`);
+  }
+});
+
+test("the deploy call site forwards the session identity into every descriptor", async () => {
+  const stub = stubRegistry();
+  await servingLib.deployToRegistry({
+    ...PACK,
+    deployerEmail: "session@example.com",
+    fetchImpl: stub.fetch,
+  });
+  const registered = stub.calls.agents
+    .map((r) => r.body?.metadata?.deployer_email)
+    .filter(Boolean);
+  assert.ok(registered.length > 0, "no descriptor carried a deployer email");
+  assert.ok(registered.every((e) => e === "session@example.com"), `unexpected identities: ${registered}`);
+});
+
 // ── fix-runner-port-collision: occupancy listing degradation is visible ─────
 
 test("occupancy listing failure warns loudly and the deploy still completes", async () => {

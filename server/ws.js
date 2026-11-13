@@ -343,6 +343,14 @@ const syncReadyClient = async (ws) => {
     const question = ctx.questionMessage?.(ws.viewedSession ?? ctx.dshSessionId);
     if (question && !sendIfOpen(ws, question)) return;
   }
+  {
+    // 结构化输入请求的待答卡（add-input-request-cards）：与问询卡同址推送，
+    // 行是唯一真源，重连/换设备由此水合。
+    const sid = ws.viewedSession ?? ctx.dshSessionId;
+    for (const msg of ctx.inputRequestMessages?.(sid) ?? []) {
+      if (!sendIfOpen(ws, msg)) return;
+    }
+  }
 
   const sessionRows = await chatHistory.listSessions(ctx.sessionScopeFor(ws));
   const sessions = ctx.withTurnStatus?.(sessionRows) ?? sessionRows;
@@ -1171,6 +1179,7 @@ ctx.wss.on("connection", (ws, req) => {
           {
             const question = ctx.questionMessage?.(data.id);
             if (question) sendIfOpen(ws, question);
+            for (const msg of ctx.inputRequestMessages?.(data.id) ?? []) sendIfOpen(ws, msg);
           }
           sendMemoryRecall(ctx, ws, ws.identity?.email ?? null, data.id);
           break;
@@ -1205,6 +1214,7 @@ ctx.wss.on("connection", (ws, req) => {
             {
               const question = ctx.questionMessage?.(result.id);
               if (question) sendIfOpen(ws, question);
+              for (const msg of ctx.inputRequestMessages?.(result.id) ?? []) sendIfOpen(ws, msg);
             }
             // The session's tool-gate state (live-runtime-control): always
             // sent — the empty form is the default-closed chip position.
@@ -1246,6 +1256,10 @@ ctx.wss.on("connection", (ws, req) => {
           {
             const question = ctx.questionMessage?.(result.id);
             if (question) ctx.sendToViewers(result.id, question);
+            // 待答的输入请求同址还原（add-input-request-cards）。
+            for (const msg of ctx.inputRequestMessages?.(result.id) ?? []) {
+              ctx.sendToViewers(result.id, msg);
+            }
           }
           // Tool-gate restore (live-runtime-control): the client resets its
           // web-search chip on session_loaded; this push restates the session's

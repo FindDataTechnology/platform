@@ -146,6 +146,111 @@ test("cap 1 queues the second persona task until the slot frees", async () => {
   process.env.TASK_WORKER_MAX = "2";
 });
 
+// ── Idle workers must not lock the cap (fix-pool-idle-worker-blocks-capacity) ─
+//
+// Capacity is counted by WORKER COUNT, but a worker is bound to one persona for
+// its life. Measured in production 2026-11-13: cap 4, busy 2, idle 2, queued 6,
+// nothing dispatched — an idle worker whose persona nobody was waiting for held
+// the slot until its 5-minute idle reap. These two cases pin both halves: the
+// slot is reclaimed, and a worker whose persona still has a queued task is not.
+test("an idle worker whose persona nobody is waiting for yields its slot", async () => {
+  await bootEngine();
+  process.env.TASK_WORKER_MAX = "1";
+  const pool = attachWorkerPool(makeCtx([]), { spawnBridge: (p) => new FakeBridge(p) });
+
+  const a = engine.createManualTask({ prompt: "A", persona: "code", initiator: "s1" });
+  await settle();
+  assert.equal(engine.getTask(a.id).state, "running");
+  FakeBridge.byPersona.get("code").release();
+  await settle();
+  assert.equal(engine.getTask(a.id).state, "done");
+  // The code worker is now idle but STILL COUNTED — the old bug, in one line.
+  assert.equal(pool.poolStats().idle, 1);
+
+  const b = engine.createManualTask({ prompt: "B", persona: "minimal", initiator: "s1" });
+  await settle();
+  await settle();
+  assert.equal(engine.getTask(b.id).state, "running", "an idle code worker must not lock the only slot");
+  assert.equal(FakeBridge.byPersona.get("code").closed, true, "it is retired, not left spinning");
+  const s = pool.poolStats();
+  assert.ok(s.busy + s.idle <= pool.cap, `worker count ${s.busy + s.idle} must stay within cap ${pool.cap}`);
+
+  FakeBridge.byPersona.get("minimal").release();
+  await settle();
+  releaseAll();
+  engine.setSlotDispatcher(null);
+  process.env.TASK_WORKER_MAX = "2";
+});
+
+test("a warm worker whose persona is still queued is reused, never retired", async () => {
+  await bootEngine();
+  process.env.TASK_WORKER_MAX = "2";
+  const pool = attachWorkerPool(makeCtx([]), { spawnBridge: (p) => new FakeBridge(p) });
+
+  const a = engine.createManualTask({ prompt: "A", persona: "code", initiator: "s1" });
+  const b = engine.createManualTask({ prompt: "B", persona: "minimal", initiator: "s1" });
+  await settle();
+  assert.equal(engine.getTask(a.id).state, "running");
+  assert.equal(engine.getTask(b.id).state, "running");
+  FakeBridge.byPersona.get("code").release();
+  FakeBridge.byPersona.get("minimal").release();
+  await settle();
+  assert.equal(pool.poolStats().idle, 2);
+
+  // C wants the warm code worker (same persona) — it must be reused there.
+  const c = engine.createManualTask({ prompt: "C", persona: "code", initiator: "s1" });
+  // D wants a third persona: only the now-unwanted `minimal` worker may be retired.
+  const d = engine.createManualTask({ prompt: "D", persona: "other", initiator: "s1" });
+  await settle();
+  await settle();
+  assert.equal(engine.getTask(c.id).state, "running");
+  assert.equal(engine.getTask(d.id).state, "running", "the spare idle worker must be retired for it");
+  assert.equal(FakeBridge.byPersona.get("code").closed, false, "the code worker was reused, not retired");
+  assert.equal(FakeBridge.byPersona.get("minimal").closed, true);
+  const s = pool.poolStats();
+  assert.ok(s.busy + s.idle <= pool.cap, `worker count ${s.busy + s.idle} must stay within cap ${pool.cap}`);
+
+  FakeBridge.byPersona.get("code").release();
+  FakeBridge.byPersona.get("other").release();
+  await settle();
+  releaseAll();
+  engine.setSlotDispatcher(null);
+});
+
+// ── The pool must not claim non-persona targets (fix-pool-claims-tool-posts) ──
+//
+// Tool posts (target_kind=tool, e.g. a 盯梢岗 = `websearch::web_search`) have a
+// deterministic executor on the primary chain, and the engine writes
+// `preset = persona ?? agent ?? tool` — so a tool task's preset IS the tool
+// name. Judging "can a worker run this?" by preset presence therefore says yes,
+// and the pool used to spawn a worker pinned to `websearch::web_search`:
+// `Unknown agent preset: websearch::web_search`, every single fire (measured in
+// production 8× on job_1794224747477_wjg1rw, latest 2026-11-13T03:05:44Z).
+test("a tool-target task is never claimed by the pool", async () => {
+  await bootEngine();
+  process.env.TASK_WORKER_MAX = "2";
+  const ctx = makeCtx([]);
+  const spawned = [];
+  const pool = attachWorkerPool(ctx, {
+    spawnBridge: (p) => {
+      spawned.push(p.agentPreset);
+      return new FakeBridge(p);
+    },
+  });
+
+  const t = engine.createManualTask({ prompt: '{"query":"policy"}', tool: "websearch::web_search", initiator: "s1" });
+  await settle();
+  await settle();
+  assert.deepEqual(spawned, [], "no worker may be constructed for a tool target");
+  // FakeBridge.byPersona is a static map shared across this file's tests, so
+  // assert only what this test owns: the tool name never became a persona.
+  assert.equal(FakeBridge.byPersona.has("websearch::web_search"), false, "the tool name never becomes a persona");
+  assert.notEqual(engine.getTask(t.id).state, "queued", "it goes to the primary chain, not the pool queue");
+  assert.equal(pool.poolStats().busy + pool.poolStats().idle, 0);
+  releaseAll();
+  engine.setSlotDispatcher(null);
+});
+
 test("idle reap shuts a worker; a later task cold-starts", async () => {
   await bootEngine();
   const ctx = makeCtx([]);
@@ -246,11 +351,14 @@ test("a human wake uses the extra slot at full cap; the slot is singular and hum
     FakeBridge.byPersona.get("code").release(); // a done — a within-cap slot frees
     assert.ok(await waitFor(() => engine.getTask(a.id).state === "done"));
     await settle();
-    // Still queued: the freed within-cap worker is persona code (no affinity
-    // for b/h2), and spawning beyond cap stays blocked for a normal task and
-    // for a second human wake while the extra worker exists.
-    assert.equal(engine.getTask(b.id).state, "queued", "no within-cap room, no spawn for a normal task");
+    // The freed within-cap worker is persona code (no affinity for b), so b can
+    // only start by RETIRING it — that idle worker's persona has no queued task,
+    // and holding the slot until its 5-minute reap is the bug this change fixes
+    // (fix-pool-idle-worker-blocks-capacity). b is a normal task, so it still
+    // never touches the human extra slot, and h2 still gets no second extra.
+    assert.equal(engine.getTask(b.id).state, "running", "an unwanted idle worker yields its slot to a normal task");
     assert.equal(engine.getTask(h2.id).state, "queued", "no second extra while the first lives");
+    assert.equal(FakeBridge.byPersona.get("minimal").closed, false, "the human extra worker stays reserved");
     pool.shutdown();
   } finally {
     releaseAll();
@@ -988,4 +1096,144 @@ test("worker 回合把 reported / contextWindow / inputTokens 交给结算层", 
   engine.setSlotDispatcher(null);
   process.env.TASK_WORKER_MAX = "2";
   void t;
+});
+
+// ── worker 车道的失败归因与补报（2026-11-11）────────────────────────────
+//
+// worker 的失败路径原先只 `settle({ok:false, error})`：没有 detail、不补报数。
+// 而 worker 车道承载多数流量——压力/溢出失败因此在台账里不可见，报数也丢了。
+// 串行链道早就有这一套（attributeFailureAndSalvage）。
+//
+// 补的时候撞到同一个所有权坑：补报数要**向持有该会话的 child** 发 prompt，
+// 发到主 bridge 是 no-op（与早停 cancel 同一个教训）。
+class PressureBridge extends FakeBridge {
+  constructor(params) {
+    super(params);
+    this.wrapUps = 0;
+  }
+  // 真实运行时每个通知都带 params.sessionId（trace 实测），而 worker 的事件泵
+  // 按通知自带的 id 路由；fixture 不带 id 就会落回已清空的 currentSession 而挂住。
+  // 替身必须 mirror 真实形状，否则测的是替身的缺陷。
+  emitFor(sessionId, event) {
+    this.emit({ method: "session.event", params: { sessionId, event } });
+  }
+  async prompt(sessionId, blocks) {
+    this.prompts.push({ sessionId, blocks });
+    const text = (blocks || []).map((b) => b.text || "").join("");
+    if (/只做一件事/.test(text)) {
+      // 这是补报数询问 → 回一次报数调用后收口
+      this.wrapUps += 1;
+      this.emitFor(sessionId, { type: "tool/call", data: { callId: "w1", name: "mcp__fleet__report_status", arguments: "{}" } });
+      this.emitFor(sessionId, { type: "tool/result", data: { message: { source: { callId: "w1" }, content: [{ type: "text", text: "ok" }] } } });
+      this.emit({ method: "session.status", params: { sessionId, status: "idle" } });
+      return;
+    }
+    // 主回合：压 2 次后**以错误收口**（这才是失败路径；只 idle 会被当成正常完成）
+    for (let i = 0; i < 2; i++) this.emitFor(sessionId, { type: "compaction/start", data: {} });
+    this.emitFor(sessionId, { type: "turn/end", data: { reason: { kind: "error", error: { message: "pi-ai detected context overflow for model \"m\"" } } } });
+    this.emit({ method: "session.status", params: { sessionId, status: "idle" } });
+  }
+}
+
+test("worker 压力失败带 contextPressure，且补报数走 worker 自己的 bridge", async () => {
+  await bootEngine();
+  process.env.TASK_WORKER_MAX = "1";
+  const events = [];
+  const ctx = makeCtx(events);
+  const recorded = [];
+  ctx.recordFleetTurnEvent = (_task, outcome) => recorded.push(outcome);
+  // 主 bridge 绝不能被用于补报数（会话不属于它）
+  ctx.dshBridge = { prompt: () => { throw new Error("must not prompt the primary bridge for a worker session"); } };
+  attachWorkerPool(ctx, { spawnBridge: (p) => new PressureBridge(p) });
+
+  const t = engine.createManualTask({
+    prompt: "pressure",
+    persona: "press-1",
+    initiator: "s1",
+    origin: { fleet: { fleetId: "f_press", memberId: "m_press" } },
+  });
+  for (let i = 0; i < 80 && recorded.length === 0; i++) await settle();
+
+  const bridge = FakeBridge.byPersona.get("press-1");
+  assert.ok(bridge, "worker must have been spawned");
+  assert.equal(recorded.length, 1, "the failed round must still reach the ledger");
+
+  const out = recorded[0];
+  assert.equal(out.ok, false);
+  assert.equal(out.detail?.contextPressure, true, "worker 压力失败必须被归因（原来 detail 为空）");
+  assert.equal(out.detail?.compactions, 2, "压缩次数要落库");
+  assert.equal(bridge.wrapUps, 1, "空产出 + 未报数 → 向该 worker 的 child 追问一次报数");
+  releaseAll();
+  engine.setSlotDispatcher(null);
+  process.env.TASK_WORKER_MAX = "2";
+  void t;
+});
+
+// ── 早停的拒绝分支也要自证原因（2026-11-11）──────────────────────────────
+//
+// worker 的**拒绝**路径（早停 / 超时）与 `result.error` 路径不是同一条：
+// reject 走过的 catch 曾把 `e.detail` 整个丢掉，于是 24h 内 105 次上下文压力
+// 失败里有 77 行 detail 是 NULL（最忙的车道把墙记成了匿名失败）。上面那条
+// 「worker 压力失败带 contextPressure」测的是 `result.error` 分支，覆盖不到这里。
+//
+// 同时钉住另一半：窗口只在运行时报过时才写——absent 仍然 absent。
+class StormWindowBridge extends FakeBridge {
+  constructor(params) {
+    super(params);
+    this.cancelCalls = [];
+  }
+  cancelSession(sessionId) {
+    this.cancelCalls.push(sessionId);
+    return Promise.resolve({ cancelled: true });
+  }
+  emitFor(sessionId, event) {
+    this.emit({ method: "session.event", params: { sessionId, event } });
+  }
+  async prompt(sessionId, blocks) {
+    this.prompts.push({ sessionId, blocks });
+    // 先报窗口，再喷压缩——与被修的时序一致（窗口在早停之前就知道）
+    this.emitFor(sessionId, { type: "request/context", data: { contextWindow: 128000 } });
+    for (let i = 0; i < 4; i++) {
+      this.emitFor(sessionId, { type: "compaction/start", data: {} });
+      await new Promise((r) => setTimeout(r, 5));
+    }
+    await new Promise((resolve) => { this.release = resolve; });
+    this.emit({ method: "session.status", params: { sessionId, status: "idle" } });
+  }
+}
+
+test("worker 早停的拒绝结算带 detail：压力标记、压缩数、运行时窗口", async () => {
+  await bootEngine();
+  process.env.TASK_WORKER_MAX = "1";
+  const events = [];
+  const ctx = makeCtx(events);
+  ctx.earlyStopAfterMs = 0;
+  const recorded = [];
+  ctx.recordFleetTurnEvent = (_task, out) => recorded.push(out);
+  ctx.dshBridge = { cancelSession: () => { throw new Error("must not cancel the primary bridge"); } };
+  attachWorkerPool(ctx, { spawnBridge: (p) => new StormWindowBridge(p) });
+
+  engine.createManualTask({
+    prompt: "storm-w",
+    persona: "storm-w1",
+    initiator: "s1",
+    origin: { fleet: { fleetId: "f_stormw", memberId: "m_stormw" } },
+  });
+
+  for (let i = 0; i < 60 && !(FakeBridge.byPersona.get("storm-w1")?.cancelCalls.length); i++) await settle();
+  const bridge = FakeBridge.byPersona.get("storm-w1");
+  assert.ok(bridge, "worker must have been spawned");
+  bridge.release?.();
+  for (let i = 0; i < 100 && recorded.length === 0; i++) await settle();
+
+  assert.equal(recorded.length, 1, "早停的回合仍必须进台账");
+  const out = recorded[0];
+  assert.equal(out.ok, false);
+  assert.equal(out.detail?.contextPressure, true, "早停就是压力失败：标记必须落库（曾经整块 detail 被丢掉）");
+  assert.equal(out.detail?.compactions, 4, "压缩次数要落库");
+  assert.equal(out.detail?.contextWindow, 128000,
+    "运行时报过的窗口必须随失败落库，否则归因算不出比例（cause 永远为空）");
+  releaseAll();
+  engine.setSlotDispatcher(null);
+  process.env.TASK_WORKER_MAX = "2";
 });

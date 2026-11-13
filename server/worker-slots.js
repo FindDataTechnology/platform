@@ -18,7 +18,7 @@
 import { DshBridge } from "../dsh-bridge.js";
 import * as engine from "../task-engine.js";
 import * as chatHistory from "../chat-history.js";
-import { collectTurn, resolveTurnBudgetMs, roundChildSessionId, fleetTagOf, parkPersonaForTurn } from "./cron-runner.js";
+import { collectTurn, resolveTurnBudgetMs, roundChildSessionId, fleetTagOf, parkPersonaForTurn, attributeFailureAndSalvage } from "./cron-runner.js";
 
 const REAP_SCAN_MS = 60_000;
 const IDLE_REAP_MS = 5 * 60_000;
@@ -82,13 +82,23 @@ export function attachWorkerPool(ctx, { spawnBridge = null, idleReapMs = IDLE_RE
   // this worker's in-flight collector (interrupted, not failed).
   function pumpFor(worker) {
     return (notif) => {
-      const { method } = notif || {};
+      const { method, params } = notif || {};
+      // Route by the notification's OWN session id (2026-11-11). Keying only on
+      // `worker.currentSession` silently dropped every notification that arrives
+      // while no turn is "current" — the wrap-up salvage lane is exactly that:
+      // it runs AFTER the main turn's finally cleared currentSession, so its
+      // idle event never reached its collector and the salvage hung until its
+      // 240s timeout (measured: the failure reached the ledger only after the
+      // full wait). Throwing away the id the runtime already put on the
+      // notification was the bug; currentSession stays as the fallback for
+      // notifications that carry none.
+      const sid = params?.sessionId ?? worker.currentSession;
       if (method === "bridge.exit" || method === "_bridge_crash") {
-        const abort = worker.activeTurns.get(worker.currentSession);
+        const abort = worker.activeTurns.get(sid);
         if (abort) abort("the worker runtime restarted mid-turn");
         return;
       }
-      const collector = worker.collectors.get(worker.currentSession);
+      const collector = worker.collectors.get(sid);
       collector?.(notif);
     };
   }
@@ -284,11 +294,65 @@ export function attachWorkerPool(ctx, { spawnBridge = null, idleReapMs = IDLE_RE
         abortTurn?.(`worker prompt failed: ${e?.message || String(e)}`);
         collected.catch(() => {}); // 结算后的拒绝由此吞掉；调用方拿的是下面的返回值
       } catch { /* 结算失败不能掩盖原始错误 */ }
-      return settle({ ok: false, error: e?.message || String(e), interrupted: e?.interrupted === true });
+      // The rejection carries the failure's own facts (`timeoutError` builds
+      // detail with contextPressure / compactions / contextWindow). Dropping them
+      // here is why most context-pressure failures were recorded anonymously:
+      // measured 2026-11-11 over 24h, 77 of 105 such failures landed with
+      // `detail = NULL`, and the worker lane carries most of the traffic. Absent
+      // stays absent — forward whatever the error has, invent nothing.
+      const failureDetail = e?.detail ?? null;
+      return settle({
+        ok: false,
+        error: e?.message || String(e),
+        interrupted: e?.interrupted === true,
+        ...(failureDetail ? { detail: failureDetail } : {}),
+      });
     } finally {
       worker.currentSession = null;
     }
-    if (result.error) return settle({ ok: false, error: result.error });
+    if (result.error) {
+      // Parity with the serial chain (2026-11-11): a pressure/overflow failure on
+      // the worker lane used to settle with NO detail and no salvage attempt —
+      // the serial lane attributes the wall (contextPressure + compactions +
+      // tokens) and asks the same session once for its report. The worker lane
+      // carries most of the traffic, so skipping both meant its failures were
+      // invisible in the ledger and its reports were lost.
+      //
+      // Both injections are the OWNERSHIP rule again: the session lives in this
+      // worker's child, so the wrap-up prompt must go through its own bridge and
+      // its own collector map (a prompt on the primary bridge reaches a child
+      // that does not own the session).
+      let detail = null;
+      try {
+        detail = await attributeFailureAndSalvage({
+          ...ctx,
+          dshBridge: ctx.dshBridge,
+        }, {
+          error: result.error,
+          compactions: result.compactions ?? 0,
+          reported: result.reported === true,
+          text: result.text ?? "",
+          childSessionId,
+          mirrorSessionId: sessionId,
+          isFleet: Boolean(fleetTagOf(task)),
+          prompt: (sid, blocks) => worker.bridge.prompt(sid, blocks),
+          collectors: worker.collectors,
+          contextWindow: Number.isFinite(result.contextWindow) ? result.contextWindow : null,
+          lastInputTokens: Number.isFinite(result.lastInputTokens) ? result.lastInputTokens : 0,
+          usageSteps: Number.isFinite(result.usageSteps) ? result.usageSteps : 0,
+          // Where the round started, so the worker lane can answer the same
+          // question the serial chain can: baseline too big, or one tool reply?
+          firstInputTokens: Number.isFinite(result.firstInputTokens) ? result.firstInputTokens : null,
+          steps: Array.isArray(result.toolBlocks) ? result.toolBlocks.length : null,
+        });
+      } catch { /* attribution never changes the round's outcome */ }
+      return settle({
+        ok: false,
+        error: result.error,
+        ...(detail ? { detail } : {}),
+        reported: result.reported === true,
+      });
+    }
     // Carry the WHOLE collected result, not just usage (ledger E28/E27): the
     // settlement seam judges "did this round actually produce anything" from
     // usage + text + tool calls, and E21's first cut dropped text/toolBlocks —
@@ -449,6 +513,68 @@ export function attachWorkerPool(ctx, { spawnBridge = null, idleReapMs = IDLE_RE
     return String(raw ?? "").trim() === "1" || String(raw ?? "").toLowerCase() === "true";
   }
 
+  // ── Retiring an idle worker whose persona nobody is waiting for ────────────
+  //
+  // Capacity used to be counted by WORKER COUNT (`workers.size + spawning <
+  // cap`), but a worker is bound to ONE persona for its life. Those two facts
+  // together lock the pool: a worker whose round finished stays idle AND stays
+  // counted, so the next due task from a DIFFERENT persona can neither reuse it
+  // (persona mismatch) nor spawn (size == cap) — it waits for the 5-minute idle
+  // reap to give the slot back.
+  //
+  // Measured on the owner cell 2026-11-13T02:41Z with cap 4:
+  //
+  //   {"executions":{"running":3,"queued":6},"workers":{"cap":4,"busy":2,"idle":2}}
+  //
+  // Two slots spinning, six rounds queued, nothing dispatched. Effective
+  // concurrency for a mixed-persona queue was ~cap/2, and every persona switch
+  // cost up to 5 minutes of dead time — which is why the 08:20 daily round was
+  // still queued at 10:41 and why the `*/20` monitors kept getting age-dropped.
+  //
+  // So "at cap" now means "cap workers that are busy OR bound to a persona some
+  // queued task still targets". An idle, unneeded worker is a slot in name only
+  // and is retired on demand — same shutdown path as the reap, same slot.
+  function retireCandidate(targetPersona) {
+    const wanted = new Set();
+    for (const id of waiting) {
+      const t = engine.getRecord?.(id);
+      if (t?.preset) wanted.add(t.preset);
+    }
+    // Two exclusions, both load-bearing:
+    //   • a worker whose persona some queued task still targets is that task's
+    //     warm start — retiring it turns one wait into two cold starts;
+    //   • a human-priority worker IS the reserved extra slot (add-turn-mandate-
+    //     lane): normal tasks never take it, so neither may they retire it.
+    //     Caught by the existing "human wake uses the extra slot" case, which
+    //     went green→red the first time this filter was missing.
+    const spare = [...workers].filter(
+      (w) => !w.busy && !w.humanPriority && w.persona !== targetPersona && !wanted.has(w.persona),
+    );
+    if (!spare.length) return null;
+    // Longest-unused first: the hottest warm worker is the one most likely to
+    // serve the next round of its own persona.
+    return spare.reduce((a, b) => (a.lastUsedAt <= b.lastUsedAt ? a : b));
+  }
+
+  function hasRetirableIdle(targetPersona) {
+    return retireCandidate(targetPersona) !== null;
+  }
+
+  function retireIdleWorker(targetPersona) {
+    const w = retireCandidate(targetPersona);
+    if (!w) return false;
+    // Delete SYNCHRONOUSLY: the slot has to be back in `workers.size` before
+    // the caller recomputes `beyondCap`, or the spawn is refused for the very
+    // capacity this just freed. stopBridge is the reap's own shutdown ladder.
+    workers.delete(w);
+    if (w.humanPriority) humanExtraOut = false;
+    const idleSec = Math.round((Date.now() - w.lastUsedAt) / 1000);
+    stopBridge(w.bridge);
+    emitPoolState();
+    console.log(`[worker-pool] retired idle ${w.id} (persona ${w.persona}, unused ${idleSec}s) so ${targetPersona} can take the slot`);
+    return true;
+  }
+
   function scheduleNext() {
     const fleetCap = (() => {
       const n = Number(process.env.FLEET_MAX_INFLIGHT);
@@ -467,9 +593,13 @@ export function attachWorkerPool(ctx, { spawnBridge = null, idleReapMs = IDLE_RE
         // (the extra slot); normal tasks never do — it stays reserved.
         if ([...workers].some((w) => !w.busy && w.persona === persona && (!w.humanPriority || human))) return true;
         // Spawn room: within cap as before; the ONE extra slot beyond cap
-        // exists only for a human wake while none is outstanding.
+        // exists only for a human wake while none is outstanding. Beyond cap,
+        // a slot is still obtainable by retiring an idle worker whose persona
+        // no queued task targets (see retireCandidate) — that worker would
+        // otherwise hold the slot until its 5-minute reap.
         if (workers.size + spawning < cap) return true;
-        return human && !humanExtraOut;
+        if (human && !humanExtraOut) return true;
+        return hasRetirableIdle(persona);
       };
       // 人工点火优先：先在可派的任务里挑 human 的，挑不到再按原顺序。
       let idx = -1;
@@ -505,8 +635,20 @@ export function attachWorkerPool(ctx, { spawnBridge = null, idleReapMs = IDLE_RE
       // claim books SYNCHRONOUSLY here (the spawn→run gap is async — the
       // same class of race pendingFleets bridges); the .then only pins the
       // worker's flag once it exists.
-      const beyondCap = workers.size + spawning >= cap;
-      if (beyondCap) humanExtraOut = true;
+      let beyondCap = workers.size + spawning >= cap;
+      if (beyondCap) {
+        if (human && !humanExtraOut) {
+          humanExtraOut = true; // the extra slot, as before — never at a worker's expense
+        } else {
+          // No human entitlement: reclaim a slot from an idle worker nobody
+          // is waiting for, then recompute. `placeable` already proved one
+          // exists, so failing here means the pool changed underneath us
+          // (a reap or a claim landed) — leave the task queued and let the
+          // next scheduleNext see the fresh state.
+          if (!retireIdleWorker(persona)) return;
+          beyondCap = workers.size + spawning >= cap;
+        }
+      }
       spawning++;
       const spawnFleetId = task.sourceTag?.fleetId ?? null;
       if (spawnFleetId) pendingFleets.set(spawnFleetId, (pendingFleets.get(spawnFleetId) ?? 0) + 1);
@@ -565,6 +707,15 @@ export function attachWorkerPool(ctx, { spawnBridge = null, idleReapMs = IDLE_RE
     // id, not a persona — a worker pinned to it would boot a broken child.
     // The primary chain's cluster executor fans members out itself.
     if (task.targetType === "cluster") return no("targetType=cluster");
+    // Tool targets (add-tool-posts): `preset` carries the "server::tool" ref,
+    // not a persona — the engine writes `preset = persona ?? agent ?? tool`, so
+    // "does it have a preset?" is TRUE for every tool post and can never be the
+    // gate. A worker pinned to it boots a child that answers
+    // `Unknown agent preset: <tool>` on every fire (measured 8× on a 盯梢岗
+    // cadence, latest 2026-11-13T03:05:44Z), while the primary chain's
+    // `toolExecutor` — one deterministic MCP call, no runtime, no LLM — never
+    // got the task. One line per targetType, judged on targetType itself.
+    if (task.targetType === "tool") return no("targetType=tool");
     // Null-ref (legacy live-preset) tasks have no persona to pin a worker to.
     if (!task.preset) return no("no-preset");
     if (!claimed.has(task.id)) {

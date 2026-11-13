@@ -36,3 +36,22 @@ resources/**/*.tar.gz
 resources/**/*.tgz
 resources/**/*.tar.xz
 facet/web/dist
+
+# 会话存档的 SDK 二进制与 RSA 私钥**绝不进镜像**。
+#
+# Dockerfile 用的是 `COPY . .`（不是白名单），所以"没人会把 SDK 放进仓库"这句话
+# 不能当作保障：官方 SDK 由客户自己下载，私钥由客户自己挂载，只要有人顺手把它们
+# 放在仓库目录里，一次构建就会把两样东西一起打进镜像层。
+# 这两类东西一旦进了镜像层，删文件也没用——层还在。
+#
+# 对应任务：add-archive-sidecar-delivery 1.1 / add-wecom-archive-ingest 7.1。
+# 判据是构建产物里 find 不到 libWeWorkFinanceSdk*，而不是"我们没主动 COPY"。
+**/libWeWorkFinanceSdk*
+*.pem
+**/*.pem
+*.key
+**/*.key
+# 私钥常见的其他落点
+**/private_key*
+**/apiclient_key*
+

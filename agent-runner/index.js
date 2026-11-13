@@ -4,7 +4,7 @@
 // Multi-tenant runner for deployed Agent Services (ADR-0004). Boots inert —
 // polls the registry, hosts nothing — then serves A2A for whatever deploy
 // actions registered. One dsh child per role, private DSH_HOME, runner-level
-// model. Runbook: DEPLOY.md § agent-runner.
+// model. Runbook: see the agent-runner design (docs/adr/0004).
 
 import http from "node:http";
 import path from "node:path";
@@ -109,11 +109,18 @@ const registryClient = createRegistryClient({
     runnerId: config.fleetRunnerId,
     defaultRunnerId: config.defaultRunnerId,
   });
-// 披露闸客户端（design D8）：两个 env 都齐才注入。缺一个就保持 null ——
-// 闸门会以 no_verdict_client 失败关闭，与打补丁前完全一致。
+// 披露闸客户端（design D8 / fix-disclosure-gate-reachability D2 修订）：URL 与 TOKEN
+// 两个 env 齐才注入，缺一个就保持 null —— 闸门以 no_verdict_client 失败关闭。
+//
+// owner（问哪个 cell）**不再来自 env**：生产数据判掉了那个设计（唯一部署的属主
+// 没有 cell，在跑的真人 cell 又不属于它，填谁都错）。改为由 local feed 自报、
+// 调用时传入（`registryClient.feedOwner`）——owner 是数据，不是配置。
+// 传不进来（还没拉过名单 / feed 没报）→ 不带这个头 → 网关回 400，失败关闭，
+// 绝不替我们猜一个 cell。
 const mandateVerdictClient =
   config.mandateVerdictUrl && config.mandateVerdictToken
-    ? async ({ domain, text, declaredSources, channelRevocable }) => {
+    ? async ({ domain, text, declaredSources, channelRevocable, owner }) => {
+        const target = String(owner ?? config.mandateVerdictOwner ?? "").trim().toLowerCase();
         // 超时即失败关闭：宁可不发，也不要在网上挂着等。
         const ctl = new AbortController();
         const timer = setTimeout(() => ctl.abort(), 5000);
@@ -123,6 +130,8 @@ const mandateVerdictClient =
             headers: {
               "content-type": "application/json",
               authorization: `Bearer ${config.mandateVerdictToken}`,
+              // 网关只在这条 bearer 通过后才读这个头；没有就不发（400 好过猜错）。
+              ...(target ? { "x-mandate-owner": target } : {}),
             },
             body: JSON.stringify({ domain, text, declaredSources, channelRevocable }),
             signal: ctl.signal,

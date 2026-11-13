@@ -42,7 +42,7 @@ PACK_CREATOR_GROUPS: "creators"        # 可选；默认 creators，可加组织
 PACK_BASELINE_MCP: "websearch"         # 可选；聚焦模式仍加载的基线 MCP
 ```
 
-`FACET_INTERNAL_TOKEN` 在 platform-secrets（代理转发身份的共享 secret，两进程同名同值）。改 ConfigMap 后 rollout 生效；ArgoCD ~3min 轮询滞后，先 annotate refresh 再等 rollout（DEPLOY.md §2）。**本地/dev 部署不加 `PACK_MARKETPLACE`**——入口整体隐藏。
+`FACET_INTERNAL_TOKEN` 在 platform-secrets（代理转发身份的共享 secret，两进程同名同值）。改 ConfigMap 后 rollout 生效；ArgoCD ~3min 轮询滞后，先 annotate refresh 再等 rollout（运维手册）。**本地/dev 部署不加 `PACK_MARKETPLACE`**——入口整体隐藏。
 
 ### 2.3 Logto 组织 `creators`
 

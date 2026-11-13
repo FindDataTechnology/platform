@@ -277,6 +277,9 @@ function RetrievalSection() {
       .catch(() => setLoadError(true));
   }, []);
 
+  // Mount-time read only: `load` is redefined per render, so depending on it
+  // would refetch on every render. (The suppression above it went unused after
+  // the effect's dependency list was accepted, and an unused suppression is an error.)
   useEffect(() => {
     load();
   }, [load]);

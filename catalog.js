@@ -219,7 +219,7 @@ function packAgentDoc() {
         type: "agent-remote",
         mode: "chat",
         name: a.name,
-        description: a.description || `来自功能集「${installed.name}」的角色`,
+        description: a.description || `来自智能体「${installed.name}」的角色`,
         persona: a.persona,
         // Memory constitution (add-agent-self-iteration): passthrough for the
         // persona composition tail.

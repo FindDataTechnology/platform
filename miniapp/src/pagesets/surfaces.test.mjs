@@ -133,6 +133,8 @@ test("se-api: 端点路径与 se-sales 契约逐条对应", async () => {
   await api.handleAlert("A1", { decision: "accept" });
   await api.statements({});
   await api.pushStatement("ST1", {});
+  await api.invoiceAuditList({ status: "pending" });
+  await api.invoiceDecide("IR-1", { decision: "rejected", note: "抬头不符" });
   const paths = calls.map((c) => `${c.method} ${c.path}`);
   assert.deepEqual(paths, [
     "GET /se/workspace",
@@ -150,6 +152,8 @@ test("se-api: 端点路径与 se-sales 契约逐条对应", async () => {
     "POST /se/alerts/A1/handle",
     "GET /se/statements",
     "POST /se/statements/ST1/push",
+    "GET /se/invoice-requests",
+    "POST /se/invoice-requests/IR-1/decide",
   ]);
   assert.match(calls[1].query, /keyword=acme/, "查询参数编码进 query");
 });
@@ -438,6 +442,9 @@ test("501 三端页面消费 notImplemented 而不是把 501 当加载失败", (
     "src/pages/sp/invoice-upload/index.tsx",
     "src/pages/sp/payment-view/index.tsx",
     "src/pages/cp/reconciliation/index.tsx",
+    // 开票审核：内核不可达时 API 如实 501，页面必须演成「能力未提供」而不是空队列
+    // （空队列＝「没有待审」是假读数，spec erp-invoice-audit-queue 明令禁止）。
+    "src/pages/se/invoice-audit/index.tsx",
   ]) {
     const src = readFileSync(p, "utf8");
     assert.match(src, /notImplemented/, `${p} 须读 notImplemented`);

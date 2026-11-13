@@ -146,3 +146,15 @@ export function acpSecretsRefusal(secretRefs, harnessName) {
     { code: "HARNESS_SECRETS_UNSUPPORTED", harness: harnessName, secrets: names },
   );
 }
+
+// The owner of owner-scoped tools on a runner-carried harness
+// (add-acp-input-request-owner). There is no per-user profile here to inject
+// one, so the precedence is: the deployment descriptor's deployer identity
+// (written from the deploying session's authorization context at deploy time)
+// → the runner deployment's standing INPUT_REQUEST_OWNER_EMAIL. Empty means
+// "no owner": the caller must then NOT mount the tool, because a card with no
+// owner is a row nobody can answer.
+export function inputRequestOwnerOf(descriptor, config) {
+  const raw = descriptor?.deployer_email || config?.inputRequestMcpOwner || "";
+  return String(raw).trim().toLowerCase();
+}

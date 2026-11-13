@@ -55,19 +55,18 @@ function baseCtx() {
       llmLaneForModel: () => null,
       recordFleetModelNotices: () => {},
       resolveFleetIdentity: null,
-      // Both jobs below carry `sourceTag.fleetId`, so the round goes through
-      // normalizeModelForJob — and a fleet-attributed job with NO plan is now
-      // refused before it runs ("post model resolution unavailable …", ledger
-      // E28). Without this the healthy case settles ok:false for a reason that
-      // has nothing to do with what this file pins (empty-turn billing), and
-      // the error case matches the refusal prose instead of the upstream
-      // UNKNOWN_MODEL that actually describes the failure.
-      resolveFleetModel: async (preset) => ({
-        memberId: "m_1",
-        preset,
+      // fix(fleet): a job carrying fleet attribution with NO model plan is a
+      // failed round (113233eb) — so a fixture that exercises a fleet-tagged
+      // job must supply the plan, or every case dies in normalization before
+      // the behaviour under test is reached. Minimal single-hop plan.
+      resolveFleetModel: async () => ({
+        memberId: "m1",
         candidates: [{ model: DECLARED }],
-        notices: [],
         explicitChain: false,
+        notices: [],
+        budgetBlocked: [],
+        effort: null,
+        contextBudget: null,
       }),
       switchModelTo: async () => ({ ok: true }),
       dshBridge: {
@@ -132,7 +131,12 @@ test("runPersonaTurn: silent empty return settles ok:false — never billed as s
   };
   const out = await runPersonaTurn(ctx, job, 5_000, new Map(), { startedAt: Date.now() });
   assert.equal(out.ok, false, "the empty failure must NOT settle as success");
-  assert.match(out.error, /UNKNOWN_MODEL/);
+  // The failure must come from the turn/end frame (the billed-empty shape), NOT
+  // from the model-plan gate — otherwise this case would pass for the wrong
+  // reason and stop testing what its name promises.
+  assert.match(out.error, /UNKNOWN_MODEL/, "the turn/end error is the reason it failed");
+  assert.doesNotMatch(out.error, /model resolution unavailable/, "not the model-plan gate");
+  assert.ok(out.usage, "the spent tokens are still reported");
 });
 
 test("runPersonaTurn: healthy turn (no error frames) still settles ok:true", async () => {

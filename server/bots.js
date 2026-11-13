@@ -18,6 +18,21 @@ import { isGenericBotType, packBotMeta, PACK_BOT_CREDENTIAL_KEY } from "../lib/g
 import { observeTurnTap } from "./observe-tap.js";
 import { gateOutboundMessage, noteBypassAttempt } from "../lib/outbound-message.js";
 
+// Outbound accountability ledger writer — NOT IMPLEMENTED YET, and this null is
+// deliberate. The call sites below said `recordOutboundLedger?.(…)` with no such
+// binding anywhere: `?.` guards a nullish VALUE, never an undeclared NAME, so
+// every bot send that carried `gate.ledger` threw `ReferenceError:
+// recordOutboundLedger is not defined` — swallowed by their try/catch, leaving
+// the accountability trail (spec: principal-disclosure-accountability, "每次对外
+// 发言 SHALL 记录") silently empty and, on one site, a misleading warning per
+// send. Declaring the seam makes the optional call what it always meant to be.
+//
+// Wiring it for real needs a decision the disclosure owner has to make: the
+// audit table (`action_audit`) requires line/action_id/args_digest/risk/target/
+// impact_text/result_summary as NOT NULL, and a bot utterance has none of those.
+// Tracked in openspec/changes/bot-outbound-accountability-ledger.
+const recordOutboundLedger = null;
+
 // Trust-boundary guards (design D3). These bound an untrusted external caller's
 // reach into an agent, so they live here — before prompt() — not in the adapters.
 const MAX_MESSAGE_CHARS = 4000;
@@ -74,6 +89,11 @@ const state = {
   // collectTurn closure that submits to the runtime and resumes the paused
   // turn timeout. Present only while a question waits in that chat.
   pendingAsks: new Map(),
+  // sessionId → 该 bot 聊天里待答的结构化输入请求（add-input-request-cards）：
+  // {bot, adapter, chatKey, request, values, cursor, attempts}。与 pendingAsks
+  // 同一职责，只是来源不同——问询来自 dsh 的 userQuestions，输入请求来自
+  // MCP 工具写下的行，所以两边各有各的入口、共用一个拦截位。
+  pendingInputs: new Map(),
 };
 
 const allowTools = () => process.env.BOTS_ALLOW_TOOLS === "1";
@@ -387,6 +407,180 @@ async function deliverAskAttempt(entry, text) {
   );
 }
 
+// ── 结构化输入请求的 bot 车道（add-input-request-cards 4.5） ────────────────
+//
+// 卡片在 bot 聊天里没有可渲染的 UI，所以摊成编号问答：一次问一个必填字段，
+// 每条入站消息填当前字段，填满就落到那一行上。它与 ask 通道共用同一条纪律：
+// 不识别就重问、最多三次、支持「取消」、到期自动放手。
+//
+// 归属：行上的 session_id 是 `bot-<botId>-<sha1(chatKey)[0..16]>`，所以反查
+// 靠 bot_chats 列表逐条哈希比对（这张表很小）。找不到就不用投递——一个没有
+// 聊天可投的行仍然可以在 web 上被答。
+
+function botChatForSession(sessionId) {
+  const text = String(sessionId ?? "");
+  if (!text.startsWith("bot-")) return null;
+  for (const row of state.ctx?.db?.listBotChats?.() ?? []) {
+    if (sessionIdFor(row.bot_id, row.chat_key) === text) return { botId: row.bot_id, chatKey: row.chat_key };
+  }
+  return null;
+}
+
+function renderInputFieldPrompt(card, cursor) {
+  const f = card.fields[cursor];
+  const total = card.fields.length;
+  const lines = [];
+  if (cursor === 0 && card.title) lines.push(`【${card.title}】`);
+  if (cursor === 0 && card.detail) lines.push(String(card.detail));
+  lines.push(`${total > 1 ? `（${cursor + 1}/${total}）` : ""}${f.label}${f.required ? "（必填）" : ""}`);
+  if (f.kind === "enum") {
+    (f.options ?? []).forEach((o, i) => {
+      lines.push(`${i + 1}. ${o.label}`);
+    });
+    lines.push("回复数字或选项原文；回复“取消”结束");
+  } else if (f.kind === "boolean") {
+    lines.push("回复「是」或「否」；回复“取消”结束");
+  } else if (f.kind === "number") {
+    lines.push(`请回复数字${f.unit ? `（单位：${f.unit}）` : ""}；回复“取消”结束`);
+  } else if (f.kind === "date") {
+    lines.push("请回复日期（YYYY-MM-DD）；回复“取消”结束");
+  } else if (f.kind === "file") {
+    lines.push("请直接发送文件或资源链接；回复“取消”结束");
+  } else {
+    lines.push("请直接回复文字；回复“取消”结束");
+  }
+  return lines.join("\n");
+}
+
+/** Parse one inbound reply for the field at `cursor`. */
+export function parseInputField(text, field) {
+  const trimmed = String(text ?? "").trim();
+  if (ASK_CANCEL_WORDS.has(trimmed.toLowerCase())) return { kind: "cancel" };
+  if (field.kind === "enum") {
+    const options = field.options ?? [];
+    const stripped = trimmed.replace(/^\d+\s*[.、)．]\s*/, "");
+    if (/^\d+$/.test(trimmed)) {
+      const idx = Number(trimmed) - 1;
+      if (idx >= 0 && idx < options.length) return { kind: "value", value: options[idx].value };
+    }
+    const byLabel = options.find((o) => o.label === stripped || o.value === stripped);
+    if (byLabel) return { kind: "value", value: byLabel.value };
+    return { kind: "reprompt" };
+  }
+  if (field.kind === "boolean") {
+    if (/^(是|对|好|确认|yes|y|true|1)$/i.test(trimmed)) return { kind: "value", value: true };
+    if (/^(否|不|取消确认|no|n|false|0)$/i.test(trimmed)) return { kind: "value", value: false };
+    return { kind: "reprompt" };
+  }
+  if (field.kind === "number") {
+    const n = Number(trimmed.replace(/[,，\s]/g, ""));
+    return Number.isFinite(n) ? { kind: "value", value: n } : { kind: "reprompt" };
+  }
+  if (!trimmed) return { kind: "reprompt" };
+  return { kind: "value", value: trimmed };
+}
+
+/**
+ * Deliver a freshly created request into its bot chat (registered on ctx by
+ * registerBotRoutes so the route has no hard import of this module).
+ */
+export async function deliverInputRequestToBotChat(sessionId, request) {
+  const found = botChatForSession(sessionId);
+  if (!found) return false;
+  const bot = state.ctx?.db?.getBot?.(found.botId);
+  if (!bot || !bot.enabled) return false;
+  const adapter = adapterForBot(bot);
+  const entry = {
+    bot,
+    adapter,
+    chatKey: found.chatKey,
+    request,
+    values: {},
+    cursor: firstOpenField(request.card, 0),
+    attempts: 0,
+    timer: null,
+  };
+  state.pendingInputs.set(sessionId, entry);
+  entry.timer = setTimeout(() => {
+    // 到期不私自取消：行的无人应答策略说了算（TTL 扫尾会收）。这里只放手，
+    // 别让一条过期的拦截把后面所有入站消息都吃掉。
+    state.pendingInputs.delete(sessionId);
+  }, ASK_WAIT_MS);
+  const card = request.card;
+  if (!card || !card.fields?.length) return false;
+  await adapter
+    .sendText(bot.credentials, found.chatKey, renderInputFieldPrompt(card, entry.cursor))
+    .catch((e) => console.warn(`[bots] "${bot.name}" send failed: ${e.message}`));
+  return true;
+}
+
+function firstOpenField(card, from) {
+  for (let i = from; i < card.fields.length; i++) {
+    const f = card.fields[i];
+    if (f.required) return i;
+  }
+  return card.fields.length - 1;
+}
+
+/** One intercepted reply on the bot's input-request lane. */
+async function deliverInputAttempt(entry, text) {
+  const { bot, adapter, chatKey, request } = entry;
+  const reply = (body) =>
+    adapter.sendText(bot.credentials, chatKey, body).catch((e) => {
+      console.warn(`[bots] "${bot.name}" send failed: ${e.message}`);
+    });
+  const card = request.card;
+  const field = card.fields[entry.cursor];
+  const outcome = parseInputField(text, field);
+  if (outcome.kind === "cancel") {
+    clearTimeout(entry.timer);
+    state.pendingInputs.delete(sessionIdOf(entry));
+    try {
+      await import("./input-requests.js").then((m) => m.cancelInputRequest(state.ctx.db.getDb?.() ?? state.ctx.db, request.requestId));
+    } catch (e) {
+      console.warn(`[bots] cancel input request failed: ${e.message}`);
+    }
+    await reply("已取消本次填写。");
+    return;
+  }
+  if (outcome.kind === "reprompt") {
+    entry.attempts += 1;
+    if (entry.attempts >= ASK_MAX_ATTEMPTS) {
+      clearTimeout(entry.timer);
+      state.pendingInputs.delete(sessionIdOf(entry));
+      await reply(`未能识别回答（${ASK_MAX_ATTEMPTS} 次尝试），本次填写已结束。`);
+      return;
+    }
+    await reply(`未识别的回答（还可尝试 ${ASK_MAX_ATTEMPTS - entry.attempts} 次）。\n${renderInputFieldPrompt(card, entry.cursor)}`);
+    return;
+  }
+  entry.values[field.key] = outcome.value;
+  entry.attempts = 0;
+  const next = card.fields.findIndex((f, i) => i > entry.cursor && f.required);
+  if (next === -1) {
+    clearTimeout(entry.timer);
+    state.pendingInputs.delete(sessionIdOf(entry));
+    try {
+      const core = await import("./input-requests.js");
+      const { changed, request: row } = core.answerInputRequest(state.ctx.db, request.requestId, {
+        values: entry.values,
+        answeredBy: request.ownerEmail,
+      });
+      await reply(changed ? "已收到，正在继续。" : `本次填写${row?.state === "answered" ? "已由他人完成" : "已失效"}。`);
+    } catch (err) {
+      await reply(`提交失败：${err.message}`);
+    }
+    return;
+  }
+  entry.cursor = next;
+  await reply(renderInputFieldPrompt(card, next));
+}
+
+function sessionIdOf(entry) {
+  for (const [sid, e] of state.pendingInputs) if (e === entry) return sid;
+  return null;
+}
+
 // Strip reasoning markup that a model sometimes emits INSIDE a plain text block
 // (prod 2026-10-29: a WeCom reply began literally with "<thinking>The user is
 // asking me to…"). The clean path puts reasoning in its own `reasoning` block
@@ -590,6 +784,13 @@ export async function handleMessage(botId, { chatKey, senderName, text }) {
   }
 
   const sessionId = sessionIdFor(botId, chatKey);
+  // 结构化输入请求待答？（add-input-request-cards）它比问询更早判：一张卡可能
+  // 在回合结束后仍然待答，此时入站消息只可能是它的答案。
+  const pendingInput = state.pendingInputs.get(sessionId);
+  if (pendingInput) {
+    void deliverInputAttempt(pendingInput, text);
+    return;
+  }
   // A question waiting in this chat? The message is its answer attempt, not a
   // new turn (add-user-questions). The guards above still applied — answering
   // an ask enjoys no size/rate exemption.

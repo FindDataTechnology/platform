@@ -14,6 +14,7 @@
 // decisions, then by last activity (spec: 异常上浮与排序沉睡).
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { InputRequestInbox } from "@/components/fleet/InputRequestInbox";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { MiniFleetFormation } from "@/components/FleetGraph";
@@ -322,6 +323,8 @@ export function TeamsOverviewBoard({
 
   return (
     <div className="space-y-4" data-testid="teams-overview">
+      {/* 待填表的收件箱（add-input-request-cards 4.6）：与待拍板并列的一格。 */}
+      <InputRequestInbox />
       <div className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/30 px-4 py-3" data-testid="teams-summary-strip">
         <span className="text-sm font-medium">{t("agentTeams.overview.summaryTitle")}</span>
         <span className="text-sm" data-testid="teams-summary-total">

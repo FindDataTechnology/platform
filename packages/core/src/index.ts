@@ -21,6 +21,9 @@ export {
   groupHasError,
   groupHasPendingAsk,
   groupHasPendingAction,
+  groupHasPendingInput,
+  isInputRequestBlock,
+  inputRequestStateOf,
   isProposeActionBlock,
   proposalStateOf,
 } from "./store/activity-groups";

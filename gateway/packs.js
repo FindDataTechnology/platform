@@ -164,7 +164,7 @@ export function createPackRegistry({ file }) {
   if (!db.prepare(`SELECT 1 FROM agent_runners LIMIT 1`).get() && process.env.AGENT_SERVING_RUNNER_URL) {
     db.prepare(`INSERT INTO agent_runners (id, base_url, port_base, port_span, note, created_at) VALUES (?, ?, 8791, 32, ?, ?)`)
       .run(
-        process.env.AGENT_SERVING_DEFAULT_RUNNER_ID || "cheap-1",
+        process.env.AGENT_SERVING_DEFAULT_RUNNER_ID || "default-runner",
         process.env.AGENT_SERVING_RUNNER_URL,
         "seeded from AGENT_SERVING_RUNNER_URL (legacy single runner)",
         Date.now(),
@@ -2118,7 +2118,7 @@ export function registerPackRoutes(app, {
     // Every serving agent MUST end up bound: no shared-quota fallback. The
     // platform never holds a sub2api password.
     const sub2api = cfg.sub2api ? createSub2apiClient(cfg.sub2api) : null;
-    const panelUrl = process.env.SUB2API_PANEL_URL || "https://token.finddatatech.cloud";
+    const panelUrl = process.env.SUB2API_PANEL_URL || "https://your-billing-panel.example";
     let billing = { linked: false };
     let billingKeys = {}; // agentId → pk_ reference (descriptor carries these)
     const billingKeyValues = new Map(); // keyRef → plaintext (never logged)
@@ -2515,6 +2515,8 @@ export function registerPackRoutes(app, {
     // out its own timeout instead of seeing an error: 7 tests in
     // test-agent-serving each burned exactly 180s, and any production deploy
     // would have hung the same way with nothing in the response.
+    // (Both lines fixed this independently — the two comments said the same
+    // thing, so the merge keeps one declaration and one explanation.)
     let deploymentBindings = null;
     let out;
     try {
@@ -2587,6 +2589,11 @@ export function registerPackRoutes(app, {
         fleetHostsByRunnerId,
         defaultRunnerHost,
         pathSuffix: deployerSeg,
+        // Who deployed (add-acp-input-request-owner): read from the
+        // authenticated session, never from the request body. Runner-carried
+        // harnesses use it as the owner of owner-scoped tools — an ACP agent
+        // has no per-user profile to inject one.
+        deployerEmail: user.email,
         ...cfg,
         ...runnerPlacement, // fleet row wins over the env default (sharding D2)
       });
@@ -2662,28 +2669,43 @@ export function registerPackRoutes(app, {
     return next;
   };
   app.post("/api/packs/:id/versions/:version/deploy", express.json({ limit: "64kb" }), (req, res) => {
-    // The lock chain swallows rejections to keep the queue alive, which means a
-    // THROW inside deployHandler used to send no response at all: express had
-    // nothing to pass on, the client sat on an open socket until its own
-    // timeout, and the only trace was a `next.catch(() => {})` upstream. A
-    // handler that fails must fail BY NAME — 500 with a body — never by hanging.
-    // (Found this way: 7 tests in test-agent-serving each burned exactly 180s
-    // on a ReferenceError the lock had eaten.)
-    withDeployLock(String(req.params.id), () => deployHandler(req, res)).catch((e) => {
-      console.error(`[packs] deploy handler failed for ${req.params.id}: ${e?.stack || e}`);
+    // Two failure modes were both found the hard way, and both must be answered here:
+    //  · the lock chain swallows rejections to keep the queue alive, so a THROW
+    //    inside deployHandler used to send no response at all — express had
+    //    nothing to pass on and the client sat on an open socket until its own
+    //    timeout, the only trace being a `next.catch(() => {})` upstream.
+    //    (Found this way: 7 tests in test-agent-serving each burned exactly 180s
+    //    on a ReferenceError the lock had eaten.)
+    //  · the handler is async but this route never returns it to express, so an
+    //    escaping rejection does NOT reach express's error handling either: it
+    //    vanishes, and the caller waits forever on a response nobody will send.
+    // A handler that fails must fail BY NAME — status + body — never by hanging.
+    void withDeployLock(String(req.params.id), () => deployHandler(req, res)).catch((err) => {
+      console.error(`[packs] deploy handler failed for ${req.params.id}:`, err?.stack || err?.message || err);
       if (res.headersSent) {
         // Part of the response already left; ending here is all that is honest.
         try { res.end(); } catch { /* socket already gone */ }
         return;
       }
-      res.status(500).json({
-        error: "deploy failed",
-        code: "DEPLOY_INTERNAL",
-        detail: String(e?.message || e),
+      // Validators raise 400/409 and those are the caller's business — pass them
+      // through instead of flattening every rejection into one 500. A throw that
+      // carries no status is OURS (a ReferenceError, not an upstream answer), so
+      // it answers 500 by name rather than 502: the deploy target never replied,
+      // we did.
+      const status = Number.isInteger(err?.status) && err.status >= 400 ? err.status : 500;
+      const ours = status >= 500; // no status = the handler threw, not the deploy target
+      res.status(status).json({
+        // Stable label for a failure of ours; a typed rejection (400/409) speaks
+        // for itself and keeps its own wording, so validators stay readable.
+        error: ours ? "deploy failed" : err?.message || "deploy failed",
+        code: ours ? "DEPLOY_INTERNAL" : undefined,
+        detail: String(err?.message || err),
         // The registry rows are written BEFORE this catch runs, so a failed
-        // response must not read as "nothing happened": the caller cannot tell
-        // a retry-apart from a double deploy without this flag.
-        mayHaveLanded: true,
+        // response of ours must not read as "nothing happened": the caller
+        // cannot tell a retry-apart from a double deploy without this flag.
+        // A validator's 4xx is raised before any row is written, so it does not
+        // carry the flag — "may have landed" would be a hedge with no basis.
+        ...(ours ? { mayHaveLanded: true } : {}),
       });
     });
   });
@@ -2697,7 +2719,7 @@ export function registerPackRoutes(app, {
     const user = auth(req, res);
     if (!user) return;
     const cfg = deployConfig();
-    const panelUrl = process.env.SUB2API_PANEL_URL || "https://token.finddatatech.cloud";
+    const panelUrl = process.env.SUB2API_PANEL_URL || "https://your-billing-panel.example";
     const sub2api = cfg.sub2api ? createSub2apiClient(cfg.sub2api) : null;
     if (!sub2api || sub2api.degraded()) return res.json({ linked: false, balance: null, accountState: null, panelUrl });
     let account = registry.billingAccount(user.email);
@@ -2729,7 +2751,7 @@ export function registerPackRoutes(app, {
     const user = auth(req, res);
     if (!user) return;
     const cfg = deployConfig();
-    const panelUrl = process.env.SUB2API_PANEL_URL || "https://token.finddatatech.cloud";
+    const panelUrl = process.env.SUB2API_PANEL_URL || "https://your-billing-panel.example";
     const sub2api = cfg.sub2api ? createSub2apiClient(cfg.sub2api) : null;
     if (!sub2api || sub2api.degraded()) {
       return res.status(503).json({ error: "billing snapshot source not configured", code: "billing-unavailable" });

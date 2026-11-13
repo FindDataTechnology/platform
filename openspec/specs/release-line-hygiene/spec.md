@@ -77,3 +77,36 @@
 
 - **WHEN** 同一 ref 上出现连续多轮被取消的运行
 - **THEN** 这 SHALL 被视为并发策略配置问题（需要排队而非取消），而不是个别推送的失败
+
+### Requirement: A snapshot pushed to the image mirror carries the mirror's publish workflow
+
+The release tooling SHALL provide a step that seeds the workflows the image mirror requires but the public snapshot
+deliberately excludes (`.github/workflows/image-publish.yml`) into a generated snapshot tree before that tree is
+pushed, and SHALL fail loudly rather than proceed when a required workflow cannot be seeded.
+
+The step SHALL copy each listed workflow from the repository into the snapshot tree, then re-read the destination and
+compare it, treating a source that does not exist, an unreadable or unwritable path, or a destination that does not
+match afterwards as an error that names the offending path. It SHALL be idempotent: a destination already byte-identical
+to the source is left unmodified, so a repeated run produces no diff. It SHALL exit non-zero if any listed workflow is
+missing or mismatched, and zero only when every one is present and identical. The snapshot generator's operator-facing
+completion hint SHALL name this step, so the documented flow cannot silently omit it.
+
+#### Scenario: A fresh snapshot gains the publish workflow
+
+- **WHEN** the seeding step runs against a snapshot tree that does not contain `image-publish.yml`
+- **THEN** the file is copied from the repository into `.github/workflows/` of that tree and the step exits 0
+
+#### Scenario: A second run changes nothing
+
+- **WHEN** the seeding step runs again against the same tree
+- **THEN** every destination already matches byte-for-byte, nothing is rewritten, and the step still exits 0
+
+#### Scenario: A missing source is an error, not a skip
+
+- **WHEN** a listed workflow does not exist in the repository
+- **THEN** the step names that path and exits non-zero, so the push never proceeds on an incomplete tree
+
+#### Scenario: The completion hint names the step
+
+- **WHEN** the snapshot generator finishes and prints its next steps
+- **THEN** the printed flow includes the seeding step before the push to the mirror

@@ -39,6 +39,16 @@ useDefault = true
     # asserts redact() shreds a token-shaped STRING, so the literal has to look
     # like a token — "abcdefgh1234" is a placeholder, never a credential.
     '''scripts/test-bench-proposal-client\.mjs''',
+    # 会话存档的两份夹具（2026-11-13 公开快照闸门命中，3 处）：
+    #   · test-archive-credential-redaction 的 CANARY_SECRET_<hex> 是**故意**做成
+    #     凭据形状的 canary —— 该用例断言 redactSecrets() 把它擦成 ***；值是四段
+    #     随机拼接、只可能来自那次注入，任何企业都不可能持有。
+    #   · test-archive-rsa 里是一把固定的 2048 位**测试**密钥对与用它加密的已知
+    #     密文（验 RSA 解密路径），注释已写明"不是任何真实企业的密钥"；私钥只写进
+    #     本地临时目录（mode 0600），不进任何部署。
+    # 两份都是"必须长得像凭据"才能测的东西，删了等于不测；按既有模式 allowlist。
+    '''scripts/test-archive-credential-redaction\.mjs''',
+    '''scripts/test-archive-rsa\.mjs''',
   ]
   # Docker rollback tag in the registry-fork patch README — tag-shaped, not a
   # credential (its entropy trips the generic-api-key rule).

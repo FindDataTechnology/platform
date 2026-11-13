@@ -337,6 +337,18 @@ export function createFleetDatabase({ file } = {}) {
       /* column already exists */
     }
   }
+  // 输入策略（add-input-request-cards D8）：舰队与岗位两层声明、逐字段继承。
+  // 可空 = 不声明 = 与引入前字节一致；回滚只需置空，不需要数据迁移。
+  for (const col of [
+    "ALTER TABLE fleets ADD COLUMN input_policy TEXT",
+    "ALTER TABLE fleet_members ADD COLUMN input_policy TEXT",
+  ]) {
+    try {
+      db.exec(col);
+    } catch {
+      /* column already exists */
+    }
+  }
   // Orchestration section (add-fleet-orchestration): the declarative edge
   // grammar — nullable, JSON, validated at the route write face. Unset =
   // schedule = byte-identical behavior.
@@ -490,6 +502,14 @@ export function createFleetDatabase({ file } = {}) {
     "depth INTEGER",
     "wave INTEGER",
     "usage_cached_input INTEGER",
+    // Per-request high-watermark (2026-11-11): the largest single request's
+    // prompt (input + cacheRead) the runtime reported for this turn. Added
+    // because `usage_input` / `usage_cached_input` are TURN SUMS across steps —
+    // dividing a sum by the per-request window produced ratios above 1.0
+    // (measured 1.54, 1.06) that read like occupancy but are not. Nullable on
+    // purpose: a turn whose runtime reported no stream usage carries NULL, and
+    // an absent number must never be replaced by the sum it cannot equal.
+    "usage_input_max INTEGER",
     "usage_cache_write INTEGER",
     "usage_reasoning INTEGER",
     "queue_wait_ms INTEGER",
@@ -635,6 +655,11 @@ export function createFleetDatabase({ file } = {}) {
       setParts.push("source_template = ?");
       values.push(updates.sourceTemplate ? JSON.stringify(updates.sourceTemplate) : null);
     }
+    // 输入策略（add-input-request-cards D8）：null 清空 = 恢复继承。
+    if (Object.hasOwn(updates, "inputPolicy")) {
+      setParts.push("input_policy = ?");
+      values.push(updates.inputPolicy ? JSON.stringify(updates.inputPolicy) : null);
+    }
     if (setParts.length === 0) return null;
     const before = getFleet(id);
     setParts.push("updated_at = ?");
@@ -730,7 +755,7 @@ export function createFleetDatabase({ file } = {}) {
   }
 
   function updateMember(id, updates) {
-    const JSON_COLUMNS = { kpiSlots: "kpi_slots", cadence: "cadence" };
+    const JSON_COLUMNS = { kpiSlots: "kpi_slots", cadence: "cadence", inputPolicy: "input_policy" };
     const PLAIN_COLUMNS = {
       title: "title",
       parentId: "parent_id",
@@ -1480,10 +1505,20 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     if (!event.memberId) return event;
     let row = null;
     try {
-      // The current row is not inserted yet, so "latest for this post" IS the
-      // previous round.
+      // The current row is not inserted yet, so the latest row WITH USAGE for
+      // this post is the previous round that can answer "how full was it".
+      // Taking the literal latest row was useless in a failure storm: consecutive
+      // pressure failures carry no usage at all (measured 2026-11-11 — 105 such
+      // failures in 24h, every sampled row with usage_input/cached/output NULL),
+      // so the lookup landed on another anonymous row and the cause never
+      // appeared. A row without usage is not evidence of an empty round.
       row = db.prepare(
-        "SELECT usage_cached_input, usage_input FROM member_turn_events WHERE member_id = ? ORDER BY id DESC LIMIT 1",
+        `SELECT usage_input_max, usage_cached_input, usage_input FROM member_turn_events
+          WHERE member_id = ?
+            AND (usage_input_max IS NOT NULL
+                 OR usage_cached_input IS NOT NULL
+                 OR (usage_input IS NOT NULL AND usage_input > 0))
+          ORDER BY id DESC LIMIT 1`,
       ).get(event.memberId) ?? null;
     } catch {
       return event; // a table without the column (mixed-version window) reads as absent
@@ -1495,11 +1530,24 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     // 2026-11-10) — so fall back to the round's own input tokens rather than
     // publishing nothing. `priorBasis` says which one was used, because "0.03 of
     // the window from cache" and "0.03 from input" are not the same claim.
+    // Which number answers "how full was it last round"? The per-request
+    // high-watermark wins: `usage_input` and `usage_cached_input` are TURN SUMS
+    // across steps, and dividing a sum by the per-request window produced
+    // ratios above 1.0 (measured 2026-11-11: 1.54 and 1.06) that read like
+    // occupancy but cannot be. Only `usage_input_max` is the same dimension as
+    // `contextWindow`. The two sums stay as fallbacks for rows written before
+    // that column existed — `priorBasis` says which one was used, because
+    // "0.47 of the window in one request" and "1.54 of the window summed over
+    // steps" are different claims and one of them is not an occupancy at all.
+    const maxIn = row.usage_input_max;
     const cache = row.usage_cached_input;
     const input = row.usage_input;
     let prior = null;
     let basis = null;
-    if (cache !== null && cache !== undefined && Number.isFinite(Number(cache))) {
+    if (maxIn !== null && maxIn !== undefined && Number.isFinite(Number(maxIn)) && Number(maxIn) > 0) {
+      prior = Number(maxIn);
+      basis = "inputMax";
+    } else if (cache !== null && cache !== undefined && Number.isFinite(Number(cache))) {
       prior = Number(cache);
       basis = "cache";
     } else if (input !== null && input !== undefined && Number(input) > 0) {
@@ -1559,6 +1607,7 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       Number.isFinite(m.depth) ? m.depth : null,
       Number.isFinite(m.wave) ? m.wave : null,
       usageInt(m.usageCachedInput),
+      usageInt(event.inputTokensMax),
       usageInt(m.usageCacheWrite),
       usageInt(m.usageReasoning),
       Number.isFinite(m.queueWaitMs) ? Math.max(0, Math.round(m.queueWaitMs)) : null,
@@ -1572,9 +1621,9 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
           INSERT INTO member_turn_events (fleet_id, member_id, source, status, error_kind, error, model, started_at, ended_at, session_id,
                                           turn_id, run_id, parent_turn_id, edge_kind, usage_input, usage_output, trace_turn_id, detail,
                                           preset_id, preset_source, provider, effort, carrier, carrier_instance, lane_id, depth, wave,
-                                          usage_cached_input, usage_cache_write, usage_reasoning, queue_wait_ms, spin_up_ms, ttft_ms, pricing_at,
+                                          usage_cached_input, usage_input_max, usage_cache_write, usage_reasoning, queue_wait_ms, spin_up_ms, ttft_ms, pricing_at,
                                           cost_input_usd, cost_output_usd, cost_cache_write_usd, cost_cache_read_usd)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .run(
           ...base,
@@ -2023,12 +2072,40 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       const money = db
         .prepare(`
           SELECT SUM(CASE WHEN pricing_at IS NOT NULL THEN 1 ELSE 0 END) AS priced_turns,
+                 -- 半截用量（fix-overflow-attribution D4）：溢出回合保留已观测 usage，
+                 -- 那些 token 真扣了钱，所以计入花费；但读面必须知道其中几条是半截快照。
+                 -- 这一行在 2026-11-10 的并线（968a3fc38）里被整行带走，靠
+                 -- test-fleet-context-pressure 的 partialTurns 用例抓回来——别删。
+                 SUM(CASE WHEN detail LIKE '%"usagePartial":true%' THEN 1 ELSE 0 END) AS partial_turns,
                  SUM(COALESCE(cost_input_usd, 0) + COALESCE(cost_output_usd, 0)
                      + COALESCE(cost_cache_write_usd, 0) + COALESCE(cost_cache_read_usd, 0)) AS usd,
                  SUM(CASE WHEN json_extract(detail, '$.usagePartial') = 1 THEN 1 ELSE 0 END) AS partial_turns
           FROM member_turn_events WHERE fleet_id = ? AND started_at >= ?
         `)
         .get(fleetId, sinceMs);
+      // Delivery (enforce-report-contract): of the rounds that actually ran,
+      // how many delivered what their post owes. Kept SEPARATE from the pass
+      // rate on purpose — `ok` still means "the loop ended", and the delivery
+      // contract deliberately does not touch status. `deliveredOk` is the count
+      // of ok rounds NOT flagged missingReport; the rate divides by ALL turns so
+      // it can be read next to the pass rate without rescaling.
+      // Starts at the rollout of the flag: rows before it carry no detail key
+      // and therefore read as "delivered", which is why the read face says so.
+      const delivery = db
+        .prepare(`
+          SELECT COUNT(*) AS event_turns,
+                 SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_turns,
+                 SUM(CASE WHEN status = 'ok' AND detail LIKE '%"missingReport":true%' THEN 1 ELSE 0 END) AS flagged
+          FROM member_turn_events WHERE fleet_id = ? AND started_at >= ?
+        `)
+        .get(fleetId, sinceMs);
+      // Denominator and numerator come from the SAME table: `turns` above is the
+      // fleet_runs projection, which can be absent for an ad-hoc window while
+      // the turn rows exist. Mixing the two made the rate read null.
+      const eventTurns = delivery?.event_turns ?? 0;
+      const okTurns = delivery?.ok_turns ?? 0;
+      const flagged = delivery?.flagged ?? 0;
+      const deliveredOk = Math.max(0, okTurns - flagged);
       return {
         runs: agg.runs ?? 0,
         turns: agg.turns ?? 0,
@@ -2044,6 +2121,13 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
         // fix-overflow-attribution; nothing ever counted them, and the test
         // written to prove the counter existed was the field's only mention.
         partialTurns: money?.partial_turns ?? 0,
+        // 交付率与通过率并列（设计 D4）：两个数一起看才不会被 `ok` 单独骗过。
+        okTurns,
+        missingReportTurns: flagged,
+        deliveredOk,
+        eventTurns,
+        deliveryRate: eventTurns > 0 ? deliveredOk / eventTurns : null,
+        deliveryBasis: "since the missingReport flag shipped (earlier rows carry no flag)",
       };
     };
     const day = 24 * 3600_000;
@@ -2363,6 +2447,7 @@ function deserializeFleet(row) {
     defaultModel: row.default_model ?? null,
     effort: row.effort ?? null,
     contextBudget: row.context_budget ?? null,
+    inputPolicy: row.input_policy ? JSON.parse(row.input_policy) : null,
     orchestration: row.orchestration ? JSON.parse(row.orchestration) : null,
     // Unpublished console = both null. A share request for a fleet without a
     // slug answers 404, so this pair IS the publication switch.
@@ -2574,6 +2659,7 @@ function deserializeMember(row) {
     contextBudget: row.context_budget ?? null,
     carrier: row.carrier ?? null,
     packId: row.pack_id ?? null,
+    inputPolicy: row.input_policy ? JSON.parse(row.input_policy) : null,
     sortKey: row.sort_key,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

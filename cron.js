@@ -864,7 +864,7 @@ async function removeJob(id) {
   return true;
 }
 
-async function pauseJob(id) {
+async function pauseJob(id, options = {}) {
   const task = engine.getRecord(id);
   if (!task) return false;
   // Manual (delegated) tasks have no schedule-side lifecycle — pause/resume
@@ -875,6 +875,13 @@ async function pauseJob(id) {
     task.job = null;
   }
   task.paused = true;
+  // Pause SOURCE (fix-fleet-operator-pause-durability): an owner's stop and the
+  // fleet reconcile's own parking are two layers. Reconcile resumes on
+  // `desiredPaused` alone, so before this field an owner's pause on a member
+  // task came back minutes after the next catalog refresh with nobody touching
+  // it (2026-11-10 live, measured). Default "fleet" keeps every pre-existing
+  // caller — reconcile calls pauseJob bare — at the old shape.
+  task.pausedBy = options.by === "operator" ? "operator" : "fleet";
   task.status = "paused";
   await engine.saveTasks();
   engine.broadcastStatus(id);
@@ -886,6 +893,9 @@ async function resumeJob(id) {
   if (!task || !task.paused) return false;
   if (task.trigger === "manual") return false;
   task.paused = false;
+  // An explicit resume clears the source: from here on the fleet's converge
+  // pass owns the decision again (fix-fleet-operator-pause-durability).
+  task.pausedBy = null;
   task.status = "scheduled";
   // Reschedule — interval rows re-arm through scheduleJob too (the rule's next
   // occurrence is recomputed from the anchor grid; spec: on resume a recurring

@@ -112,9 +112,32 @@ export function validateReportPayload(payload) {
 //      rejection (overlapping user-built fleets must not be guessed); none →
 //      the caller is not a fleet member.
 //
+// 自报身份的归一与校验（fix-report-attribution-concurrency 2.3）。三关全过才采纳：
+// ① 该 pair 真实存在（在 persona 岗位集合里，已排掉归档舰队）② 岗位的 fleetId 与自报一致
+// ③ 岗位的 persona 与自报的 persona 归一后一致。任一不过 ⇒ null（当作没自报，
+// 继续走其余优先级）。这条把"服务端自己写进 patch 的坐标"变成可用信号，
+// 同时不给"调用方随便指个 memberId 就认"开后门。
+export function normalizeSelfIdentity(selfIdentity, personaMembers = [], rosterPresetId = (id) => id) {
+  const fleetId = selfIdentity?.fleetId;
+  const memberId = selfIdentity?.memberId;
+  const persona = selfIdentity?.persona;
+  if (!fleetId || !memberId || !persona) return null;
+  const member = (Array.isArray(personaMembers) ? personaMembers : []).find((m) => m?.id === memberId);
+  if (!member) return null;
+  if (String(member.fleetId ?? "") !== String(fleetId)) return null;
+  if (member.paused === true) return null;
+  if (rosterPresetId(member.targetId) !== rosterPresetId(persona)) return null;
+  return { fleetId: member.fleetId, memberId: member.id, member };
+}
+
 // Every branch reads SERVER state; none reads the caller's payload.
-export function resolveAttribution({ currentPreset, runningTasks = [], openTurns = [], personaMembers = [], rosterPresetId = (id) => id }) {
+export function resolveAttribution({ currentPreset, runningTasks = [], openTurns = [], personaMembers = [], rosterPresetId = (id) => id, selfIdentity = null }) {
   const openFleetTurns = (Array.isArray(openTurns) ? openTurns : []).filter((t) => t?.fleetId && t?.memberId);
+  // 自报身份优先（fix-report-attribution-concurrency 2.x）：它是唯一在并发下仍然
+  // 指向"这一轮到底是谁"的信号——因为坐标由服务端写进该 worker 的私有 patch，
+  // 而不是从任何全局值推出来的。
+  const self = normalizeSelfIdentity(selfIdentity, personaMembers, rosterPresetId);
+  if (self) return { kind: "self-report", fleetId: self.fleetId, memberId: self.memberId, member: self.member };
   if (openFleetTurns.length === 1) {
     const turn = openFleetTurns[0];
     return { kind: "turn", fleetId: turn.fleetId, memberId: turn.memberId, turn };
@@ -129,6 +152,28 @@ export function resolveAttribution({ currentPreset, runningTasks = [], openTurns
     const task = runningFleetTasks[0];
     const kind = task.targetType === "cluster" ? "cluster-task" : "job-sourceTag";
     return { kind, fleetId: task.sourceTag.fleetId, memberId: task.sourceTag.memberId ?? null, task };
+  }
+
+  // 并发下的收紧（fix-report-attribution-concurrency 1.1）。走到这里且并发数 ≥2，
+  // 说明上面两级**都**失配了：既没有唯一的在飞回合，也没有唯一带 sourceTag 的运行中任务。
+  // 这时下面唯一还能用的信号是 `currentPreset`——而它是**整个 cell 的一个全局值**
+  // （最后一次 set_preset / 最后跑的那个预设），不是"本回合自身的目标 preset"。
+  // 拿它兜底就是在猜：猜中的那一半看起来正常，猜错的那一半把报数记到别人的岗位上。
+  // 生产 2026-11-12 实测：双 worker 上线后两个舰队的岗同时跑，漂移哨与主编的报数
+  // 双双落到「书记」头上、槽位全判 UNRECOGNIZED；而本函数原有的用例只覆盖了
+  // "全局 preset 恰好不匹配任何岗"那半边（那种情况下是诚实的 none），所以这个洞一直绿着。
+  // 规格（agent-fleet-report-lane）本就要求：不能唯一命中时诚实拒收，SHALL NOT 猜测。
+  if (openFleetTurns.length > 1 || runningFleetTasks.length > 1) {
+    const candidates = [
+      ...openFleetTurns.map((t) => `${t.fleetId}:${t.memberId}`),
+      ...runningFleetTasks.map((t) => `${t.sourceTag.fleetId}:${t.sourceTag.memberId ?? "?"}`),
+    ];
+    return {
+      kind: "ambiguous",
+      error:
+        `several rounds are in flight (${candidates.join(", ")}) — the runtime's live preset ` +
+        `cannot tell which post is reporting (a cell-wide value is not this round's own preset)`,
+    };
   }
 
   if (!currentPreset) {

@@ -39,7 +39,7 @@
 // built (the caller sees `depth_bound`, not a generic transport error).
 
 import * as catalog from "../catalog.js";
-import { DELEGATION_DEPTH_BOUND, resolveGatewayCredential, runA2aTurn } from "./a2a-client.js";
+import { DELEGATION_DEPTH_BOUND, resolveGatewayCredential, runA2aTurn, outboundDelegationDepth } from "./a2a-client.js";
 import { recordTurnEvent } from "./fleet-events.js";
 import { getFleetDatabase } from "./routes/fleets-db.js";
 
@@ -97,7 +97,9 @@ export function createTeamDispatch({
       throw namedError("reception_unreachable", `a2a target '${post.targetId}' is not in the catalog (or has no url)`);
     }
 
-    const outboundDepth = Math.max(0, Number(depth) || 0) + 1;
+    // Same rule as every other outbound lane, from one place: a team call
+    // continues the chain it arrived on.
+    const outboundDepth = outboundDelegationDepth(depth, { topLevel: 1 });
     if (outboundDepth >= DELEGATION_DEPTH_BOUND) {
       // Named before the request exists: "the chain is too long" is a fact the
       // caller can fix (call the team directly), unlike a mid-stream abort.

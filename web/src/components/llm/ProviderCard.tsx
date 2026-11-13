@@ -209,6 +209,7 @@ export function ProviderCard({ provider, isAdmin, onEdit, onDelete, onModelsChan
         <ModelListEditor
           providerId={provider.id}
           models={provider.models}
+          modelMeta={provider.modelMeta}
           onSaved={() => {
             setEditingModels(false);
             onModelsChanged();

@@ -192,6 +192,39 @@ test("12. a non-pressure row is never inspected", needsDb, () => {
   assert.deepEqual(ev.detail, { foo: 1 });
 });
 
+test("14. the timeout/early-stop error carries the window, so the consumer can judge", async () => {
+  const { timeoutError } = await import(path.join(here, "../server/cron-runner.js"));
+  // 2026-11-11 measured 105 context-pressure failures in 24h and 0 with a cause:
+  // the producer never put `contextWindow` on the failure detail, so the whole
+  // attribution path was unreachable by construction. With the window present
+  // the consumer (fillContextCause) can finally answer.
+  const withWin = timeoutError([], 0, 60_000, { compactions: 4, reported: true, contextWindow: 128_000 });
+  assert.equal(withWin.detail.contextPressure, true);
+  assert.equal(withWin.detail.contextWindow, 128_000, "runtime-reported window must ride the detail");
+  const noWin = timeoutError([], 0, 60_000, { compactions: 4, reported: true });
+  assert.equal(noWin.detail.contextPressure, true);
+  assert.equal(noWin.detail.contextWindow, undefined, "an unreported window stays absent, never defaulted");
+  const bogus = timeoutError([], 0, 60_000, { compactions: 4, contextWindow: 0 });
+  assert.equal(bogus.detail.contextWindow, undefined, "a non-positive window is not a window");
+});
+
+test("15. a failure row without usage does not hide the previous round that had it", needsDb, () => {
+  // The literal-latest-row lookup broke in a failure storm: consecutive pressure
+  // failures carry usage_input/cached/output all NULL (measured 2026-11-11), so
+  // every new failure read another anonymous row and no cause ever appeared.
+  const m = member("storm");
+  appendTurnEvent({ fleetId: F, memberId: m, source: "cron", status: "ok", startedAt: 1, endedAt: 2,
+    sessionId: "x1", usage: { input: 100_000, output: 100 } });
+  // Two anonymous failures sit between that round and the one being written.
+  appendTurnEvent({ fleetId: F, memberId: m, source: "cron", status: "failed", startedAt: 3, endedAt: 4,
+    sessionId: "x2", error: "turn timed out — context pressure (4 compactions)",
+    detail: { kind: "turn_budget_exceeded", contextPressure: true, compactions: 4 } });
+  const ev = appendTurnEvent(pressure(m, { sessionId: "x3" }));
+  assert.equal(ev.detail.cause, "history_accumulation");
+  assert.equal(ev.detail.priorBasis, "input");
+  assert.ok(ev.detail.priorCacheRatio >= 0.7);
+});
+
 test("13. a caller that already knows the cause keeps it (no overwrite)", needsDb, () => {
   const m = member("known");
   appendTurnEvent({ fleetId: F, memberId: m, source: "cron", status: "ok", startedAt: 1, endedAt: 2,
@@ -203,4 +236,55 @@ test("13. a caller that already knows the cause keeps it (no overwrite)", needsD
   }));
   assert.equal(ev.detail.cause, "history_accumulation");
   assert.equal(ev.detail.priorCacheRatio, 1.23);
+});
+
+test("16. the per-request high-watermark wins over the turn-wide sums", needsDb, () => {
+  // `usage_input` and `usage_cached_input` are TURN SUMS across steps; the
+  // window is per-request. Dividing a sum by a window produced ratios above
+  // 1.0 in production (measured 2026-11-11: 1.54 and 1.06) that looked like
+  // occupancy and are not. `usage_input_max` is the same dimension as the
+  // window, so it must win — the answer here is "this round was 0.47 of the
+  // window", not "1.56 windows were read".
+  const m = member("highwater");
+  appendTurnEvent({ fleetId: F, memberId: m, source: "cron", status: "ok", startedAt: 1, endedAt: 2,
+    sessionId: "hw1", usage: { input: 200_000, output: 100 },
+    metering: { usageCachedInput: 200_000 }, inputTokensMax: 60_000 });
+  const ev = appendTurnEvent(pressure(m, { sessionId: "hw2" }));
+  assert.equal(ev.detail.priorBasis, "inputMax");
+  assert.equal(ev.detail.priorCacheRatio, 0.47);
+  assert.ok(ev.detail.priorCacheRatio <= 1, "a per-request ratio cannot exceed the window it is divided by by much");
+  assert.equal(ev.detail.cause, "single_round_too_large");
+});
+
+test("17. rows written before the column existed still attribute, from the sums", needsDb, () => {
+  // Backwards compatibility: a prior row with no high-watermark must still
+  // answer, and `priorBasis` must say the figure came from an aggregate so the
+  // ratio is never mistaken for occupancy.
+  const m = member("nosum");
+  appendTurnEvent({ fleetId: F, memberId: m, source: "cron", status: "ok", startedAt: 1, endedAt: 2,
+    sessionId: "ns1", usage: { input: 100_000, output: 100 } });
+  const ev = appendTurnEvent(pressure(m, { sessionId: "ns2" }));
+  assert.equal(ev.detail.priorBasis, "input");
+  assert.equal(ev.detail.cause, "history_accumulation");
+});
+
+test("18. 明细里同时有「起点」与「顶点」，才能区分基线过大与工具撑爆", async () => {
+  const { contextPressureDetail } = await import(path.join(here, "../server/cron-runner.js"));
+  const withFirst = contextPressureDetail("pi-ai detected context overflow for model \"m\"", {
+    facts: { contextWindow: 128000, lastInputTokens: 172611, usageSteps: 3, firstInputTokens: 168000 },
+  });
+  assert.equal(withFirst.firstInputTokens, 168000, "起点必须落库：否则分不清是基线大还是一步撑爆");
+  assert.equal(withFirst.lastInputTokens, 172611);
+  // 起点与顶点接近 ⇒ 基线本来就装不下（hotel-watch-scout 的形状）
+  assert.ok(withFirst.firstInputTokens > 128000 * 1.2);
+  // 没报过用量就不写这个键（absent stays absent）
+  const noFirst = contextPressureDetail("pi-ai detected context overflow for model \"m\"", {
+    facts: { contextWindow: 128000, lastInputTokens: 140000, usageSteps: 2 },
+  });
+  assert.equal(noFirst.firstInputTokens, undefined);
+  // 反例形状：起点很小、顶点很高 ⇒ 单个工具返回撑爆
+  const toolBlewUp = contextPressureDetail("pi-ai detected context overflow for model \"m\"", {
+    facts: { contextWindow: 128000, lastInputTokens: 170000, usageSteps: 2, firstInputTokens: 4000 },
+  });
+  assert.equal(toolBlewUp.firstInputTokens, 4000);
 });

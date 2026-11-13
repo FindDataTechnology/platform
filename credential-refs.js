@@ -28,6 +28,7 @@ import * as facetMarketCredentials from "./facet-market-credentials.js";
 import * as lineCredentials from "./line-credentials.js";
 import * as paperTradingCredentials from "./paper-trading-credentials.js";
 import * as ciyuanAccountCredentials from "./ciyuan-account-credentials.js";
+import * as lawBenchCredentials from "./law-bench-credentials.js";
 // Wire line tool hosting: the vendored tool_risk snapshot is a generated,
 // import-only module (safe from cycles) — derive the server set from it rather
 // than hand-editing the snapshot. The registry's public API does not surface
@@ -38,6 +39,9 @@ import * as ciyuanAccountCredentials from "./ciyuan-account-credentials.js";
 // control-plane read in these servers 401s (real-machine acceptance 10-21).
 import { WIRE_TOOL_RISK } from "./lib/wire-tool-risk.js";
 import * as chatwootCredentials from "./chatwoot-credentials.js";
+// 数据驱动的线凭据轨（converge-line-identity-and-keys D4）：默认关闭，
+// 开启的那一行会以同形五件套并入 REFS，未开启时本表与改动前一致。
+import * as federatedRef from "./federated-ref.js";
 const WIRE_LINE_SERVERS = new Set(Object.values(WIRE_TOOL_RISK).map((w) => w.server));
 
 const REFS = new Map(
@@ -48,6 +52,9 @@ const REFS = new Map(
       liveToken: registryCredentials.liveToken,
       markInvalid: registryCredentials.markStale,
       staleEvent: "registry_credential_stale",
+      connected: (email) => registryCredentials.status(email).connected,
+      missingReason: "connect the MCP market first — no live registry credential",
+      panel: "registry",
     },
     {
       refName: connectorCredentials.CONNECTOR_CREDENTIAL_REF,
@@ -55,6 +62,14 @@ const REFS = new Map(
       liveToken: connectorCredentials.liveToken,
       markInvalid: connectorCredentials.markInvalid,
       staleEvent: "connector_credential_stale",
+      // fix-connector-ref-attribution: 三处都必须由 connector **自己**回答。
+      // 去重前它们一律落到 registry 缺省，于是被拒的 connector 安装给出的是
+      // 「市场凭据」的理由、并把用户深链到市场卡片——而 UI 里那张 connector
+      // 卡片（web/.../ConnectionsSection.tsx `ids={["connector"]}`）才是该去的地方。
+      // 反向也错：有 connector PAT 但没 registry token 的用户会被误拒安装。
+      connected: (email) => Boolean(connectorCredentials.liveToken(email)),
+      missingReason: "connect a connector account first — no live connector credential",
+      panel: "connector",
     },
     {
       refName: facetMarketCredentials.FACET_MARKET_CREDENTIAL_REF,
@@ -62,6 +77,9 @@ const REFS = new Map(
       liveToken: facetMarketCredentials.liveToken,
       markInvalid: facetMarketCredentials.markInvalid,
       staleEvent: "facet_market_credential_stale",
+      connected: (email) => facetMarketCredentials.status(email).connected,
+      missingReason: "pair the facet market first — no live market credential",
+      panel: "facet-market",
     },
     {
       refName: paperTradingCredentials.PAPER_TRADING_CREDENTIAL_REF,
@@ -69,6 +87,9 @@ const REFS = new Map(
       liveToken: paperTradingCredentials.liveToken,
       markInvalid: paperTradingCredentials.markInvalid,
       staleEvent: "paper_trading_credential_stale",
+      connected: (email) => paperTradingCredentials.status(email).connected,
+      missingReason: "connect the paper-trading service first — no live paper-trading credential",
+      panel: "paper-trading",
     },
     {
       refName: lineCredentials.WIRE_CUSTOMER_CREDENTIAL_REF,
@@ -86,6 +107,7 @@ const REFS = new Map(
       // profile writer applies, so "connected" = the install will inject.
       connected: (email) => Boolean(lineCredentials.liveToken(email, "wire-customer")),
       missingReason: "connect your wire line first — no live wire credential",
+      panel: "line-wire-customer",
     },
     {
       refName: lineCredentials.LEX_CREDENTIAL_REF,
@@ -96,6 +118,7 @@ const REFS = new Map(
       staleEvent: "line_credential_stale",
       connected: (email) => Boolean(lineCredentials.liveToken(email, "lex")),
       missingReason: "connect your lex line first — no live lex credential",
+      panel: "line-lex",
     },
     {
       // ciyuan-account-lane (design D5): the wanxing-caller ref is served by the
@@ -108,6 +131,7 @@ const REFS = new Map(
       staleEvent: "line_credential_stale",
       connected: (email) => Boolean(ciyuanAccountCredentials.liveToken(email)),
       missingReason: "connect your Wanxing caller key first — no live caller credential",
+      panel: "ciyuan-account",
     },
     {
       // add-crm-desk-pack-embed: the merchant's own Chatwoot token — cell patch
@@ -117,6 +141,9 @@ const REFS = new Map(
       liveToken: (email) => chatwootCredentials.liveToken(email),
       markInvalid: (email) => chatwootCredentials.markInvalid(email),
       staleEvent: "chatwoot_credential_stale",
+      connected: (email) => chatwootCredentials.status(email).connected,
+      missingReason: "connect your Chatwoot account first — no live Chatwoot credential",
+      panel: "chatwoot",
     },
     {
       // add-connector-bindings D4: one connector MCP row per authorized binding,
@@ -129,7 +156,26 @@ const REFS = new Map(
       liveToken: (email, config) => connectorBindings.liveTokenBySlot(email, config?.slot),
       markInvalid: (email, config) => connectorBindings.markSlotInvalid(email, config?.slot),
       staleEvent: "connector_credential_stale",
+      // 5.1 把面板从 KNOWN_CONNECT_PANELS 挪进本表；上游新增这条 ref 时表还没有
+      // 它，合并时补上，否则它会静默落到 registry 卡片（与 connector 旧缺陷同型）。
+      panel: "connector-bindings",
     },
+    {
+      // gateway-reach-for-shared-token-mcp: law-bench-mcp authenticates every
+      // caller with ONE deployment-scoped token, so this ref resolves from env
+      // rather than the user's store — and it only makes sense on a gateway URL,
+      // where `resolveCredentials()` puts the gateway identity in Authorization
+      // and this token in X-Authorization for the relay.
+      refName: lawBenchCredentials.LAW_BENCH_CREDENTIAL_REF,
+      isRef: lawBenchCredentials.isLawBenchRef,
+      liveToken: () => lawBenchCredentials.liveToken(),
+      markInvalid: () => lawBenchCredentials.markInvalid(),
+      staleEvent: "law_bench_credential_stale",
+      connected: () => lawBenchCredentials.status().connected,
+      missingReason: "deployment is missing LAW_BENCH_MCP_TOKEN — no shared law-bench token",
+    },
+    // 已启用的联邦线（默认空数组；见 federated-ref.js 的两层开关）。
+    ...federatedRef.entries(),
   ].map((entry) => [entry.refName, entry]),
 );
 
@@ -191,6 +237,10 @@ const RELAY_REF_NAMES = new Set([
   lineCredentials.WIRE_CUSTOMER_CREDENTIAL_REF,
   lineCredentials.LEX_CREDENTIAL_REF,
   facetMarketCredentials.FACET_MARKET_CREDENTIAL_REF,
+  // Shared-token upstreams need the same shape for a different reason: the
+  // gateway strips the caller's auth, so the upstream's own token must travel
+  // in X-Authorization or it arrives anonymous (gateway-reach-for-shared-token-mcp).
+  lawBenchCredentials.LAW_BENCH_CREDENTIAL_REF,
 ]);
 
 export function needsRelayedCallerCredential(config, refName) {
@@ -198,23 +248,16 @@ export function needsRelayedCallerCredential(config, refName) {
   if (config?.relayCallerCredential === true) return true;   // explicit opt-in wins
   return RELAY_REF_NAMES.has(refName);
 }
+// 以下三个查询一律**只读表**（change converge-line-identity-and-keys 5.1）：
+// 一条线的面板 id / 缺凭据话术 / 是否已连接都是它自己那一行的字段，不再有
+// 名字分叉的 if 链。新增一条线=加一行，不加分支。
+// 缺字段的条目保持既有落点（registry），这是行为兼容，不是设计意图。
 
 export function credentialConnected(refName, email) {
-  // Table-first (fix-wire-install-gate D1): an entry that declares `connected`
-  // is judged by its own resolver — a line ref falling through to the registry
-  // check refused installs for the wrong missing credential. Entries without
-  // the field keep the legacy chain below, byte-identical.
+  // fix-wire-install-gate D1: 由该 ref 自己的 resolver 判定——线 ref 落到
+  // registry 检查会把「装得上」误判成「缺错凭据」（2026-10-24 wire-tester2）。
   const entry = REFS.get(refName);
   if (typeof entry?.connected === "function") return entry.connected(email);
-  if (refName === facetMarketCredentials.FACET_MARKET_CREDENTIAL_REF) {
-    return facetMarketCredentials.status(email).connected;
-  }
-  if (refName === chatwootCredentials.CHATWOOT_CREDENTIAL_REF) {
-    return chatwootCredentials.status(email).connected;
-  }
-  if (refName === paperTradingCredentials.PAPER_TRADING_CREDENTIAL_REF) {
-    return paperTradingCredentials.status(email).connected;
-  }
   return registryCredentials.status(email).connected;
 }
 
@@ -223,15 +266,6 @@ export function credentialConnected(refName, email) {
 export function credentialMissingReason(refName) {
   const entry = REFS.get(refName);
   if (typeof entry?.missingReason === "string") return entry.missingReason;
-  if (refName === facetMarketCredentials.FACET_MARKET_CREDENTIAL_REF) {
-    return "pair the facet market first — no live market credential";
-  }
-  if (refName === chatwootCredentials.CHATWOOT_CREDENTIAL_REF) {
-    return "connect your Chatwoot account first — no live Chatwoot credential";
-  }
-  if (refName === paperTradingCredentials.PAPER_TRADING_CREDENTIAL_REF) {
-    return "connect the paper-trading service first — no live paper-trading credential";
-  }
   return "connect the MCP market first — no live registry credential";
 }
 
@@ -244,18 +278,8 @@ export function connectPathForRef(refName) {
 // The connect panel id for a ref name (chat-connect-guidance consumes this
 // to point failed tool calls at the right card without parsing the path).
 export function connectPanelForRef(refName) {
-  return KNOWN_CONNECT_PANELS.get(refName) ?? "registry";
+  return REFS.get(refName)?.panel ?? "registry";
 }
-const KNOWN_CONNECT_PANELS = new Map([
-  [registryCredentials.REGISTRY_CREDENTIAL_REF, "registry"],
-  [facetMarketCredentials.FACET_MARKET_CREDENTIAL_REF, "facet-market"],
-  [paperTradingCredentials.PAPER_TRADING_CREDENTIAL_REF, "paper-trading"],
-  ["wire-customer", "line-wire-customer"],
-  ["lex", "line-lex"],
-  ["wanxing-caller", "ciyuan-account"],
-  [chatwootCredentials.CHATWOOT_CREDENTIAL_REF, "chatwoot"],
-  [connectorBindings.CONNECTOR_BINDING_CREDENTIAL_REF, "connector-bindings"],
-]);
 
 // The registry entry for a config's `credentialRef`, or null for an absent or
 // unknown ref name — callers decide what an unknown name means (the profile
@@ -295,6 +319,20 @@ export function invalidateRef(refName, email, config = null) {
   return Boolean(lineCredentials.markInvalid(email, refName));
 }
 
+// 配置自身是否已经带鉴权（线自有轨）。D5 的降级只在**这条为真**时才保留
+// 该 server：保留一个没有凭据的条目等于让调用方发出裸请求，比省略更糟。
+function hasOwnAuth(config) {
+  const headers = config?.headers || {};
+  for (const [name, value] of Object.entries(headers)) {
+    if (/^x?-?authorization$/i.test(name) && String(value || "").trim()) return true;
+  }
+  const env = config?.env || {};
+  for (const [name, value] of Object.entries(env)) {
+    if (/(TOKEN|API_KEY|AUTH)/i.test(name) && typeof value === "string" && value.trim()) return true;
+  }
+  return Boolean(config?.credentialEnv);
+}
+
 // Resolve every ref-carrying config in `servers` for `email`: returns a new
 // object where each carried server either gained an Authorization header or was
 // dropped, plus per-ref diagnostics for the omission warnings. Grouped by ref
@@ -309,15 +347,28 @@ export function resolveCredentials(servers, email) {
   const out = { ...servers };
   const omitted = [];
   const injected = [];
+  // D5：平台凭据不可用但线自有轨仍在 → 保留该 server 并显式记账，而不是删掉。
+  const degraded = [];
   try {
     for (const entry of REFS.values()) {
       const rows = Object.entries(servers).filter(([, config]) => entry.isRef(config));
       if (rows.length === 0) continue;
       const injectedNames = [];
       const omittedNames = [];
+      // D5：平台凭据不可用但线自有轨仍在——保留该 server 并显式记账。
+      const degradedNames = [];
       for (const [name, config] of rows) {
         const token = entry.liveToken(email, config);
         if (!token) {
+          // D5（本 change 唯一的 BEHAVIOUR CHANGE）：平台通道不可用但该线自有
+          // 轨的凭据已经在这份配置里（例如 cell env 注入的 wdk_/PAT），删掉这个
+          // server 等于把"平台挂=子线功能消失"焊死。保留它、不注入平台 token、
+          // 记一条降级；**只有配置自身带凭据时才保留**——保留一个没有凭据的条目
+          // 等于让调用方发裸请求，比省略更糟。
+          if (entry.hasOwnTrack && hasOwnAuth(out[name])) {
+            degradedNames.push(name);
+            continue;
+          }
           delete out[name];
           omittedNames.push(name);
           continue;
@@ -360,6 +411,13 @@ export function resolveCredentials(servers, email) {
       }
       if (injectedNames.length) injected.push({ ref: entry.refName, names: injectedNames });
       if (omittedNames.length) omitted.push({ ref: entry.refName, names: omittedNames });
+      if (degradedNames.length) {
+        degraded.push({
+          ref: entry.refName,
+          names: degradedNames,
+          reason: "no live platform credential; line own auth retained",
+        });
+      }
     }
   } catch (e) {
     // A resolver blowing up must never pass its servers through unauthenticated:
@@ -369,7 +427,7 @@ export function resolveCredentials(servers, email) {
     }
     omitted.length = 0;
     injected.length = 0;
-    return { servers: out, omitted, injected, error: e?.message || String(e) };
+    return { servers: out, omitted, injected, degraded, error: e?.message || String(e) };
   }
-  return { servers: out, omitted, injected };
+  return { servers: out, omitted, injected, degraded };
 }

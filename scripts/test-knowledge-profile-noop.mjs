@@ -89,6 +89,22 @@ const injectionView = (resolved) => {
   };
 };
 
+// The baseline is "the parent of the commit that introduced the `read` spelling",
+// which only names the pre-change code in a history made of real commits. The
+// public repo's main is a SQUASHED export (one commit per release), so there the
+// `-S` hit is the snapshot itself and its parent is the previous RELEASE — days
+// of unrelated changes, not the pre-change file. Comparing against that yields a
+// red, or a green, that says nothing about this claim; the honest move is to say
+// so. Measured 2026-11-13 on the published snapshot: depth 1, so ALL FOUR tests
+// below need this — one of them had the check and the other three went red with
+// `git archive <head>^: not a valid object name`.
+const HISTORY_DEPTH = Number(git(["rev-list", "--count", "HEAD"]));
+function hasPreChangeBaseline(t) {
+  if (HISTORY_DEPTH >= 10) return true;
+  t.skip(`squashed history (${HISTORY_DEPTH} commits) — no pre-change baseline to compare against`);
+  return false;
+}
+
 test("a knowledge.memory-only pack materializes the same injection input before and after", async (t) => {
   // The baseline is "the parent of the commit that introduced the `read`
   // spelling". That only names the pre-change code in a history made of real
@@ -98,11 +114,7 @@ test("a knowledge.memory-only pack materializes the same injection input before 
   // the previous RELEASE — three days of unrelated changes, not the pre-change
   // file. Comparing against that yields a red, or a green, that says nothing
   // about this claim; the honest move is to say so.
-  const depth = Number(git(["rev-list", "--count", "HEAD"]));
-  if (depth < 10) {
-    t.skip(`squashed history (${depth} commits) — no pre-change baseline to compare against`);
-    return;
-  }
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineProfileModule();
   try {
     const old = await import(baseline.module);
@@ -128,7 +140,8 @@ test("a knowledge.memory-only pack materializes the same injection input before 
 // change canonicalizes (see the dedicated test at the bottom). Proving the
 // difference is confined to `enabled`/`scope` is stronger than ignoring those
 // fields: an unexpected difference anywhere else would still surface.
-test("the resolved profile is identical except for the enabled/scope pair", async () => {
+test("the resolved profile is identical except for the enabled/scope pair", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineProfileModule();
   try {
     const old = await import(baseline.module);
@@ -157,7 +170,8 @@ test("the resolved profile is identical except for the enabled/scope pair", asyn
   }
 });
 
-test("the battery is not vacuous (errors and non-defaults must both appear)", async () => {
+test("the battery is not vacuous (errors and non-defaults must both appear)", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineProfileModule();
   try {
     const old = await import(baseline.module);
@@ -175,7 +189,8 @@ test("the battery is not vacuous (errors and non-defaults must both appear)", as
   }
 });
 
-test("the wholesale merge of cell default over deployment override is unchanged", async () => {
+test("the wholesale merge of cell default over deployment override is unchanged", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineProfileModule();
   try {
     const old = await import(baseline.module);
@@ -217,7 +232,8 @@ test("the wholesale merge of cell default over deployment override is unchanged"
 // already yielded no memory block before this change. The value of the fix is that
 // the pair can no longer disagree in storage and mislead the next reader (or the
 // next consumer, which would reasonably read only one of the two).
-test("enabled=false and scope=off now close each other, and that is deliberate", async () => {
+test("enabled=false and scope=off now close each other, and that is deliberate", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineProfileModule();
   try {
     const old = await import(baseline.module);

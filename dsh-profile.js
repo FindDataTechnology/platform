@@ -31,6 +31,7 @@ import { findRouteExclusivityViolations, throwRouteViolations } from "./lib/llm-
 import { applyRouteExceptions, loadRouteExceptions } from "./lib/route-exceptions.js";
 import { effectiveRows, ledgerFromPlan } from "./lib/fleet-plugin-rows.js";
 import { platformCredentialKeysIn } from "./lib/platform-credential-keys.js";
+import { publishReportContracts } from "./server/report-contract.js";
 import { deriveFullModeToolScope, customPresetToolScope, capByOperatorFace } from "./lib/full-mode-tool-scope.js";
 import { OPERATOR_TOOL_FACES } from "./lib/operator-tool-face.js";
 import { describeInjectionSurface } from "./lib/injection-surface.js";
@@ -43,7 +44,7 @@ import { repoRoot } from "./paths.js";
 const DSH_HOME = process.env.DSH_HOME || join(homedir(), ".dsh");
 const MCP_CONFIG_PATH = resolve(process.env.MCP_CONFIG_PATH || "mcp.json");
 
-// token.finddatatech.cloud gateway model catalog. 2026-09-30 refresh: every id
+// Model gateway catalog (2026-09-30 refresh): every id
 // on GET /v1/models (33) was probed with a real 1-token chat completion — that
 // endpoint lists *recognized* ids, not *serving* ones, and the gateway's
 // account groups authorize only a subset. Kept here: the ids that served.
@@ -70,9 +71,28 @@ const MCP_CONFIG_PATH = resolve(process.env.MCP_CONFIG_PATH || "mcp.json");
 //   需要先改选模路径并拿到「快照 serving 与探测一致率」的数据（charter 3.5a/3.5b）。
 //   前提别搞反：若将来改成从快照取目录，务必保留本表作为快照不可用时的回落，
 //   否则词元一次滚版就会让模型选择器变空。
+// 词元 deepseek-v4 车道的真实窗口（2026-11-11 实测，不是猜的）：
+//   prompt=1,000,038 tokens → 200 / finish=stop；
+//   再往上（9MB 文本）报的是 `The total text input size exceeds 8 MB`——也就是**请求体
+//   字节上限**先到，不是 token 窗口先到。所以 1M 是可兑现的下限，而不是乐观值。
+//
+// 这个数字必须诚实：dsh/pi-ai 的 clampMaxTokensToContext 用它算输出预算
+//   available = contextWindow − 估算上下文 − 4096
+// 声明小了会静默把输出预算压成个位数（线上 2026-11-11：720 个 MCP 工具 ≈ 15.9 万
+// token 的提示词 > 声明的 12.8 万 → 每回合只剩 128 个 token 的推理，卡片永远出不来，
+// 回合以 `max-tokens` 静默结束）。声明大了则永远不会触发压缩，超限时直接硬报错。
+const DEEPSEEK_V4_CONTEXT_WINDOW = 1_000_000;
+
 const VOLCES_MODELS = [
-  { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", contextWindow: 128000, maxTokens: 32768 },
-  { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", contextWindow: 128000, maxTokens: 32768 },
+  { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", contextWindow: DEEPSEEK_V4_CONTEXT_WINDOW, maxTokens: 32768 },
+  // deepseek-v4-pro dropped (2026-11-11). Not a transient flap this time: a
+  // 48-hour usage_logs window had ZERO successful calls, and only one of six
+  // candidate accounts even maps it (the other five report model_not_supported);
+  // the single mapped account answers upstream 502. Keeping it in the baked
+  // roster is what let it be selected and die — the Models page list and the
+  // cell's generated profile roster were both pruned on the same day, so this
+  // line is the last shape holding it. Re-adding it belongs to the discovery
+  // mechanism (add-llm-model-discovery), not to a hand edit.
   { id: "cohere/north-mini-code:free", name: "Cohere North Mini Code (free)", contextWindow: 128000, maxTokens: 8192 },
   { id: "dots-studio/dots-3-note-preview:free", name: "Dots 3 Note Preview (free)", contextWindow: 128000, maxTokens: 8192 },
   { id: "liquid/lfm-2.5-2.6b:free", name: "Liquid LFM 2.5 2.6B (free)", contextWindow: 128000, maxTokens: 8192 },
@@ -205,13 +225,30 @@ export async function buildLlmProfile({
   const providers = {};
   const models = [];
 
+  // User-managed providers (Models page) + their family-table resolver. The
+  // import is lazy to avoid a module-eval cycle (llm-providers imports only
+  // paths.js); hoisted to the top so the env route's metadata resolves through
+  // the same table as the user routes.
+  let userLlm = null;
+  try {
+    userLlm = await import("./llm-providers.js");
+  } catch (e) {
+    console.warn(`[dsh-profile] user providers unavailable: ${e?.message || e}`);
+  }
+  // A stored conservative default is not a declaration — resolve it to the
+  // family value before dsh meters against it (fix-model-window-family-reconcile).
+  const resolveMeta = (m) => {
+    const meta = userLlm?.effectiveModelMeta?.(m);
+    return meta ? { ...m, ...meta } : m;
+  };
+
   if (llmApiKey) {
     const route = "volces";
     const effective = await effectiveVolcesRoute();
     // An operator base-URL override outranks everything; without one the
     // caller's parameter (the env seed) keeps its meaning (D2 precedence).
     const override = effective.hasOverride;
-    const volcesModels = effective.models;
+    const volcesModels = effective.models.map(resolveMeta);
     providers[route] = {
       retryPolicy: { ...RETRY_POLICY, backoff: { ...RETRY_POLICY.backoff } },
       apiKeyEnv: "LLM_API_KEY",
@@ -234,15 +271,15 @@ export async function buildLlmProfile({
     }
   }
 
-  // Merge user-managed providers (Models page). Imported lazily to avoid a
-  // cycle (llm-providers imports only paths.js).
-  try {
-    const userLlm = await import("./llm-providers.js");
-    const { providers: userProviders, models: userModels } = userLlm.buildUserProviderEntries();
-    Object.assign(providers, userProviders);
-    models.push(...userModels);
-  } catch (e) {
-    console.warn(`[dsh-profile] user providers unavailable: ${e?.message || e}`);
+  // Merge user-managed providers (Models page) with the env route.
+  if (userLlm) {
+    try {
+      const { providers: userProviders, models: userModels } = userLlm.buildUserProviderEntries();
+      Object.assign(providers, userProviders);
+      models.push(...userModels);
+    } catch (e) {
+      console.warn(`[dsh-profile] user providers unavailable: ${e?.message || e}`);
+    }
   }
 
   // Project the persisted thinking level onto each route (dsh reads effort
@@ -762,6 +799,32 @@ const RUNTIME_NODE_MODULES = (() => {
   return APP_NODE_MODULES;
 })();
 
+/**
+ * Is `entry`'s PARENT still inside `moduleDir` once symlinks are resolved?
+ *
+ * The cleanup below deletes "stale" entries BY PATH, and a path is not a
+ * location: when any component between `moduleDir` and the entry is a symlink,
+ * `rmSync(join(moduleDir, pkg))` deletes in the tree on the FAR side. Measured
+ * 2026-11-11 — `~/.dsh/profiles/platform/node_modules/@deepseek-ai` was left
+ * EMPTY (every pinned package gone) while the unit-suite log showed only four
+ * unrelated assertion failures; the entry's parent was a link into another
+ * install.
+ *
+ * Returns false whenever containment cannot be PROVEN (dangling link, missing
+ * directory, unreadable path): refusing to delete on a guess is the point. A
+ * skipped cleanup only costs a re-link attempt; a wrong one costs somebody
+ * else's install.
+ */
+function resolvesInside(moduleDir, entry) {
+  try {
+    const root = realpathSync(moduleDir);
+    const parent = realpathSync(dirname(entry));
+    return parent === root || parent.startsWith(root + sep);
+  } catch {
+    return false;
+  }
+}
+
 function linkProfilePinnedModules() {
   const moduleDir = join(DSH_HOME, PROFILE_MODULE_DIR);
   // The deployment may hand the profile its WHOLE tree as one symlink — the
@@ -824,6 +887,12 @@ function linkProfilePinnedModules() {
         continue; // dangling — not ours to judge
       }
       if (target === appRoot || target.startsWith(appRoot + sep)) {
+        if (!resolvesInside(moduleDir, link)) {
+          console.warn(
+            `[dsh-profile] refusing to remove ${pkg} at ${link}: its parent resolves outside the profile module dir (delete-through-symlink guard)`,
+          );
+          continue;
+        }
         try {
           rmSync(link);
           console.log(`[dsh-profile] removed app-tree ${pkg} link from the deployment module dir (module-identity poison)`);
@@ -854,6 +923,14 @@ function linkProfilePinnedModules() {
         }
         if (same) continue;
       }
+      // NEVER delete through a symlinked component: the entry may live in another
+      // install (see resolvesInside).
+      if (!resolvesInside(moduleDir, link)) {
+        console.warn(
+          `[dsh-profile] refusing to clear ${pkg} at ${link}: its parent resolves outside the profile module dir (delete-through-symlink guard)`,
+        );
+        continue;
+      }
       try {
         rmSync(link, { recursive: true, force: true });
       } catch (err) {
@@ -863,6 +940,14 @@ function linkProfilePinnedModules() {
     }
     try {
       mkdirSync(dirname(link), { recursive: true });
+      // Same rule for the WRITE: linking into a directory that resolves outside
+      // moduleDir mutates the far side just like a delete would.
+      if (!resolvesInside(moduleDir, link)) {
+        console.warn(
+          `[dsh-profile] refusing to link ${pkg} at ${link}: its parent resolves outside the profile module dir (delete-through-symlink guard)`,
+        );
+        continue;
+      }
       symlinkSync(source, link, process.platform === "win32" ? "junction" : "dir");
       console.log(`[dsh-profile] linked ${pkg} into the profile node_modules (packaged resolution)`);
     } catch (err) {
@@ -1401,6 +1486,17 @@ export async function writeMcpPatch({ mcpOverlay, userGroups = null, ownerEmail 
         `[dsh-profile] omitting ${names.length} ${ref} MCP server(s) (${names.join(", ")}): no live credential for ${ownerEmail || "the machine owner"}`,
       );
     }
+    // D5：平台通道不可用但线自有轨仍在——保留 server 并显式说明降级，
+    // 而不是让它连同线自有凭据一起消失（"平台挂=子线功能消失"是本 change
+    // 要消除的形状）。降级不是静默：这条日志与计数就是它的证据。
+    for (const { ref, names, reason } of resolved.degraded || []) {
+      console.warn(
+        `[dsh-profile] degrading ${names.length} ${ref} MCP server(s) to the line's own credential (${names.join(", ")}): ${reason}`,
+      );
+      void import("./federated-ref.js")
+        .then((m) => m.recordFederatedDegraded(ref, { servers: names.length, email: ownerEmail }))
+        .catch(() => {});
+    }
     if (resolved.error) {
       console.warn(`[dsh-profile] credential-ref resolution failed (${resolved.error}); every ref-carrying server omitted`);
     }
@@ -1471,9 +1567,11 @@ export async function writeMcpPatch({ mcpOverlay, userGroups = null, ownerEmail 
     // (add-focus-overlay design D2).
     const available = { ...servers };
     const keep = new Set(Object.keys(mcpJsonServers));
-    for (const name of baselineMcpNames()) {
+    for (const name of [...baselineMcpNames(), ...PLATFORM_BASELINE_MCP]) {
       if (servers[name]) keep.add(name);
-      else console.warn(`[dsh-profile] PACK_BASELINE_MCP entry "${name}" is not installed; skipping`);
+      else if (!PLATFORM_BASELINE_MCP.includes(name)) {
+        console.warn(`[dsh-profile] PACK_BASELINE_MCP entry "${name}" is not installed; skipping`);
+      }
     }
     for (const name of scope.mcpKeep ?? []) keep.add(name);
     // External-team narrowing (fix-external-team-chat-lane B3): a pack that
@@ -1713,7 +1811,7 @@ export async function writeMcpPatch({ mcpOverlay, userGroups = null, ownerEmail 
 //      pre-change whole-account view, byte-for-byte).
 // Dirs reuse targetPaths' { dshHome, profileName } contract (the same
 // parameterization writeToolFilterPatch takes).
-export async function writeMemberMcpPatch({ personaPreset, memoryToken = null, libraryCollections = [], faceForPreset = null, ...writeOpts } = {}) {
+export async function writeMemberMcpPatch({ personaPreset, memoryToken = null, libraryCollections = [], faceForPreset = null, fleetIdentity = null, ...writeOpts } = {}) {
   // `faceForPreset` is this function's own input, never the base writer's —
   // destructured out above so it cannot leak into writeMcpPatch's options.
   const patchPath = await writeMcpPatch({ ...writeOpts });
@@ -1753,7 +1851,13 @@ export async function writeMemberMcpPatch({ personaPreset, memoryToken = null, l
     console.warn(`[dsh-profile] member trim skipped (${e?.message || e}); keeping the full composition`);
     trimmed = insert;
   }
-  const out = applyMemberOverrides(trimmed, { memoryToken, libraryCollections, memoryUrl: writeOpts.mcpOverlay?.fd_memory_url ?? null });
+  const out = applyMemberOverrides(trimmed, {
+    memoryToken,
+    libraryCollections,
+    memoryUrl: writeOpts.mcpOverlay?.fd_memory_url ?? null,
+    // 2.1：岗位身份写进该成员自己的 patch（persona 也带上，服务端要用它做一致性校验）。
+    fleetIdentity: fleetIdentity ? { ...fleetIdentity, persona: fleetIdentity.persona ?? personaPreset } : null,
+  });
   const memberPatch = join(memberDir, "mcp.patch.yml");
   atomicWriteTextSync(memberPatch, yaml.dump([{ insert: out }]));
   console.log(`[dsh-profile] member patch for ${personaPreset}: ${out.length} server(s) → ${memberPatch}`);
@@ -1772,9 +1876,38 @@ export async function writeMemberMcpPatch({ personaPreset, memoryToken = null, l
 // is what makes the member patch self-sufficient — the base writer only adds
 // the person row when the person mount resolves, which is orthogonal to
 // whether the member's own memory face exists.
-export function applyMemberOverrides(insert, { memoryToken = null, libraryCollections = [], memoryUrl = null } = {}) {
+export function applyMemberOverrides(insert, { memoryToken = null, libraryCollections = [], memoryUrl = null, fleetIdentity = null } = {}) {
   const ids = libraryCollections.map((c) => String(c).replace(/^library:/, "")).filter(Boolean);
   const hasMemoryRow = insert.some((e) => e?.config?.serverName === "fd-memory");
+  // 岗位身份随 patch 走（fix-report-attribution-concurrency 2.1）：报数归属需要一个
+  // **服务端写入**的坐标，而不是让模型在工具参数里自报。这份 patch 是那个 worker
+  // 私有的，它读到的只能是自己的身份 ⇒ 伪造成别人做不到（与 fd-memory 的成员令牌
+  // 同一条信任边界）。没有身份时**不写空值**：缺坐标 ⇒ bridge 不自报 ⇒ 服务端按
+  // 并发规则诚实拒收；带着空坐标冒充比拒收更坏。
+  //
+  // 通道是 headers 不是 env（2026-11-12 生产实测修正）：`fleet` 在
+  // SHARED_SATELLITE_SERVERS 里，全 cell 只由 mcp-satellite-host 起**一份** stdio
+  // 子进程，client 配置里的 env 没有任何进程会继承（实测三个 fleet-mcp.js 子进程的
+  // FLEET_MCP_* 全为 0，报数照旧按"唯一在飞回合"归因）。headers 是这一类
+  // streamable-http 行的已证通道（同 patch 里 facet-market 的 Authorization 就走它），
+  // 由中继逐请求读出来带进 tools/call。
+  // env 仍写一份：设计上"成员级 env 的卫星必须逐 runtime 起"，若将来把 fleet 从
+  // 共享名单里摘出去改成 stdio，这一条自动生效，不必再改一次。
+  const hasFleetIdentity = Boolean(fleetIdentity?.fleetId && fleetIdentity?.memberId);
+  const fleetEnv = hasFleetIdentity
+    ? {
+        FLEET_MCP_FLEET_ID: String(fleetIdentity.fleetId),
+        FLEET_MCP_MEMBER_ID: String(fleetIdentity.memberId),
+        ...(fleetIdentity.persona ? { FLEET_MCP_PERSONA: String(fleetIdentity.persona) } : {}),
+      }
+    : null;
+  const fleetHeaders = hasFleetIdentity
+    ? {
+        "X-Fleet-Fleet-Id": String(fleetIdentity.fleetId),
+        "X-Fleet-Member-Id": String(fleetIdentity.memberId),
+        ...(fleetIdentity.persona ? { "X-Fleet-Persona": String(fleetIdentity.persona) } : {}),
+      }
+    : null;
   let out = insert
     .filter((e) => !(e?.config?.serverName === "fd-memory" && (!memoryToken || hasMemoryRow === false && memoryToken)))
     .map((e) => {
@@ -1783,6 +1916,16 @@ export function applyMemberOverrides(insert, { memoryToken = null, libraryCollec
       }
       if (e?.config?.serverName === "library" && ids.length > 0) {
         return { ...e, config: { ...e.config, env: { ...(e.config.env ?? {}), LIBRARY_COLLECTIONS: ids.join(",") } } };
+      }
+      if (e?.config?.serverName === "fleet" && fleetEnv) {
+        return {
+          ...e,
+          config: {
+            ...e.config,
+            env: { ...(e.config.env ?? {}), ...fleetEnv },
+            headers: { ...(e.config.headers ?? {}), ...fleetHeaders },
+          },
+        };
       }
       return e;
     });
@@ -2054,6 +2197,26 @@ export async function writeSkillsPatch({ agentPreset = null, extraDirs = [], noO
 function baselineMcpNames() {
   return (process.env.PACK_BASELINE_MCP || "").split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
 }
+
+// PLATFORM_BASELINE_MCP: the platform's OWN bridges — servers the deployment
+// ships in platform.bundle.json rather than in the operator's mcp.json. They are
+// the same kind of thing as the mcp.json layer (part of the runtime, not a
+// business face), so they must survive focusing exactly like it does.
+//
+// Why this is a code constant and not just an operator env entry: there are TWO
+// baseline channels (mcp.json + bundle-seeded extension_configs) and the focus
+// keep-set only knew the first, so `PACK_BASELINE_MCP` had to name every bundled
+// bridge by hand or it silently vanished. Live proof 2026-11-11: the owner's
+// focused patch listed actions/fleet/cron/library/delegation/playwright but no
+// `input-request`, while an unfocused cell on the same image had it — the model
+// therefore had no way to ask the user anything, and the card smoke failed with
+// "卡片出现时不是 pending 态" rather than a configuration error.
+//
+// `input-request` belongs here rather than in a persona's resource set: asking
+// the human is not a capability a role opts into, it is how a role that needs a
+// human reaches them. (The public-facing narrowing still drops it — an owner-
+// only card answered by nobody must not sit in front of a visitor.)
+export const PLATFORM_BASELINE_MCP = Object.freeze(["input-request"]);
 
 // The public tool face (fix-external-team-chat-lane B3, decision 2026-10-30):
 // a public-facing pack's personas may mount the fleet bridge (its own team
@@ -2470,8 +2633,16 @@ export function writePresetsPatchSync({ dirs, default: defaultPreset = DEFAULT_A
     },
   ];
   atomicWriteTextSync(presetsPatchPath, yaml.dump(patch));
+  // Delivery contract (enforce-report-contract): the persona text is RIGHT HERE
+  // (defs[].persona) at the only moment it is authoritative. Publish the verdict
+  // into the process that will later settle these very turns, so settlement
+  // reads a fact instead of re-parsing prose (and does not depend on the catalog,
+  // which is empty in a live cell).
+  const contracts = publishReportContracts(defs);
+  const required = Object.values(contracts).filter((v) => v === "required").length;
   console.log(
-    `[dsh-profile] wrote preset overlay (registry default: ${defaultPreset}, ${presetRows.length} preset row(s)) → ${presetsPatchPath}`,
+    `[dsh-profile] wrote preset overlay (registry default: ${defaultPreset}, ${presetRows.length} preset row(s)) → ${presetsPatchPath}`
+    + `; report contracts: ${required}/${Object.keys(contracts).length} posts require a report`,
   );
   return presetsPatchPath;
 }
@@ -3265,9 +3436,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.assert(!catalogEntryPersona({ id: AGENT_ID, name: "自检官" }).includes("聚焦模式"), "non-pack persona must not");
     console.log("OK catalog persona focus note");
 
-    // Cleanup: no self-check pack root, preset dir, or DB survives.
+    // Cleanup: no self-check pack root or DB survives. (There is no preset DIR
+    // to remove any more: presets are rows in the preset overlay, not files —
+    // the old `rmSync(presetDir, …)` named a variable this script never declared
+    // and would have thrown on every self-check run.)
     sm.removePackSkills(PACK_ID);
-    rmSync(presetDir, { recursive: true, force: true });
     extensionStore.removeMcpServer("scope-extra");
     db.deleteInstalledPack(PACK_ID);
     // Leave the conventional full-mode patches behind.

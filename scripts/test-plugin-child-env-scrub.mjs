@@ -37,7 +37,9 @@ test("platform credential keys are absent from the child env", () => {
   const hostile = {
     FACET_INTERNAL_TOKEN: "facet-secret",
     PACK_USAGE_TOKEN: "usage-secret",
-    SUB2API_ADMIN_KEY: "sub2api-secret",
+    SUB2API_ADMIN_KEY: "placeholder", // low-entropy on purpose: the real gate this
+    // fixture feeds is "is the KEY scrubbed", and a secret-shaped literal here only
+    // trips the public-snapshot leak scan (gitleaks generic-api-key).
     MARKET_COOKIE: "cookie",
     LLM_API_KEY: "llm-key",
     LLM_PROVIDER_KEY_ACME: "provider-key",

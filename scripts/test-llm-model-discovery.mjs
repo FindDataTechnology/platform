@@ -89,11 +89,12 @@ test.after(() => mockServer.close());
 
 // ── 1.1 Family metadata table ────────────────────────────────────────────────
 
-test("family table: deepseek ids get 32768 + efforts, both id shapes", () => {
+test("family table: deepseek ids get 32768 + efforts + the measured 1M window, both id shapes", () => {
   for (const id of ["deepseek/deepseek-v4.1-flash", "deepseek-v4.1-flash", "deepseek-v4-pro"]) {
     const meta = llm.modelFamilyMeta(id);
     assert.equal(meta.maxTokens, 32768, id);
-    assert.equal(meta.contextWindow, 128000, id);
+    // 实测值，不是保守猜测：1,000,038-token prompt 在词元车道上正常完成。
+    assert.equal(meta.contextWindow, 1_000_000, id);
     assert.deepEqual(meta.reasoningEfforts, ["low", "medium", "high"], id);
     assert.equal(llm.modelFamilyRank(id), 0, id);
   }
@@ -188,8 +189,12 @@ test("syncProvider appends serving ids, flags (never evicts) dead roster ids", a
   });
 
   const result = await llm.syncProvider(created.id);
-  assert.deepEqual(Object.keys(result).sort(), ["added", "rosterSize", "statuses"]);
+  assert.deepEqual(Object.keys(result).sort(), ["added", "rosterSize", "statuses", "upgraded"]);
   assert.deepEqual(result.added, ["brand-new-model"]);
+  // Both existing entries carry values the family table does not know better
+  // than (unknown families), so nothing is rewritten: the upgrade pass is
+  // narrow on purpose, not a blanket metadata rewrite.
+  assert.deepEqual(result.upgraded, []);
   assert.equal(result.rosterSize, 3);
 
   const record = llm.listUserProviders().find((p) => p.id === created.id);
@@ -271,9 +276,16 @@ test("reserved volces sync persists into the override (add-editable-llm-route)",
     assert.equal(result.dryRun, undefined, "the dry-run marker is gone");
     assert.deepEqual(result.added, ["never-seen-model"]);
     assert.equal(result.statuses["dead-volces"].status, "upstream_down");
-    // The override roster seeds from the baked VOLCES_MODELS (13) + the merge.
-    assert.equal(result.rosterSize, 14);
+    // The override roster = the baked VOLCES_MODELS roster + whatever the merge
+    // added. This used to pin the absolute count ("baked 13 + 1 = 14"), which
+    // meant every unrelated edit to the baked roster turned this green test red —
+    // a judgement hung on an unstable number, not on the behaviour under test.
+    // The invariant that actually matters: the merge ADDS to the baked set (it
+    // must not replace it), and the whole roster is what gets persisted.
+    assert.ok(result.rosterSize > result.added.length, "merge adds to the baked roster, not replaces it");
     const override = llm.getVolcesOverride();
+    assert.equal(override.models.length, result.rosterSize, "the override persists the whole roster");
+    assert.ok(override.models.some((m) => m.id === "deepseek-v4.1-flash"), "a baked model survives the merge");
     assert.ok(override.models.some((m) => m.id === "never-seen-model"), "serving id persisted");
     assert.equal(override.discovery["dead-volces"].status, "upstream_down");
   } finally {
@@ -343,11 +355,37 @@ test("updateProvider replaces the roster with family-table fallbacks", () => {
   assert.deepEqual(models[0], {
     id: "deepseek-v4.1-flash",
     name: "DeepSeek V4.1 Flash",
-    contextWindow: 128000,
+    // 词元 deepseek-v4 车道实测窗口（2026-11-11：prompt=1,000,038 → 200/stop；
+    // 更大时先撞 8MB 请求体上限）。曾写 128000，会把 dsh/pi-ai 的输出预算压到
+    // 128 个 token，回合静默空转。
+    contextWindow: 1_000_000,
     maxTokens: 32768,
     reasoningEfforts: ["low", "medium", "high"],
   });
-  assert.deepEqual(models[1], { id: "custom-model", name: "Custom", contextWindow: 64000, maxTokens: 2048 });
+  // An explicit value that disagrees with the family table (here: the generic
+  // defaults, since "custom-model" has no family) is pinned — an operator can
+  // always declare a window the table would not pick.
+  assert.deepEqual(models[1], {
+    id: "custom-model",
+    name: "Custom",
+    contextWindow: 64000,
+    maxTokens: 2048,
+    metaPinned: true,
+  });
+});
+
+test("a round-tripped family value is not pinned, so sync stays able to reconcile", () => {
+  // The panel prefills from modelMeta and saves the whole roster. That value IS
+  // the family value — if the save pinned it, the family-table correction could
+  // never reach a roster again (the freeze fix-model-window-family-reconcile
+  // exists to undo).
+  const created = llm.createProvider({ name: "Roundtrip Fixture", baseUrl: MOCK_BASE, apiKey: "sk-rt-key" });
+  llm.updateProvider(created.id, {
+    models: [{ id: "deepseek-v4.1-flash", contextWindow: 1_000_000, maxTokens: 32768 }],
+  });
+  const stored = JSON.parse(fs.readFileSync(process.env.LLM_PROVIDERS_STORE, "utf8"))
+    .providers.find((p) => p.id === created.id).models[0];
+  assert.equal(stored.metaPinned, undefined, "family value round-trip must not pin");
 });
 
 test("invalid models payloads are rejected and leave the roster unchanged", () => {
@@ -394,4 +432,110 @@ test("roster: glm-5.3-flash 降到队尾（96% 失败的链路不该是首选后
   const di = ids.indexOf("deepseek-v4.1-flash");
   assert.ok(gi > 0 && di === 0, "deepseek 仍是首选（dshModels[0] 是默认）");
   assert.equal(gi, ids.length - 1, "glm 保留席位但在队尾：显式绑定仍能解析，兜底不再先给它");
+});
+
+// ── Metadata reconciliation (fix-model-window-family-reconcile) ──────────────
+//
+// The incident this undoes: a roster row persisted as `contextWindow: 128000`
+// for a lane that measured 1,000,000. Sync only appended, so the family table
+// could never correct an existing row; the squeeze (720 MCP tools ≈ 159k tokens
+// ⇒ ~128 output tokens per turn, stopReason=length) was silent.
+
+const readStoredModels = (id) =>
+  JSON.parse(fs.readFileSync(process.env.LLM_PROVIDERS_STORE, "utf8")).providers.find((p) => p.id === id).models;
+
+// A stored row exactly as the drifted nodes have it.
+function resetStoreWithModels(id, name, models) {
+  resetStore([
+    {
+      id,
+      name,
+      baseUrl: MOCK_BASE,
+      apiKey: `sk-${id}-key`,
+      models,
+      reasoningEfforts: [],
+      createdAt: new Date().toISOString(),
+      lastTest: null,
+    },
+  ]);
+}
+
+test("resolver: conservative default upgrades on a 1M family, stays on an unknown one", () => {
+  assert.deepEqual(
+    llm.effectiveModelMeta({ id: "deepseek-v4.1-flash", contextWindow: 128000, maxTokens: 8192 }),
+    { contextWindow: 1_000_000, maxTokens: 32768 },
+  );
+  // A hand-tuned value that is NOT the conservative default is somebody's
+  // decision, not an untuned placeholder.
+  assert.deepEqual(
+    llm.effectiveModelMeta({ id: "deepseek-v4.1-flash", contextWindow: 64000, maxTokens: 2048 }),
+    { contextWindow: 64000, maxTokens: 2048 },
+  );
+  assert.deepEqual(
+    llm.effectiveModelMeta({ id: "zeta-model", contextWindow: 128000, maxTokens: 8192 }),
+    { contextWindow: 128000, maxTokens: 8192 },
+  );
+  assert.deepEqual(
+    llm.effectiveModelMeta({ id: "deepseek-v4.1-flash", contextWindow: 128000, maxTokens: 8192, metaPinned: true }),
+    { contextWindow: 128000, maxTokens: 8192 },
+  );
+});
+
+test("a stale stored window resolves to the family value in the dsh route and the served list", () => {
+  const created = llm.createProvider({ name: "Stale Window", baseUrl: MOCK_BASE, apiKey: "sk-stale-key" });
+  resetStoreWithModels(created.id, "Stale Window", [
+    { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", contextWindow: 128000, maxTokens: 8192 },
+  ]);
+  const entries = llm.buildUserProviderEntries();
+  const routeModel = entries.providers[created.id].models.find((m) => m.id === "deepseek-v4.1-flash");
+  assert.equal(routeModel.contextWindow, 1_000_000, "dsh meters against this — a 128k declaration squeezes the budget");
+  assert.equal(routeModel.maxTokens, 32768);
+  // The flat list is what getAvailableModels() serves; without the window the
+  // chat context meter has no denominator for user routes.
+  const flat = entries.models.find((m) => m.id === "deepseek-v4.1-flash" && m.provider === created.id);
+  assert.equal(flat.contextWindow, 1_000_000);
+  // The panel sees the same numbers (it prefills the editor from here).
+  const card = llm.listUserProviders().find((p) => p.id === created.id);
+  assert.deepEqual(card.modelMeta["deepseek-v4.1-flash"], { contextWindow: 1_000_000, maxTokens: 32768 });
+});
+
+test("sync persists the upgrade, reports it, and is idempotent", async () => {
+  const created = llm.createProvider({ name: "Upgrade Fixture", baseUrl: MOCK_BASE, apiKey: "sk-up-key" });
+  resetStoreWithModels(created.id, "Upgrade Fixture", [
+    { id: "deepseek-v4.1-flash", name: "DeepSeek V4.1 Flash", contextWindow: 128000, maxTokens: 8192 },
+  ]);
+  setBehavior({ "deepseek-v4.1-flash": "ok" });
+
+  const first = await llm.syncProvider(created.id);
+  assert.deepEqual(first.added, [], "nothing new to merge — this is a metadata repair");
+  assert.deepEqual(first.upgraded, ["deepseek-v4.1-flash"]);
+  const stored = readStoredModels(created.id)[0];
+  assert.equal(stored.contextWindow, 1_000_000, "the store is corrected through the same write path");
+  assert.equal(stored.maxTokens, 32768);
+
+  // Idempotent: a second sync has nothing to rewrite and says so.
+  const second = await llm.syncProvider(created.id);
+  assert.deepEqual(second.upgraded, []);
+  assert.equal(readStoredModels(created.id)[0].contextWindow, 1_000_000);
+});
+
+test("sync never rewrites an operator-pinned window", async () => {
+  const created = llm.createProvider({ name: "Pinned Fixture", baseUrl: MOCK_BASE, apiKey: "sk-pin-key" });
+  resetStoreWithModels(created.id, "Pinned Fixture", [
+    { id: "deepseek-v4.1-flash", name: "Delivery Cap", contextWindow: 128000, maxTokens: 1234, metaPinned: true },
+  ]);
+  setBehavior({ "deepseek-v4.1-flash": "ok" });
+
+  const result = await llm.syncProvider(created.id);
+  assert.deepEqual(result.upgraded, []);
+  const stored = readStoredModels(created.id)[0];
+  assert.equal(stored.contextWindow, 128000);
+  assert.equal(stored.maxTokens, 1234);
+  assert.equal(stored.name, "Delivery Cap", "a pinned row is not touched at all");
+  const entries = llm.buildUserProviderEntries();
+  assert.equal(
+    entries.providers[created.id].models.find((m) => m.id === "deepseek-v4.1-flash").contextWindow,
+    128000,
+    "the runtime honours the pin too, not just the store",
+  );
 });

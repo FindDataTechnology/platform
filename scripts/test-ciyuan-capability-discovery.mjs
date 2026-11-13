@@ -115,8 +115,10 @@ test("sync probes only serving ids and skips permitted_only", async () => {
   assert.equal(attempts["orphan-c"], undefined, "permitted_only 不许被探测（纯白探）");
 
   assert.deepEqual(result.added, ["live-a"]);
-  // 结果形状不变（既有测试钉住这三个键），快照信息只进日志。
-  assert.deepEqual(Object.keys(result).sort(), ["added", "rosterSize", "statuses"]);
+  // 结果形状钉死在这里（既有测试钉住这些键），快照信息只进日志。
+  // `upgraded` 由 fix-model-window-family-reconcile 加入：sync 顺手把仍是保守默认值的
+  // 条目升级成家族值并如实报出来——「名册被改了」不能是静默重写。
+  assert.deepEqual(Object.keys(result).sort(), ["added", "rosterSize", "statuses", "upgraded"]);
 });
 
 // ── 2. 快照不可用时退回全量探测 ─────────────────────────────

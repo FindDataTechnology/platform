@@ -122,6 +122,11 @@ export type ServerMessage =
       sessionId?: string;
     }
   | { type: "answer_question_error"; message: string }
+  // 结构化输入请求（add-input-request-cards）：提卡时推给该会话的观看者，
+  // 落终态时推 settled。行是唯一真源——这两个事件只是「快去读那一行」的
+  // 提示，断连期间错过的靠会话同步时的待答列表补齐。
+  | { type: "input_request"; request: InputRequestView }
+  | { type: "input_request_settled"; requestId: string; state: string; values?: Record<string, unknown> | null }
   | { type: "catalog_changed" }
   | { type: "skills"; skills: SkillInfo[] }
   | { type: "documents_status"; [k: string]: unknown }
@@ -398,6 +403,65 @@ export interface AskAnswerItem {
   id: string;
   selected: string[];
   custom?: string;
+}
+
+// ── 结构化输入请求（add-input-request-cards） ───────────────────────────────
+// 卡片形状与 server/input-requests.js 的校验结果一一对应：closed 的 card
+// type 与 field kind，字段的展示信息随卡片下发，渲染端不猜。
+
+export type InputCardType = "form" | "confirm" | "choice";
+
+export type InputFieldKind =
+  | "text"
+  | "multiline"
+  | "number"
+  | "date"
+  | "enum"
+  | "boolean"
+  | "file";
+
+export interface InputFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface InputField {
+  key: string;
+  label: string;
+  kind: InputFieldKind;
+  required?: boolean;
+  placeholder?: string;
+  unit?: string;
+  options?: InputFieldOption[];
+  default?: unknown;
+}
+
+export interface InputCard {
+  type: InputCardType;
+  title: string;
+  detail?: string | null;
+  fields: InputField[];
+  actions?: { id: string; label: string; kind: "primary" | "danger" }[];
+}
+
+export interface InputRequestView {
+  requestId: string;
+  sessionId?: string | null;
+  state: "pending" | "answered" | "cancelled" | "expired" | "escalated";
+  card: InputCard;
+  policy?: {
+    onUnattended?: "wait" | "default" | "abort" | "escalate";
+    ttlSec?: number;
+    answerableBy?: "owner" | "any";
+  } | null;
+  expiresAt: number;
+  createdAt: number;
+  values?: Record<string, unknown> | null;
+  answeredBy?: string | null;
+  // 提出这张卡的工具调用（服务端在提卡帧上带的一次性关联，不落库）。卡片用它
+  // 在**工具返回之前**就认出「这张卡是我这个调用提的」——否则 waits 窗口内
+  // 拿不到 requestId，只能渲染成只读的「等待填写」（2026-11-11 线上实测）。
+  toolCallId?: string;
 }
 
 // A prompt waiting behind another session's turn (concurrent-chat-sessions):

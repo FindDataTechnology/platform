@@ -339,6 +339,53 @@ test("runPersonaTurn: a fast upstream failure retries ONCE on the next candidate
   assert.equal(out.detail?.degradedTo, "model-b");
 });
 
+test("runPersonaTurn: a SLOW upstream failure with zero output still retries once (2026-11-11)", async () => {
+  resetLanes();
+  const ctx = attrCtx();
+  // 把一个「跑了很久、什么都没产出」的上游失败造出来：把快速窗口压到 1ms，
+  // 于是 shouldRetryFastFailure 物理上不可能命中（elapsed >= 1ms 必然成立）。
+  // 这条正是现场那 42/54 的形状：5xx 在 1 分钟之后才回来，快速门永远不开。
+  process.env.PLATFORM_LLM_RETRY_FAST_MS = "1";
+  try {
+    // 让上游失败**真的**慢过窗口：不加这段，elapsed≈0ms 仍然 <1ms，
+    // 快速门照样先命中，等于没测到归零门（第一版就是这么假绿的）。
+    const inner = ctx.dshBridge.prompt;
+    ctx.dshBridge.prompt = async (sessionId) => {
+      await new Promise((r) => setTimeout(r, 25));
+      return inner(sessionId);
+    };
+    ctx.promptBehavior = (n) => (n === 1 ? "upstream" : "ok");
+    const out = await ctx.runCronJobTurn(fleetJob({ id: "job_zero", sessionId: "cron-attr-zero" }), { turnTimeoutMs: 800 });
+    assert.equal(out.ok, true, "零产出的一次性损失值得再试一次");
+    assert.deepEqual(ctx.switches, ["model-a", "model-b"], "换到链上的下一跳");
+    assert.equal(out.detail?.degradedTo, "model-b");
+    assert.equal(out.detail?.retryReason, "zero_output", "要写清是哪个门放行的那一次重试");
+  } finally {
+    delete process.env.PLATFORM_LLM_RETRY_FAST_MS;
+  }
+});
+
+test("runPersonaTurn: FLEET_RETRY_ZERO_OUTPUT=0 关掉这道门（回滚闸）", async () => {
+  resetLanes();
+  const ctx = attrCtx();
+  process.env.PLATFORM_LLM_RETRY_FAST_MS = "1";
+  process.env.FLEET_RETRY_ZERO_OUTPUT = "0";
+  try {
+    const inner = ctx.dshBridge.prompt;
+    ctx.dshBridge.prompt = async (sessionId) => {
+      await new Promise((r) => setTimeout(r, 25));
+      return inner(sessionId);
+    };
+    ctx.promptBehavior = (n) => (n === 1 ? "upstream" : "ok");
+    const out = await ctx.runCronJobTurn(fleetJob({ id: "job_zero_off", sessionId: "cron-attr-zero-off" }), { turnTimeoutMs: 800 });
+    assert.equal(out.ok, false, "关了门就不该重试");
+    assert.equal(ctx.prompts.length, 1, "只跑一次");
+  } finally {
+    delete process.env.PLATFORM_LLM_RETRY_FAST_MS;
+    delete process.env.FLEET_RETRY_ZERO_OUTPUT;
+  }
+});
+
 test("runPersonaTurn: a timeout does NOT retry (the work's own shape, not the lane's)", async () => {
   resetLanes();
   const ctx = attrCtx();

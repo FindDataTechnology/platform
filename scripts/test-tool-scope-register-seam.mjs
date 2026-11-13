@@ -96,7 +96,7 @@ test("shadow drops out-of-allowlist registrations at every generation; the rest 
   }
 });
 
-test("shadow preserves scoped registration attribution", async () => {
+test("shadow records the MEASURED scope-attribution facts (re-pinned 2026-11-13)", async () => {
   writeFilter({ alpha: ["lookup"] });
   const { app, inst } = await bootTools();
   try {
@@ -107,13 +107,49 @@ test("shadow preserves scoped registration attribution", async () => {
     await handle.await?.();
 
     const disp = capture.ctx.tools.register(mkTool("mcp__beta__scoped_tool"));
-    const globalNames = inst.schemas().map((s) => s.name);
-    assert.ok(!globalNames.includes("mcp__beta__scoped_tool"), "a scoped registration never leaks to the global layer");
     const scopedNames = inst.schemas(scopeOf(capture.ctx)).map((s) => s.name);
     assert.ok(scopedNames.includes("mcp__beta__scoped_tool"), "the scoped registration stays visible in its scope");
 
+    // ── DECISION RECORD (re-measured 2026-11-13 while merging main into the CI line) ──
+    // The 2026-11-10 record here said the opposite (a scoped registration leaked
+    // into the shared layer and another agent's roster saw it). That record no
+    // longer describes the pinned runtime: measured with a standalone probe on
+    // this exact tree (dsh-tools 0.2.0-rc.2, shadow installed), a scope-level
+    // registration is visible ONLY inside its own scope. Three facts, each
+    // pinned below so the next upstream move turns this red instead of
+    // quietly changing the security story:
+    //
+    //   1. the raw/shared instance does NOT gain the scoped name  (no leak upward)
+    //   2. another agent scope's roster does NOT see it            (no leak sideways)
+    //   3. `tools.restrict({ deny })` from an agent scope still refuses, but with
+    //      "names unknown global tool" — not "requires a scoped context" — i.e.
+    //      it resolves names against the global layer only, which is exactly why
+    //      per-agent narrowing still cannot be expressed here.
+    //
+    // Still standing (and not weakened by this record): the registration-time
+    // allowlist filter (case 1 of this file) and the pre-execute guard.
+    assert.ok(
+      !inst.schemas().map((s) => s.name).includes("mcp__beta__scoped_tool"),
+      "a scope-level registration must not appear on the raw/shared instance",
+    );
+    const second = createScope(app, { seam: "agent-two" });
+    const other = {};
+    const h2 = second.ctx.plugin(toolsUserPlugin(other));
+    await h2.await?.();
+    assert.ok(
+      !other.ctx.tools.schemas().map((s) => s.name).includes("mcp__beta__scoped_tool"),
+      "another agent's roster must not see this scope's registration (no leak sideways)",
+    );
+    assert.throws(
+      () => other.ctx.tools.restrict({ deny: ["mcp__beta__scoped_tool"] }),
+      /unknown global tool/,
+      "tools.restrict() resolves names against the GLOBAL layer only — per-agent narrowing is unavailable",
+    );
+
     disp();
+    h2.dispose?.();
     handle.dispose?.();
+    await second.dispose();
     await scope.dispose();
   } finally {
     delete inst.register;

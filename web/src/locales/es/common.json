@@ -1261,7 +1261,67 @@
         "summaryUnmapped": "{{count}} esperando tu elección",
         "browseCatalog": "Ver el directorio de aplicaciones"
       },
-      "filterPlaceholder": "Filtrar conexiones…"
+      "filterPlaceholder": "Filtrar conexiones…",
+      "doors": {
+        "title": "Cuántas claves cuesta esto",
+        "lead": "por puerta, no por marca",
+        "goConnect": "Conectar",
+        "refresh": "Actualizar",
+        "missingCount": "faltan {missing} de {count}",
+        "allReady": "{count} listas",
+        "footnote": "Una clave de cliente sirve a varias líneas y se factura al cliente; las credenciales de terceros siguen siendo suyas. Las tarjetas de abajo mantienen sus propios flujos.",
+        "loadFailed": "No se pudo leer el estado: {detail}",
+        "ownTrack": "credencial propia de la línea: {track}",
+        "noOwnTrack": "sin credencial propia de reserva",
+        "state": {
+          "connected": "conectada",
+          "missing": "sin conectar",
+          "unknown": "ilegible",
+          "stale": "caducada"
+        },
+        "customerKey": {
+          "title": "Clave de cliente",
+          "subtitle": "Una sola clave 词元, facturada al cliente y compartida por todas las líneas que la consumen."
+        },
+        "memberAssertion": {
+          "title": "Delegación de miembro",
+          "subtitle": "La plataforma actúa como tú en esa línea con una aserción firmada de corta duración; nunca guarda tu sesión.",
+          "offSubtitle": "Desactivada por defecto: ninguna línea acepta delegación todavía. Siguen usando su credencial propia.",
+          "empty": "Ninguna línea declara delegación todavía."
+        },
+        "thirdParty": {
+          "title": "Credenciales de terceros",
+          "subtitle": "Credenciales de otros sistemas: acceso al mercado, conectores, Chatwoot, búsqueda. No nos toca fusionarlas."
+        },
+        "refName": {
+          "ciyuan-account": "Cuenta 词元",
+          "registry": "Acceso al mercado",
+          "facet-market": "Emparejamiento del mercado",
+          "connector": "Cuenta de conectores",
+          "connector-bindings": "Vinculaciones de conectores",
+          "chatwoot": "Tenant de Chatwoot",
+          "search": "Búsqueda web",
+          "paper-trading": "Trading simulado",
+          "line-wire-customer": "Credencial de línea 柏讯",
+          "line-lex": "Credencial de línea 识律"
+        },
+        "refPurpose": {
+          "ciyuan-account": "modelos y herramientas de 萬星",
+          "registry": "instalar herramientas del mercado",
+          "facet-market": "habilitar MCP del mercado 谦面",
+          "connector": "credenciales SaaS alojadas",
+          "connector-bindings": "suministro por paquete instalado",
+          "chatwoot": "tu propio tenant",
+          "search": "clave de búsqueda personal",
+          "paper-trading": "desbloquear herramientas de simulación",
+          "line-wire-customer": "acciones de la línea 柏讯",
+          "line-lex": "acciones de la línea 识律"
+        },
+        "lineName": {
+          "lex": "识律",
+          "wire-customer": "柏讯"
+        }
+      }
     },
     "lines": {
       "title": "Operaciones por línea",
@@ -2743,6 +2803,29 @@
     "cancelled": "Pregunta cancelada",
     "customAnswer": "Respuesta personalizada"
   },
+  "inputRequest": {
+    "title": "Se necesita información",
+    "waitingHint": "La conversación continúa al enviar",
+    "submit": "Enviar",
+    "cancel": "Cancelar solicitud",
+    "answered": "Enviado",
+    "cancelled": "Cancelado",
+    "expired": "Caducado (sin respuesta)",
+    "escalated": "Escalado para revisión",
+    "expiresIn": "Quedan {{minutes}} min",
+    "fillRequired": "Completa: {{fields}}",
+    "filePlaceholder": "Referencia de recurso o enlace",
+    "yes": "Sí",
+    "no": "No",
+    "pending": "Esperando tu respuesta (responde desde la lista de solicitudes)"
+  },
+  "inputInbox": {
+    "title": "Formularios pendientes",
+    "count": "{{count}}",
+    "empty": "Nada pendiente",
+    "refresh": "Actualizar",
+    "error": "Error al cargar: {{message}}"
+  },
   "auth": {
     "login": "Iniciar sesión",
     "logout": "Cerrar sesión"
@@ -3143,6 +3226,23 @@
     }
   },
   "fleets": {
+    "credentialPack": {
+      "title": "Credenciales",
+      "needFills": "{{count}} por rellenar",
+      "ready": "Todo listo",
+      "connect": "Conectar",
+      "doorCustomerKey": "Puerta K · clave de cliente",
+      "doorMemberAssertion": "Puerta A · actúa como tú",
+      "doorThirdParty": "Terceros",
+      "doorUnclassified": "Sin clasificar",
+      "reasonFallback": "Hay que conectar primero",
+      "unknown": "{{count}} servicio(s) no están en el registro: no se puede juzgar",
+      "noCredential": "{{count}} servicio(s) no necesitan credencial",
+      "missingPacks": "{{count}} paquete(s) ya no están instalados aquí",
+      "unreadable": "Ilegible",
+      "loadFailed": "No se pudo leer el plan de credenciales: {{message}}",
+      "loading": "Calculando cuántas credenciales necesita este equipo…"
+    },
     "title": "Equipos de agentes",
     "create": "Crear equipo",
     "empty": "Aún no hay equipos de agentes: crea el primero",
@@ -4241,7 +4341,7 @@
     "market": {
       "subtitle": "Adquiere y gestiona capacidades: agentes, herramientas, habilidades, complementos",
       "openStudio": "Abrir el estudio de creación",
-      "installed": "Packs instalados en esta máquina"
+      "installed": "Agentes instalados en esta máquina"
     }
   },
   "hub": {
@@ -4312,30 +4412,8 @@
     },
     "agents": {
       "unavailableTitle": "Este despliegue no tiene mercado de agentes",
-      "unavailableBody": "No hay mercado conectado. Los paquetes ya instalados siguen en «Míos» y funcionan igual."
+      "unavailableBody": "No hay mercado conectado. Los agentes ya instalados siguen en «Míos» y funcionan igual."
     }
-  },
-  "inputInbox": {
-    "title": "Formularios pendientes",
-    "count": "{{count}}",
-    "empty": "Nada pendiente",
-    "refresh": "Actualizar",
-    "error": "Error al cargar: {{message}}"
-  },
-  "inputRequest": {
-    "title": "Se necesita información",
-    "waitingHint": "La conversación continúa al enviar",
-    "submit": "Enviar",
-    "cancel": "Cancelar solicitud",
-    "answered": "Enviado",
-    "cancelled": "Cancelado",
-    "expired": "Caducado (sin respuesta)",
-    "escalated": "Escalado para revisión",
-    "expiresIn": "Quedan {{minutes}} min",
-    "fillRequired": "Completa: {{fields}}",
-    "filePlaceholder": "Referencia de recurso o enlace",
-    "yes": "Sí",
-    "no": "No"
   },
   "teamDirectory": {
     "title": "Directorio de equipos",

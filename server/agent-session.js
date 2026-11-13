@@ -4,7 +4,7 @@
 // chat-history routes consume them through ctx.
 
 import * as chatHistory from "../chat-history.js";
-import { runA2aTurn, resolveGatewayCredential } from "./a2a-client.js";
+import { runA2aTurn, resolveGatewayCredential, outboundDelegationDepth } from "./a2a-client.js";
 import * as catalog from "../catalog.js";
 import * as dshProfile from "../dsh-profile.js";
 import path from "node:path";
@@ -769,6 +769,11 @@ async function streamA2aChat(entry, text, explicitSessionId = null) {
     let sent = 0;
     const out = await runA2aTurn(entry.url, text, {
       contextId: sessionId,
+      // A human chat sends no depth header (topLevel 0); a turn that itself
+      // arrived as a delegation continues the chain (inbound + 1). Reading it
+      // per-turn rather than per-deployment is what stops a second hop from
+      // looking like a first one — see outboundDelegationDepth.
+      depth: outboundDelegationDepth(ctx.turnStateFor(sessionId).origin?.fleet?.depth, { topLevel: 0 }),
       gatewayToken,
       agentToken,
       signal: abort.signal,

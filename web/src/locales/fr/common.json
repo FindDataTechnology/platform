@@ -1261,7 +1261,67 @@
         "summaryUnmapped": "{{count}} en attente de votre choix",
         "browseCatalog": "Parcourir le répertoire des applications"
       },
-      "filterPlaceholder": "Filtrer les connexions…"
+      "filterPlaceholder": "Filtrer les connexions…",
+      "doors": {
+        "title": "Combien de clés cela coûte",
+        "lead": "par porte, pas par marque",
+        "goConnect": "Connecter",
+        "refresh": "Rafraîchir",
+        "missingCount": "{missing} sur {count} manquantes",
+        "allReady": "{count} prêtes",
+        "footnote": "Une clé client sert plusieurs lignes et est facturée au client ; les identifiants tiers restent les leurs. Les cartes ci-dessous gardent leurs propres parcours.",
+        "loadFailed": "Impossible de lire l'état : {detail}",
+        "ownTrack": "identifiant propre à la ligne : {track}",
+        "noOwnTrack": "aucun identifiant propre de secours",
+        "state": {
+          "connected": "connecté",
+          "missing": "non connecté",
+          "unknown": "illisible",
+          "stale": "expirée"
+        },
+        "customerKey": {
+          "title": "Clé client",
+          "subtitle": "Une seule clé 词元, facturée au client et partagée par toutes les lignes qui la consomment."
+        },
+        "memberAssertion": {
+          "title": "Délégation de membre",
+          "subtitle": "La plateforme agit en votre nom sur cette ligne via une assertion signée de courte durée ; elle ne détient jamais votre session.",
+          "offSubtitle": "Désactivée par défaut : aucune ligne n'accepte encore la délégation. Elles utilisent leur propre identifiant.",
+          "empty": "Aucune ligne ne déclare de délégation pour l'instant."
+        },
+        "thirdParty": {
+          "title": "Identifiants tiers",
+          "subtitle": "Les identifiants d'autres systèmes : accès au marché, connecteurs, Chatwoot, recherche. Ce n'est pas à nous de les fusionner."
+        },
+        "refName": {
+          "ciyuan-account": "Compte 词元",
+          "registry": "Accès au marché",
+          "facet-market": "Appairage du marché",
+          "connector": "Compte connecteur",
+          "connector-bindings": "Liaisons de connecteurs",
+          "chatwoot": "Locataire Chatwoot",
+          "search": "Recherche web",
+          "paper-trading": "Trading simulé",
+          "line-wire-customer": "Identifiant ligne 柏讯",
+          "line-lex": "Identifiant ligne 识律"
+        },
+        "refPurpose": {
+          "ciyuan-account": "modèles et outils 萬星",
+          "registry": "installer des outils du marché",
+          "facet-market": "activer le MCP du marché 谦面",
+          "connector": "identifiants SaaS hébergés",
+          "connector-bindings": "fourniture par pack installé",
+          "chatwoot": "votre propre locataire",
+          "search": "clé de recherche personnelle",
+          "paper-trading": "débloquer les outils de simulation",
+          "line-wire-customer": "actions de la ligne 柏讯",
+          "line-lex": "actions de la ligne 识律"
+        },
+        "lineName": {
+          "lex": "识律",
+          "wire-customer": "柏讯"
+        }
+      }
     },
     "lines": {
       "title": "Opérations par ligne",
@@ -2743,6 +2803,29 @@
     "cancelled": "Question annulée",
     "customAnswer": "Réponse libre"
   },
+  "inputRequest": {
+    "title": "Informations requises",
+    "waitingHint": "La conversation reprend après envoi",
+    "submit": "Envoyer",
+    "cancel": "Annuler la demande",
+    "answered": "Envoyé",
+    "cancelled": "Annulé",
+    "expired": "Expiré (sans réponse)",
+    "escalated": "Escaladé pour revue",
+    "expiresIn": "{{minutes}} min restantes",
+    "fillRequired": "Veuillez renseigner : {{fields}}",
+    "filePlaceholder": "Référence de ressource ou lien",
+    "yes": "Oui",
+    "no": "Non",
+    "pending": "En attente de votre saisie (répondez depuis la liste des demandes)"
+  },
+  "inputInbox": {
+    "title": "Formulaires à remplir",
+    "count": "{{count}}",
+    "empty": "Rien en attente",
+    "refresh": "Actualiser",
+    "error": "Échec du chargement : {{message}}"
+  },
   "auth": {
     "login": "Se connecter",
     "logout": "Se déconnecter"
@@ -3143,6 +3226,23 @@
     }
   },
   "fleets": {
+    "credentialPack": {
+      "title": "Identifiants",
+      "needFills": "{{count}} à renseigner",
+      "ready": "Tout est prêt",
+      "connect": "Connecter",
+      "doorCustomerKey": "Porte K · clé client",
+      "doorMemberAssertion": "Porte A · agit pour vous",
+      "doorThirdParty": "Tiers",
+      "doorUnclassified": "Non classé",
+      "reasonFallback": "À connecter d'abord",
+      "unknown": "{{count}} service(s) introuvable(s) dans le registre — impossible de juger",
+      "noCredential": "{{count}} service(s) sans identifiant",
+      "missingPacks": "{{count}} paquet(s) ne sont plus installés ici",
+      "unreadable": "Illisible",
+      "loadFailed": "Plan d'identifiants illisible : {{message}}",
+      "loading": "Calcul du nombre d'identifiants nécessaires…"
+    },
     "title": "Équipes d'agents",
     "create": "Créer une équipe",
     "empty": "Aucune équipe d'agents — créez la première",
@@ -4241,7 +4341,7 @@
     "market": {
       "subtitle": "Acquérir et gérer des capacités : agents, outils, compétences, plugins",
       "openStudio": "Ouvrir l'atelier de création",
-      "installed": "Packs installés sur cette machine"
+      "installed": "Agents installés sur cette machine"
     }
   },
   "hub": {
@@ -4312,30 +4412,8 @@
     },
     "agents": {
       "unavailableTitle": "Ce déploiement n'a pas de marché d'agents",
-      "unavailableBody": "Aucun marché n'est branché ici. Les paquets déjà installés restent sous « Les miens » et fonctionnent comme avant."
+      "unavailableBody": "Aucun marché n'est branché ici. Les agents déjà installés restent sous « Les miens » et fonctionnent comme avant."
     }
-  },
-  "inputInbox": {
-    "title": "Formulaires à remplir",
-    "count": "{{count}}",
-    "empty": "Rien en attente",
-    "refresh": "Actualiser",
-    "error": "Échec du chargement : {{message}}"
-  },
-  "inputRequest": {
-    "title": "Informations requises",
-    "waitingHint": "La conversation reprend après envoi",
-    "submit": "Envoyer",
-    "cancel": "Annuler la demande",
-    "answered": "Envoyé",
-    "cancelled": "Annulé",
-    "expired": "Expiré (sans réponse)",
-    "escalated": "Escaladé pour revue",
-    "expiresIn": "{{minutes}} min restantes",
-    "fillRequired": "Veuillez renseigner : {{fields}}",
-    "filePlaceholder": "Référence de ressource ou lien",
-    "yes": "Oui",
-    "no": "Non"
   },
   "teamDirectory": {
     "title": "Annuaire des équipes",

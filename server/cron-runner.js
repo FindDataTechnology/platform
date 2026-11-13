@@ -17,15 +17,15 @@ import * as catalog from "../catalog.js";
 import * as dshProfile from "../dsh-profile.js";
 import { parseToolResult } from "./dsh-events.js";
 import { getClusterDatabase } from "./routes/clusters-db.js";
-import { runA2aTurn, resolveGatewayCredential } from "./a2a-client.js";
+import { runA2aTurn, resolveGatewayCredential, outboundDelegationDepth } from "./a2a-client.js";
 import { clusterMemoryFor, memoryInjectionFor } from "@finddatatechnology/yongyi-client";
 import { runToolTurn as runToolTurnDefault } from "./tool-turn.js";
 import { classifyErrorKind, normalizeUsage } from "./fleet-events.js";
 import { breakerState, recordUpstreamFailure, recordUpstreamSuccess } from "./llm-lane.js";
 import { classifyPresetSetError } from "../dsh-bridge.js";
-import { getFleetDatabase } from "./routes/fleets-db.js";
+import { getFleetDatabase, isPersonaBackedTargetKind } from "./routes/fleets-db.js";
 import { turnTokens } from "./model-budget.js";
-import { retryFastWindowMs, shouldRetryFastFailure, shouldDegradeOverBudget } from "./cron-decisions.js";
+import { retryFastWindowMs, shouldRetryFastFailure, shouldRetryZeroOutput, shouldDegradeOverBudget } from "./cron-decisions.js";
 
 // ── Turn carrier (add-fleet-carrier) ─────────────────────────────────────────
 //
@@ -240,6 +240,13 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
     let contextWindow = null;
     let lastInputTokens = 0;
     let usageSteps = 0;
+    // The FIRST request's billed input (2026-11-11). `lastInputTokens` is a
+    // high-water mark, so a round that dies at 187k cannot say whether it
+    // STARTED near the ceiling (baseline context too big) or was pushed there
+    // by one huge tool reply. Measured motivation: hotel-watch-scout overflows
+    // at 2 steps with a 92-token prompt template — the ledger could show the
+    // wall but not what filled it, so the cure could not be chosen.
+    let firstInputTokens = null;
     // 早停的"到点复判"定时器（见 maybeEarlyStop）。
     let earlyStopTimer = null;
     const settle = (fn, arg) => {
@@ -273,7 +280,7 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
     // zero-output turn (honest NULL, never a 0).
     let firstAssistantAt = null;
     const timer = setTimeout(
-      () => settle(reject, timeoutError(toolBlocks, startedAtMs, Date.now(), { compactions, hasOutput: Boolean(text), reported })),
+      () => settle(reject, timeoutError(toolBlocks, startedAtMs, Date.now(), { compactions, hasOutput: Boolean(text), reported, contextWindow, inputTokens: lastInputTokens })),
       timeoutMs,
     );
     // 早停判定（唯一入口）。
@@ -309,7 +316,7 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
         ? cancelSession
         : (sid) => ctx.dshBridge?.cancelSession?.(sid);
       try { cancel(sessionId)?.catch?.(() => {}); } catch { /* best effort */ }
-      const err = timeoutError(toolBlocks, startedAtMs, Date.now(), { compactions, hasOutput: Boolean(text), reported });
+      const err = timeoutError(toolBlocks, startedAtMs, Date.now(), { compactions, hasOutput: Boolean(text), reported, contextWindow, inputTokens: lastInputTokens });
       err.message = `turn stopped early — context pressure (${compactions} compactions)`;
       err.earlyStop = true;
       settle(reject, err);
@@ -336,7 +343,7 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
       // mistake as trusting the catalog.
       if (!Number.isFinite(contextWindow) || contextWindow <= 0) return false;
       if (lastInputTokens < contextWindow * OVERFLOW_PREEMPT_RATIO) return false;
-      const err = timeoutError(toolBlocks, startedAtMs, Date.now(), { compactions, hasOutput: Boolean(text), reported });
+      const err = timeoutError(toolBlocks, startedAtMs, Date.now(), { compactions, hasOutput: Boolean(text), reported, contextWindow, inputTokens: lastInputTokens });
       err.message = `turn stopped early — context overflow (${lastInputTokens}/${contextWindow} input tokens)`;
       err.earlyStop = true;
       // Build the detail here (the message now names the overflow, so the shared
@@ -345,7 +352,7 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
         compactions,
         reported,
         hasOutput: Boolean(text),
-        facts: { contextWindow, lastInputTokens, usageSteps },
+        facts: { contextWindow, lastInputTokens, usageSteps, firstInputTokens },
         steps: toolBlocks.length,
         toolResults: toolBlocks.filter((b) => b.result !== undefined).length,
       }) ?? err.detail;
@@ -370,7 +377,7 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
           // Overflow evidence rides every normal close too, so a failure that
           // arrives later (the upstream error is reported on this same payload)
           // carries the wall it hit.
-          contextWindow, lastInputTokens, usageSteps,
+          contextWindow, lastInputTokens, usageSteps, firstInputTokens,
         });
       }
       // A user-questions ask in an unattended session (scheduled task or
@@ -391,6 +398,21 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
         const chunk = params?.frame?.chunk;
         if (chunk?.type === "finish" && chunk.reason?.kind === "error") {
           error = chunk.reason.failure?.message || "LLM request failed";
+        }
+        // THE prompt size lives here, not in assistant/message.usage (2026-11-11).
+        // `usage.input` on an assistant message is the increment for that step
+        // (measured: 633–2,082 tokens), while this stream frame reports the whole
+        // prompt the provider was charged for (measured: 16k–124k on the same
+        // turns — one to two orders of magnitude apart). Reading the increment as
+        // "how full is the window" made `inputTokens >= 0.95 * contextWindow`
+        // physically impossible, so `windowFull` could never fire: 34 post-fix
+        // rounds, zero rows, while rounds at 0.97 were visibly happening.
+        if (chunk?.type === "usage") {
+          const u = chunk.usage ?? {};
+          const billed = (Number(u.inputTokens ?? u.input ?? 0) || 0) + (Number(u.cacheReadTokens ?? u.cacheRead ?? 0) || 0);
+          if (billed > lastInputTokens) lastInputTokens = billed;
+          if (firstInputTokens === null) firstInputTokens = billed;
+          usageSteps += 1;
         }
         return;
       }
@@ -435,6 +457,7 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
           const step = normalizeUsage(usage);
           const billed = step ? (step.input ?? 0) + (step.cacheReadTokens ?? 0) : 0;
           if (billed > lastInputTokens) lastInputTokens = billed;
+          if (firstInputTokens === null) firstInputTokens = billed;
           usageSteps += 1;
           maybePreemptOverflow();
         }
@@ -498,7 +521,20 @@ export function collectTurn(ctx, sessionId, timeoutMs, activeTurns, collectors =
 // `turn_budget_exceeded` (raise the budget or shorten the work). A turn with
 // no tool history at all summarizes honestly empty — the model may have been
 // thinking, and an invented tool name would misdirect triage.
-export function timeoutError(toolBlocks, startedAtMs, now = Date.now(), { compactions = 0, hasOutput = false, reported = false } = {}) {
+// "How full is the window" — ONE definition, so every settlement path agrees
+// (2026-11-11). Previously only `shapeTurnOutcome` computed it, i.e. only OK
+// rounds could ever carry `windowFull` — but a round that fills the window is
+// precisely the one that fails on budget, so the field was structurally absent
+// on the entire population where it matters (measured: one round at ratio 1.23
+// settled as a timeout with no `windowFull`).
+export const WINDOW_FULL_RATIO = 0.95;
+
+export function isWindowFull(contextWindow, inputTokens) {
+  return Number.isFinite(contextWindow) && contextWindow > 0
+    && Number.isFinite(inputTokens) && inputTokens >= contextWindow * WINDOW_FULL_RATIO;
+}
+
+export function timeoutError(toolBlocks, startedAtMs, now = Date.now(), { compactions = 0, hasOutput = false, reported = false, contextWindow = null, inputTokens = null } = {}) {
   const err = new Error("turn timed out");
   const pending = [...toolBlocks].reverse().find((b) => b.result === undefined);
   err.detail = pending
@@ -526,6 +562,14 @@ export function timeoutError(toolBlocks, startedAtMs, now = Date.now(), { compac
     err.detail.contextPressure = true;
     err.message = `turn timed out — context pressure (${compactions} compactions)`;
   }
+  // The window rides the detail whenever the runtime told us (fix: the
+  // attribution field was declared but never fed — 2026-11-11 measured 106
+  // context-pressure failures in 24h with `cause` on 0 of them, because the
+  // producer wrote no `contextWindow` and the consumer requires it). Absent
+  // stays absent: a missing window is not defaulted, it is simply not claimed.
+  if (Number.isFinite(contextWindow) && contextWindow > 0) err.detail.contextWindow = contextWindow;
+  // The wall, on the failure path too (this is the path that actually sees it).
+  if (isWindowFull(contextWindow, inputTokens)) { err.detail.windowFull = true; err.detail.inputTokens = inputTokens; }
   return err;
 }
 
@@ -553,7 +597,7 @@ export function timeoutError(toolBlocks, startedAtMs, now = Date.now(), { compac
 // `detail: null`. Both mean "this round could not fit its own work".
 export const OVERFLOW_RE = /context overflow|context_length_exceeded|maximum context/i;
 
-export function contextPressureDetail(error, { compactions = 0, reported = false, hasOutput = false, facts = null, steps = null, toolResults = null, priorCacheRead = null, contextWindow = null } = {}) {
+export function contextPressureDetail(error, { compactions = 0, reported = false, hasOutput = false, facts = null, steps = null, toolResults = null, priorCacheRead = null, contextWindow = null, inputTokens = null } = {}) {
   const overflow = OVERFLOW_RE.test(String(error ?? ""));
   const pressured = overflow || compactions >= CONTEXT_PRESSURE_COMPACTIONS;
   if (!pressured) return null;
@@ -568,10 +612,18 @@ export function contextPressureDetail(error, { compactions = 0, reported = false
     // ABSENT rather than defaulted: a null contextWindow means the runtime never
     // told us its capacity, which is different from "the window is 128k".
     ...(Number.isFinite(facts?.lastInputTokens) ? { lastInputTokens: facts.lastInputTokens } : {}),
+    // Where the round STARTED, next to where it ended (2026-11-11): the pair is
+    // what separates "this post's baseline never fits" from "one tool reply
+    // blew it up". Absent when the runtime reported no usage at all.
+    ...(Number.isFinite(facts?.firstInputTokens) ? { firstInputTokens: facts.firstInputTokens } : {}),
     ...(Number.isFinite(facts?.contextWindow) ? { contextWindow: facts.contextWindow } : {}),
     ...(Number.isFinite(facts?.usageSteps) ? { usageSteps: facts.usageSteps } : {}),
     ...(Number.isFinite(steps) ? { steps } : {}),
     ...(Number.isFinite(toolResults) ? { toolResults } : {}),
+    // Same one definition of "filled the window" the timeout path uses.
+    ...(isWindowFull(contextWindow ?? facts?.contextWindow ?? null, inputTokens ?? facts?.lastInputTokens ?? null)
+      ? { windowFull: true }
+      : {}),
     // WHY it ran out of room (rotate-cron-session-on-context-pressure 4.1):
     // the numbers above say how full it was; this says which cure applies.
     ...attributionFor({ priorCacheRead, contextWindow: contextWindow ?? facts?.contextWindow ?? null }),
@@ -653,12 +705,19 @@ export async function attributeFailureAndSalvage(ctx, {
   childSessionId = null,
   mirrorSessionId = null,
   isFleet = false,
+  // Injected by a caller whose session is owned by a DIFFERENT bridge (worker
+  // pool). Omitted → the serial chain's ctx.dshBridge, unchanged.
+  prompt = null,
+  collectors = null,
   // Overflow evidence collected by the turn itself (fix-overflow-attribution):
   // the failing upstream answer carries no usage, so these are the only numbers
   // that can describe the wall.
   contextWindow = null,
   lastInputTokens = 0,
   usageSteps = 0,
+  // The first request's billed input: lets the ledger separate "the baseline
+  // context was already near the ceiling" from "one tool reply pushed it over".
+  firstInputTokens = null,
   steps = null,
   toolResults = null,
   priorCacheRead = null,
@@ -667,7 +726,7 @@ export async function attributeFailureAndSalvage(ctx, {
     compactions,
     reported,
     hasOutput: Boolean(text),
-    facts: { contextWindow, lastInputTokens, usageSteps },
+    facts: { contextWindow, lastInputTokens, usageSteps, firstInputTokens },
     steps,
     toolResults,
     priorCacheRead,
@@ -675,20 +734,26 @@ export async function attributeFailureAndSalvage(ctx, {
   if (!detail) return null;
   let out = detail;
   if (shouldSalvageReport(out, { isFleet })) {
-    const salvage = await runWrapUpReport(ctx, { childSessionId, mirrorSessionId });
+    const salvage = await runWrapUpReport(ctx, { childSessionId, mirrorSessionId, prompt, collectors });
     out = { ...out, wrapUp: { ok: Boolean(salvage?.text), chars: (salvage?.text ?? "").length } };
   }
   return out;
 }
 
-export async function runWrapUpReport(ctx, { childSessionId, mirrorSessionId, timeoutMs = WRAPUP_TIMEOUT_MS } = {}) {
-  if (!childSessionId || !ctx?.dshBridge?.prompt) return null;
-  const prompt =
+export async function runWrapUpReport(ctx, { childSessionId, mirrorSessionId, timeoutMs = WRAPUP_TIMEOUT_MS, prompt = null, collectors = null } = {}) {
+  // The session belongs to whichever bridge owns it (2026-11-11). On the serial
+  // chain that is ctx.dshBridge; on the worker pool it is the worker's own child,
+  // so the caller injects its prompt + collector map. Sending the wrap-up through
+  // the primary bridge for a worker session would ask a child that does not own
+  // the session — the same ownership mistake the early-stop cancel had.
+  const send = typeof prompt === "function" ? prompt : ctx?.dshBridge?.prompt?.bind(ctx.dshBridge);
+  if (!childSessionId || typeof send !== "function") return null;
+  const wrapPrompt =
     "只做一件事：立刻调用 report_status 提交本轮已有结论（槽位值 + 阻塞项 + 一句摘要）。" +
     "不要调用其他工具，不要解释，不要继续分析，调用完立即结束。没有新数据就报「本轮无新数据」。";
   try {
-    const collected = collectTurn(ctx, childSessionId, timeoutMs, new Map(), ctx.sessionCollectors, mirrorSessionId ?? childSessionId);
-    await ctx.dshBridge.prompt(childSessionId, [{ type: "text", text: prompt }]);
+    const collected = collectTurn(ctx, childSessionId, timeoutMs, new Map(), collectors ?? ctx.sessionCollectors, mirrorSessionId ?? childSessionId);
+    await send(childSessionId, [{ type: "text", text: wrapPrompt }]);
     const out = await collected;
     return out ?? null;
   } catch {
@@ -919,8 +984,8 @@ async function normalizeModelForJob(ctx, preset, job = null) {
 // a2a targets (add-agent-delegation-a2a D2): a REMOTE turn — no runtime
 // readiness, no preset switch, no dsh prompt. The streamed reply lands in the
 // task's dedicated session exactly like a persona execution's output;
-// outbound depth is 1 (human-originated delegation baseline — chains get
-// +1 only when in-cell turns are themselves delegated, a future state).
+// outbound depth continues the chain it arrived on (see outboundDelegationDepth:
+// top-level fire = 1, delegated fire = inbound + 1).
 async function runA2aRemoteTurn(ctx, job, timeoutMs) {
   const entry = catalog.getAgentEntry(job.preset);
   if (!entry || entry.mode !== "a2a") {
@@ -939,7 +1004,10 @@ async function runA2aRemoteTurn(ctx, job, timeoutMs) {
     const agentToken = process.env.AGENT_SERVING_BACKEND_TOKEN || "";
     const out = await runA2aTurn(entry.url, job.prompt, {
       contextId: sessionId,
-      depth: 1,
+      // Continuation, not a constant: a cron fire that itself arrived as a
+      // delegation ships inbound+1; a top-level fire ships 1 (a2a-client only
+      // sends the header at depth ≥ 1). See outboundDelegationDepth.
+      depth: outboundDelegationDepth(job?.origin?.fleet?.depth, { topLevel: 1 }),
       gatewayToken,
       agentToken,
       timeoutMs,
@@ -1286,6 +1354,7 @@ export async function runPersonaTurn(ctx, job, timeoutMs, activeTurns, { started
           contextWindow: out.contextWindow ?? null,
           lastInputTokens: out.lastInputTokens ?? 0,
           usageSteps: out.usageSteps ?? 0,
+          firstInputTokens: out.firstInputTokens ?? null,
           steps: out.steps ?? null,
           toolResults: out.toolResults ?? null,
         });
@@ -1381,25 +1450,37 @@ export async function runPersonaTurn(ctx, job, timeoutMs, activeTurns, { started
   // attempt outcome, the classified error kind, the elapsed wall time and the
   // chain position.
   const retryFastMs = retryFastWindowMs(process.env);
-  if (
-    shouldRetryFastFailure({
+  const retryErrorKind = classifyErrorKind(result.error);
+  // Two gates, one retry. The fast one bounds double budget on a turn that has
+  // already spent wall clock; the zero-output one covers the rounds whose loss
+  // is total (nothing produced) — measured 2026-11-11: 42/54 upstream 5xx
+  // failures ran past the fast window, so the fast gate could never fire for
+  // them, and those are the worst losses. `retryReason` rides the log and the
+  // detail so a reader can tell which gate spent the second attempt.
+  const retryWhy = shouldRetryFastFailure({
       result,
-      errorKind: classifyErrorKind(result.error),
+      errorKind: retryErrorKind,
       elapsedMs: Date.now() - startedWall,
       retryFastMs,
       candidates,
       landedIndex,
     })
-  ) {
+    ? "fast_upstream"
+    : process.env.FLEET_RETRY_ZERO_OUTPUT !== "0"
+      && shouldRetryZeroOutput({ result, errorKind: retryErrorKind, candidates, landedIndex })
+      ? "zero_output"
+      : null;
+  if (retryWhy) {
     const nextModel = candidates[landedIndex + 1];
     try {
       const switched = await ctx.switchModelTo?.(nextModel);
       if (switched?.ok !== false) {
-        console.warn(`[fleets] post model degraded for ${job.id}: ${modeled?.landed ?? "?"} → ${nextModel} (upstream failure)`);
+        console.warn(`[fleets] post model degraded for ${job.id}: ${modeled?.landed ?? "?"} → ${nextModel} (${retryWhy})`);
         degradedTo = nextModel;
         result = await attempt(nextModel);
-        if (result.ok && !result.detail) result.detail = { degradedTo: nextModel };
-        else if (result.detail) result.detail = { ...result.detail, degradedTo: nextModel };
+        const stamp = { degradedTo: nextModel, retryReason: retryWhy };
+        if (result.ok && !result.detail) result.detail = stamp;
+        else if (result.detail) result.detail = { ...result.detail, ...stamp };
       }
     } catch { /* switch failure: the original result stands */ }
   }
@@ -1561,11 +1642,8 @@ export function buildClusterDigest({ clusterName, results, policy }) {
       lines.push(`- ${r.name}：${r.status === "skipped" ? `跳过——${r.reason}` : `失败——${r.error || "未知错误"}`}`);
     }
   }
-  // 这里的 `kind` 是本函数**自己写进 results 的载体标签**（persona = 走本地共享
-  // 运行时，见下方 results.push），审计官成员也走这条载体、记的也是 "persona"。
-  // 换成 isPersonaBackedTargetKind 反而会错：results 里永远不会有 kind ===
-  // "auditor"，那会写成"我管了审计官"却一次也匹配不到。
-  // persona-only: results 的 kind 是载标签，auditor 也记成 persona
+  // persona-only: 这里的 kind 是结果车道标签（results.push 只产生 skip / a2a / persona），
+  // 不是成员目标类型——审计官成员同样落 kind:"persona"，故本判断已覆盖 persona 族。
   if (policy?.allowParallel && results.some((r) => r.kind === "persona" && r.status === "ok")) {
     lines.push("", "（并行策略下本地 persona 成员仍按序执行——共享运行时一次只能承载一个 persona；仅远端 a2a 成员真正并行。）");
   }
@@ -1856,9 +1934,10 @@ export function attachCronRunner(ctx, { runPersona = null, runA2a = null, runToo
     // round leaves no run instance, no handoffs, no settle behind it. The
     // inner gate in runPersonaTurn stays as the race fallback (bridge flapping
     // between this pre-gate and the turn itself records failed, honestly).
-    // persona-only: targetType 是载体判别（只有 cluster|a2a|tool|persona，
-    // 见 cron.js:646），审计官成员的 job 落在 persona 载体上，本比较已含它
-    if (job.targetType === "persona" && job.sourceTag?.fleetId) {
+    // 审计官（targetType "auditor"）与 persona 同属 persona 族：同一条执行车道、
+    // 同一个运行时。写成 === "persona" 会让审计官回合绕过本前置闸，只落到内层竞态
+    // 兜底，把「运行时就绪失败」记成 failed 而非设计要求的 skipped。
+    if (isPersonaBackedTargetKind(job.targetType) && job.sourceTag?.fleetId) {
       let ready;
       try {
         ready = await awaitRuntimeReadyForJob(ctx, job);
@@ -1997,9 +2076,8 @@ export function attachCronRunner(ctx, { runPersona = null, runA2a = null, runToo
       // a2a targets (add-agent-delegation-a2a D2): a REMOTE turn — no runtime
       // readiness, no preset switch, no dsh prompt. The streamed reply lands
       // in the task's dedicated session exactly like a persona execution's
-      // output; outbound depth is 1 (human-originated delegation baseline —
-      // chains get +1 only when in-cell turns are themselves delegated, a
-      // future state).
+      // output; outbound depth continues the chain (runA2aRemoteTurn resolves
+      // it through outboundDelegationDepth).
       out = await a2aExecutor(ctx, job, timeoutMs);
     } else if (job.targetType === "tool") {
       // Tool posts (add-tool-posts): one deterministic MCP call — no dsh

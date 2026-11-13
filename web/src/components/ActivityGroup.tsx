@@ -5,6 +5,7 @@ import {
   groupHasError,
   groupHasPendingAction,
   groupHasPendingAsk,
+  groupHasPendingInput,
   isGroupOpen,
   useChatStore,
   type ActivityGroup as ActivityGroupModel,
@@ -58,7 +59,12 @@ function ActivityGroupBase({ turn, group, renderBlock }: Props) {
   // (same never-fold rule as errored activity). A proposal awaiting the
   // human's confirm/cancel is the same case: the gate's confirmation card is
   // the turn's deliverable, not machinery.
-  const open = isGroupOpen(turn, group) || groupHasPendingAsk(group, pendingQuestion) || groupHasPendingAction(group);
+  const open =
+    isGroupOpen(turn, group) ||
+    groupHasPendingAsk(group, pendingQuestion) ||
+    groupHasPendingAction(group) ||
+    // 待答的输入卡同理：它在回合结束后仍要人能看见并填写（线上实测被折掉的形态）。
+    groupHasPendingInput(group);
   const errored = groupHasError(group);
   const info = headerInfo(turn, group);
   const params = {

@@ -29,6 +29,7 @@ import type {
   TodoCounts,
   TodoItem,
   AskQuestionItem,
+  InputRequestView,
 } from "../types/ws";
 
 const NO_TODOS: TodoCounts = { pending: 0, inProgress: 0, completed: 0 };
@@ -252,6 +253,15 @@ interface State {
   // then), or a session switch (the server re-pushes if it is still pending).
   // Drives the interactive card and the composer gate.
   pendingQuestion: { askId: string; toolCallId?: string; questions: AskQuestionItem[] } | null;
+  // 结构化输入请求（add-input-request-cards）：按 requestId 收在途的卡。
+  // 行是唯一真源，这里只是「本视图现在该显示哪些卡」的投影——settled 事件
+  // 或会话切换都会把它收敛回服务器的真相。
+  pendingInputRequests: Record<string, InputRequestView>;
+  // 已收尾的输入请求（add-input-request-cards，2026-11-11 线上补）：工具可能在
+  // 人还没填时就返回「挂起中」（dsh 的 MCP 调用有 60s 硬超时，等人天然超过它），
+  // 于是答案是在之后由 settled 事件送到的——卡片要能显示真正的终态与所填的值，
+  // 就不能只依赖工具结果。这里是收到过终态的 requestId → {state, values}。
+  settledInputRequests: Record<string, SettledInputRequestView>;
   // True while the remainder of a dismissed run (user stop, or a socket drop
   // mid-stream) must be ignored. dsh has no interrupt RPC, so "stop" is a
   // view-level finalize; without this flag the orphaned run's late events
@@ -445,6 +455,37 @@ const RUN_EVENT_TYPES = new Set([
 // risk the guard exists for is assistant-side anyway.
 // `queued` / `dequeued` are stamped too (concurrent-chat-sessions): a queue
 // announcement belongs to the session it names, never to whatever is on screen.
+// 会话加载时待答投影的处置（2026-11-11 线上修）：左边的清空原本是无条件的，
+// 理由是「会话换了，卡就不属于本视图，服务器的会话同步会重推」。但同一条
+// session_loaded 也会在**同一会话**上重发（回合起止、断连重同步），而无条件的
+// 清空会把刚推来的待答卡抹掉——线上形态就是卡一出现就退化成只读的「等待填写」
+// （工具确实问过了、行也是 pending，只是 store 里没这张卡）。
+// 所以只在**真的换了会话**时清；同会话重载一律保留（服务端重推是幂等的）。
+// The helpers below preserve records ACROSS a session load, so they must speak
+// the exact shapes the state declares. They used to return
+// `Record<string, unknown>`, which only typechecked while the state fields were
+// loose too; once the fields got real types the spread at the load path failed
+// with TS2322 (found here, in the merge of the two lines).
+type SettledInputRequestView = {
+  state: string;
+  values: Record<string, unknown> | null;
+  toolCallId?: string;
+};
+
+function keepPendingInput(
+  state: { currentSessionId: string | null; pendingInputRequests: Record<string, InputRequestView> },
+  loadedId: string,
+): Record<string, InputRequestView> {
+  return state.currentSessionId === loadedId ? state.pendingInputRequests : {};
+}
+
+function keepSettledInput(
+  state: { currentSessionId: string | null; settledInputRequests: Record<string, SettledInputRequestView> },
+  loadedId: string,
+): Record<string, SettledInputRequestView> {
+  return state.currentSessionId === loadedId ? state.settledInputRequests : {};
+}
+
 const SESSION_SCOPED_TYPES = new Set([...RUN_EVENT_TYPES, "done", "queued", "dequeued"]);
 
 // ── Session turn cache (perf-session-open) ───────────────────────────────────
@@ -676,6 +717,8 @@ export const useChatStore = create<State>((set) => ({
         todos: [],
         todoCounts: NO_TODOS,
         pendingQuestion: null,
+        pendingInputRequests: {},
+        settledInputRequests: {},
         // Gate chip resets to the platform default on switch; the load's
         // tool_gate push restates the target session's real position.
         websearchEnabled: false,
@@ -708,6 +751,8 @@ export const useChatStore = create<State>((set) => ({
   todos: [],
   todoCounts: NO_TODOS,
   pendingQuestion: null,
+  pendingInputRequests: {},
+        settledInputRequests: {},
   suppressed: false,
   demoExhausted: null,
   demoBudgetLeft: null,
@@ -1144,6 +1189,33 @@ export const useChatStore = create<State>((set) => ({
           // Counts come from the server so header rendering needs no recount.
           return { todos: m.todos, todoCounts: m.counts };
 
+        case "input_request": {
+          // 提卡（add-input-request-cards）：按 requestId 收下，与 agent_question
+          // 的区别是它不挂回合——这张卡可以在回合结束后仍然待答。
+          if (!m.request || m.request.state !== "pending") return {};
+          return {
+            pendingInputRequests: { ...state.pendingInputRequests, [m.request.requestId]: m.request },
+          };
+        }
+
+        case "input_request_settled": {
+          // 落终态：从「待答」投影里摘掉，同时把终态与所填的值记进 settled 投影。
+          // 工具结果不是唯一来源（它可能在人填之前就返回了挂起中），卡片要能在
+          // 之后凭这条事件显示真正的结局与答案。
+          const prev = state.pendingInputRequests[m.requestId];
+          const next = { ...state.pendingInputRequests };
+          delete next[m.requestId];
+          return {
+            pendingInputRequests: next,
+            settledInputRequests: {
+              ...state.settledInputRequests,
+              // toolCallId 从「摘走的那张卡」上带过来：工具还没返回时卡片手头没有
+              // requestId，只能靠它认出「这张卡是我的终态」（2026-11-11 e2e 实测）。
+              [m.requestId]: { state: m.state ?? "answered", values: m.values ?? null, toolCallId: prev?.toolCallId },
+            },
+          };
+        }
+
         case "agent_question":
           // The runtime parked on ask_user_question (add-user-questions): hold
           // the ask for the interactive card + composer gate. Broadcast live
@@ -1248,6 +1320,8 @@ export const useChatStore = create<State>((set) => ({
                 todos: [],
                 todoCounts: NO_TODOS,
                 pendingQuestion: null,
+                pendingInputRequests: keepPendingInput(state, m.id),
+                settledInputRequests: keepSettledInput(state, m.id),
                 pendingSession: null,
                 pendingNewSession: isNewChatArrival ? false : state.pendingNewSession,
                 sessionSwitchBackup: null,
@@ -1273,6 +1347,10 @@ export const useChatStore = create<State>((set) => ({
             todos: [],
             todoCounts: NO_TODOS,
             pendingQuestion: null,
+            // 待答的输入请求属于会话：加载时清空，服务器的会话同步随即把
+            // 目标会话的待答卡重新推回来（add-input-request-cards）。
+            pendingInputRequests: keepPendingInput(state, m.id),
+            settledInputRequests: keepSettledInput(state, m.id),
             pendingSession: null,
             // Only the structural new-chat arrival consumes the handshake —
             // an id-matched refresh must not disarm it while the real

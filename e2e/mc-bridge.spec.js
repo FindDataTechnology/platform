@@ -7,7 +7,7 @@ import { prepareTempStoreDirs, spawnTestServer } from "./helpers.js";
 // MC bridge e2e (spec: mission-control-bridge): a self-booted cell with the
 // bridge enabled against an in-test STUB console implementing the three
 // pinned endpoints (MC is alpha/external — live verification is a deployment
-// checklist item, see DEPLOY.md). Dead LLM keeps the child task's failure
+// checklist item, see the ops runbook). Dead LLM keeps the child task's failure
 // deterministic: register → queue task (title=persona, description=prompt) →
 // the cell claims and runs it → it appears in /tasks (manual category, own
 // session) → the failure posts back to the console.

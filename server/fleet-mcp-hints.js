@@ -45,3 +45,32 @@ export function decisionResolveErrorText(message, status) {
 export function deputyToolErrorText(message, status) {
   return status === 403 ? deputyDeniedText(message) : message;
 }
+
+// ── 岗位身份的两个通道（fix-report-attribution-concurrency 2.2，2026-11-12 修正）──
+//
+// 报数归属需要的岗位坐标必须来自**服务端写入**的东西，模型改不了：
+//
+//   1. `args.__fleetIdentity` —— 共用卫星的现役通道。`fleet` 在
+//      SHARED_SATELLITE_SERVERS 里，全 cell 只由 mcp-satellite-host 起一份 stdio
+//      子进程、被所有 runtime 共用；client 配置里的 env 没有任何进程会继承
+//      （2026-11-12 生产实测：三个 fleet-mcp.js 子进程的 FLEET_MCP_* 全为 0，
+//      报数照旧按"唯一在飞回合"归因）。所以身份随成员私有 patch 的 `X-Fleet-*`
+//      header 进来，由中继逐请求读出来塞进 tools/call；调用方自带的同名键在中继
+//      那边已被剥掉。
+//   2. `process.env.FLEET_MCP_*` —— 逐 runtime stdio 的形态（若 fleet 将来按设计
+//      "成员级 env 的卫星必须逐 runtime 起"从共享名单里摘出去），以及单测。
+//
+// 两处都没有 ⇒ 返回 null，调用方整个不自报：服务端按并发规则诚实拒收，而不是拿
+// 全局 preset 去猜（那正是本 change 要修的生产事故）。
+// 放在这里而不是 fleet-reports.js 的原因同本文件开头：中继与 fleet-mcp 都要用，
+// 而这两个模块各自都有启动副作用。
+export const FLEET_IDENTITY_ARG = "__fleetIdentity";
+
+export function selfIdentityFrom(args, env = process.env) {
+  const injected = args?.[FLEET_IDENTITY_ARG] ?? null;
+  const fleetId = injected?.fleetId ?? env.FLEET_MCP_FLEET_ID;
+  const memberId = injected?.memberId ?? env.FLEET_MCP_MEMBER_ID;
+  const persona = injected?.persona ?? env.FLEET_MCP_PERSONA;
+  if (!fleetId || !memberId) return null;
+  return { fleetId: String(fleetId), memberId: String(memberId), ...(persona ? { persona: String(persona) } : {}) };
+}

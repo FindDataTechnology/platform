@@ -208,7 +208,11 @@ test.describe("model selection", () => {
     const def = await page.request.get("/api/llm/default");
     const defBody = await def.json();
     const activeId = defBody.activeModelId;
-    const FROZEN = ["deepseek-v4-pro", "glm-5.3-flash", "cohere/north-mini-code:free"];
+    // deepseek-v4-pro is NOT here any more: it was dropped from VOLCES_MODELS on
+    // 2026-11-11 (48h of usage_logs with zero successful calls — not a flap).
+    // Switching to an id the roster no longer carries answers "Unknown model",
+    // so the frozen list may only name ids the roster still serves.
+    const FROZEN = ["glm-5.3-flash", "cohere/north-mini-code:free"];
     const targetId = FROZEN.find((id) => id !== activeId);
     if (!targetId) {
       test.skip(true, "no alternate frozen model available");
@@ -270,12 +274,15 @@ test.describe("model selection", () => {
     });
 
     const volcesIds = models.filter((m) => m.provider === "volces").map((m) => m.id);
-    // The 2026-09-30 roster refresh: 13 probe-verified ids, deepseek lane
+    // The 2026-09-30 roster refresh had 13 probe-verified ids, deepseek lane
     // first; every dead id (unauthorized / upstream-down / revoked free tier)
-    // must be gone from the env route's roster.
-    expect(volcesIds.length, `expected 13 volces models; got ${JSON.stringify(volcesIds)}`).toBe(13);
+    // must be gone from the env route's roster. It is 12 since 2026-11-11, when
+    // deepseek-v4-pro was dropped after 48h of zero successful calls — the
+    // roster shrinking is itself the assertion, so pin the count.
+    expect(volcesIds.length, `expected 12 volces models; got ${JSON.stringify(volcesIds)}`).toBe(12);
     expect(volcesIds[0]).toBe("deepseek-v4.1-flash");
     const deadIds = [
+      "deepseek-v4-pro", // dropped 2026-11-11 — a re-add must show up here first
       "deepseek/deepseek-v4.1-flash",
       "deepseek-v4-pro-0813",
       "deepseek-v4-flash-0731",

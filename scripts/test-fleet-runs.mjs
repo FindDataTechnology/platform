@@ -21,7 +21,7 @@
 //
 // Run: node --test scripts/test-fleet-runs.mjs
 
-import { test, beforeEach } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
 import os from "node:os";
@@ -64,6 +64,18 @@ beforeEach(() => {
   });
   setFleetDatabase(fleetDb);
   seam = null;
+});
+
+// Drain the engine between tests, not just at the end of the file. The engine is
+// a MODULE-level singleton while the fleet DB is swapped per test, so a task
+// still queued from the previous test runs against the NEW db — its turn row
+// lands in whichever run its `origin.fleet.fleetId` names (every test here uses
+// `f_run`), and the next test's settle then sees an extra failed turn and
+// reports `partial` where it asserted `ok` (test-fleet-runs:328 under load).
+// Draining at the boundary is the minimal way to keep that work inside the test
+// that created it.
+afterEach(async () => {
+  await engine.idle?.();
 });
 
 test.after(async () => {
@@ -330,11 +342,10 @@ test("settle: a late downstream re-opens a closed run and re-closes with consist
   const ledger = createFleetTurnLedger({ db: fleetDb });
   const job = rootJob("f_run", "m_up", "j_late");
   const h = ledger.begin(job, { startedAt: 1 });
-  // `text` is not decoration: a 1-token, no-text, no-tool, no-report turn is
-  // classified `interrupted` by the stub guard (fix-stub-turn-success — 67 of
-  // 248 live rounds were exactly that shape), which would make this run
-  // `partial` and hide what this test is about (late downstream re-open).
-  ledger.end(job, h, { ok: true, text: "完成", usage: { input: 10, output: 1 } }, { startedAt: 1, endedAt: 2 });
+  // text 不能省：只有 usage、没有文本/工具/报数的回合会被 fix-stub-turn-success 判成
+  // 桩回合（interrupted），这一轮就 settle 成 partial 而不是 ok。这条用例要的是结算
+  // 投影（turns/okCount/failedCount/endedAt），不是桩判据。
+  ledger.end(job, h, { ok: true, text: "已派发。", usage: { input: 10, output: 1 } }, { startedAt: 1, endedAt: 2 });
   assert.equal(ledger.settle(h.runId).status, "ok");
   const late = { id: "t_late", trigger: "manual", preset: "p-m_down", sessionId: "task-t_late", origin: { fleet: { fleetId: "f_run", memberId: "m_down", depth: 1, chain: { runId: h.runId, parentTurnId: h.turnId, edgeKind: "handoff" } } } };
   const h2 = ledger.begin(late, { startedAt: 10 });

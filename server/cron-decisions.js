@@ -52,6 +52,36 @@ export function shouldRetryFastFailure({ result, errorKind, elapsedMs, retryFast
     && fastWindowWithUntriedHop({ elapsedMs, retryFastMs, candidates, landedIndex });
 }
 
+// A round that produced NOTHING is a total loss: whatever the wall it burned,
+// the post got no text, no tool result and no output tokens from it. One retry
+// on the next candidate has a bounded downside (one more attempt) while the
+// alternative is a guaranteed zero. Measured motivation (2026-11-11): 42 of 54
+// upstream 5xx failures in 24h took longer than the 60s fast window, so the
+// fast gate could never fire for them; the long ones are exactly the rounds
+// whose loss is worst.
+//
+// This gate deliberately does NOT look at elapsed time: the windows exist to
+// bound DOUBLE budget, and a round that yielded nothing has nothing to double.
+// It does still require an untried hop and the upstream class, so a slow tool
+// problem is never retried on another model.
+// Kill switch lives at the seam (FLEET_RETRY_ZERO_OUTPUT=0), not here.
+export function producedNothing(result) {
+  if (!result) return false;
+  if (String(result.text ?? "").trim()) return false;
+  if (Array.isArray(result.toolBlocks) && result.toolBlocks.length > 0) return false;
+  const out = result?.usage?.output;
+  if (Number.isFinite(out) && out > 0) return false;
+  return true;
+}
+
+export function shouldRetryZeroOutput({ result, errorKind, candidates, landedIndex }) {
+  return result?.ok === false
+    && result?.interrupted !== true
+    && errorKind === "model_upstream"
+    && Array.isArray(candidates) && landedIndex + 1 < candidates.length
+    && producedNothing(result);
+}
+
 // The single-tier budget gate (add-model-surface-budget-gate, spec 单次超限走
 // 降级链): the turn SUCCEEDED but blew the per-turn token cap — the same
 // one-hop degrade the upstream-failure retry rides, gated on the same

@@ -25,6 +25,8 @@ const {
   retryFastWindowMs,
   fastWindowWithUntriedHop,
   shouldRetryFastFailure,
+  shouldRetryZeroOutput,
+  producedNothing,
   shouldDegradeOverBudget,
   CATCH_UP_FLOOR_MS,
   catchUpWindowMs,
@@ -239,4 +241,36 @@ test("countMissedBetween: counts occurrences strictly after lastRun, capped at M
   // The cap stops the walk (a task dead for years cannot spin the parser).
   const many = Array.from({ length: 150 }, (_, i) => T0 + (150 - i) * 60_000);
   assert.equal(countMissedBetween(iterOf(...many), T0), 100);
+});
+
+// ── Zero-output retry gate (2026-11-11) ─────────────────────────────────────
+
+test("producedNothing: text / tool result / output tokens each count as something", () => {
+  assert.equal(producedNothing({ ok: false }), true);
+  assert.equal(producedNothing({ ok: false, text: "  " }), true);
+  assert.equal(producedNothing({ ok: false, toolBlocks: [] }), true);
+  assert.equal(producedNothing({ ok: false, text: "有话说" }), false);
+  assert.equal(producedNothing({ ok: false, toolBlocks: [{ name: "report_status" }] }), false);
+  assert.equal(producedNothing({ ok: false, usage: { output: 12 } }), false);
+  assert.equal(producedNothing(null), false, "没有结果不是「零产出」，是不知道");
+});
+
+test("shouldRetryZeroOutput: ignores the fast window — a slot-burning loss is worth one retry", () => {
+  // 现场依据：24h 内 54 次上游 5xx，42 次跑了 1 分钟以上，快速窗口物理上不可能命中；
+  // 而这些长回合恰恰是损失最大的那一批。
+  const slowTotalLoss = {
+    result: { ok: false, interrupted: false },
+    errorKind: "model_upstream",
+    candidates: ["model-a", "model-b"],
+    landedIndex: 0,
+  };
+  assert.equal(shouldRetryZeroOutput(slowTotalLoss), true);
+
+  // 产出过东西就不重试：那是活干了一半，换模型会把半程作废。
+  assert.equal(shouldRetryZeroOutput({ ...slowTotalLoss, result: { ok: false, text: "半程结论" } }), false);
+  // 非上游、被中断、链已到底，一律不重试。
+  assert.equal(shouldRetryZeroOutput({ ...slowTotalLoss, errorKind: "timeout" }), false);
+  assert.equal(shouldRetryZeroOutput({ ...slowTotalLoss, result: { ok: false, interrupted: true } }), false);
+  assert.equal(shouldRetryZeroOutput({ ...slowTotalLoss, landedIndex: 1 }), false);
+  assert.equal(shouldRetryZeroOutput({ ...slowTotalLoss, candidates: null }), false);
 });

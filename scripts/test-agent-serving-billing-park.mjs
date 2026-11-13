@@ -231,6 +231,12 @@ async function driveFailingTurn(manager, sessionId = "srv-test-1") {
   );
 }
 
+// Point the fake gate at a billing rejection shape.
+const gatewayRejects = (gate, code, status = 403) => {
+  gate.state.probeStatus = status;
+  gate.state.probeBody = { code, message: code === "SUBSCRIPTION_NOT_FOUND" ? "No active subscription found for this group" : code };
+};
+
 const meterLines = (h) =>
   readFileSync(h.config.meterFile, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l));
 
@@ -671,4 +677,105 @@ test("AGENT_RUNNER_BILLING_PARK=off: no probe, no park, reprobe timer inert — 
 // Shared cleanup of the temp store dir (best-effort; mkdtemp dirs live in tmpdir).
 after(() => {
   try { rmSync(STORE_DIR, { recursive: true, force: true }); } catch { /* tmpdir housekeeping */ }
+});
+
+// ── 5.x: the probe judges the credential the CHILD bills with ────────────────
+
+// Live shape, 2026-11-10: the runner's route key answered 200 while the turn
+// kept 403ing — the child was billing with a key left in its private home by
+// an earlier deploy, and nothing was pinning that key any more. Probing the
+// route key proved only that a credential NOBODY used was healthy, so the role
+// never parked. The probe must read the home.
+test("the probe uses the key in the private home, not the route's — a stale child key parks", async () => {
+  const gate = await fakeGateAndPacks();
+  const clientState = { fail: 0, reply: "热身完成" };
+  const h = await bootManager({ gate, clientState });
+  try {
+    // Warm the child first. Materialization is what writes the home's
+    // credentials from the route store, so a key written AFTER that survives
+    // into the turn — exactly the "nobody pins this any more" shape
+    // production showed (a per-cell account token the route knows nothing about).
+    const entry = h.manager.entries.get(KEY);
+    await h.manager.turn(entry, "srv-warm", "hi");
+    const home = path.join(h.homeRoot, KEY);
+    writeFileSync(
+      path.join(home, ".credentials.yaml"),
+      "version: 1\nrefs:\n  LLM_API_KEY: sk-stale-child-key\n  LLM_PROVIDER_KEY_FINDDATA: sk-stale-child-key\n",
+    );
+    gatewayRejects(gate, "SUBSCRIPTION_NOT_FOUND");
+    clientState.fail = 1;
+    await driveFailingTurn(h.manager, "srv-test-1");
+    assert.ok(await waitUntil(() => h.manager.isParked(KEY)), "the child's dead key parks the role");
+    const park = h.manager.parkedInfo(KEY);
+    assert.equal(park.reason, "no-subscription");
+    assert.equal(park.detail, "SUBSCRIPTION_NOT_FOUND");
+    // The decisive bit: the probe went out with the HOME's key. Before this
+    // fix it carried "Bearer sk-runner-fallback" — the route key — and passed.
+    const probes = gate.probeHits();
+    assert.equal(probes.length, 1);
+    assert.equal(probes[0].auth, "Bearer sk-stale-child-key");
+  } finally {
+    await h.close();
+    await gate.close();
+  }
+});
+
+test("SUBSCRIPTION_NOT_FOUND at 403 is a billing rejection, with its own reason", async () => {
+  const gate = await fakeGateAndPacks();
+  gate.state.probeStatus = 403;
+  gate.state.probeBody = { code: "SUBSCRIPTION_NOT_FOUND", message: "No active subscription found for this group" };
+  const h = await bootManager({ gate, clientState: { fail: 1, reply: "ok" } });
+  try {
+    await driveFailingTurn(h.manager);
+    assert.ok(await waitUntil(() => h.manager.isParked(KEY)));
+    const park = h.manager.parkedInfo(KEY);
+    assert.equal(park.reason, "no-subscription");
+    assert.notEqual(park.reason, "insufficient-balance", "a lapsed subscription is distinguishable from an empty balance");
+    // No home in this boot → the record's key stands, unchanged behaviour.
+    assert.equal(gate.probeHits()[0].auth, "Bearer sk-runner-fallback");
+  } finally {
+    await h.close();
+    await gate.close();
+  }
+});
+
+// ── 3.2 / 3.3: what the emitted events say (and refuse to say) ───────────────
+test("3.2 a successful turn's turn_ended carries no error_kind at all", async () => {
+  const gate = await fakeGateAndPacks();
+  const h = await bootManager({ gate, clientState: { fail: 0, reply: "正常回复" } });
+  try {
+    const entry = h.manager.entries.get(KEY);
+    await h.manager.turn(entry, "srv-ok", "hi");
+    const ended = h.events.filter((e) => e.kind === "turn_ended");
+    assert.equal(ended.length, 1, "one turn_ended");
+    assert.ok(!("error_kind" in ended[0].payload), "absent, not null — the field is omitted");
+    assert.equal(gate.probeHits().length, 0, "a success never probes");
+  } finally {
+    await h.close();
+    await gate.close();
+  }
+});
+
+test("3.3 the park event carries the confirmed reason; turn_ended never does", async () => {
+  const gate = await fakeGateAndPacks();
+  gatewayRejects(gate, "SUBSCRIPTION_NOT_FOUND");
+  const h = await bootManager({ gate, clientState: { fail: 1, reply: "ok" } });
+  try {
+    await driveFailingTurn(h.manager);
+    await waitUntil(() => h.manager.isParked(KEY));
+    const ended = h.events.filter((e) => e.kind === "turn_ended");
+    assert.equal(ended.length, 1);
+    // The failure frame is -32003, so the form named at emit time is llm_failed
+    // (the billing verdict was not known yet). What matters: never "billing_rejected".
+    assert.equal(ended[0].payload.error_kind, "llm_failed");
+    assert.notEqual(ended[0].payload.error_kind, "billing_rejected", "confirmation is not available at emit time");
+    const parked = h.events.filter((e) => e.kind === "billing_parked");
+    assert.equal(parked.length, 1, "exactly one park event");
+    assert.equal(parked[0].payload.reason, "no-subscription");
+    assert.equal(parked[0].payload.detail, "SUBSCRIPTION_NOT_FOUND");
+    assert.ok(parked[0].payload.since, "the park carries its timestamp");
+  } finally {
+    await h.close();
+    await gate.close();
+  }
 });

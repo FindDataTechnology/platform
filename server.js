@@ -58,6 +58,9 @@ import { registerConnectorRoutes } from "./server/routes/connector.js";
 import { registerConnectorBindingRoutes } from "./server/routes/connector-bindings.js";
 import { registerFacetMarketRoutes } from "./server/routes/facet-market.js";
 import { registerLineCredentialRoutes } from "./server/routes/line-credentials.js";
+import { registerCredentialDegradationRoutes } from "./server/routes/credential-degradation.js";
+// 舰队级凭据包（converge-line-identity-and-keys 4.1）：建舰队时算一次"要填几次、填哪几处"。
+import { registerFleetCredentialPackRoutes } from "./server/routes/fleet-credential-pack.js";
 import { registerChatwootCredentialRoutes } from "./server/routes/chatwoot-credentials.js";
 import { registerDeskEmbedRoutes } from "./server/routes/desk-embed.js";
 import { registerPaperTradingRoutes } from "./server/routes/paper-trading.js";
@@ -72,6 +75,9 @@ import { registerBotRelayRoutes, RELAY_PREFIX } from "./server/routes/bot-relay.
 import { createClusterRoutes, startAutoTerminationJob } from "./server/routes/clusters.js";
 import { createFleetRoutes, resolveFleetTarget } from "./server/routes/fleets.js";
 import { registerPackAuthorRoutes } from "./server/pack-author.js";
+import { createKfRoutes } from "./server/archive/kf/routes.js";
+import { maybeStartKfSyncJob } from "./server/archive/kf/scheduler.js";
+import { getKfDatabase } from "./server/archive/kf/db.js";
 import { createSkillEvolutionRoutes } from "./server/skill-evolution-routes.js";
 import { createPersonaEvolutionRoutes } from "./server/persona-evolution-routes.js";
 import { getFleetDatabase } from "./server/routes/fleets-db.js";
@@ -115,6 +121,11 @@ import { attachWebSocket } from "./server/ws.js";
 import { matrixGate } from "./lib/dsh-matrix-verify.js";
 import { registerActionsRoutes } from "./server/routes/actions.js";
 import { startActionExpiryJob } from "./lib/action-expiry.js";
+import {
+  registerInputRequestRoutes,
+  startInputRequestExpiryJob,
+} from "./server/routes/input-requests.js";
+import { mountInputRequestMcp } from "./server/input-request-http.js";
 import { recordRejection, prune, summarizeRejections } from "./lib/report-rejection-log.js";
 import { pickMemberIdentity, describeCandidates } from "./lib/member-identity.js";
 import { registerBoardRoutes } from "./server/routes/boards.js";
@@ -308,6 +319,13 @@ registerCronRoutes(ctx);
 registerActionsRoutes(ctx);
 // Action expiry sweeper (24h fail-closed, broadcast action_expired).
 startActionExpiryJob(ctx);
+// Input-request lane (add-input-request-cards): create/read/wait/answer/cancel
+// + the TTL sweeper that applies the unattended policy.
+registerInputRequestRoutes(ctx);
+startInputRequestExpiryJob(ctx);
+// The same tool over streamable HTTP, for harnesses whose MCPs are mounted as
+// http rows (ACP). Inert unless INPUT_REQUEST_MCP_TOKEN is set.
+mountInputRequestMcp(ctx.app);
 // Board routes (add-line-boards-and-action-gate): GET /api/boards/:line.
 registerBoardRoutes(ctx);
 // Task stats lane (unify-wanxing-management-plane): read-only counts for the
@@ -323,7 +341,13 @@ registerWanxingFleetRoutes(ctx);
 // gate never sees it (see AUTH_EXEMPT_PREFIXES).
 ctx.app.use(
   LOCAL_FEED_BASE,
-  createLocalAgentFeed({ env: ctx.env ?? process.env, runnerId: process.env.WANXING_PLUGIN_RUNNER_ID ?? null }),
+  createLocalAgentFeed({
+    env: ctx.env ?? process.env,
+    runnerId: process.env.WANXING_PLUGIN_RUNNER_ID ?? null,
+    // 这个 cell 的主人 —— 裁决通道的路由键（fix-disclosure-gate-reachability D2 修订）。
+    // 本 cell 自己的事实，由读面报出，runner 不再靠 env 猜。
+    ownerEmail: ctx.cellUserEmail ?? null,
+  }),
 );
 // Convergence on boot (add-desktop-residency-hardening 4.x): the cell is what
 // the resident steward starts, so a login / wake / post-update restart lands
@@ -389,6 +413,10 @@ createFleetRoutes(app, ctx);
 // the fleet-detail source chip; the blueprint-author bridge retired with the
 // endpoints (the pack-author bridge is unmounted separately per d5784e8e).
 registerPackAuthorRoutes(app, ctx);
+// 微信客服通道（add-wecom-kf-ingest）：只读查询面 —— 会话、消息、检索、待回复队列、
+// 附件完成率。**只有 GET**：拉取会打外部接口、回复会真发给客户，两者都必须显式
+// （CLI 的 sync / reply --confirm），不能挂在这条读路径上。库是独立的 data/kf.db。
+createKfRoutes(app, ctx);
 // Skill self-evolution (add-skill-self-evolution): the propose face for the
 // in-cell MCP child (loopback bridge) + the owner's evaluate/promote/reject
 // REST face. Candidates live outside custom_skills; promotion is the only
@@ -417,6 +445,11 @@ registerFacetMarketRoutes(ctx);
 // 各线操作 MCP 凭据 (line-credentials): wire-customer / lex (browser silent
 // mint ID tokens) + wanxing-caller (pasted sk-) — same family.
 registerLineCredentialRoutes(ctx);
+// 凭据降级读面（converge-line-identity-and-keys 4.2）：只读、按人；
+// 数据源是 profile 写入时落的 federated.degraded.<owner>.<ref>。
+registerCredentialDegradationRoutes(ctx);
+// 舰队级凭据包（4.1）：只读规划，不写库、不新增状态读面。
+registerFleetCredentialPackRoutes(ctx);
 // 商家 Chatwoot BYOK 凭据（add-crm-desk-pack-embed）：粘贴 token(+嵌入用登录对)。
 registerChatwootCredentialRoutes(ctx);
 // CRM 客服台嵌入反代（add-crm-desk-pack-embed 6.x）：go 铸发 + 同源代理。
@@ -560,6 +593,13 @@ attachWebSocket(ctx);
 
 // Dynamic cluster auto-termination (agent-cluster-platform)
 startAutoTerminationJob(ctx);
+
+// WeChat kf pull loop (add-wecom-kf-ingest). kf only keeps 3 days of messages, so a
+// missing puller is a permanent gap, not a delay. Off unless KF_SYNC_ENABLED=1 and
+// credentials are present; the db handle is opened lazily so an unused channel
+// leaves no empty data/kf.db behind. Status face: /api/archive/kf/sync-status.
+const kfSync = maybeStartKfSyncJob({ getDb: getKfDatabase });
+ctx.kfSyncStatus = () => (kfSync ? kfSync.status() : { running: false, disabledReason: "未启动" });
 
 // Demo sandbox only (openspec: mp-demo-sandbox): periodically wipe the shared
 // conversation state so visitors never see each other's sessions. The timer
@@ -1900,6 +1940,11 @@ attachDelegationAggregator(ctx).rearm();
             userGroups: null,
             agentPreset: personaPreset,
             faceForPreset,
+            // 岗位身份写进这个 worker 的私有 patch（fix-report-attribution-concurrency 2.1）：
+            // 报数归属需要一个**服务端写入**的坐标——并发（双 worker）时按全局 preset 猜
+            // 会把报数记到别人的岗位上（2026-11-12 生产）。identity 在这里已经算好
+            // （taskIdentity 优先：sourceTag 是服务端自己写进任务记录的）。
+            fleetIdentity: identity,
           });
         }
       }

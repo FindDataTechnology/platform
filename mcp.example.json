@@ -70,6 +70,26 @@
         "BENCH_PROPOSAL_DOMAIN"
       ],
       "comment": "本体草案出口（switch-fleet-proposals-to-domain-inbox）——一个工具 bench_proposal_submit，把草案投到知验台该域提案箱，取代往柏讯动作闸逐租户声明实体。三项一律走 envRefs 显式转发：dsh 子进程会擦除形似凭据的环境名（含 *TOKEN*），只写在环境里的 BENCH_CONSUMER_TOKEN 过不了这一跳；URL/域一并走 refs，好让目标随部署档切换。凭据只经 env/secret 注入，不落仓；BENCH_CONSUMER_TOKEN 填知验台自管 api key（lbk_ 开头，走 X-API-Key 通道）或 Logto JWT（走 Bearer），客户端按前缀二选一，绝不同时发两条。"
+    },
+    "archive": {
+      "command": "node",
+      "args": [
+        "server/archive/mcp.js"
+      ],
+      "envRefs": [
+        "ARCHIVE_DB"
+      ],
+      "comment": "会话存档读面（add-wecom-archive-ingest 6.1b）——三个只读工具 archive_conversations / archive_messages / archive_search。同意边界做在工具层：未同意存档的会话既列不出、取不到、也搜不到，且取不到时明确说原因（空数组会让 agent 换个角度重试，明说才会停手）。ARCHIVE_DB 走 envRefs：库路径随部署档变化，不能写死在 args 里。"
+    },
+    "kf": {
+      "command": "node",
+      "args": [
+        "server/archive/kf/mcp.js"
+      ],
+      "envRefs": [
+        "KF_DB"
+      ],
+      "comment": "微信客服读面（add-kf-agent-tools）——四个只读工具 kf_conversations / kf_messages / kf_search / kf_attachment。只读是刻意的：没有拉取、没有下载附件、没有发送；给客户发消息仍只有 CLI 的 reply --confirm。默认只给客户发言（本方回复与系统事件会污染判断），要本方发言显式传 includeSelf=true。附件正文随消息带出，未抽取时给状态与原因而不是空串；kf_attachment 只查已落库的抽取结果，不下载也不现场解析。KF_DB 走 envRefs：库路径随部署档变化，不能写死在 args 里。"
     }
   }
 }

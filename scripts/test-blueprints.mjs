@@ -558,7 +558,7 @@ test("签字：只模型判绿未签字不可售；签字后放行；重跑覆�
       reports: [{ memberId: "m1", reportId: "r1", createdAt: since + 2, summary: "简报已出" }],
       escalations: 0,
     }),
-    judge: async () => ({ verdict: "pass", reason: "证据支持", audit: { model: "cheap-1", verdict: "pass" } }),
+    judge: async () => ({ verdict: "pass", reason: "证据支持", audit: { model: "runner-a", verdict: "pass" } }),
   };
   const { server, base } = mount({ trialDeps });
   try {
@@ -612,7 +612,7 @@ test("铸造嵌试跑报告：_casting.trialReport 带 green/judged/signoff（�
       reports: [{ memberId: "m1", reportId: "r1", createdAt: since + 2, summary: "简报已出" }],
       escalations: 0,
     }),
-    judge: async () => ({ verdict: "pass", reason: "", audit: { model: "cheap-1", verdict: "pass" } }),
+    judge: async () => ({ verdict: "pass", reason: "", audit: { model: "runner-a", verdict: "pass" } }),
   };
   const { server, base } = mount({ publishCalls, trialDeps });
   try {

@@ -172,6 +172,24 @@ test("rolling prune: keeps newest N per member, reports untouched", () => {
 test("classifyErrorKind: ordered table, one probe per kind, other floor", () => {
   assert.ok(ERROR_KINDS.includes("other"));
   assert.equal(classifyErrorKind("execution timed out after 10 minutes"), "timeout");
+  // Early stop is the same termination, spelled differently: cron-runner
+  // rewrites timeoutError's message to "turn stopped early — context pressure
+  // (N compactions)". Unaliased it fell to `other` — measured 2026-11-11 over
+  // 24h, 82 of 170 real failures (43%, the single largest class) were early
+  // stops recorded as unclassified while their "timed out" siblings were fine.
+  assert.equal(classifyErrorKind("turn stopped early — context pressure (4 compactions)"), "timeout");
+  // ...but an early stop caused by OVERFLOW is a fit problem, not a time
+  // problem: it goes to context_budget so triage stops trying another model
+  // against the same wall. This reverses the first cut of this very test
+  // (2026-11-11, same day): both spellings were timeout, then the taxonomy
+  // decision split them — pressure ⇒ timeout, overflow ⇒ context_budget,
+  // matching each row's own detail.kind (turn_budget_exceeded / context_overflow).
+  assert.equal(classifyErrorKind("turn stopped early — context overflow (163631/128000 input tokens)"), "context_budget");
+  assert.equal(classifyErrorKind('pi-ai detected context overflow for model "deepseek-v4.1-flash"'), "context_budget");
+  assert.equal(classifyErrorKind("context_length_exceeded"), "context_budget");
+  // A budget-exhausted message names models too; it must stay `budget`, not
+  // be swallowed by the new context pattern or by model_upstream.
+  assert.equal(classifyErrorKind("budget_exhausted: all candidate models over daily/monthly budget (model 'x' skipped: budget_exhausted (daily))"), "budget");
   assert.equal(classifyErrorKind("could not switch the agent for the scheduled task"), "runtime_not_ready");
   assert.equal(classifyErrorKind("tool call denied: not authorized"), "tool_permission");
   assert.equal(classifyErrorKind("no runnable model for this post"), "model_upstream");

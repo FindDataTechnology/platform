@@ -444,3 +444,39 @@ test("GET returns the stored diff, the effective set, and the addable universes"
   assert.ok(!doc.addableSkills.includes("fo-skill-b"));
   assert.ok(doc.addableSkills.includes("fo-user-skill") || doc.addableSkills.includes("fo-skill-a"), `skill universe: ${doc.addableSkills}`);
 });
+
+// ── Platform baseline bridges (add-input-request-cards, 2026-11-11 线上回归) ──
+//
+// 线上实证：owner 的聚焦 profile 里有 actions/fleet/cron/library/delegation/
+// playwright，唯独没有 input-request —— 它只存在于 platform.bundle.json 播种
+// 出来的 extension_configs 行里，不在 mcp.json，而 focus keep-set 当时只认
+// mcp.json + PACK_BASELINE_MCP。于是模型手上没有 request_input 这个工具，冒烟
+// 报的是「卡片出现时不是 pending 态」而不是配置错误。
+//
+// 这两条把修复钉成结构：平台自带的桥（PLATFORM_BASELINE_MCP）随聚焦存活，但
+// 个人/DB 的关闭仍然优先；而且不是「所有 bundled 行都留下」——那会把 agent-team
+// 卫星也塞回每个角色。
+test("platform baseline bridge survives focusing, ordinary bundled rows do not", async () => {
+  extensionStore.addMcpServer({ name: "input-request", config: { command: "node", args: ["server/input-request-mcp.js"] }, enabled: true });
+  extensionStore.addMcpServer({ name: "fo-bundled-satellite", config: { command: "node", args: ["server/x.js"] }, enabled: true });
+  try {
+    await compose({ agentPreset: "fo-beta" });
+    const servers = serversOf();
+    assert.ok(servers.includes("input-request"), "平台自带的输入桥随聚焦存活");
+    assert.ok(!servers.includes("fo-bundled-satellite"), "普通 bundled 行仍被聚焦裁掉");
+  } finally {
+    // 清理，免得后面的用例看到这两行（同一进程共享一个库）。
+    extensionStore.removeMcpServer("input-request");
+    extensionStore.removeMcpServer("fo-bundled-satellite");
+  }
+});
+
+test("a personal disable still wins over the platform baseline", async () => {
+  extensionStore.addMcpServer({ name: "input-request", config: { command: "node", args: ["server/input-request-mcp.js"] }, enabled: true });
+  try {
+    await compose({ agentPreset: "fo-beta", mcpOverlay: { "input-request": false } });
+    assert.ok(!serversOf().includes("input-request"), "个人关闭优先于平台基线");
+  } finally {
+    extensionStore.removeMcpServer("input-request");
+  }
+});

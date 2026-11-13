@@ -201,6 +201,91 @@ function failUnreachable(res, lane, err) {
   });
 }
 
+// ── segments (speaker-attribution): opt-in, and honest when absent ───────────
+//
+// Measured 2026-11-13 (add-speaker-attribution, design appendix A): the 词元
+// lane ACCEPTS `response_format=verbose_json` and answers 200 with `{text}`
+// only — no `segments`, no `words`, no timestamps; `diarized_json` is rejected
+// with 400. So "the request succeeded" never means "we got segments", and the
+// only honest capability test is whether the body carries a `segments` array.
+// Until the lane grows one, every segment request degrades to a single UNKNOWN
+// speaker with a reason — never an invented label, never a failed request.
+
+export const SPEAKER_UNKNOWN = "UNKNOWN";
+export const SEGMENTS_RESPONSE_FORMAT = "verbose_json";
+export const SEGMENT_DEGRADED_NO_DIARIZATION = "upstream_no_diarization";
+export const SEGMENT_DEGRADED_MALFORMED = "upstream_malformed_segments";
+const SEGMENT_REQUEST_FIELD = "diarize";
+
+// Opt-in from a multipart text field (folder captures) or the query string
+// (ad-hoc probes). Absent/blank/anything unrecognised = today's behaviour.
+export function wantsSegments(req) {
+  const raw = req?.body?.[SEGMENT_REQUEST_FIELD] ?? req?.query?.[SEGMENT_REQUEST_FIELD];
+  const v = String(Array.isArray(raw) ? raw[0] : (raw ?? "")).trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+}
+
+// OpenAI `verbose_json` gives offsets in seconds; our shape is milliseconds.
+// Both spellings are read so a 词元-side dialect needs no second code path.
+function offsetMs(item, msKey, secKey) {
+  const ms = item?.[msKey];
+  if (typeof ms === "number" && Number.isFinite(ms)) return Math.round(ms);
+  const sec = item?.[secKey];
+  if (typeof sec === "number" && Number.isFinite(sec)) return Math.round(sec * 1000);
+  return null;
+}
+
+// The speaker is an upstream identifier (cluster index/name), never a person.
+// A non-finite/missing one reads as UNKNOWN — the truthful value, not a label.
+function speakerLabel(value) {
+  if (typeof value === "string") return value.trim().slice(0, 64) || SPEAKER_UNKNOWN;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return SPEAKER_UNKNOWN;
+}
+
+function payloadDurationMs(payload) {
+  const d = payload?.duration;
+  if (typeof d === "number" && Number.isFinite(d) && d >= 0) return Math.round(d * 1000);
+  return 0;
+}
+
+// Any upstream dialect → the ONE platform shape
+// `{ segments: [{ startMs, endMs, speaker, text }], degraded?: { reason } }`.
+// Nothing upstream-specific survives (no ids, tokens, logprobs, `start`/`end`).
+//
+// Only SHAPE is judged here. Reconciling segment text against the whole text is
+// the merge layer's job (task 3.2) — doing it here would drop a whole recording
+// over a punctuation difference.
+export function normalizeSegments(payload, text) {
+  const whole = (reason) => ({
+    segments: [{ startMs: 0, endMs: payloadDurationMs(payload), speaker: SPEAKER_UNKNOWN, text }],
+    degraded: { reason },
+  });
+  const raw = payload?.segments;
+  if (!Array.isArray(raw) || raw.length === 0) return whole(SEGMENT_DEGRADED_NO_DIARIZATION);
+  const segments = [];
+  let prevEnd = 0;
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return whole(SEGMENT_DEGRADED_MALFORMED);
+    const startMs = offsetMs(item, "startMs", "start");
+    const endMs = offsetMs(item, "endMs", "end");
+    if (startMs === null || endMs === null) return whole(SEGMENT_DEGRADED_MALFORMED);
+    // Negative, inverted or overlapping-start offsets mean the offsets do not
+    // describe one ordered line — refuse rather than stitch a broken document.
+    if (startMs < 0 || endMs < startMs || startMs < prevEnd) return whole(SEGMENT_DEGRADED_MALFORMED);
+    const segmentText = typeof item.text === "string" ? item.text.trim() : "";
+    if (!segmentText) return whole(SEGMENT_DEGRADED_MALFORMED);
+    segments.push({
+      startMs,
+      endMs,
+      speaker: speakerLabel(item.speaker ?? item.speaker_id ?? item.speakerId),
+      text: segmentText,
+    });
+    prevEnd = endMs;
+  }
+  return { segments };
+}
+
 // ── routes ──────────────────────────────────────────────────────────────────
 
 export function registerVoiceRoutes(ctx) {
@@ -250,6 +335,10 @@ export function registerVoiceRoutes(ctx) {
       const keyInfo = resolveVoiceKey(ctx, req);
       if (!keyInfo.key) return res.status(503).json({ error: "语音服务未配置凭据", code: "voice_not_configured" });
 
+      // Opt-in only: an absent switch keeps `response_format=json` and the
+      // single-`text` response byte for byte (task 2.1).
+      const wantSegments = wantsSegments(req);
+
       const form = new FormData();
       form.append(
         "file",
@@ -257,7 +346,7 @@ export function registerVoiceRoutes(ctx) {
         req.file.originalname || "audio",
       );
       if (config.asrModel) form.append("model", config.asrModel);
-      form.append("response_format", "json");
+      form.append("response_format", wantSegments ? SEGMENTS_RESPONSE_FORMAT : "json");
 
       let upstream;
       try {
@@ -277,7 +366,14 @@ export function registerVoiceRoutes(ctx) {
         return res.status(502).json({ error: "语音服务返回了无法解析的结果", code: "upstream_malformed" });
       }
       const text = typeof payload?.text === "string" ? payload.text : "";
-      res.json({ text, keySource: keyInfo.source });
+      if (!wantSegments) return res.json({ text, keySource: keyInfo.source });
+      const normalized = normalizeSegments(payload, text);
+      return res.json({
+        text,
+        segments: normalized.segments,
+        ...(normalized.degraded ? { degraded: normalized.degraded } : {}),
+        keySource: keyInfo.source,
+      });
     });
   });
 

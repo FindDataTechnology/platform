@@ -57,6 +57,7 @@ export const PAGESETS: readonly PagesetDef[] = [
       { id: "se-order-track", path: "pages/se/order-track", title: "名下订单跟进", requiredGrants: [] },
       { id: "se-alert-inbox", path: "pages/se/alert-inbox", title: "预警收件箱", requiredGrants: ["alert.handle"] },
       { id: "se-alert-handle", path: "pages/se/alert-handle", title: "预警处置（拍板）", requiredGrants: ["alert.handle"] },
+      { id: "se-invoice-audit", path: "pages/se/invoice-audit", title: "开票审核", requiredGrants: ["alert.handle"] },
       { id: "se-statement-assist", path: "pages/se/statement-assist", title: "对账协助", requiredGrants: ["statement.confirm.proxy"] },
       { id: "se-ai-assistant", path: "pages/se/ai-assistant", title: "AI 助手", requiredGrants: ["ai.chat"] },
     ],

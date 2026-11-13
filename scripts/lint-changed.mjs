@@ -21,7 +21,12 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
 
-const CODE_PATH = /^(web\/src|packages|server|server\.js|lib|gateway|app\/src)\/|^(server|task-engine|cron|db|pack-store|dsh-bridge)\.js$/;
+// `agent-runner` joined this list on 2026-11-12, after a merge left manager.js
+// calling billingKeyFromHome without importing it: biome's noUndeclaredVariables
+// flags exactly that line, but the push gate never looked at the tree, so it
+// shipped and broke billing-park in production. The tree lints clean today —
+// measured, 26 files, zero errors — so this adds coverage without inheriting debt.
+const CODE_PATH = /^(web\/src|packages|server|server\.js|lib|gateway|app\/src|agent-runner)\/|^(server|task-engine|cron|db|pack-store|dsh-bridge)\.js$/;
 const CODE_EXT = /\.(tsx?|jsx?|mjs|cjs)$/;
 
 const args = process.argv.slice(2);
@@ -105,8 +110,15 @@ if (SKIP) {
 
 const biome = path.resolve("node_modules/.bin/biome");
 if (!existsSync(biome)) {
-  console.warn("[lint-changed] 未找到 biome（先 npm install）——跳过推送前检查。");
-  process.exit(0);
+  // 缺依赖时 MUST NOT 静默放行：这一行原来 exit(0)，于是「钩子报了跳过、实际
+  // 什么都没查」——2026-11-11 一天里两次推送都是这样过去的（一次带进两处 lint
+  // 债，一次差点把没人读的参数带上产）。闸门自己的失效必须是响的。
+  console.error(
+    "[lint-changed] 找到必须检查的代码改动，但没有 biome（node_modules 未安装）。\n" +
+      "  · 修法一：在本仓跑 `npm i`（只装依赖，不跑别的）；\n" +
+      "  · 修法二：`SKIP_LINT_HOOK=1 git push`——仅限紧急回滚，CI 仍会红。",
+  );
+  process.exit(1);
 }
 let code = 0;
 try {

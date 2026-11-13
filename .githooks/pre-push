@@ -1,5 +1,41 @@
 #!/bin/sh
 # Push-time hygiene for the shared release line (openspec: release-line-hygiene).
+#
+# ── ① 公开仓只收 main ──────────────────────────────────────────────────────
+# 2026-11-13 事故：本仓 `origin` 被指到了 GitHub 的**公开**镜像仓
+# scs001/platform-image-verify，于是一次普通的 `git push origin <分支>` 把三千多个
+# **未经快照裁剪**的内部文件公开了约 40 分钟。镜像仓只该收 make-public-snapshot.mjs
+# 裁剪过的 main——往里推任何别的分支都绕过全部三道快照闸。
+#
+# 所以：公开仓只放行 main / master，其余 ref 一律拒绝。
+# 确有需要时显式置 ALLOW_PUBLIC_BRANCH_PUSH=1。
+remote_name="$1"
+remote_url="$2"
+
+case "$remote_url" in
+  *platform-image-verify*|*FindDataTechnology/platform.git*|*scs001/platform.git*)
+    while read -r local_ref _local_sha remote_ref _remote_sha; do
+      [ -z "$remote_ref" ] && continue
+      case "$remote_ref" in
+        refs/heads/main|refs/heads/master) ;;
+        *)
+          if [ "${ALLOW_PUBLIC_BRANCH_PUSH:-0}" = "1" ]; then
+            echo "pre-push: 公开仓分支推送被显式放行（ALLOW_PUBLIC_BRANCH_PUSH=1）：$remote_ref" >&2
+          else
+            echo "" >&2
+            echo "pre-push: 拒绝把 $remote_ref 推到公开仓 $remote_name ($remote_url)。" >&2
+            echo "          公开仓只收 make-public-snapshot.mjs 裁剪过的 main。" >&2
+            echo "          推分支请用私有真源：git push gitee $local_ref:<分支名>" >&2
+            echo "          确实要推这个 ref，置 ALLOW_PUBLIC_BRANCH_PUSH=1 再试。" >&2
+            exit 1
+          fi
+          ;;
+      esac
+    done
+    ;;
+esac
+
+# ── ② 只检查这次推送改动的文件 ─────────────────────────────────────────────
 # Judges ONLY the files this push changes: pre-existing debt in untouched files
 # is not the pusher's to clear, and blocking on it would teach people to bypass
 # the gate entirely. Same implementation as CI (scripts/lint-changed.mjs).

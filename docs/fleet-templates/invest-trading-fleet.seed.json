@@ -28,18 +28,6 @@
       "persona": "你是投研交易舱的复盘岗。每个交易日收盘后（不与盘前同窗）执行一轮复盘：先调 list_pending_decisions 拿待结算清单（**不得**依赖自己记住的 decision_id），再逐条推进到两种结局之一——结算成功，或如实报出未到期缺口。组合记录用组合结算入口（传整期全部标的价格序列，权重取自记录的 payload），**不得**用单票结算拼装组合收益。\n\n持有期未满不强行结算；alpha 为负不等于判断错误，为正不等于判断正确。输出必须报「清单 N 条、已结 M 条、未到期 K 条」且三者自洽。挑着结算（只结看起来会好看的）会产生选择偏差，而选择偏差不会写在数字里。结算失败必须升级给主人，不允许「下轮再说」。收尾 report_status（槽位：pending_total、settled、not_due）。"
     }
   ],
-  "i18n": {
-    "en": {
-      "name": "Research & Trading Cabin",
-      "description": "Official cluster template: a five-seat cabin from research to paper execution — research issues a verdict, portfolio turns it into weights by an explicit rule, execution sends those weights to the paper-trading desk, review settles at expiry and distils the lessons, risk passively re-checks and escalates. Demonstrated: an execution seat whose core discipline is \"no prerequisite, no action\" (no valid weights received / risk thresholds unset / risk triggered / stale price watermark → never place an order), plus four staggered rhythm windows inside a trading day. When the pack is minted and published, packId/presetId are filled in by the minting script; this file is the manifest source of truth, and the tests pin that it must pass fleet-section pre-validation. Paper-only throughout: simulated desk, no real funds and no real orders.",
-      "agents": {
-        "trade-research": { "name": "Research" },
-        "trade-portfolio": { "name": "Portfolio" },
-        "trade-execute": { "name": "Execution" },
-        "trade-review": { "name": "Review" }
-      }
-    }
-  },
   "fleet": {
     "name": "投研交易舱",
     "members": [
@@ -252,40 +240,84 @@
           "research": {
             "title": "Research",
             "kpiSlots": {
-              "rating_count": { "label": "Verdicts this round" },
-              "top_subject": { "label": "Lead subject" }
+              "rating_count": {
+                "label": "Verdicts this round"
+              },
+              "top_subject": {
+                "label": "Top subject"
+              }
             }
           },
           "portfolio": {
             "title": "Portfolio construction",
             "kpiSlots": {
-              "portfolio_key": { "label": "Portfolio key this period" },
-              "weight_count": { "label": "Positions" },
-              "cash_floor": { "label": "Cash floor" }
+              "portfolio_key": {
+                "label": "Portfolio key this cycle"
+              },
+              "weight_count": {
+                "label": "Holdings"
+              },
+              "cash_floor": {
+                "label": "Cash floor"
+              }
             }
           },
           "execute": {
             "title": "Execution (paper)",
             "kpiSlots": {
-              "order_count": { "label": "Simulated orders" },
-              "blocked_reason": { "label": "Reason for not acting" }
+              "order_count": {
+                "label": "Paper orders"
+              },
+              "blocked_reason": {
+                "label": "Why no action"
+              }
             }
           },
           "review": {
             "title": "Post-close review",
             "kpiSlots": {
-              "pending_total": { "label": "Pending settlements" },
-              "settled": { "label": "Settled this round" },
-              "not_due": { "label": "Not yet due" }
+              "pending_total": {
+                "label": "Pending settlement"
+              },
+              "settled": {
+                "label": "Settled this round"
+              },
+              "not_due": {
+                "label": "Not yet due"
+              }
             }
           },
           "risk": {
             "title": "Risk control",
             "kpiSlots": {
-              "blocked_count": { "label": "Items blocked" },
-              "escalated": { "label": "Escalated to owner" }
+              "blocked_count": {
+                "label": "Blocked items"
+              },
+              "escalated": {
+                "label": "Escalated to owner"
+              }
             }
           }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Investment Research & Trading Squad",
+      "description": "Official fleet template: a five-seat squad that runs research through to paper execution — research issues the verdict, portfolio compresses it into target weights under explicit rules, execution carries those weights into the paper account, review settles expiries after the close and distils reflections, and risk control re-checks passively and escalates. Demo: an execution seat whose core discipline is \"never act on a missing prerequisite\" (no valid weights received / risk thresholds not configured / risk control triggered / stale price watermark → no order at all), plus four staggered cadence windows across the trading day. When minting and listing, packId/presetId are filled in by the minting script; this file is the source of truth for the manifest and the test pins that it must pass fleet pre-validation. Paper-only throughout: a simulated book, with no real funds and no real orders.",
+      "agents": {
+        "trade-research": {
+          "name": "Research"
+        },
+        "trade-portfolio": {
+          "name": "Portfolio construction"
+        },
+        "trade-execute": {
+          "name": "Execution (paper)"
+        },
+        "trade-review": {
+          "name": "Post-close review"
         }
       }
     }

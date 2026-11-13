@@ -168,6 +168,27 @@ export interface SeStatementRow {
   [k: string]: unknown;
 }
 
+export interface SeInvoiceRow {
+  requestId?: string;
+  status?: string;
+  customerId?: string;
+  title?: string;
+  taxId?: string;
+  orderId?: string;
+  statementId?: string;
+  delivery?: string;
+  submitted_at?: string;
+  decided_at?: string;
+}
+
+export interface SeInvoiceDecideResult {
+  requestId?: string;
+  status?: string;
+  customerId?: string;
+  decided_at?: string;
+  note?: string | null;
+}
+
 export interface SeApi {
   workspace(): Promise<SeWorkspaceData>;
   customers(params: { keyword?: string; offset?: number; limit?: number }): Promise<Envelope<SeCustomerRow>>;
@@ -189,6 +210,8 @@ export interface SeApi {
   handleAlert(alertId: string, body: { decision: "accept" | "reject"; note?: string }): Promise<AlertHandleResult>;
   statements(params: { status?: string; offset?: number; limit?: number }): Promise<Envelope<SeStatementRow>>;
   pushStatement(statementId: string, body: { channel?: string }): Promise<Record<string, unknown>>;
+  invoiceAuditList(params: { status?: string; from?: string; to?: string; offset?: number; limit?: number }): Promise<Envelope<SeInvoiceRow>>;
+  invoiceDecide(requestId: string, body: { decision: "accepted" | "rejected"; note?: string }): Promise<SeInvoiceDecideResult>;
 }
 
 export function makeSeApi(transport: ErpTransport, headers: HeadersProvider): SeApi {
@@ -209,6 +232,9 @@ export function makeSeApi(transport: ErpTransport, headers: HeadersProvider): Se
     handleAlert: (id, body) => obj<AlertHandleResult>(`/se/alerts/${seg(id)}/handle`, { method: "POST", body }),
     statements: (p) => list<SeStatementRow>(`/se/statements${q(p)}`),
     pushStatement: (id, body) => obj(`/se/statements/${seg(id)}/push`, { method: "POST", body }),
+    invoiceAuditList: (p) => list<SeInvoiceRow>(`/se/invoice-requests${q(p)}`),
+    invoiceDecide: (id, body) =>
+      obj<SeInvoiceDecideResult>(`/se/invoice-requests/${seg(id)}/decide`, { method: "POST", body }),
   };
 }
 

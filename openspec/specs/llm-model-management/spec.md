@@ -134,6 +134,8 @@ The page SHALL display the current default model id (provider + model) and SHALL
 
 The server SHALL expose `POST /api/llm/providers/:id/sync` (admin-gated) which reconciles a provider's model roster against the provider's own gateway. Sync SHALL: fetch the full id list from `GET <baseUrl>/models`, then probe each id with a single minimal chat completion (bounded concurrency, per-probe timeout), classify each id as exactly one of `serving`, `unauthorized`, `upstream_down`, `rate_limited`, `not_chat`, or `error`, merge `serving` ids into the provider's model roster, and persist the full per-id status map on the provider record. Sync SHALL NOT delete existing roster entries whose probe did not serve. The response SHALL include the classification summary; probe error strings SHALL be sanitized (no API key, bounded length) before persistence or return.
 
+Sync SHALL also reconcile metadata of entries already present: an entry whose `contextWindow`/`maxTokens` still equals the conservative default and whose family publishes a more specific value SHALL be upgraded to the family value and persisted, with the touched ids returned as `upgraded`. An operator-pinned entry SHALL NOT be altered. Reconciliation SHALL be idempotent — a roster already carrying family values SHALL report an empty `upgraded`.
+
 Sync SHALL apply identically to the reserved env-generated route: serving ids merge into that route's persisted override roster (see "Reserved env route is runtime-overridable"), and its status map persists, so the built-in lane reconciles against gateway drift through the same operator action. A sync SHALL NOT write the route's API key or delete the route.
 
 #### Scenario: sync classifies and merges
@@ -171,7 +173,14 @@ Sync SHALL apply identically to the reserved env-generated route: serving ids me
 - **WHEN** a `serving` id is merged whose family is known to the local metadata table
 - **THEN** the merged entry SHALL carry the table's contextWindow/maxTokens/reasoningEfforts
 - **AND** an unknown family SHALL get conservative defaults (128k context, 8192 maxTokens, no reasoning efforts)
-- **AND** sync SHALL NOT alter metadata fields of entries already present in the roster
+- **AND** an entry already in the roster SHALL keep an operator-pinned metadata value, and SHALL otherwise have a value equal to the conservative default upgraded to the family value (a stored conservative default is treated as untuned)
+
+#### Scenario: sync reports the metadata it reconciled
+
+- **WHEN** sync upgrades an existing entry's `contextWindow` from the conservative default to its family value
+- **THEN** the response SHALL list that id in `upgraded`
+- **AND** a subsequent `GET /api/llm/providers` SHALL expose the family value for it
+- **AND** a second sync against the same roster SHALL report an empty `upgraded`
 
 ### Requirement: Reserved env route is runtime-overridable
 
@@ -203,7 +212,7 @@ The env-generated provider route SHALL support a persisted operator override cov
 
 ### Requirement: Provider model list is editable at runtime
 
-`PUT /api/llm/providers/:id` SHALL accept a `models` array replacing the provider's roster: entries carry `id` plus optional `name`/`contextWindow`/`maxTokens` (absent fields fall back to the family table, then conservative defaults). The mutation SHALL validate ids are unique non-empty strings, run through the same write lock + hot-reload path as other provider edits, and take effect without a restart or image rebuild. This SHALL apply to the reserved env-generated route through its override roster. The Models page SHALL expose a per-provider model-list editor (add id, remove entry, set default pointer, edit each entry's `contextWindow` and `maxTokens`) restricted to admin users.
+`PUT /api/llm/providers/:id` SHALL accept a `models` array replacing the provider's roster: entries carry `id` plus optional `name`/`contextWindow`/`maxTokens` (absent fields fall back to the family table, then conservative defaults). The mutation SHALL validate ids are unique non-empty strings, run through the same write lock + hot-reload path as other provider edits, and take effect without a restart or image rebuild. This SHALL apply to the reserved env-generated route through its override roster. An entry whose supplied `contextWindow`/`maxTokens` differs from the family table's value for that id SHALL be recorded as operator-pinned and SHALL NOT be reconciled by a later sync; a supplied value equal to the family table's value SHALL NOT pin the entry. The Models page SHALL expose a per-provider model-list editor (add id, remove entry, set default pointer, edit each entry's `contextWindow` and `maxTokens`) restricted to admin users, and its prefill SHALL use the same family table as the server so that saving an unedited roster cannot reintroduce a conservative default.
 
 #### Scenario: operator adds a model without a rebuild
 
@@ -228,6 +237,13 @@ The env-generated provider route SHALL support a persisted operator override cov
 - **WHEN** an admin sets an entry's `contextWindow` or `maxTokens` in the model-list editor and saves
 - **THEN** the stored entry SHALL carry the provided values, validated as positive integers
 - **AND** entries with omitted fields SHALL keep family-table or conservative-default values
+
+#### Scenario: an operator value that disagrees with the family table is pinned
+
+- **WHEN** an admin saves an entry whose `contextWindow` differs from the family table's value for that id
+- **THEN** the stored entry SHALL be marked operator-pinned
+- **AND** a later sync SHALL NOT overwrite that value
+- **AND** a saved value equal to the family table's value SHALL NOT be marked pinned
 
 ### Requirement: Non-admin users see a read-only model roster
 The Models settings section SHALL present non-admin users a read-only view of the models currently available to them — the providers' model rosters with serving status where known — and SHALL NOT render provider management controls (add, edit, delete, test, sync) for those users. Users with the admin role, and any user of an open-access deployment where admin gating is disabled, SHALL continue to see the full provider management surface unchanged. The read-only view SHALL carry no secrets: provider base URLs and API-key presence indicators SHALL follow the same masking rules as the management view.
@@ -300,3 +316,39 @@ provider 路由），而非仅文档说明。**本要求的覆盖面是 dsh harn
 
 - **WHEN** 同一本地 provider 同时服务 chat 与 fleet 两面
 - **THEN** 两面的路由来源是同一份 dsh profile 写入（单源），无第二份配置
+
+### Requirement: Model metadata resolves family windows over the conservative default
+
+Whenever model metadata is resolved for use — the generated dsh route declarations, the client-facing
+provider roster, and the flat model list served to clients — an entry whose `contextWindow` or `maxTokens`
+equals the conservative default SHALL resolve to the local family table's value when that family publishes a
+more specific one, unless the entry is operator-pinned. Resolution SHALL happen at read time, so a roster
+persisted before this change (or restored from an older volume, or written by a node that never synced)
+cannot squeeze the runtime's output budget; the persisted value SHALL be corrected on the next sync or
+editor save. The family table SHALL remain the only source of these numbers — a missing value SHALL NOT be
+invented, and an unknown family SHALL keep the conservative default.
+
+#### Scenario: a stale stored default cannot squeeze the output budget
+
+- **WHEN** the persisted roster carries `contextWindow: 128000` for an id whose family publishes 1,000,000
+- **THEN** the generated dsh route declaration for that id SHALL declare 1,000,000
+- **AND** the resolved roster served to clients SHALL report 1,000,000 for it
+
+#### Scenario: operator-pinned metadata wins over the family table
+
+- **WHEN** an entry is operator-pinned at 128000 for an id whose family publishes 1,000,000
+- **THEN** resolution SHALL keep 128000
+- **AND** the family table SHALL NOT override it
+
+#### Scenario: an unknown family keeps the conservative default
+
+- **WHEN** a roster entry's family is absent from the local metadata table
+- **THEN** resolution SHALL leave the conservative defaults (128000 context, 8192 maxTokens)
+- **AND** SHALL NOT invent a larger window
+
+#### Scenario: the served model list carries the window for every route
+
+- **WHEN** a client reads the model list
+- **THEN** every entry whose route declares a `contextWindow` SHALL carry it — user-managed routes and the
+  reserved env route alike
+- **AND** an entry whose route declares none SHALL omit the field rather than send a fabricated number

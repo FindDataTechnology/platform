@@ -63,19 +63,22 @@ export async function extractText(type, buffer) {
   if (!reader) throw new Error(`No reader for document type: ${type}`);
   if (!buffer) throw new Error(`Missing buffer for ${type} document`);
 
-  // officeparser handles XLSX and PPTX
+  // officeparser handles XLSX and PPTX.
+  //
+  // 两个必须一起改的点（2026-11-13 实测 officeparser@7.8.0）：
+  //   1. 回调第一参**不是字符串**，是 ParsedOffice 对象，文本在 `.toText()` 上。
+  //      按字符串 `.trim()` 会抛 `text.trim is not a function`。
+  //   2. `parseOffice` 出错时**先**回调 `(undefined, err)`、**再**把同一个错误抛出去。
+  //      旧写法不接它的返回值，那条 promise 没人处理 → unhandledRejection；
+  //      Node 默认策略下这会**结束进程**，而表面症状只是"文档导入失败"。
+  //      改成 await，错误就落到本函数的调用方手里。
   if (reader === "officeparser") {
-    return new Promise((resolve, reject) => {
-      officeparser.parseOffice(buffer, (text, err) => {
-        if (err) {
-          reject(new Error(`officeparser failed for ${type}: ${err}`));
-        } else if (!text || !text.trim()) {
-          reject(new Error(`officeparser produced empty text for ${type}`));
-        } else {
-          resolve(text.trim());
-        }
-      }, { preserveTempFiles: false });
-    });
+    const result = await officeparser.parseOffice(buffer);
+    // v7 是对象 + toText()；v6 直接给字符串。两种都认，升级依赖时不必再改这里。
+    const text = typeof result?.toText === "function" ? result.toText() : result;
+    const trimmed = typeof text === "string" ? text.trim() : "";
+    if (!trimmed) throw new Error(`officeparser produced empty text for ${type}`);
+    return trimmed;
   }
 
   // LlamaIndex readers for DOCX, CSV, HTML, JSON

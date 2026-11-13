@@ -23,6 +23,7 @@ import {
   acpMcpServers,
   acpCredentialEnv,
   acpSecretsRefusal,
+  inputRequestOwnerOf,
 } from "../agent-runner/compose-acp.js";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -204,4 +205,24 @@ test("1.3 acpSecretsRefusal fails closed with a channel-naming error", () => {
   assert.deepEqual(err.secrets, ["wgk_pat", "api_tok"]);
   assert.match(err.message, /wgk_pat, api_tok/);
   assert.match(err.message, /no controlled secrets channel/);
+});
+
+// ── add-acp-input-request-owner: owner precedence on a runner-carried harness ─
+
+test("2.4 inputRequestOwnerOf: descriptor deployer first, deployment email as the fallback", () => {
+  // The deploy-time identity wins: two agents on ONE runner deployed by
+  // different people must not both send their cards to the deployment's
+  // standing email.
+  assert.equal(
+    inputRequestOwnerOf({ deployer_email: "Deployer@Example.COM" }, { inputRequestMcpOwner: "runner@example.com" }),
+    "deployer@example.com",
+  );
+  // No descriptor identity (entries deployed before the field existed) ⇒ the
+  // runner's standing email still works, exactly as before this change.
+  assert.equal(inputRequestOwnerOf({}, { inputRequestMcpOwner: "Runner@Example.com" }), "runner@example.com");
+  // Neither ⇒ empty, and the caller must therefore not mount the tool.
+  assert.equal(inputRequestOwnerOf({}, {}), "");
+  assert.equal(inputRequestOwnerOf(null, null), "");
+  // Blank strings are "no value", not an owner.
+  assert.equal(inputRequestOwnerOf({ deployer_email: "   " }, { inputRequestMcpOwner: "" }), "");
 });

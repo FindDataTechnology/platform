@@ -26,6 +26,19 @@ function git(args) {
   return execFileSync("git", args, { cwd: PAAS, encoding: "utf8" }).trim();
 }
 
+// The baseline is the PARENT of the commit that introduced the wiring, which only
+// names the pre-change code in a history of real commits. The public repo's main
+// is a squashed export (one commit per release), so `git archive <hit>^` dies with
+// "not a valid object name" there — a red that says nothing about the wiring.
+// Measured 2026-11-13 on the published snapshot: depth 1. Every test below needs
+// this, so it is one named question, not four copies of a magic number.
+const HISTORY_DEPTH = Number(git(["rev-list", "--count", "HEAD"]));
+function hasPreChangeBaseline(t) {
+  if (HISTORY_DEPTH >= 10) return true;
+  t.skip(`squashed history (${HISTORY_DEPTH} commits) — no pre-change baseline to compare against`);
+  return false;
+}
+
 /** Rebuild the validator as it stood before the memory wiring existed. */
 function baselineValidator() {
   const introducedBy = git(["log", "-S", "validateMemoryBlock", "--format=%H", "--", "lib/pack-manifest.js"])
@@ -119,7 +132,8 @@ const MANIFESTS = {
   },
 };
 
-test("every pre-existing manifest validates identically before and after the wiring", async () => {
+test("every pre-existing manifest validates identically before and after the wiring", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineValidator();
   try {
     const old = await import(baseline.module);
@@ -137,7 +151,8 @@ test("every pre-existing manifest validates identically before and after the wir
   }
 });
 
-test("the battery actually exercises errors (a battery of clean packs proves nothing)", async () => {
+test("the battery actually exercises errors (a battery of clean packs proves nothing)", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineValidator();
   try {
     const old = await import(baseline.module);
@@ -153,7 +168,8 @@ test("the battery actually exercises errors (a battery of clean packs proves not
   }
 });
 
-test("declaring memory ADDS findings and removes none", async () => {
+test("declaring memory ADDS findings and removes none", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   const baseline = baselineValidator();
   try {
     const old = await import(baseline.module);
@@ -178,7 +194,8 @@ test("declaring memory ADDS findings and removes none", async () => {
 
 // ── the one intentional behaviour change, stated rather than hidden ────────
 
-test("an invalid legacy memory_scope is now refused, and that is deliberate", async () => {
+test("an invalid legacy memory_scope is now refused, and that is deliberate", async (t) => {
+  if (!hasPreChangeBaseline(t)) return;
   // Measured difference, so it is documented instead of quietly absorbed:
   // `agents[].memory_scope` had NO consumer in this repo — a bogus value was dead
   // data that published fine. The change makes it a validated spelling of

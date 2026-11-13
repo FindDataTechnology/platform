@@ -25,9 +25,20 @@ import { fileURLToPath } from "node:url";
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(readFileSync(path.join(REPO, "package.json"), "utf8"));
 
-test("test:unit stays serial and per-test-bounded", () => {
+test("test:unit sets concurrency explicitly and bounds every case", () => {
   const script = pkg.scripts?.["test:unit"] ?? "";
-  assert.match(script, /--test-concurrency=1\b/, "the suite is serial on purpose: files share global state and within-file order");
+  // Concurrency must be EXPLICIT — either a literal or the env seam with a
+  // numeric default — because node's default (os.availableParallelism()) would
+  // silently oversubscribe a 2-core CI runner. Why the value is no longer pinned
+  // to 1: measured 2026-11-10 on one tree, the whole suite (520 files) at
+  // --test-concurrency=4 finished in 315s, and re-running its 14 failing files
+  // SERIALLY reproduced all 27 of those failures — i.e. zero failures were
+  // concurrency-induced. Serialization was a blanket safety choice, not a
+  // measured requirement; keeping 1 as the DEFAULT still leaves it intact.
+  const m = script.match(/--test-concurrency=(?:\$\{UNIT_TEST_CONCURRENCY:-(\d+)\}|(\d+))/);
+  assert.ok(m, "test:unit must pass --test-concurrency explicitly (a literal, or the UNIT_TEST_CONCURRENCY env seam with a numeric default)");
+  const n = Number(m[1] ?? m[2]);
+  assert.ok(Number.isInteger(n) && n >= 1, `--test-concurrency must be a positive integer, got ${m[0]}`);
   assert.match(script, /--test-timeout=\d+/, "a hanging case must fail by name, not eat the job budget");
 });
 

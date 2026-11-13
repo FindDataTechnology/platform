@@ -224,7 +224,7 @@
   "i18n": {
     "en": {
       "name": "Morning Brief Station",
-      "description": "Official fleet template: a daily morning-brief intel station — the tech and market scouts patrol separately every early morning, and the briefing editor synthesizes the morning brief at 8; plus a cluster-reference post (existing-cluster, weekly deep aggregation, demonstrating cluster fan-out).",
+      "description": "Official fleet template: a daily morning-brief intel station — the tech and market scouts patrol separately every early morning, and the briefing editor synthesizes the morning brief at 8; plus a cluster-reference post (existing-cluster, deep aggregation every Monday, demonstrating cluster fan-out reference AND derived reporting). Demo: two intel sources running in parallel, the morning-brief stream, and a cluster-reference post (the company seed only demonstrated a2a). The orchestration section is a trigger+handoff chain — the two scouts finish their patrols and hand the baton to the editor for synthesis — plus the cluster reporting upward. When minting and listing, packId/agents are filled in by the minting script; this file is the source of truth for the manifest and the test pins that it must pass fleet pre-validation.",
       "agents": {
         "intel-chief": {
           "name": "Briefing editor"

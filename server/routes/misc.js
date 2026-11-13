@@ -22,6 +22,9 @@ import * as lineCredentials from "../../line-credentials.js";
 import * as paperTradingCredentials from "../../paper-trading-credentials.js";
 import * as chatwootCredentials from "../../chatwoot-credentials.js";
 import * as ciyuanAccountCredentials from "../../ciyuan-account-credentials.js";
+import * as federatedRef from "../../federated-ref.js";
+import { doorOf, groupDoors } from "../lib/credential-doors.js";
+import { groupLinesByDoor, loadManifests } from "../lib/line-tracks.js";
 import { resolveVoiceConfig } from "./voice.js";
 import { copilotEnabled, lineBoardsEnabled } from "../../lib/board-adapters.js";
 import { BUSINESS_ROLES, parseStoredAssignments, resolveAssignment } from "../roles.js";
@@ -841,7 +844,20 @@ export function registerMiscRoutes(ctx) {
     }
     items.push(search);
 
-    res.json({ connections: items });
+    // 按门分组（converge-line-identity-and-keys 4.2）：同一批事实只在这里读一次，
+    // 门只是一层归类。逐条**加上** door 字段（纯增量，既有消费方不受影响），
+    // 另给一份分组摘要供设置页顶部按门呈现。
+    // 各线 manifest 的声明优先（5.3）：目录里有 manifest 时，线的那一半就从
+    // 声明里来，平台侧不再需要为"新增一条线"改表。目录不存在 = 还没人投放，
+    // 退回联邦配置（当前部署形态），行为与之前一致。
+    const manifests = loadManifests(process.env.LINE_MANIFEST_DIR || null);
+    res.json({
+      connections: items.map((item) => ({ ...item, door: doorOf(item.id) })),
+      doors: groupDoors(items, federatedRef.FEDERATED_LINES, {
+        ...manifests,
+        ...groupLinesByDoor(manifests.lines),
+      }),
+    });
   });
 
   // ── Supervisor / system status (for the Dashboard view) ──────────────────

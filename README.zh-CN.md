@@ -13,7 +13,7 @@
 - **流式智能体对话** —— 思维链、工具调用、技能执行实时渲染；每场对话可自选模型与智能体。
 - **自有文档 RAG** —— 导入 PDF / Markdown / 纯文本或网页 URL，回答立足于你的文档；全部数据存于本地 SQLite。
 - **MCP 扩展** —— 零代码接入 MCP 服务器；扩展市场可对接自建的 [mcp-gateway-registry](https://github.com/agentic-community/mcp-gateway-registry)。
-- **智能体、功能集与定时任务** —— 支持云端刷新的智能体/应用目录、版本化功能集（pack）、带通知的 cron 定时任务。
+- **智能体与定时任务** —— 支持云端刷新的智能体/应用目录、可版本化的智能体（pack）、带通知的 cron 定时任务。
 - **Bot 通道** —— 企业微信、飞书、Telegram、微信公众号 bot，webhook 校验 + 每（bot, 会话）独立会话。
 - **会话分享** —— 公开只读的 `/share/:token` 视图。
 - **一个产品，多个界面** —— 网页、Electron 桌面端（macOS / Windows）、微信小程序，说同一套 WS/REST 契约。

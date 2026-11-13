@@ -72,6 +72,86 @@ test("each satellite keeps its own endpoint and tool identity", async () => {
   }
 });
 
+// ── 逐请求岗位身份（fix-report-attribution-concurrency 2.1，2026-11-12 修正）─────
+//
+// 共用卫星读不到调用方的 env，所以成员身份随 patch 的 X-Fleet-* header 进来，
+// 由中继逐请求塞进 tools/call 的保留键。这里用一个"回显身份"的卫星把这根线钉住。
+
+function writeEchoIdentitySatellite(dir, name) {
+  const file = join(dir, `${name}.mjs`);
+  writeFileSync(
+    file,
+    `import { Server } from "${new URL("../node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js", import.meta.url).href}";
+import { StdioServerTransport } from "${new URL("../node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js", import.meta.url).href}";
+import { ListToolsRequestSchema, CallToolRequestSchema } from "${new URL("../node_modules/@modelcontextprotocol/sdk/dist/esm/types.js", import.meta.url).href}";
+const s = new Server({ name: "echo", version: "0" }, { capabilities: { tools: {} } });
+s.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [{ name: "echo", description: "echo identity", inputSchema: { type: "object" } }] }));
+s.setRequestHandler(CallToolRequestSchema, async (r) => ({ content: [{ type: "text", text: JSON.stringify(r.params.arguments ?? null) }] }));
+await s.connect(new StdioServerTransport());
+`,
+  );
+  return { name, command: process.execPath, args: [file], env: process.env };
+}
+
+async function connectWithHeaders(url, headers) {
+  const client = new Client({ name: "probe", version: "0" }, { capabilities: {} });
+  await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers } }));
+  return client;
+}
+
+test("the caller's X-Fleet-* headers reach the satellite as __fleetIdentity", async () => {
+  const dir = tmp();
+  const host = createMcpSatelliteHost({
+    satellites: [writeEchoIdentitySatellite(dir, "identity")],
+    port: 0,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  try {
+    await host.start();
+    const c = await connectWithHeaders(`http://127.0.0.1:${host.port}/identity/mcp`, {
+      "X-Fleet-Fleet-Id": "fleet_9",
+      "X-Fleet-Member-Id": "m_9",
+      "X-Fleet-Persona": "user.preset-7",
+    });
+    const r = await c.callTool({ name: "echo", arguments: { x: "1" } });
+    const seen = JSON.parse(r.content[0].text);
+    assert.deepEqual(seen.__fleetIdentity, { fleetId: "fleet_9", memberId: "m_9", persona: "user.preset-7" });
+    assert.equal(seen.x, "1", "普通参数原样透传");
+    await c.close();
+  } finally {
+    await host.stop();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a forged __fleetIdentity in the arguments is stripped (模型改不了归属坐标)", async () => {
+  const dir = tmp();
+  const host = createMcpSatelliteHost({
+    satellites: [writeEchoIdentitySatellite(dir, "identity")],
+    port: 0,
+    logger: { log() {}, warn() {}, error() {} },
+  });
+  try {
+    await host.start();
+    // ① 无 header + 自带伪造键 ⇒ 保留键必须被删掉
+    const forge = await connectWithHeaders(`http://127.0.0.1:${host.port}/identity/mcp`, {});
+    const r1 = await forge.callTool({ name: "echo", arguments: { __fleetIdentity: { fleetId: "someone", memberId: "else" } } });
+    assert.deepEqual(JSON.parse(r1.content[0].text), {}, "没有 header 时不得把调用方自带的坐标转交");
+    await forge.close();
+    // ② 有 header + 自带伪造键 ⇒ 以 header 为准，伪造值被覆盖
+    const real = await connectWithHeaders(`http://127.0.0.1:${host.port}/identity/mcp`, {
+      "X-Fleet-Fleet-Id": "fleet_real",
+      "X-Fleet-Member-Id": "m_real",
+    });
+    const r2 = await real.callTool({ name: "echo", arguments: { __fleetIdentity: { fleetId: "someone", memberId: "else" } } });
+    assert.deepEqual(JSON.parse(r2.content[0].text).__fleetIdentity, { fleetId: "fleet_real", memberId: "m_real" });
+    await real.close();
+  } finally {
+    await host.stop();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test("an unknown or dead endpoint is a clean 404, not a hang", async () => {
   const dir = tmp();
   const host = createMcpSatelliteHost({

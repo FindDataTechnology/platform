@@ -31,17 +31,33 @@ test.describe("GET /api/connections", () => {
     }
 
     // Fresh hermetic store: nothing connected yet. Whitelist projection: the
-    // four state fields only (search additionally carries userKey/shared; the
+    // state fields only, plus `door` (the settings grouping added by
+    // converge-line-identity-and-keys 4.2 — a classification label, not
+    // credential material; search additionally carries userKey/shared; the
     // connector entry carries the binding projection added by
-    // add-connector-bindings 6.1 — still states only, no credential material).
+    // add-connector-bindings 6.1).
     for (const c of body.connections) {
       expect(["connected", "stale", "disconnected", "not-configured"]).toContain(c.state);
+      // Every entry answers "which door is this" — a null here means the
+      // classification table missed an id, which the unit test also pins.
+      expect(["customer-key", "member-assertion", "third-party"]).toContain(c.door);
       if (c.id === "connector") {
-        expect(Object.keys(c).sort()).toEqual(["bindingSummary", "bindings", "id", "name", "reason", "state"]);
+        expect(Object.keys(c).sort()).toEqual([
+          "bindingSummary", "bindings", "door", "id", "name", "reason", "state",
+        ]);
       } else if (c.id !== "search") {
-        expect(Object.keys(c).sort()).toEqual(["id", "name", "reason", "state"]);
+        expect(Object.keys(c).sort()).toEqual(["door", "id", "name", "reason", "state"]);
       }
     }
+    // The door grouping travels alongside, and it must reference the same ids —
+    // a grouping that names ids the projection does not have is a drift bug.
+    expect(Array.isArray(body.doors?.order)).toBeTruthy();
+    const grouped = body.doors.doors.flatMap((d) => d.connections);
+    for (const id of grouped) expect(ids).toContain(id);
+    expect(body.doors.unclassified).toEqual([]);
+    // 门 A 此刻没有线声明代做：必须如实报 false，而不是画一个空门。
+    expect(body.doors.memberAssertion.declared).toBe(false);
+    expect(body.doors.memberAssertion.enabled).toBe(false);
     // No credential material anywhere in the payload, at any nesting.
     const raw = JSON.stringify(body);
     expect(raw).not.toMatch(/sk-|fdt_|oct_|Bearer\s|eyJ[A-Za-z0-9_-]{10,}/);
@@ -95,6 +111,32 @@ test.describe("connections section", () => {
     await expect(page.getByTestId("search-service-card")).toBeVisible();
     // The BYOK zone moved verbatim (same testids as the former section).
     await expect(page.getByTestId("websearch-byok")).toBeVisible();
+  });
+
+  test("the door overview is mounted and tells the truth about 门 A", async ({ page }) => {
+    await pinLocaleEn(page);
+    await page.goto("/settings/connections");
+
+    // 声明≠挂载：这个块必须真的出现在页面上（构建通过并不能证明它被引用）。
+    const card = page.getByTestId("credential-doors");
+    await expect(card).toBeVisible();
+
+    // 三扇门各有一句说明；门 K 只有一把钥，门 A 此刻没有任何线声明。
+    for (const door of ["Customer key", "Member delegation", "Third-party credentials"]) {
+      await expect(card.getByRole("heading", { name: door })).toBeVisible();
+    }
+    // 词元那把钥在门 K 里只出现一次——多条线吃同一把钥不等于多把钥。
+    const customerKeySection = card.locator("section").filter({ hasText: "Customer key" });
+    await expect(customerKeySection.getByText("词元 account")).toHaveCount(1);
+
+    // 门 A 默认关：如实说"还没有线声明代做"，而不是画成一个可点的入口。
+    const memberSection = card.locator("section").filter({ hasText: "Member delegation" });
+    await expect(memberSection.getByText("No line declares delegation yet.")).toBeVisible();
+    await expect(memberSection.getByText("Off by default", { exact: false })).toBeVisible();
+
+    // 每行的"去连接"都必须落回既有卡片（本块不复制任何流程）。
+    await card.getByRole("link", { name: /Connect/ }).first().click();
+    await expect(page).toHaveURL(/\/settings\/connections\?panel=/);
   });
 
   test("market tab is a pure shelf — no connect cards", async ({ page }) => {

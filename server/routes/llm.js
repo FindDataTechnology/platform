@@ -51,8 +51,16 @@ export function registerLlmRoutes(ctx) {
       const envProviders = [];
       if (process.env.LLM_API_KEY?.trim()) {
         const dshProfile = await import("../../dsh-profile.js");
-        const { baseURL, hasOverride } = await dshProfile.effectiveVolcesRoute();
+        const { baseURL, hasOverride, models: envRoster } = await dshProfile.effectiveVolcesRoute();
         const override = llmProviders.getVolcesOverride();
+        // Same per-entry metadata the user providers expose, so the roster
+        // editor prefills what the runtime resolves instead of its own mirror
+        // (fix-model-window-family-reconcile).
+        const modelMeta = {};
+        for (const m of envRoster) {
+          const meta = llmProviders.effectiveModelMeta(m);
+          modelMeta[m.id] = { ...meta, ...(m.metaPinned ? { pinned: true } : {}) };
+        }
         envProviders.push({
           id: "volces",
           name: "Volces",
@@ -61,6 +69,7 @@ export function registerLlmRoutes(ctx) {
           hasKey: true,
           reserved: true,
           models: ctx.dshModels.filter((m) => m.provider === "volces").map((m) => m.id),
+          modelMeta,
           lastTest: null,
           discovery: override?.discovery || null,
           override: {

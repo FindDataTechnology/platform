@@ -52,11 +52,14 @@
 
 归属解析的**权威信号 SHALL 是该回合自身的执行上下文**，SHALL NOT 是运行时部署默认 preset——运行时默认 preset 按设计不由定时车道移动，读它会让驻留（parked）回合的归属必然失配。权威信号按优先级为：
 
-1. **运行账本的在飞回合**（该回合已在执行、尚未收尾）：其岗位标识即真岗位；
-2. **该回合的运行中任务记录**：其 `sourceTag` 的岗位标识即真岗位（舰队回合逐岗位物化，sourceTag 由服务端自己写入，调用方无法伪造）；
-3. **回合自身的目标 preset**（任务携带值 / 驻留值）：匹配唯一 persona 岗位时采纳。
+1. **调用方随请求自报的岗位身份**（由服务端写入成员私有 patch 的 `fleetId`/`memberId`，非模型可编造的自由文本）：该 pair 真实存在且其 persona 与调用方一致时采纳；
+2. **运行账本的在飞回合**（该回合已在执行、尚未收尾）：其岗位标识即真岗位；
+3. **该回合的运行中任务记录**：其 `sourceTag` 的岗位标识即真岗位（舰队回合逐岗位物化，sourceTag 由服务端自己写入，调用方无法伪造）；
+4. **回合自身的目标 preset**（任务携带值 / 驻留值）：匹配唯一 persona 岗位时采纳。
 
 以上均不能唯一命中时，沿既有纪律诚实拒收（多个岗位共用同一 persona ⇒ ambiguous；无命中 ⇒ not-a-member），SHALL NOT 猜测、SHALL NOT 采信调用方指定的岗位 id。
+
+**并发下的收紧**：当同时存在两个及以上的在飞舰队回合或运行中舰队任务时，第 4 级的 preset 值 SHALL 只在其来源可判定为「本回合自身」时使用。运行时的全局当前 preset（cell 级最后一次切换值）SHALL NOT 作为归属依据；来源不可判定时 SHALL 以 `attribution_ambiguous` 拒收并把候选岗位写进原因。
 
 #### Scenario: 服务端归属解析
 
@@ -82,6 +85,21 @@
 
 - **WHEN** 同一 persona 持有多个岗位，且运行中任务记录无法唯一确定本回合岗位
 - **THEN** 报数被拒并说明归属歧义，SHALL NOT 任选其一记入
+
+#### Scenario: 两个岗位并发跑时不自报身份则拒收（2026-11-12 生产）
+
+- **WHEN** 同一 cell 上有两个岗位的回合同时在执行（双 worker），某回合调用 report_status 且未自报岗位身份
+- **THEN** 报数 SHALL 被拒（`attribution_ambiguous`），原因里列出候选岗位；SHALL NOT 记到运行时全局 preset 对应的那个岗位上
+
+#### Scenario: 并发下自报身份即可正确归属
+
+- **WHEN** 某 worker 的成员私有 patch 带有 `fleetId`/`memberId`，其回合调用 report_status 并随请求带上该 pair
+- **THEN** 报数归属该 pair 对应岗位，即使此刻还有另一个岗位的回合在跑
+
+#### Scenario: 自报身份必须是服务端写入的那一对
+
+- **WHEN** 调用方自报的 pair 不存在，或其 persona 与调用方不一致
+- **THEN** 该自报被忽略并按其余优先级继续解析（不得凭自报把报数记到任意岗位）
 
 ### Requirement: 巡视上下文注入
 

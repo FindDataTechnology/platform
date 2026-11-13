@@ -233,26 +233,21 @@ export async function mintDeploymentBindings({ email, packId, agentIds, record, 
   }
   for (const agentId of agentIds) {
     for (const binding of mintable) {
-      const result = local
-        ? await mintDeploymentBinding({
-            email,
-            packId,
-            agentId,
-            bindingKey: binding.bindingKey,
-            provider: binding.provider,
-            operations: binding.operations,
-            record,
-            fetchImpl,
-          })
-        : await mintBindingViaChannel({
-            email,
-            packId,
-            agentId,
-            bindingKey: binding.bindingKey,
-            provider: binding.provider,
-            operations: binding.operations,
-            fetchImpl,
-          });
+      // Only the local mint can be reached here: every channel-mode deploy
+      // returned above (`if (!local) { … return }`), so `local` is necessarily
+      // true. The old ternary kept a `: await mintBindingViaChannel(…)` arm that
+      // named a function this module never declared or imported — dead today,
+      // a ReferenceError the moment the early return moved.
+      const result = await mintDeploymentBinding({
+        email,
+        packId,
+        agentId,
+        bindingKey: binding.bindingKey,
+        provider: binding.provider,
+        operations: binding.operations,
+        record,
+        fetchImpl,
+      });
       if (result.ok && !local) {
         record({
           packId,

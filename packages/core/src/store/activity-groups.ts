@@ -101,6 +101,42 @@ export function proposalStateOf(result: unknown): string | null {
   return typeof r.state === "string" ? r.state : "pending";
 }
 
+// 结构化输入请求（add-input-request-cards）：待答时必须展开，理由与问询卡、
+// 确认卡完全相同——它是这个回合的交付物，不是过程。线上实测（2026-11-11）：
+// 工具先返回「挂起中」后回合结束，活动组随即收起，卡片被折进「已完成」那一行，
+// 人根本看不到该填的卡（冒烟也因此判「卡片未出现」）。
+//
+// 两个形态都算待答：调用还在跑（state=running），或工具已经返回挂起中
+// （state=done 且结果是 state=pending）。落终态后照常折叠。
+export function isInputRequestBlock(b: Block): b is Extract<Block, { kind: "tool" }> {
+  return b.kind === "tool" && b.name.endsWith("__request_input");
+}
+
+export function groupHasPendingInput(group: ActivityGroup): boolean {
+  return group.blocks.some((b) => {
+    if (!isInputRequestBlock(b)) return false;
+    if (b.state === "running") return true;
+    if (b.state !== "done") return false;
+    return proposalStateOf(b.result) === "pending" || inputRequestStateOf(b.result) === "pending";
+  });
+}
+
+// 工具结果里的 state（shim 的 JSON 文本或已解析对象，两种都要认）。
+export function inputRequestStateOf(result: unknown): string | null {
+  if (!result) return null;
+  if (typeof result === "string") {
+    try {
+      return inputRequestStateOf(JSON.parse(result));
+    } catch {
+      return null;
+    }
+  }
+  if (typeof result !== "object") return null;
+  const r = result as { requestId?: unknown; state?: unknown };
+  if (typeof r.requestId !== "string") return null;
+  return typeof r.state === "string" ? r.state : null;
+}
+
 // A proposal still waiting for the human's confirm/cancel must not sit folded
 // behind the collapsed header any more than a live ask: the group renders
 // expanded while the call is in flight or its proposal is pending. A resolved

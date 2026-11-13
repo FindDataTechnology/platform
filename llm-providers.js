@@ -44,7 +44,7 @@ export const RESERVED_IDS = new Set(["volces"]);
 // well-known ids the selector can offer immediately. The real discovered list
 // arrives later via dsh-llm's discoverModels() (out of scope for the CRUD path).
 const DEFAULT_MODELS = [
-  { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", contextWindow: 128000, maxTokens: 8192 },
+  { id: "deepseek-v4-pro", name: "DeepSeek V4 Pro", contextWindow: 1_000_000, maxTokens: 8192 },
 ];
 
 // ── Model family metadata (add-llm-model-discovery, design D5) ───────────────
@@ -70,7 +70,10 @@ export const MODEL_FAMILY_DEFAULTS = Object.freeze({
 // dsh-profile's declaredEfforts: a wrong `false` hides a control, a wrong map
 // is a dispatch error).
 const MODEL_FAMILIES = [
-  { prefix: "deepseek-v4", rank: 0, maxTokens: 32768, reasoningEfforts: IDENTITY_EFFORTS },
+  // 词元 deepseek-v4 车道的窗口是**实测**的 1M（2026-11-11：prompt=1,000,038 → 200/stop；
+  // 更大时先撞 8MB 请求体上限）。声明 128k 会把 dsh/pi-ai 的输出预算压成个位数——
+  // 线上就是 720 个 MCP 工具（≈15.9 万 token）> 12.8 万 → 每回合只剩 128 个 token。
+  { prefix: "deepseek-v4", rank: 0, maxTokens: 32768, contextWindow: 1_000_000, reasoningEfforts: IDENTITY_EFFORTS },
   { prefix: "deepseek", rank: 0, maxTokens: 32768 },
   { prefix: "glm-5.3-flash", rank: 1, maxTokens: 32768 },
   { prefix: "glm", rank: 1 },
@@ -86,10 +89,53 @@ function familyFor(id) {
 export function modelFamilyMeta(id) {
   const f = familyFor(id);
   return {
-    contextWindow: MODEL_FAMILY_DEFAULTS.contextWindow,
+    contextWindow: f?.contextWindow ?? MODEL_FAMILY_DEFAULTS.contextWindow,
     maxTokens: f?.maxTokens ?? MODEL_FAMILY_DEFAULTS.maxTokens,
     reasoningEfforts: [...(f?.reasoningEfforts ?? MODEL_FAMILY_DEFAULTS.reasoningEfforts)],
   };
+}
+
+// ── Resolving a roster entry's metadata (conservative default = "untuned") ───
+//
+// A value equal to the conservative default is what normalizeModelsInput writes
+// when the caller supplied nothing, so on its own it carries no intent. On a
+// family that publishes a verified window it is also the exact shape of the
+// 2026-10 incident: 720 MCP tools ≈ 159k tokens against a declared 128k, so
+// `available = contextWindow − 估算 − 4096` went negative and every turn was
+// left ~128 output tokens — ending as stopReason=length with nothing in the log
+// saying why (1,467 `context overflow` rows in /data/meter.jsonl).
+//
+// Resolution therefore treats the conservative default as "untuned" and prefers
+// the family value, unless the operator pinned one (`metaPinned`, written by the
+// editor when the supplied value disagrees with the family table). The failure
+// this trades into is the loud one: pi-ai reports `context overflow`.
+//
+// Read at every resolution site (dsh route declarations, served model list,
+// panel roster, sync persistence) so a stale store — an older volume, a node
+// that never synced, a roster written before this rule — cannot squeeze the
+// runtime's output budget. Data repair is not a precondition.
+export function effectiveModelMeta(entry) {
+  const meta = modelFamilyMeta(entry?.id);
+  const stored = (v) => (Number.isInteger(v) && v > 0 ? v : null);
+  const storedCw = stored(entry?.contextWindow);
+  const storedMt = stored(entry?.maxTokens);
+  if (entry?.metaPinned) {
+    return { contextWindow: storedCw ?? meta.contextWindow, maxTokens: storedMt ?? meta.maxTokens };
+  }
+  return {
+    contextWindow:
+      storedCw === null || storedCw === MODEL_FAMILY_DEFAULTS.contextWindow ? meta.contextWindow : storedCw,
+    maxTokens: storedMt === null || storedMt === MODEL_FAMILY_DEFAULTS.maxTokens ? meta.maxTokens : storedMt,
+  };
+}
+
+// The fields sync would have to rewrite for `entry` (null = already resolved).
+export function reconcileModelMeta(entry) {
+  const want = effectiveModelMeta(entry);
+  const patch = {};
+  if (entry?.contextWindow !== want.contextWindow) patch.contextWindow = want.contextWindow;
+  if (entry?.maxTokens !== want.maxTokens) patch.maxTokens = want.maxTokens;
+  return Object.keys(patch).length ? patch : null;
 }
 
 // Ordering rank: `:free` ids are always last (free pool), else the family's
@@ -259,19 +305,11 @@ function normalizeEfforts(value) {
 
 // List user providers. `hasKey` reflects whether a credential is stored.
 // `discovery` is the last sync's per-id status map (null before any sync).
+// Delegates to clientRecord: this used to be a hand-copied duplicate of that
+// shape, so a field added to one never reached the other (modelMeta was added
+// to clientRecord and the panel still got nothing).
 export function listUserProviders() {
-  return readProvidersDoc().providers.map((p) => ({
-    id: p.id,
-    name: p.name,
-    baseUrl: p.baseUrl,
-    type: "openai-completions",
-    auth: p.auth === "none" ? "none" : "bearer",
-    hasKey: Boolean(p.apiKey),
-    models: (p.models || DEFAULT_MODELS).map((m) => m.id),
-    reasoningEfforts: p.reasoningEfforts || [],
-    lastTest: p.lastTest || null,
-    discovery: p.discovery || null,
-  }));
+  return readProvidersDoc().providers.map(clientRecord);
 }
 
 // Raw record (includes apiKey) — internal/server use (route credentials,
@@ -377,8 +415,17 @@ function normalizeModelsInput(models) {
       }
       return n;
     };
-    const contextWindow = positiveInt(entry.contextWindow, "contextWindow") ?? meta.contextWindow;
-    const maxTokens = positiveInt(entry.maxTokens, "maxTokens") ?? meta.maxTokens;
+    const suppliedCw = positiveInt(entry.contextWindow, "contextWindow");
+    const suppliedMt = positiveInt(entry.maxTokens, "maxTokens");
+    const contextWindow = suppliedCw ?? meta.contextWindow;
+    const maxTokens = suppliedMt ?? meta.maxTokens;
+    // A pin is "the operator's number disagrees with the family table". A
+    // round-tripped family value is NOT a pin — otherwise the panel's own save
+    // would freeze every entry and the family-table correction could never
+    // reach a roster again (that freeze is what this rule exists to undo).
+    const metaPinned =
+      (suppliedCw !== null && suppliedCw !== meta.contextWindow) ||
+      (suppliedMt !== null && suppliedMt !== meta.maxTokens);
     const name =
       entry.name !== undefined && String(entry.name).trim()
         ? String(entry.name).trim()
@@ -389,7 +436,14 @@ function normalizeModelsInput(models) {
       if (explicit === null) throw new ProviderError("invalid", "reasoningEfforts must be a list of level names");
       levels = explicit;
     }
-    return { id, name, contextWindow, maxTokens, ...(levels.length ? { reasoningEfforts: levels } : {}) };
+    return {
+      id,
+      name,
+      contextWindow,
+      maxTokens,
+      ...(metaPinned ? { metaPinned: true } : {}),
+      ...(levels.length ? { reasoningEfforts: levels } : {}),
+    };
   });
 }
 
@@ -438,6 +492,16 @@ export function deleteProvider(id) {
 }
 
 function clientRecord(p) {
+  const roster = p.models || DEFAULT_MODELS;
+  // `models` stays an id list (client pickers key on it), but the editor needs
+  // the numbers the runtime actually resolves — otherwise it prefills from its
+  // own family mirror, saves, and silently overwrites an operator's pinned
+  // window (or reintroduces the conservative default this change removes).
+  const modelMeta = {};
+  for (const m of roster) {
+    const meta = effectiveModelMeta(m);
+    modelMeta[m.id] = { ...meta, ...(m.metaPinned ? { pinned: true } : {}) };
+  }
   return {
     id: p.id,
     name: p.name,
@@ -445,7 +509,8 @@ function clientRecord(p) {
     type: "openai-completions",
     auth: p.auth === "none" ? "none" : "bearer",
     hasKey: Boolean(p.apiKey),
-    models: (p.models || DEFAULT_MODELS).map((m) => m.id),
+    models: roster.map((m) => m.id),
+    modelMeta,
     reasoningEfforts: p.reasoningEfforts || [],
     lastTest: p.lastTest || null,
     discovery: p.discovery || null,
@@ -479,7 +544,18 @@ export function buildUserProviderEntries() {
           ? m.reasoningEfforts
           : p.reasoningEfforts || [];
       const effortMap = levels.length ? Object.fromEntries(levels.map((l) => [l, l])) : false;
-      return { ...m, input: ["text"], reasoningEfforts: effortMap };
+      // The numbers dsh meters against come from the resolver, not straight
+      // from the store: a stale conservative default would otherwise declare a
+      // 128k window for a 1M lane and leave every turn ~128 output tokens.
+      const { contextWindow, maxTokens } = effectiveModelMeta(m);
+      return {
+        id: m.id,
+        name: m.name || prettifyModelId(m.id),
+        contextWindow,
+        maxTokens,
+        input: ["text"],
+        reasoningEfforts: effortMap,
+      };
     });
     providers[p.id] = {
       retryPolicy: { ...RETRY_POLICY, backoff: { ...RETRY_POLICY.backoff } },
@@ -491,7 +567,16 @@ export function buildUserProviderEntries() {
     };
     for (const m of routeModels) {
       const levels = effortLevelsOf(m);
-      models.push({ id: m.id, name: m.name, provider: p.id, ...(levels.length ? { reasoningEfforts: levels } : {}) });
+      models.push({
+        id: m.id,
+        name: m.name,
+        provider: p.id,
+        ...(levels.length ? { reasoningEfforts: levels } : {}),
+        // getAvailableModels() and the chat context meter divide by this. The
+        // env route always carried it; the user routes never did, so their
+        // models silently had no denominator (chat-usage-display).
+        ...(typeof m.contextWindow === "number" ? { contextWindow: m.contextWindow } : {}),
+      });
     }
   }
   return { providers, models };
@@ -806,13 +891,29 @@ function logProbePlan(name, id, plan, classified) {
   }
 }
 
+// Upgrade every roster entry still carrying a conservative default to its
+// family value (the resolver's rule, applied as a write). Returns copies, so a
+// roster that came from a module constant (the baked VOLCES_MODELS) is never
+// mutated in place, plus the ids it touched so the caller can report them.
+function reconcileRoster(roster) {
+  const upgraded = [];
+  const out = roster.map((entry) => {
+    const patch = reconcileModelMeta(entry);
+    if (!patch) return entry;
+    upgraded.push(entry.id);
+    return { ...entry, ...patch };
+  });
+  return { roster: out, upgraded };
+}
+
 // Reconcile a provider's roster against its own gateway (design D1–D8).
 // Classification happens BEFORE the write lock; inside it: merge `serving`
-// ids (append + family metadata, never touch existing entries' fields),
-// re-order by family rank, persist the `discovery` status map. The reserved
-// env route ("volces") runs the same pipeline targeting its override
-// (add-editable-llm-route): the built-in lane reconciles against gateway
-// drift through the same operator action, no image rebuild.
+// ids (append + family metadata), reconcile metadata of entries already present
+// that still carry a conservative default, re-order by family rank, persist the
+// `discovery` status map. The reserved env route ("volces") runs the same
+// pipeline targeting its override (add-editable-llm-route): the built-in lane
+// reconciles against gateway drift through the same operator action, no image
+// rebuild.
 export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}) {
   if (syncInFlight) throw new ProviderError("busy", "a model sync is already running");
   if (RESERVED_IDS.has(id)) {
@@ -835,7 +936,8 @@ export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}
     const probedAt = new Date().toISOString();
     return tryWithWriteLock(async () => {
       const dshProfile = await import("./dsh-profile.js");
-      const roster = [...(await dshProfile.effectiveVolcesRoute()).models];
+      const starting = [...(await dshProfile.effectiveVolcesRoute()).models];
+      const { roster, upgraded } = reconcileRoster(starting);
       const existing = new Set(roster.map((m) => m.id));
       const added = [];
       for (const [mid, r] of Object.entries(classified)) {
@@ -849,9 +951,9 @@ export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}
       setVolcesOverride({ models: roster, discovery });
       if (reload) await reload();
       console.log(
-        `[llm-providers] sync "Volces" (volces): ${added.length} added, override roster ${roster.length}`
+        `[llm-providers] sync "Volces" (volces): ${added.length} added, ${upgraded.length} metadata upgraded, override roster ${roster.length}`
       );
-      return { statuses: discovery, added, rosterSize: roster.length };
+      return { statuses: discovery, added, upgraded, rosterSize: roster.length };
     });
   }
 
@@ -877,7 +979,7 @@ export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}
     const idx = doc.providers.findIndex((p) => p.id === id);
     if (idx < 0) throw new ProviderError("not_found", `provider ${id} not found`);
     const current = doc.providers[idx];
-    const roster = current.models || [];
+    const { roster, upgraded } = reconcileRoster(current.models || []);
     const existing = new Set(roster.map((m) => m.id));
     const added = [];
     for (const [mid, r] of Object.entries(classified)) {
@@ -892,8 +994,10 @@ export async function syncProvider(id, { fetchImpl = global.fetch, reload } = {}
     doc.providers[idx] = { ...current, models: roster, discovery, updatedAt: probedAt };
     writeJsonAtomic(STORE_PATH, doc);
     if (reload) await reload();
-    console.log(`[llm-providers] sync "${current.name}" (${id}): ${added.length} added, roster ${roster.length}`);
-    return { statuses: discovery, added, rosterSize: roster.length };
+    console.log(
+      `[llm-providers] sync "${current.name}" (${id}): ${added.length} added, ${upgraded.length} metadata upgraded, roster ${roster.length}`
+    );
+    return { statuses: discovery, added, upgraded, rosterSize: roster.length };
   });
 }
 

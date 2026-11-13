@@ -64,7 +64,7 @@ Each entry skill SHALL be a registry skill whose SKILL.md encodes: the pack's wo
 
 ### Requirement: Conversational agent per pack
 
-Each pack's agent entry SHALL be a catalog `agent-remote` `chat` entry backed by the OpenAI-compatible endpoint `token.finddatatech.cloud/v1` (model `deepseek-v4-pro`), with credentials supplied exclusively via an environment-variable reference (`apiKeyEnv`); the API key MUST NOT appear inline in any catalog document. Selecting the pack agent SHALL route prompts to that endpoint. The registry's `chatlaw`/`fingpt` link cards remain in the catalog as ecosystem showcase entries alongside the chat agents.
+Each pack's agent entry SHALL be a catalog `agent-remote` `chat` entry backed by an OpenAI-compatible endpoint (model `deepseek-v4-pro`), with credentials supplied exclusively via an environment-variable reference (`apiKeyEnv`); the API key MUST NOT appear inline in any catalog document. Selecting the pack agent SHALL route prompts to that endpoint. The registry's `chatlaw`/`fingpt` link cards remain in the catalog as ecosystem showcase entries alongside the chat agents.
 
 #### Scenario: Chat agent without inline secrets
 

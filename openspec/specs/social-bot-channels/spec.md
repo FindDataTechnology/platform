@@ -416,3 +416,37 @@ The `channels` slug SHALL leave the Settings container of the surface registry a
 - **WHEN** the operator opens `/channels`
 - **THEN** the platform icon grid SHALL remain the primary entry, with configured bots as cards carrying brand icon, enable toggle, edit/delete actions, and webhook URL copy, and the onboarding QR panel SHALL open as before
 - **AND** credentials SHALL remain server-side only and masked in API responses, the per-bot tool switch SHALL remain available, and configuration changes SHALL take effect without a restart
+
+### Requirement: bot 车道不得越权订阅，整群消息只能经会话存档
+
+bot 车道的投递范围 SHALL 限于平台按既有约定送达的消息：单聊全部消息，群聊仅成员 @机器人
+时的消息。系统 MUST NOT 通过机器人回调、管理接口、agent 工具或任何旁路取得未被提及的群消息。
+
+群聊「整群消息」的唯一合法来源是会话内容存档通道，且该通道的授权、同意状态与可见性约束
+SHALL 一并生效。存档通道存在这件事 MUST NOT 反过来扩大 bot 车道的投递范围。
+
+查询面允许把两侧视角归并为一条时间线（见 `wecom-archive` 规格的归并规则）；但 **agent
+回合的输入 MUST NOT 因存档启用而自动包含整群消息**——注入与否是显式决策，不是副作用。
+
+#### Scenario: 存档上线不扩大 bot 投递范围
+
+- **WHEN** 同一企业同时启用了 bot 车道与会话存档
+- **THEN** bot 回调的投递范围 SHALL 与启用前完全一致，MUST NOT 开始接收未被 @ 的群消息
+- **AND** 该结论 SHALL 能在启用前后各跑一次既有投递用例得到相同期望
+
+#### Scenario: 索取整群历史不被代答
+
+- **WHEN** 通过 bot 相关接口或 agent 工具请求某群的完整历史
+- **THEN** 系统 SHALL 拒绝或返回不可用
+- **AND** MUST NOT 转而从存档表取数代答——整群内容只能经存档通道自身的读接口与授权路径取得
+
+#### Scenario: 归并在查询面，不泄漏到回合输入
+
+- **WHEN** 同一个群既有 @机器人 的对话、又有存档里的整群消息
+- **THEN** 查询时间线 MAY 按 `msgid` + 时间 + 发送者归并
+- **AND** 该会话的 agent 回合输入 SHALL 仍只由 bot 车道实际收到的消息构成，MUST NOT 静默包含存档里的整群消息
+
+#### Scenario: 未 @ 的群消息仍然什么都不发生
+
+- **WHEN** 群成员正常聊天而没有 @机器人，且存档通道未启用
+- **THEN** 系统 SHALL NOT 收到、记录或回应任何该类消息，MUST NOT 以「先去把存档开起来」作为降级路径

@@ -28,6 +28,7 @@ import { Markdown } from "./Markdown";
 import { CronCard } from "./CronCard";
 import { DelegationCard } from "./DelegationCard";
 import { QuestionCard } from "./QuestionCard";
+import { InputRequestCard } from "./InputRequestCard";
 
 function ToolBlock({ block, onToggle }: { block: Extract<Block, { kind: "tool" }>; onToggle: () => void }) {
   const stateLabel = block.state === "running" ? "运行中" : block.state === "error" ? "失败" : "完成";
@@ -100,6 +101,10 @@ function BlockView({ block, streaming, onToggle }: { block: Block; streaming: bo
       // 卡(选项/自定义/取消),解决=静态摘要,与 web 端交互对齐。
       if (block.name === "ask_user_question") {
         return <QuestionCard block={block} />;
+      }
+      // 结构化输入请求(add-input-request-cards):与 web 同一条行、同一个端点。
+      if (block.name.endsWith("__request_input")) {
+        return <InputRequestCard block={block} />;
       }
       return <ToolBlock block={block} onToggle={onToggle} />;
     case "skill":

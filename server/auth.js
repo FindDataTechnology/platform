@@ -242,6 +242,17 @@ export const INTERNAL_BRIDGES = [
     match: (req) => req.method === "POST" && FLEET_BRIDGE_PATHS.has(req.path),
     note: "post attributed server-side; deputy routes guarded by deputyGuard",
   },
+  {
+    // The input-request MCP child (add-input-request-cards): 提卡 + 等待/重读。
+    // 只有一个写动词（提卡）被信任其自报 owner——那是子进程 per-user profile
+    // 注入的邮箱，与 actions 桥同一条纪律。作答/取消永远不走这扇门：它们
+    // 必须带登录身份，否则分享会话里的人也能替我填表。
+    email: "input-request-bridge@internal",
+    match: (req) =>
+      (req.method === "POST" && req.path === "/api/input-requests") ||
+      (req.method === "GET" && /^\/api\/input-requests\/[^/]+(\/wait)?$/.test(req.path)),
+    note: "create + read/wait only; owner comes from the child's profile env",
+  },
 ];
 
 // The bridge identity for this request, or null when nothing bridges it.

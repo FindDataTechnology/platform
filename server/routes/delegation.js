@@ -15,6 +15,7 @@ import { Router } from "express";
 import * as engine from "../../task-engine.js";
 import * as chatHistory from "../../chat-history.js";
 import * as catalog from "../../catalog.js";
+import { rosterPresetId } from "../../dsh-profile.js";
 import { searchAgentsView } from "../agent-discovery.js";
 
 // Facade a2a target matching (add-principal-facade): a declared ref matches
@@ -115,13 +116,25 @@ export function registerDelegationRoutes(ctx) {
           sessionTitle: req.body?.name || null,
           initiator: chatHistory.currentSessionId(),
           initiatorPreset: current ?? null,
+          // 同上（fix-delegated-round-admission）：a2a 委托也是"有人要求了这一轮"。
+          humanPriority: true,
         });
         return res.status(201).json({ task });
       }
       // Self-delegation is rejected: the running persona delegating to itself
       // is a no-op loop, not a fan-out (spec scenario). Persona targets only —
       // an a2a target is always another agent by construction.
-      if (persona === current) {
+      //
+      // 同一身份两种拼法的折点（2026-11-12 实测）：目录/预设 API 的 id 是
+      // `user.preset-7`（点号），运行期 roster 目录名只允许 [a-z0-9-]，于是是
+      // `user-preset-7`（`dsh-profile.js:rosterPresetId` 那条注释写明了"catalog
+      // keeps the original id"）。集群派发那条路已经折过（`fleets.js` 用
+      // `rosterPresetId(target.targetId)`），**这条没有**——模型按它看到的名册
+      // 原样传点号形式时，落库 `preset=user.preset-7`、执行期直接
+      // `Unknown agent preset: user.preset-7`（实测 task_1794475327486_gg928n）。
+      // 折在入口，落库就是运行期真能解析的那个 id。
+      const targetPersona = rosterPresetId(persona);
+      if (targetPersona === rosterPresetId(current)) {
         return res.status(400).json({
           error: `the conversation is already running under ${persona}; delegate to a different persona`,
         });
@@ -131,19 +144,26 @@ export function registerDelegationRoutes(ctx) {
         if (list.length === 0) {
           return res.status(400).json({ error: "this facade's reception role declares no delegation face (pure reception)" });
         }
-        if (!list.some((d) => d?.kind === "in-pack" && d.ref === persona)) {
+        if (!list.some((d) => d?.kind === "in-pack" && rosterPresetId(d.ref) === targetPersona)) {
           return res.status(400).json({ error: `persona '${persona}' is not in this facade's delegation list` });
         }
       }
       const task = engine.createManualTask({
         prompt,
-        persona,
+        persona: targetPersona,
         sessionTitle: req.body?.name || null,
         initiator: chatHistory.currentSessionId(),
         // The persona the conversation runs under — the aggregator switches
         // back to it before injecting the summary (the fan-out leaves the
         // runtime on the last target persona).
         initiatorPreset: current ?? null,
+        // 对话里有人要求了这一轮 ⇒ 与主人的 execute-now 同一档
+        // (fix-delegated-round-admission)。不带这个标记，委托轮在准入与池挑选里
+        // 与"定时轮"完全同形：满负荷时只有人类优先轮能越过 cap 拿那个额外席位，
+        // 其余一律按队头取；而 manual 又不按年龄丢 ⇒ 表现为「已入队、永不执行、
+        // 零报错」（2026-11-12 cell 1da519d4c1c0bf89 实测：5 条 manual 全 hist=0、
+        // 4 条 cadence 在正常轮转）。
+        humanPriority: true,
       });
       res.status(201).json({ task });
     } catch (err) {

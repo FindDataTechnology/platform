@@ -45,3 +45,62 @@ test("the person token never survives a member patch", () => {
   const out = applyMemberOverrides(rows(), { memoryToken: "member-tok", libraryCollections: ["library:x"] });
   assert.ok(!JSON.stringify(out).includes("person-token"), "owner credential cannot leak into the member face");
 });
+
+// ── fix-report-attribution-concurrency 2.1：岗位身份写进成员 patch ──────────────
+//
+// 报数归属需要一个**服务端写入**的坐标，模型改不了它。这个 env 只落进该 worker
+// 的私有 patch，所以它读到的只能是自己的身份。
+
+const rowsWithFleet = () => [
+  ...rows(),
+  { id: "mcp-fleet", name: "@deepseek-ai/dsh-mcp-client", config: { serverName: "fleet", transport: "stdio", command: "node", args: ["server/fleet-mcp.js"] } },
+];
+
+test("fleet row gains the member identity env AND headers when the caller supplies it", () => {
+  const out = applyMemberOverrides(rowsWithFleet(), {
+    memoryToken: "t",
+    libraryCollections: [],
+    fleetIdentity: { fleetId: "fleet_1", memberId: "m_1", persona: "user.preset-7" },
+  });
+  const fleet = out.find((e) => e.config.serverName === "fleet");
+  assert.equal(fleet.config.env.FLEET_MCP_FLEET_ID, "fleet_1");
+  assert.equal(fleet.config.env.FLEET_MCP_MEMBER_ID, "m_1");
+  assert.equal(fleet.config.env.FLEET_MCP_PERSONA, "user.preset-7");
+  // 现役通道（2026-11-12 生产实测修正）：fleet 是**共用卫星**，client 配置的 env
+  // 没有进程会继承；身份必须走 headers，由 mcp-satellite-host 逐请求带过去。
+  assert.equal(fleet.config.headers["X-Fleet-Fleet-Id"], "fleet_1");
+  assert.equal(fleet.config.headers["X-Fleet-Member-Id"], "m_1");
+  assert.equal(fleet.config.headers["X-Fleet-Persona"], "user.preset-7");
+});
+
+test("identity headers never overwrite an existing Authorization header", () => {
+  const rowsWithAuth = () => [
+    { id: "mcp-fleet", name: "@deepseek-ai/dsh-mcp-client", config: { serverName: "fleet", transport: "streamable-http", url: "http://127.0.0.1:1/fleet/mcp", headers: { Authorization: "Bearer keep-me" } } },
+  ];
+  const out = applyMemberOverrides(rowsWithAuth(), {
+    memoryToken: "t",
+    libraryCollections: [],
+    fleetIdentity: { fleetId: "fleet_1", memberId: "m_1" },
+  });
+  const fleet = out.find((e) => e.config.serverName === "fleet");
+  assert.equal(fleet.config.headers.Authorization, "Bearer keep-me", "既有凭据不得被身份写入挤掉");
+  assert.equal(fleet.config.headers["X-Fleet-Member-Id"], "m_1");
+});
+
+test("no identity ⇒ no env and no identity headers (缺坐标就不冒充，服务端会诚实拒收)", () => {
+  const out = applyMemberOverrides(rowsWithFleet(), { memoryToken: "t", libraryCollections: [] });
+  const fleet = out.find((e) => e.config.serverName === "fleet");
+  assert.equal(fleet.config.env, undefined, "不得写入空串坐标");
+  assert.equal(fleet.config.headers, undefined, "也不得写入空的身份头");
+});
+
+test("identity never leaks onto other servers", () => {
+  const out = applyMemberOverrides(rowsWithFleet(), {
+    memoryToken: "t",
+    libraryCollections: ["library:x"],
+    fleetIdentity: { fleetId: "fleet_1", memberId: "m_1", persona: "p" },
+  });
+  const lib = out.find((e) => e.config.serverName === "library");
+  assert.deepEqual(Object.keys(lib.config.env), ["LIBRARY_COLLECTIONS"], "library row carries only its own env");
+  assert.ok(!JSON.stringify(out.find((e) => e.config.serverName === "fd-memory").config).includes("fleet_1"));
+});

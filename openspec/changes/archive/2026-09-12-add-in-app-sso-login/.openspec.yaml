@@ -1,4 +1,0 @@
-schema: spec-driven
-created: 2026-09-12
-goal: Let forward-auth users enter the existing SSO flow from the application
-  without adding local password authentication.

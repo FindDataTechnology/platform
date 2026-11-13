@@ -195,6 +195,31 @@ test("replay order is waiting order, not file order", async () => {
   assert.equal(order[0].includes("old"), true, `the oldest waiter must run first, got ${JSON.stringify(order)}`);
 });
 
+test("a failed round rotates the session instead of resuming a dead child id", async () => {
+  // Ledger E35 (live 2026-11-10): the rotation threshold reads token usage, and
+  // an upstream 502/503 round records NO tokens — so `shouldRotateSession` never
+  // fired and the task kept the same rotated id forever. Once the child that
+  // owned it was gone, every later round failed with `502 upstream_error` at
+  // revision 3 / index 1 (the job's sessionId still carried --r<ts> from 11:41
+  // while rounds ran at 12:19). A failed round has nothing worth resuming.
+  const seen = [];
+  await boot([legacyRecord()], async (task) => {
+    seen.push(task?.sessionId ?? null);
+    return { ok: false, error: "502: upstream_error" };
+  });
+  engine.enqueueExecution("job_1");
+  await engine.idle();
+  const first = engine.getTaskRecord("job_1").sessionId;
+
+  engine.enqueueExecution("job_1");
+  await engine.idle();
+  const second = engine.getTaskRecord("job_1").sessionId;
+
+  assert.ok(first, "first round has a session id");
+  assert.ok(second, "second round has a session id");
+  assert.notEqual(second, first, "失败后必须换一个会话，不能复用已死的 child id");
+});
+
 test("failed execution records the gist and re-run works", async () => {
   let n = 0;
   await boot([legacyRecord()], async () => {

@@ -54,7 +54,7 @@ function okResponse(texts, dim = 1024) {
 {
   const embedder = createEmbedder({
     config: CONFIG,
-    fetchImpl: async (url, init) => okResponse(JSON.parse(init.body).input, 4096),
+    fetchImpl: async (_url, init) => okResponse(JSON.parse(init.body).input, 4096),
   });
   await assert.rejects(
     () => embedder.embedBatch(["a"]),
@@ -128,7 +128,7 @@ function okResponse(texts, dim = 1024) {
   // 端到端：真发一次超时请求，事后样本数要增加
   const embedder = createEmbedder({
     config: { ...CONFIG, budgetFloorMs: 40, budgetCeilingMs: 40 },
-    fetchImpl: async (url, init) => {
+    fetchImpl: async (_url, init) => {
       await new Promise((resolve, reject) => {
         const t = setTimeout(resolve, 120);
         init.signal?.addEventListener("abort", () => {
@@ -149,7 +149,7 @@ function okResponse(texts, dim = 1024) {
     config: { ...CONFIG, budgetCeilingMs: 30, budgetFloorMs: 30 },
     // The fake must honour `signal` exactly as real fetch does — a fake that
     // ignores it would make the budget look enforced when it is not.
-    fetchImpl: async (url, init) => {
+    fetchImpl: async (_url, init) => {
       await new Promise((resolve, reject) => {
         const t = setTimeout(resolve, 80);
         init.signal?.addEventListener("abort", () => {

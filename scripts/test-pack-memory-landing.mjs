@@ -69,7 +69,11 @@ test("landing writes the declared process axis with a token scoped to the pack r
 
   const put = calls.find((c) => c.url.includes("/policy"));
   const u = new URL(put.url);
-  assert.equal(u.searchParams.get("rootKey"), "d-legal-crew");
+  // 反面断言：**绝不能**带 rootKey（2026-11-13 线上实测 400 rootKey_is_platform_seam_only）。
+  // 旧测试这里写的是 `assert.equal(u.searchParams.get("rootKey"), "d-legal-crew")`——
+  // 它把错的行为钉死了：stub 的 fetch 不执行服务端的缝规则，所以测试一直绿，
+  // 而生产里每次落地都静默失败（degrade-open 只 warn）。断言必须钉住「不带」。
+  assert.equal(u.searchParams.get("rootKey"), null, "a pod token must not name a root — the service refuses it with 400");
   assert.equal(u.searchParams.get("scope"), "root");
   assert.equal(put.auth, "Bearer pod:d/legal-crew", "the write must NOT ride the platform token");
   assert.deepEqual(JSON.parse(put.body), { process: { distill: "off", cold_after_days: 90 } });

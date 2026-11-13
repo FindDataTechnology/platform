@@ -166,7 +166,7 @@ export async function reconcileFleet({
   const tagged = cronApi.listJobs().filter((j) => j?.sourceTag?.fleetId === fleetId && j.trigger === "schedule");
   const taskByMember = new Map(tagged.map((j) => [j.sourceTag.memberId, j]));
 
-  const out = { created: [], updated: [], paused: [], resumed: [], removed: [] };
+  const out = { created: [], updated: [], paused: [], resumed: [], removed: [], respectedPause: [] };
 
   // Orphans first: members deleted, or cadence withdrawn (passive posts
   // materialize nothing — design D10).
@@ -216,8 +216,19 @@ export async function reconcileFleet({
       await cronApi.pauseJob(existing.id);
       out.paused.push(existing.id);
     } else if (!desiredPaused && existing.paused) {
-      await cronApi.resumeJob(existing.id);
-      out.resumed.push(existing.id);
+      // An owner's stop is its own layer (fix-fleet-operator-pause-durability):
+      // `desiredPaused` only says what the FLEET wants, so resuming here undid
+      // an owner's pause on the next catalog refresh — measured 2026-11-10, a
+      // paused member task came back minutes later with nobody touching it.
+      // Respect it and report it, so a caller can say "N posts stopped by the
+      // owner" instead of silently leaving them parked.
+      // Missing marker = pre-split record → "fleet", i.e. the old behaviour.
+      if ((existing.pausedBy ?? "fleet") === "operator") {
+        out.respectedPause.push(existing.id);
+      } else {
+        await cronApi.resumeJob(existing.id);
+        out.resumed.push(existing.id);
+      }
     }
   }
 

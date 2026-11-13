@@ -37,6 +37,7 @@ export default defineAppConfig({
     "pages/se/order-track",
     "pages/se/alert-inbox",
     "pages/se/alert-handle",
+    "pages/se/invoice-audit",
     "pages/se/statement-assist",
     "pages/se/ai-assistant",
     "pages/sp/home",

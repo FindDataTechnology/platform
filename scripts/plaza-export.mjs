@@ -631,8 +631,11 @@ export async function fetchPackContents(base, packs, { fetchImpl = fetchJson } =
 }
 
 // ── main ──
-export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PLAZA_SITE_BASE || "https://agent.finddatatech.cloud", outDir = "site-plaza/generated", fixture = null, allowStale = false, whitelist = [] } = {}) {
-  const generatedAt = new Date().toISOString().slice(0, 10);
+export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PLAZA_SITE_BASE || "https://agent.finddatatech.cloud", outDir = "site-plaza/generated", fixture = null, allowStale = false, whitelist = [], now = new Date() } = {}) {
+  // `now` 只为可测：周期刷新的验收要求「两次 generatedAt 相差一个周期」，而这值是日期、
+  // 同一天重跑不变——没有注入点就只能等一天。默认 `new Date()`，生产行为一字未改；
+  // 测试传两个相差一天的 now 即可确定性验证「隔天必然前进」。
+  const generatedAt = now.toISOString().slice(0, 10);
   if (fixture) return runFixture({ fixture, siteBase, outDir, whitelist, generatedAt });
   try {
     return await runFresh({ base, siteBase, outDir, whitelist, generatedAt });

@@ -100,6 +100,29 @@ function LocaleSwitcher() {
  *  Critically, the control states WHO is signed in even when closed: the
  *  earlier silent-login failure (a viewer believed to be signed in, header
  *  still anonymous) must stay impossible. */
+
+/** The panel is `w-56`; the constant exists so the anchor maths below cannot
+ *  drift away from the class. */
+const ACCOUNT_MENU_WIDTH = 224;
+
+/** Where the panel's left edge goes, in viewport coordinates.
+ *
+ *  A fixed `right-0` anchor clipped the panel's own first characters off the
+ *  screen whenever the header wrapped the chip toward the middle of a narrow
+ *  viewport (measured at 390px: chip 124..207 ⇒ panel left = −17px; 「已登录」、
+ *  「我的发布」、「内容运营」、「退出登录」 each lost their first glyph, and
+ *  `scrollWidth` stayed 0 because the document does not scroll — the text was
+ *  simply outside). Pick from the room actually available: right-align to the
+ *  chip, else left-align to it, else clamp inside the viewport with a gutter.
+ *  Pure and total so the three branches are testable without a browser. */
+function accountMenuLeft(chip: { left: number; right: number }, viewportWidth: number): number {
+  const gutter = 8;
+  const rightAligned = chip.right - ACCOUNT_MENU_WIDTH;
+  if (rightAligned >= gutter) return rightAligned;
+  if (chip.left + ACCOUNT_MENU_WIDTH <= viewportWidth - gutter) return chip.left;
+  return Math.max(gutter, viewportWidth - ACCOUNT_MENU_WIDTH - gutter);
+}
+
 function AccountMenu({
   email,
   label,
@@ -116,7 +139,11 @@ function AccountMenu({
   logoutLabel: string;
 }) {
   const [open, setOpen] = useState(false);
+  /** Distance from the wrapper's left edge to the panel's left edge; null until
+   *  the first open (the panel renders only when open, so it is always set). */
+  const [panelLeft, setPanelLeft] = useState<number | null>(null);
   const ref = useRef<HTMLDivElement | null>(null);
+  const chipRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -138,11 +165,25 @@ function AccountMenu({
     <div className="relative" ref={ref}>
       <button
         type="button"
+        ref={chipRef}
         data-testid="facet-user-chip"
         title={loggedInAs}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (open) {
+            setOpen(false);
+            return;
+          }
+          const chip = chipRef.current?.getBoundingClientRect();
+          const wrapper = ref.current?.getBoundingClientRect();
+          if (chip && wrapper) {
+            setPanelLeft(
+              accountMenuLeft(chip, document.documentElement.clientWidth) - wrapper.left,
+            );
+          }
+          setOpen(true);
+        }}
         className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <span className="inline-block h-2 w-2 rounded-full bg-success" aria-hidden />
@@ -162,7 +203,8 @@ function AccountMenu({
         <div
           role="menu"
           data-testid="facet-account-menu"
-          className="absolute right-0 z-20 mt-1 w-56 rounded-md border border-border bg-background p-1 shadow-sm"
+          style={{ left: panelLeft ?? 0 }}
+          className="absolute z-20 mt-1 w-56 rounded-md border border-border bg-background p-1 shadow-sm"
         >
           <p className="truncate px-2 py-1.5 text-xs text-muted-foreground" title={email}>
             {loggedInAs}

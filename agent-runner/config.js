@@ -3,7 +3,7 @@
 // One place that reads the runner's env so the rest of the service stays
 // injection-friendly for tests. Everything has a default that makes an inert
 // local boot possible; production values come from the compose env file
-// (DEPLOY.md runbook).
+// (operator runbook).
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -138,6 +138,20 @@ export function loadConfig(env = process.env) {
     // Concurrency stays bounded with queueing; upgrade/undeploy drain as before.
     maxChildren: num(env.AGENT_RUNNER_MAX_CHILDREN, 4),
     drainMs: num(env.AGENT_RUNNER_DRAIN_SECS, 300) * 1000,
+    // 结构化输入面（add-input-request-cards D2）：ACP 子进程的 MCP 只认 http
+    // 行，所以这里给出平台侧端点与共享令牌。两者缺一就不挂该工具（degrade
+    // open：agent 少一个工具，而不是多一个连不上的地址）。
+    inputRequestMcpUrl: String(env.INPUT_REQUEST_MCP_URL || "").trim(),
+    inputRequestMcpToken: String(env.INPUT_REQUEST_MCP_TOKEN || "").trim(),
+    // 应答归属（add-acp-input-request-owner 2.2）：**优先级在这里定死，改这条要看两个读者**——
+    // `compose-acp.js` 的 `inputRequestOwnerOf(descriptor, config)` 与 `manager.js` 的
+    // `#spawnAcpChild`，两边同一个顺序：
+    //   descriptor.deployer_email（部署会话身份；同一台 runner 上不同人的 agent 各归各人）
+    //     → 这个环境变量（部署级兜底；一个人替整台 runner 兜住）
+    //     → 空（不挂该工具：没有归属的卡没人能答，fail-closed）
+    // 环境变量**不得反过来盖 descriptor**——那会把同一台上不同人部署的 agent 全归到一个人，
+    // 正是本 change 要淘汰的旧姿态（2026-11-12 验收临时期用过，验完已撤）。
+    inputRequestMcpOwner: String(env.INPUT_REQUEST_OWNER_EMAIL || "").trim().toLowerCase(),
     // Deployment default turn budget (add-serving-budgets): the per-turn
     // ceiling for roles whose descriptor carries no effective_budget_minutes.
     // Over it the turn is hard-stopped either way — the env value is the
@@ -276,6 +290,11 @@ export function loadConfig(env = process.env) {
     // no_verdict_client 的失败关闭，行为与打补丁前逐字节相同。
     mandateVerdictUrl: (env.MANDATE_VERDICT_URL || "").replace(/\/+$/, ""),
     mandateVerdictToken: env.MANDATE_VERDICT_TOKEN || "",
+    // 目标 cell 的 owner（fix-disclosure-gate-reachability D2）：裁决按 cell 答，
+    // 而网关的路由键是身份。runner 的 descriptor 今天不带部署者邮箱，所以 owner
+    // 只能由部署环境点名——与 input-request 的 x-input-request-owner 同形。
+    // 缺它时网关机器门回 400，而不是猜一个 cell（猜就是拿 A 的文本问 B 的策略）。
+    mandateVerdictOwner: String(env.MANDATE_VERDICT_OWNER || "").trim().toLowerCase(),
     fleetRunnerId: env.AGENT_RUNNER_FLEET_ID || "runner-1",
     fleetSampleSecs: num(env.AGENT_RUNNER_FLEET_SAMPLE_SECS, 30),
     // Seat mailbox cadence (add-desktop-fleet-runner ④).

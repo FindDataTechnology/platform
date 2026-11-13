@@ -24,6 +24,9 @@
   "web/src/components/FleetGraph.tsx": {
     "hex-color": 23
   },
+  "web/src/components/InputRequestCard.tsx": {
+    "side-tab-border": 3
+  },
   "web/src/components/Markdown.tsx": {
     "tw-arbitrary-color": 1,
     "side-tab-border": 1

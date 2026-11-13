@@ -67,6 +67,7 @@ function syncFleetPlugins(db, log = console) {
   }
 }
 import { assessPersonalAgent } from "../../lib/personal-agent-readiness.js";
+import { probeMandateVerdict } from "../../lib/mandate-verdict-probe.js";
 import { fleetModelChoiceError, resolveModelChain, validateConfigDims, effortUnionFrom } from "../fleet-model.js";
 import { fetchWithTimeout } from "../../lib/fetch-with-timeout.js";
 import {
@@ -98,6 +99,7 @@ import { createConfigChangeProposal, runIterationCast, retryIterationCast } from
 import { provisionFleetFromTemplate } from "../fleet-provisioner.js";
 import { fleetBindingHealth } from "../../lib/fleet-binding-health.js";
 import * as dbModule from "../../db.js";
+import { resolveInputPolicy } from "../fleet-input-policy.js";
 import { facetRequest } from "../../gateway/facet-proxy.js";
 
 const DENSE_CADENCE_MS = 10 * 60 * 1000; // design D7: <10min cadence needs confirmation
@@ -408,6 +410,10 @@ function memberView(db, fleet, member, tasks, { now = Date.now(), resolver = res
     // — the actual body lands on the turn events' carrier column.
     carrier: member.carrier ?? null,
       packId: member.packId ?? null,
+    // 输入策略（add-input-request-cards D8）：本岗位声明的原文 + 生效值（与
+    // 舰队层逐字段合并后的结果）。两者并存，前端不必自己再算继承。
+    inputPolicy: member.inputPolicy ?? null,
+    effectiveInputPolicy: resolveInputPolicy({ member: member.inputPolicy, fleet: fleet?.inputPolicy }),
     // Latest real turn's usage (fleet-ops-canvas): the config bar's context
     // budget histogram buckets by this over the declared budget. null = the
     // newest real round reported none (用量字段缺失 ≠ 未超预算).
@@ -734,6 +740,10 @@ export function createFleetRoutes(app, ctx = null) {
         openTurns: openTurns(),
         personaMembers,
         rosterPresetId,
+        // 2.2/2.3：bridge 自报的岗位坐标（值来自服务端写进该成员私有 patch 的 env）。
+        // 三关校验在 resolveAttribution 里做：pair 存在 / fleetId 一致 / persona 归一一致；
+        // 任一不过就当作没自报，继续走其余优先级（不给"随便指个 memberId 就认"开后门）。
+        selfIdentity: req.body?.selfIdentity ?? null,
       });
       if (attribution.kind === "none" || attribution.kind === "ambiguous") {
       // A refused report is a fact about this turn, exactly like a flood-gate
@@ -1213,6 +1223,11 @@ export function createFleetRoutes(app, ctx = null) {
         openTurns: openTurns(),
         personaMembers,
         rosterPresetId,
+        // 与 /report 同一条优先级（2026-11-13）：bridge 自报的岗位坐标先认，
+        // 三关校验在 resolveAttribution 里做。派活是幕僚长的日常动作，它所在的
+        // 08:30 正是多舰队 cadence 齐响的窗口，没有自报就只能靠"唯一在飞回合"，
+        // 并发时被拒——那不是安全，是让派活时灵时不灵。
+        selfIdentity: req.body?.selfIdentity ?? null,
       });
       if (attribution.kind === "none" || attribution.kind === "ambiguous") {
         return res.status(409).json({ error: attribution.error });
@@ -2640,7 +2655,7 @@ export function createFleetRoutes(app, ctx = null) {
   // 就绪检查（2026-11-10）：七个开关分散在三处，配错的表现是「代理很安静」——
   // 和「没配好」一模一样。这个端点把「安静」拆成一句可读结论 + 每条修法。
   // 只读，不改任何状态。
-  router.get("/personal-agent/readiness", (req, res) => {
+  router.get("/personal-agent/readiness", async (req, res) => {
     try {
       const user = resolveUser(req);
       if (!user) return res.status(401).json({ error: "Authentication required" });
@@ -2662,11 +2677,20 @@ export function createFleetRoutes(app, ctx = null) {
         0,
       );
 
+      // 裁决通道真探一次（fix-disclosure-gate-reachability D4）：凭据非空 ≠ 通道能答。
+      // 2.5s 超时、失败一律 false —— 体检不能自己变成慢接口，也不能把「没探到」读成「通」。
+      const verdict = await probeMandateVerdict({
+        url: process.env.MANDATE_VERDICT_URL,
+        token: process.env.MANDATE_VERDICT_TOKEN,
+        owner: user.email,
+      });
+
       const result = assessPersonalAgent({
         mandate,
         domainMap: db.getPersonalDomainMap(),
         hasAuditor,
         verdictTokenConfigured: Boolean(String(process.env.MANDATE_VERDICT_TOKEN ?? "").trim()),
+        verdictReachable: verdict.reachable === true,
         citablePrecedents: precedents,
         levelSamples: db.outboundLevelSamples(),
         consistency,
@@ -3673,6 +3697,11 @@ export function createFleetRoutes(app, ctx = null) {
       if (effort !== undefined) updates.effort = dims.effort;
       if (contextBudget !== undefined) updates.contextBudget = dims.contextBudget;
 
+      // 输入策略（add-input-request-cards D8）：null 清空 = 恢复继承。
+      if (req.body?.inputPolicy !== undefined) {
+        updates.inputPolicy = req.body.inputPolicy;
+      }
+
       const updated = getFleetDatabase().updateFleet(fleet.id, updates, auditMeta(req, `PATCH /api/fleets/${fleet.id}`));
       if (updates.state !== undefined) syncFleetPlugins(getFleetDatabase());
       const reconcile = await runReconcile(fleet.id);
@@ -3698,7 +3727,17 @@ export function createFleetRoutes(app, ctx = null) {
       // Archive is terminal: the fleet now declares nothing, so a recompute is
       // the whole removal path (no separate delete-the-row code to drift).
       syncFleetPlugins(getFleetDatabase());
-      res.json({ fleet: updated, dissolved: true });
+      // …and reconcile AFTER archiving, because the pack memory policy release
+      // (add-pack-memory-declaration 4.2) lives inside reconcileFleet and only
+      // fires on an archived fleet whose pack has no other live team. Without
+      // this call the dissolve path archived the fleet and stopped: the policy
+      // root `d-<pack>` kept its document until some unrelated catalog change
+      // happened to sweep every fleet, which in a quiet cell may never come.
+      // Safe to run on an archived fleet — reconcileFleet never (re)materializes
+      // tasks for one ("archive is stop-and-keep") and only sweeps scheduled
+      // rhythm jobs, and the release itself degrades open.
+      const reconcile = await runReconcile(fleet.id);
+      res.json({ fleet: updated, dissolved: true, reconcile });
     } catch (err) {
       console.error("[fleets] delete error:", err.message);
       res.status(500).json({ error: err.message || "internal error" });
@@ -3896,6 +3935,11 @@ export function createFleetRoutes(app, ctx = null) {
           return res.status(400).json({ error: "packId must be a non-empty string (≤64 chars) or null" });
         }
         updates.packId = packId === null ? null : packId.trim();
+      }
+
+      // 输入策略（add-input-request-cards D8）：岗位层覆盖舰队层；null 清空。
+      if (req.body?.inputPolicy !== undefined) {
+        updates.inputPolicy = req.body.inputPolicy;
       }
 
       const updated = db.updateMember(member.id, updates);

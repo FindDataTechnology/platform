@@ -27,7 +27,7 @@ const E2E_REGISTRY_TOKEN = process.env.E2E_REGISTRY_TOKEN || "e2e-registry-token
 // two sides must not drift.
 const E2E_FACET_URL = process.env.E2E_FACET_URL || `http://127.0.0.1:${E2E_FACET_PORT}`;
 const E2E_FACET_TOKEN = process.env.E2E_FACET_TOKEN || "e2e-facet-token";
-const LIVE_SERVICE_URL = process.env.LIVE_SERVICE_URL || "http://23.144.68.246:30950";
+const LIVE_SERVICE_URL = process.env.LIVE_SERVICE_URL || "http://127.0.0.1:3000";
 
 // Create throwaway store directories before the server boots so the suite never
 // touches the project's real chat-history-store/ or documents-store/. Skipped for
@@ -87,7 +87,7 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
       grep: /@smoke/,
     },
-    // Live project - targets deployed k3s NodePort at http://23.144.68.246:30950
+    // Live project - targets a deployed instance at http://127.0.0.1:3000
     // (overridable via LIVE_SERVICE_URL env). Runs only `@live` tagged tests,
     // NEVER spawns a local server (PW_LIVE=1 skips the root webServer), NEVER
     // creates temp store dirs. `--proxy-server=direct://` forces direct

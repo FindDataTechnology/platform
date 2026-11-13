@@ -38,6 +38,9 @@ export function createRegistryClient({ registryUrl, token: tokenOpt, registryTok
   // that read a single page would silently stop serving the tail of its fleet.
   const LIST_PAGE_LIMIT = 500;
   const LIST_MAX_PAGES = 100;
+  // 这个 registry（= 一个 cell 的 local feed）自报的主人。裁决通道的路由键来自它
+  // （fix-disclosure-gate-reachability D2 修订）：owner 是数据，不是配置。
+  let feedOwner = null;
   async function listAllPages(path) {
     const items = [];
     let offset = 0;
@@ -46,6 +49,9 @@ export function createRegistryClient({ registryUrl, token: tokenOpt, registryTok
     const seenFirst = new Set();
     for (let page = 0; page < LIST_MAX_PAGES; page += 1) {
       const doc = await get(`${path}?limit=${LIST_PAGE_LIMIT}&offset=${offset}`);
+      if (!feedOwner && doc && typeof doc === "object" && typeof doc.owner === "string" && doc.owner.trim()) {
+        feedOwner = doc.owner.trim().toLowerCase();
+      }
       const rows = Array.isArray(doc) ? doc : (doc?.agents ?? doc?.items ?? []);
       const firstPath = rows.length ? (rows[0]?.path ?? rows[0]?.name ?? null) : null;
       if (page > 0 && firstPath !== null && seenFirst.has(firstPath)) break;
@@ -77,6 +83,11 @@ export function createRegistryClient({ registryUrl, token: tokenOpt, registryTok
   }
 
   return {
+    // 供裁决客户端取路由键；还没拉过名单时是 null（客户端据此失败关闭）。
+    get feedOwner() {
+      return feedOwner;
+    },
+
     async listServedAgents() {
       const rows = await listAllPages("/api/agents");
       return rows.filter(

@@ -98,7 +98,12 @@ function parkCtx({ streaming = false } = {}) {
     // The job carries `sourceTag.fleetId`, so the round goes through
     // normalizeModelForJob; a fleet-attributed round with no model plan is
     // refused before it runs (ledger E28). Without the plan every case below
-    // read the refusal as "the park path did not park".
+    // read the refusal as "the park path did not park" (measured:
+    // `modeled={"ok":false,"err":"post model resolution unavailable …"}` right
+    // after the readiness gate). Same minimal shape as test-empty-turn-billing.
+    //
+    // 合并时同一个夹具里 `resolveFleetModel` / `switchModelTo` 各写了两份，后一份生效；
+    // 前一份在运行时永远不可达，已删——这里是唯一的那一份。
     resolveFleetModel: async (preset) => ({
       memberId: "m-1",
       preset,

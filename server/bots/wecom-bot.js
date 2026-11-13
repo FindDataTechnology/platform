@@ -187,6 +187,50 @@ export const registry = {
     return { chatKey, senderName: sender, text, platformMessageId: messageId ? String(messageId) : null };
   },
 
+  // 事件回调（与自建应用适配器同一个理由）：`parseMessage` 把非文本一律回 null，
+  // 于是一条 `msg_audit_approved`（客户撤回/授予存档同意）到了门口就被当噪音丢掉，
+  // 存档侧继续按旧结论写最多 5 分钟。这里只把事件**认出来并交出明文**，不解释语义。
+  //
+  // 两代报文都收：XML 世代直接读标签；JSON 世代只读到"这是个事件"，**不猜内部字段**——
+  // 把明文交回 `xml: ""`，由存档侧按"认不清就把水位记成全局"处理（下一轮对所有会话
+  // 重查官方接口）。方向是安全的：宁可多问一次，也不拿没读懂的报文当结论。
+  async parseEvent(req, cred) {
+    const encrypted = xmlField(req.raw, "Encrypt") ?? req.json?.encrypt;
+    if (!encrypted) return null;
+    wecomSignatureCheck(cred, req.query, encrypted, req.json?.encrypt ? req.json : null);
+    const { message: plain, receiveId } = decrypt(cred.encodingAesKey, encrypted);
+    if (cred.corpId && receiveId && receiveId !== cred.corpId) {
+      throw new Error(`receiveId mismatch: ${receiveId}`);
+    }
+
+    const trimmed = String(plain ?? "").trim();
+    if (trimmed.startsWith("<")) {
+      if (xmlField(trimmed, "MsgType") !== "event") return null;
+      const event = xmlField(trimmed, "Event");
+      if (!event) return null;
+      return { event, xml: trimmed, from: xmlField(trimmed, "FromUserName") };
+    }
+    if (trimmed.startsWith("{")) {
+      let j;
+      try {
+        j = JSON.parse(trimmed);
+      } catch {
+        return null;
+      }
+      if (String(j.msgtype ?? j.MsgType ?? "").toLowerCase() !== "event") return null;
+      const ev =
+        j.event?.event_type ??
+        j.event?.type ??
+        (typeof j.event === "string" ? j.event : null) ??
+        j.Event ??
+        null;
+      if (!ev) return null;
+      // 明文字段形状未经实证（机器人世代），只交事件名，xml 留空。
+      return { event: String(ev), xml: "", from: j.from?.userId ?? j.FromUserName ?? null };
+    }
+    return null;
+  },
+
   async sendText(_cred, chatKey, text) {
     const entry = responseUrls.get(chatKey);
     if (!entry || Date.now() - entry.at > RESPONSE_URL_TTL_MS) {

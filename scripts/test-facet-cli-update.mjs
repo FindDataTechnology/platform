@@ -97,10 +97,14 @@ test("install records; update reports 已最新 / upgrades / vanished per pack",
   // with version reporting and reports the latter honestly.
   market.state.packs["pk-a"] = { detail: packV("pk-a", 3) };
   market.state.packs["pk-b"] = { detail: null };
-  const up1 = await facet(["update", ...base], { home });
+  // 0.4.1 起「部分失败」的退出码为非零（一笔消失 ⇒ $? 必须能反映），
+  // 所以这里按失败期望来取 stdout 并单独断言退出码。
+  const up1 = await facet(["update", ...base], { home, expectFail: true });
+  assert.equal(up1.code, 1, "有消失的包 ⇒ 退出码非零（0.4.1 行为）");
   assert.match(up1.stdout, /pk-a.*v1 → v3/);
   assert.match(up1.stdout, /1 笔更新/);
   assert.match(up1.stdout, /pk-b.*已不可解析/);
+  assert.match(up1.stdout, /1 笔失败/, "并且如实报出失败笔数");
   assert.equal(skillFile(home, "claude-code", "pk-a-skill").includes("v3 body"), true, "skills rewrote to v3");
   const rec2 = JSON.parse(readFileSync(path.join(home, ".facet", "installed.json"), "utf8"));
   assert.deepEqual(rec2.installs.map((r) => [r.packId, r.version]).sort(), [["pk-a", 3], ["pk-b", 2]]);
@@ -116,6 +120,49 @@ test("install records; update reports 已最新 / upgrades / vanished per pack",
   const rec3 = JSON.parse(readFileSync(path.join(home, ".facet", "installed.json"), "utf8"));
   assert.equal(rec3.installs.filter((r) => r.packId === "pk-a").length, 1);
   assert.equal(existsSync(path.join(home, ".facet", "credentials.json")), false, "update/install never touch credentials");
+
+  await market.close();
+});
+
+test("a failed update exits non-zero (0.4.1: $? must reflect the ✗)", async () => {
+  // 0.4.0 之前：打 ✗ 就 continue，退出码仍 0，脚本化调用会把失败当成功。
+  // 这条钉住修复后的契约：只要有一笔失败，$? 必须非零，且文案说清几笔失败。
+  const market = await stubMarket();
+  market.state.packs["pk-gone"] = { detail: null }; // 下架/私有/网络 不可解析
+  const base = ["--base", market.base];
+  const home = newHome();
+
+  await facet(["install", "pk-gone", ...base], { home }).catch(() => {}); // 装不上也没关系，下面手写记录
+  const recPath = path.join(home, ".facet", "installed.json");
+  const fsmod = await import("node:fs");
+  fsmod.mkdirSync(path.dirname(recPath), { recursive: true });
+  fsmod.writeFileSync(
+    recPath,
+    JSON.stringify({
+      installs: [
+        { packId: "pk-gone", name: "Gone", target: "claude-code", scope: "用户级", project: null, version: 2, base: market.base, installedAt: "2026-11-01T00:00:00Z" },
+      ],
+    }),
+  );
+
+  const out = await facet(["update", ...base], { home, expectFail: true });
+  assert.equal(out.code, 1, "有一笔失败 ⇒ 退出码非零");
+  assert.match(out.stdout, /已不可解析/);
+  assert.match(out.stdout, /1 笔失败/, "文案如实报出失败笔数");
+
+  // 全成功时仍必须是 0（别把修复做成「一律非零」）
+  market.state.packs["pk-ok"] = { detail: packV("pk-ok", 5) };
+  fsmod.writeFileSync(
+    recPath,
+    JSON.stringify({
+      installs: [
+        { packId: "pk-ok", name: "Ok", target: "claude-code", scope: "用户级", project: null, version: 4, base: market.base, installedAt: "2026-11-01T00:00:00Z" },
+      ],
+    }),
+  );
+  const ok = await facet(["update", ...base], { home });
+  assert.equal(ok.code, 0, "全成功 ⇒ 退出码 0");
+  assert.match(ok.stdout, /v4 → v5/);
 
   await market.close();
 });

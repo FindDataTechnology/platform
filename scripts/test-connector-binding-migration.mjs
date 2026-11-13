@@ -58,7 +58,6 @@ const { writeMcpPatch } = await import("../dsh-profile.js");
 // `connector:<pack>:<key>` form fails dsh's /^[A-Za-z0-9_-]{1,32}$/ check and
 // the row silently never starts (fix-mcp-server-name-validation, 9b3491068).
 // That commit missed this file too — 7.1/7.2 still pinned the retired name.
-const bindingNames = await import("../connector-bindings.js");
 
 const bridge = await import("../registry-bridge.js");
 bridge.initRegistryBridge({
@@ -143,7 +142,13 @@ test("7.1 an upgraded single-account install injects the same token it injected 
   const connectorRows = patchEntries(raw).filter((entry) => entry.config.serverName.startsWith("connector"));
   assert.equal(connectorRows.length, 1, "one connector row after the upgrade, not zero and not two");
 
-  const row = patchEntry(bindingNames.bindingServerName("chat:explore"), raw);
+  // The injected row's NAME is `bindingServerName(slot)` — dsh rejects colons in
+  // MCP server names, so the ledger moved to a folded slug+hash and legacy
+  // `connector:<slot>` names no longer resolve (see test-mcp-server-name.mjs:
+  // "those rows are dead on this dsh"). Ask the generator; never hardcode a hash.
+  const bindings7 = await import("../connector-bindings.js");
+  const EXPLORE_ROW = bindings7.bindingServerName("chat:explore");
+  const row = patchEntry(EXPLORE_ROW, raw);
   assert.ok(row, "the built-in exploration binding is the surviving row");
   assert.equal(row.config.url, "https://connector.example.test/mcp", "same transport as the retired template");
   assert.equal(row.config.headers.Authorization, `Bearer ${PRIMARY_TOKEN}`, "same credential as before the upgrade");
@@ -201,14 +206,14 @@ test("7.2 multi-account stock keeps its primary and grants nothing", async () =>
 
   const raw = await writePatch({ ownerEmail: email });
   const connectorRows = patchEntries(raw).filter((entry) => entry.config.serverName.startsWith("connector"));
-  assert.deepEqual(connectorRows.map((entry) => entry.config.serverName), [bindingNames.bindingServerName("chat:explore")]);
+  assert.deepEqual(connectorRows.map((entry) => entry.config.serverName), [bindings.bindingServerName("chat:explore")]);
   assert.equal(connectorRows[0].config.headers.Authorization, `Bearer ${OTHER_TOKEN}`);
 
   // Same for the single-account identity seeded alongside: its own token, never
   // the neighbour's (per-identity isolation across the migration).
   const single = await writePatch({ ownerEmail: "single@example.com" });
   assert.equal(
-    patchEntry(bindingNames.bindingServerName("chat:explore"), single).config.headers.Authorization,
+    patchEntry(bindings.bindingServerName("chat:explore"), single).config.headers.Authorization,
     `Bearer ${PRIMARY_TOKEN}`,
   );
   assert.equal(seeded.length, 3);

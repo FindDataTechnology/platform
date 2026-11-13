@@ -19,6 +19,7 @@
 			"!connect-app",
 			"!resources",
 			"!dist",
+			"!!dist-opensource",
 			"!web/dist",
 			"!test-results",
 			"!data",
@@ -39,13 +40,22 @@
 			"complexity": "off",
 			"a11y": "off",
 			"correctness": {
+				"noUndeclaredVariables": "error",
 				"noUnusedVariables": "error",
 				"noUnusedImports": "error"
 			}
 		}
 	},
 	"javascript": {
-		"globals": ["process", "console", "fetch", "URL", "AbortSignal"]
+		"globals": [
+			"process",
+			"console",
+			"fetch",
+			"URL",
+			"AbortSignal",
+			"definePageConfig",
+			"defineAppConfig"
+		]
 	},
 	"overrides": [
 		{

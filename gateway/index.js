@@ -30,6 +30,10 @@ import { createFleetMachinesStore } from "./fleet-machines-store.js";
 import { registerFleetMachineRoutes } from "./fleet-machines-routes.js";
 import { rm } from "node:fs/promises";
 import { forwardedHeaders, machineHeaders, proxyHttp, proxyUpgrade } from "./proxy.js";
+import { decideMandateDoor, MANDATE_OWNER_HEADER, MANDATE_VERDICT_PATH } from "./mandate-door.js";
+import { decideInputRequestDoor, INPUT_REQUEST_MCP_PATH, INPUT_REQUEST_OWNER_HEADER } from "./input-request-door.js";
+import { registerLineExchange } from "./line-token-exchange.js";
+import { createSub2apiClient } from "../lib/sub2api-admin.js";
 import { createMpAuth } from "./mp-auth.js";
 import { createMpBindings } from "./mp-bindings.js";
 import { renderBindCodePage } from "./mp-bind-page.js";
@@ -48,6 +52,7 @@ import { isBusinessRole } from "../server/roles.js";
 // wanxing mount 摘挂（unify-wanxing-a2a-face 4.x）：卡片/目录/管理路由的唯一出面
 // 是萬星 facade（wanxing.finddatatech.cloud，fd-wanxing 仓）；platform 域不再挂载。
 import { registerZhiyuRoutes } from "./zhiyu/index.js";
+import { createVoiceRoute } from "./zhiyu/voice-route.js";
 import { registerFleetRoomBridge } from "./fleet-room-bridge.js";
 import { createZhiyuAgentLane } from "./zhiyu/agent-lane.js";
 import { createCellFleetReporter } from "./fleet-cells.js";
@@ -1033,6 +1038,11 @@ const zhiyu = registerZhiyuRoutes(app, {
   callAgent: zhiyuLane.callAgent,
   settleTurn: zhiyuLane.settleTurn,
   cellExport: exportSessionFromCell,
+  // Voice attribution (add-speaker-attribution 5.1, design D9): a capture
+  // message carries its own stream evidence in `meta.capture`; every other
+  // message answers null and keeps the legacy broadcast, so mounting this is a
+  // no-op until the capture lane starts writing that field.
+  voiceRoute: createVoiceRoute(),
   // The /api/zhiyu/* 404 guard is deferred: fleet-room-bridge below mounts
   // more routes under this prefix. zhiyu.registerNotFound() seals the prefix
   // once all of them are mounted (before the cell-proxy catch-all).
@@ -1345,6 +1355,111 @@ registerMemoryFaceRoute(app, {
   isAdminUser,
   threshold: CELL_MEMORY_FLOOR,
   browserLaneProbe,
+});
+
+// ── Disclosure-gate machine door (fix-disclosure-gate-reachability) ─────────
+// The verdict endpoint is machine-to-machine: a runner asks a cell "may this
+// outbound text be sent". It holds no user identity, and the cell-proxy
+// catch-all below refuses anything without one — so the cell-side
+// AUTH_EXEMPT_PREFIXES never runs. Measured 2026-11-11 with the token correctly
+// injected on both sides: `401 Authentication required`, forever.
+//
+// Three things make this door safe, and all three are load-bearing:
+//   * it is registered BEFORE the catch-all (precedent: bot webhooks). After it,
+//     the door is dead code and the 401 comes back.
+//   * the bearer is checked FIRST; the owner header is read only once it passes,
+//     so an unauthenticated caller cannot name a cell at all.
+//   * the target must be a RUNNING cell. No fallback to any default cell: a
+//     fallback would answer A's text with B's policy, which is the one failure
+//     this endpoint exists to prevent.
+// No body parser here on purpose — the request is piped through unchanged, so
+// the cell's own handler parses (and validates) the payload exactly once.
+// The decision itself lives in gateway/mandate-door.js (pure, contract-tested).
+const MANDATE_VERDICT_TOKEN = String(process.env.MANDATE_VERDICT_TOKEN || "");
+
+app.post(MANDATE_VERDICT_PATH, (req, res) => {
+  const verdict = decideMandateDoor({
+    configuredToken: MANDATE_VERDICT_TOKEN,
+    authorization: req.headers.authorization,
+    ownerHeader: req.headers[MANDATE_OWNER_HEADER],
+    runningCells: registry.status(),
+  });
+  if (verdict.status !== 200) return res.status(verdict.status).json({ error: verdict.error });
+  proxyHttp(req, res, {
+    host: "127.0.0.1",
+    port: verdict.cell.port,
+    headers: forwardedHeaders(req, { email: verdict.owner, groups: [] }, SECRET, {
+      roleHeaders: roleStore.headersFor(verdict.owner),
+      layoutHeader: layoutStore.headerValue(),
+    }),
+  });
+});
+
+// ── Input-request machine door (add-acp-input-request-owner) ────────────────
+//
+// The ACP lane reaches request_input over streamable HTTP with a shared bearer.
+// Same wall, same answer as the disclosure gate above: without a door here, a
+// correct bearer answers `401 Authentication required` and the cell never sees
+// it (measured 2026-11-12 on sha-f34ed77). Same three rules, same reasons:
+// bearer first, owner only names a RUNNING cell, and never a default cell —
+// a fallback would land one owner's card inside another owner's session.
+//
+// No body parser: proxyHttp streams the request through, so the cell's own
+// handler parses once AND the SSE response streams back untouched (an MCP
+// streamable-HTTP reply is `text/event-stream`; buffering it would hang the
+// runner's long poll).
+// The decision lives in gateway/input-request-door.js (pure, contract-tested).
+const INPUT_REQUEST_MCP_TOKEN = String(process.env.INPUT_REQUEST_MCP_TOKEN || "");
+
+app.post(INPUT_REQUEST_MCP_PATH, (req, res) => {
+  const verdict = decideInputRequestDoor({
+    configuredToken: INPUT_REQUEST_MCP_TOKEN,
+    authorization: req.headers.authorization,
+    ownerHeader: req.headers[INPUT_REQUEST_OWNER_HEADER],
+    runningCells: registry.status(),
+  });
+  if (verdict.status !== 200) {
+    // Codes and bodies mirror server/input-request-http.js so a caller cannot
+    // tell which side refused — one contract, two mounts.
+    return res.status(verdict.status).json({ error: verdict.error });
+  }
+  proxyHttp(req, res, {
+    host: "127.0.0.1",
+    port: verdict.cell.port,
+    headers: forwardedHeaders(req, { email: verdict.owner, groups: [] }, SECRET, {
+      roleHeaders: roleStore.headersFor(verdict.owner),
+      layoutHeader: layoutStore.headerValue(),
+    }),
+  });
+});
+
+// ── 门 K 换票（converge-line-identity-and-keys 7.1）─────────────────────────
+// 客户拿词元 sk- 换一枚 aud=目标线、带 source、≤10 分钟的 JWT；线侧只做离线
+// JWKS 验签。**这个接缝必须在 cell-proxy 兜底之前**（同 mandate/input-request
+// 两道机器门的先例）：兜底要求用户身份，而换票的调用方恰恰没有会话。
+//
+// 开关关闭时 `registerLineExchange()` 挂 0 条路由——不是返回 404，是路径不存在。
+// 这是验收原文「开关关闭时网关行为与现状一致」唯一可靠的实现方式：现行网关按设计
+// 剥掉调用方 Authorization，改成发币是行为变更，必须显式开。
+//
+// 钥匙校验复用 lib/sub2api-admin.js 那份客户端（与萬星 A2A 同一套
+// findUserByKey + probeKeyLiveness）：同一份凭据两个读者必须共用解析。
+const lineExchangeSub2api = createSub2apiClient();
+registerLineExchange(app, {
+  verifyCaller: async (key) => {
+    // 计费面没配 admin key = 没人能回答"这把钥匙是谁"。返回 503 让线走自有轨，
+    // 不能回 401——那会让客户以为钥匙坏了去重贴。
+    if (lineExchangeSub2api.degraded()) return { ok: false, status: 503 };
+    const probe = await lineExchangeSub2api.probeKeyLiveness(key);
+    if (!probe.ok) {
+      // 探活打不通（status 0）= 上游不可达，仍是 503；2xx 之外的上游判定
+      // （INVALID_KEY / INSUFFICIENT_BALANCE / …）是 401，交给调用方对号。
+      return { ok: false, reason: "invalid_credential", status: probe.status === 0 ? 503 : 401 };
+    }
+    const holder = await lineExchangeSub2api.findUserByKey(key);
+    if (!holder) return { ok: false, reason: "unresolved_credential" };
+    return { ok: true, userId: holder.userId, email: holder.email ?? null };
+  },
 });
 
 app.use(async (req, res) => {

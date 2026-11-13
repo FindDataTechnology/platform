@@ -1261,7 +1261,67 @@
         "summaryUnmapped": "{{count}} 项待你选定系统",
         "browseCatalog": "浏览应用目录"
       },
-      "filterPlaceholder": "筛选连接…"
+      "filterPlaceholder": "筛选连接…",
+      "doors": {
+        "title": "这些钥匙一共要几把",
+        "lead": "按门看，不按品牌看",
+        "goConnect": "去连接",
+        "refresh": "刷新",
+        "missingCount": "{count} 项里缺 {missing} 项",
+        "allReady": "{count} 项都已就绪",
+        "footnote": "客户级钥匙一把喂多条线，按客户计费；第三方凭据仍归各家。下面的旧卡片各有自己的流程，等它们退休前保持原样。",
+        "loadFailed": "读不到凭据状态：{detail}",
+        "ownTrack": "该线自有凭据：{track}",
+        "noOwnTrack": "没有自有回退轨",
+        "state": {
+          "connected": "已连接",
+          "missing": "未连接",
+          "unknown": "读不到",
+          "stale": "已失效"
+        },
+        "customerKey": {
+          "title": "客户级钥匙",
+          "subtitle": "一把词元钥匙，按客户计费，被多条线共用。"
+        },
+        "memberAssertion": {
+          "title": "成员级代做",
+          "subtitle": "平台用一份短时签名断言，以你的名义在该线做事——不持有你的登录态。",
+          "offSubtitle": "默认关闭：目前没有线接受平台代做，各线仍用自己的凭据。",
+          "empty": "还没有线声明代做。"
+        },
+        "thirdParty": {
+          "title": "第三方凭据",
+          "subtitle": "别家系统自己的凭据——市场登录、连接器、Chatwoot、搜索。它们不该被我们合并。"
+        },
+        "refName": {
+          "ciyuan-account": "词元账号",
+          "registry": "工具市场登录",
+          "facet-market": "市场设备配对",
+          "connector": "连接器账号",
+          "connector-bindings": "连接器绑定",
+          "chatwoot": "Chatwoot 租户",
+          "search": "网络搜索",
+          "paper-trading": "模拟交易",
+          "line-wire-customer": "柏讯线凭据",
+          "line-lex": "识律线凭据"
+        },
+        "refPurpose": {
+          "ciyuan-account": "模型与萬星运维工具",
+          "registry": "装市场工具",
+          "facet-market": "启用谦面市场 MCP",
+          "connector": "托管 SaaS 凭据",
+          "connector-bindings": "逐个已装套件的供给",
+          "chatwoot": "你自己的租户",
+          "search": "个人搜索密钥",
+          "paper-trading": "解锁模拟盘工具",
+          "line-wire-customer": "柏讯线动作",
+          "line-lex": "识律线动作"
+        },
+        "lineName": {
+          "lex": "识律",
+          "wire-customer": "柏讯"
+        }
+      }
     },
     "lines": {
       "title": "产品线操作",
@@ -2743,6 +2803,29 @@
     "cancelled": "问询已取消",
     "customAnswer": "自定义回答"
   },
+  "inputRequest": {
+    "title": "需要你补充信息",
+    "waitingHint": "填好后对话继续",
+    "submit": "提交",
+    "cancel": "取消请求",
+    "answered": "已提交",
+    "cancelled": "已取消",
+    "expired": "已过期（无人应答）",
+    "escalated": "已升级待人工处理",
+    "expiresIn": "剩余 {{minutes}} 分钟",
+    "fillRequired": "请先填写：{{fields}}",
+    "filePlaceholder": "资源引用或链接",
+    "yes": "是",
+    "no": "否",
+    "pending": "等待填写（可在输入请求列表作答）"
+  },
+  "inputInbox": {
+    "title": "待填表",
+    "count": "{{count}} 项",
+    "empty": "没有待填的表单",
+    "refresh": "刷新",
+    "error": "读取失败：{{message}}"
+  },
   "auth": {
     "login": "登录",
     "logout": "退出登录"
@@ -3143,6 +3226,23 @@
     }
   },
   "fleets": {
+    "credentialPack": {
+      "title": "凭据包",
+      "needFills": "还要填 {{count}} 处",
+      "ready": "凭据齐了",
+      "connect": "去连接",
+      "doorCustomerKey": "门 K · 客户级钥匙",
+      "doorMemberAssertion": "门 A · 成员级代做",
+      "doorThirdParty": "第三方凭据",
+      "doorUnclassified": "未归类",
+      "reasonFallback": "需要先连接",
+      "unknown": "{{count}} 个服务在注册表里查不到，无法判断",
+      "noCredential": "{{count}} 个服务不需要凭据",
+      "missingPacks": "{{count}} 个智能体已不在本机",
+      "unreadable": "读不到",
+      "loadFailed": "凭据计划读不到：{{message}}",
+      "loading": "正在算这个团队要填几次…"
+    },
     "title": "智能体团队",
     "create": "创建智能体团队",
     "empty": "还没有智能体团队，点右上角创建第一个",
@@ -4241,7 +4341,7 @@
     "market": {
       "subtitle": "获取与管理能力：智能体、工具、技能、插件",
       "openStudio": "打开创作台",
-      "installed": "本机已装功能集"
+      "installed": "本机已装智能体"
     }
   },
   "hub": {
@@ -4312,30 +4412,8 @@
     },
     "agents": {
       "unavailableTitle": "本部署未启用智能体市场",
-      "unavailableBody": "这份部署没有接市场；已装的功能集仍在「我的」里，可以正常启用与卸载。"
+      "unavailableBody": "这份部署没有接市场；已装的智能体仍在「我的」里，可以正常启用与卸载。"
     }
-  },
-  "inputInbox": {
-    "title": "待填表",
-    "count": "{{count}} 项",
-    "empty": "没有待填的表单",
-    "refresh": "刷新",
-    "error": "读取失败：{{message}}"
-  },
-  "inputRequest": {
-    "title": "需要你补充信息",
-    "waitingHint": "填好后对话继续",
-    "submit": "提交",
-    "cancel": "取消请求",
-    "answered": "已提交",
-    "cancelled": "已取消",
-    "expired": "已过期（无人应答）",
-    "escalated": "已升级待人工处理",
-    "expiresIn": "剩余 {{minutes}} 分钟",
-    "fillRequired": "请先填写：{{fields}}",
-    "filePlaceholder": "资源引用或链接",
-    "yes": "是",
-    "no": "否"
   },
   "teamDirectory": {
     "title": "团队目录",

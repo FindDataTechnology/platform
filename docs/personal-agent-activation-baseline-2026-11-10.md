@@ -233,7 +233,7 @@ routine-ops   -> deputy  ×3      ← 唯一可裁的那格
 | 编号 | 事项 | 缺什么 | 谁能给 | 解除条件（可验证） | 现状 |
 | --- | --- | --- | --- | --- | --- |
 | **PENDING-1** | 场景 3（对外接待/商务问询）不可用 | `MANDATE_VERDICT_TOKEN` 的**值**（manifest 引用已在，`envRef=1`） | 用户/运维（要生成并 patch secret） | pod 内 `process.env.MANDATE_VERDICT_TOKEN` 非空 **且** 对外裁决端点不再 503 **且** 出现 ≥1 条 `action_audit.mandate_domain` 非空 | **用户已裁决暂不铸**（2026-11-10 明示），保持失败关闭；**等待用户给值** |
-| **PENDING-2a** | 漂移哨「两条同时出现」的界面未查明 | 具体页面/接口路径 | 用户 | 给出路径后能定位到是单 cell 读面还是多 cell 聚合面 | 两例分属不同 cell，单 cell 读面不可能同时返回；**等待用户给路径** |
+| **PENDING-2a** | 漂移哨「两条同时出现」的界面未查明 | 具体页面/接口路径 | 用户 | 给出路径后能定位到是单 cell 读面还是多 cell 聚合面 | 两例分属不同 cell，单 cell 读面不可能同时返回；**等待用户给路径**（解除于 2026-11-11，依据：两例同处一个 platform pod 的两个 cell 目录，`infra-telemetry` 用 `/opt/platform-cells/*/data/data/fleets.db` 通配并按 `f.name` 分组、无 cell 身份 ⇒ 聚合面同名即撞；单 cell 读面已带 `state`，不该改，详见 `docs/roll-2026-11-11-platform-d35b79b.md` §六） |
 | **PENDING-2b** | 归档舰队里漂移哨残留的处置 | 处置方式的决定（保持归档 / 改节奏 / 并入） | 用户 | 决定后无需改数据即视为解除（保持归档即零动作） | 推荐「保持归档」；清理需删 22 行含审计留痕且官方接口 409 |
 | **PENDING-3** | 观测频率仍是每小时 | `CronUpdate` 工具在会话内不可用 | 工具面（会话可用时）或用户手动 | `CronList` 显示该自动化 `scheduleRule.unit === "daily"` **且** 它真跑过一次并产出读数 | 指令与三条转折条件已备：`docs/observation-daily-prompt.md` |
 | **PENDING-4** | 场景 3 的另两个前置：域授权 + 来源 | `external-comms` 授到 `draft`、`supplier-thread` 来源开启 | 用户（需 owner cookie） | doctor 的 blocked 项清零，退出码 1→0 | **即使解了也不通**——PENDING-1 未解除时对外发不出字节，故应排在 PENDING-1 之后 |
@@ -793,7 +793,106 @@ firstInputTokens << lastInputTokens  → 某次工具返回撑爆 → 分页或�
 
 ⚠️ 未上产。现有 24 条 overflow 明细里没有起点，**存量不可回填**（起点从未被记录）。
 
-## 十五、出片前必须先看的一件事：发布线与主干已分叉（2026-11-11）
+## 十五、统一片 sha-d35b79b：零产出重试上线 + 两条孪生线包含式收敛（2026-11-11）
+
+全景见 `docs/roll-2026-11-11-platform-d35b79b.md`（本轮唯一详细记录）。三句话摘要：
+
+- **改了判据**：降级重试原本只认「跑得快」（<60s），而 24h 内 54 次上游 5xx 有 42 次跑了 ≥1 分钟——
+  正是烧满预算零产出那批。新门换成「有没有产出」不看耗时；留痕 `detail.retryReason`；
+  回滚闸 `FLEET_RETRY_ZERO_OUTPUT=0`。
+- **两次差点回退都在出片前拦住**：先补 `f69ef2ea` 两笔；再发现线上已被换到 `2fc23f9e` 那条线
+  （输入请求卡片五笔），杀掉在飞构建改成 merge 收敛（`215156d3e`，零冲突 + 79 文件逐行内容核对
+  证明零回退）。
+- **上线证据**：快照 `d35b79bf` → tag `sha-d35b79b` → digest `sha256:0be58181` → 内容闸 8/8 →
+  GitOps `ecee093` → Argo Synced → pod `platform-ccb59c6dc-c45vb` 2/2 restart=0，
+  BUILD-INFO `baseCommit=2bd60871c`。
+
+⚠️ 仍未验：`retryReason=zero_output` 的实际命中率与挽回率（要等下一次上游失败才有样本）。
+
+## 十六、统一片上线与随后被"包含式替换"（2026-11-11 14:00–14:40）
+
+### 16.1 我的一轮上线（已验证）
+
+```
+构建  testaction002/build-pool run 42965282983 → success（源 paas bd8049de6，快照 1b58503c）
+relay 2026-11-11T13:40:28+08:00 OK law-bench/platform:sha-1b58503 (6s)
+ccr   skopeo: Digest sha256:b0325b24…  Created 2026-11-11T05:25:37Z  amd64
+GitOps 三处引用 → sha-1b58503（platform.yaml 72/604 + platform-demo.yaml 75），提交 07425c4
+Argo  Synced → rollout success → pod platform-59f9949dd7-n2n4l
+pod 内 BUILD-INFO baseCommit bd8049de6；六标记 + server/input-requests.js 全在
+```
+
+### 16.2 半小时后又被换了一次——但这次是**包含**，不是覆盖
+
+```
+新片 sha-9d425e2 / baseCommit f69ef2ea（分支 fix/input-request-baseline，commit 14:07:51
+      "fix(input-request): 答案不投递到不存在的会话"）
+pod platform-67d59997d5-rm7m9（restarts platform=0 / browser-lane=0）
+```
+
+两条判据（照 paas-release §3.1，**先判内容再决定要不要重滚**）：
+
+1. **内容**：pod 内七处标记全在 —— `failureDetail` 2 / `latest row WITH USAGE` 1 /
+   `stopped early|` 1 / `context_budget` 1 / `usage_input_max` 6 / `firstInputTokens` 9 /
+   `input-requests` 1。
+2. **血缘**：`git merge-base --is-ancestor bd8049de6 f69ef2ea` → **YES**。
+
+⇒ **复用，不重滚。** 我的归因/分类/量纲/起点-顶点修复仍在产，对方的 input-request 修复叠在其上。
+这正是"时间晚 ≠ 覆盖"的正面例子：如果我按"谁后推送"去重滚，会把对方那笔修好的缺陷重回去。
+
+### 16.3 四个 cell 缺 `usage_input_max`：不是迁移坏，是**它们还没被打开**
+
+```
+[1da519d4] 列有 行6772 最近06:30Z  总列数 40  DDL 890
+[2b043ce0] 列无 行5    最近11-10    总列数 39  DDL 865
+[420a3344] 列无 行5    最近10-24    总列数 39  DDL 865
+[6db2b1b4] 列无 行162  最近11-11 01:50 总列数 39  DDL 865
+[de7ec3a6] 列无 行1    最近10-25    总列数 39  DDL 865
+```
+
+40 vs 39、890 vs 865（=加一条列定义的长度差），且**四者都已有 `usage_cached_input`** ——
+说明不是远古结构，只差这一条迁移。
+
+原因：增量迁移在 `createFleetDatabase` 打开 cell 库时执行，而 cell 是**按需启动**的
+（本次启动日志里只有 `1da519d4`、`3fdc7b8e` 两个 cell 起了进程）。这四个都是休眠 cell，
+新片上线后还没被打开过 —— 一旦有流量进来就会自动补列，不需要人工修。
+
+**留一个观察项**：若某个 cell 有流量却仍缺列，那才是真问题（`appendTurnEvent` 的扩展 INSERT
+会失败并退化到旧版 INSERT，静默丢掉全部计量列）。判据：`列无 && 最近写入 > 本次上线时刻`。
+
+### 16.4 一次启动期崩溃重启（未复现、未归因，不掩盖）
+
+```
+pod platform-59f9949dd7-n2n4l  platform: restarts=1
+lastState.terminated exitCode=1 reason=Error  startedAt 06:04:53Z finishedAt 06:07:15Z
+上一实例日志尾部：
+  triggerUncaughtException(err, true /* fromPromise */)
+  Error: aborted
+      at abortIncoming (node:_http_server:851:17)
+      at socketOnClose (node:_http_server:845:3)
+  code: 'ECONNRESET'   Node.js v25.9.0
+```
+
+- 进程**没有** `unhandledRejection` / `uncaughtException` 兜底（全仓只有 `a2a-client.js` 的一句注释提到这件事），
+  所以任何未接拒绝都会直接退进程 —— 这是放大器，不是原因。
+- 崩前日志是正常启动序列（gateway 3100、两个 cell listen、dsh runtime ready、bots registry 未就绪），
+  另有 `[line-renewal] lex auth config unreadable … aborted due to timeout` 与重复的 telegram poll fetch failed。
+- 新 pod（`sha-9d425e2`）跑 13 分钟 **restarts=0**，未复现。
+- **未定性**：`abortIncoming` 指向"服务器关闭时在飞请求被掐"，本次合并新增
+  `GET /api/input-requests/:id/wait` 长轮询是合理嫌疑（该处有 try/catch，但 `sendError` 在 socket
+  已断时是否再抛未验）。要定性需要下一次启动期抓到堆栈，不靠猜。
+
+### 16.5 上产后归因样本仍为空
+
+```
+06:03:02Z 起 回合 2 失败 0
+06:31:54Z 起 回合 1 失败 0
+```
+没有失败的上下文压力回合，所以 `cause` / `firstInputTokens` 的产线读数**还取不到**。
+判据不变：等出现压力失败行后，`detail` 应同时有 `cause`、`priorBasis=inputMax`、`firstInputTokens`；
+`errorKind` 应把早停记成 `timeout`、把窗口装不下记成 `context_budget`。
+
+## 十七、出片前必须先看的一件事：发布线与主干已分叉（2026-11-11）
 
 准备给上面三笔修复出片时，`fd-build-channel` 指向公开仓免费线，但 `gh run list` 显示
 **另一会话正在出片**，其快照源是 `origin/main` 的 `6fd20765`。查血缘发现两件事：
@@ -911,86 +1010,3 @@ fleet-events context_budget 档 0 · fleets-db usage_input_max 0 · cron-runner 
 
 ⚠️ 未执行：合并另一会话正在写的分支（`feat/input-request-cards` 刚落地、可能还在改）属于协同比
 技术更重的事，需要你或对方确认后再动。
-
-## 十六、统一片上线与随后被"包含式替换"（2026-11-11 14:00–14:40）
-
-### 16.1 我的一轮上线（已验证）
-
-```
-构建  testaction002/build-pool run 42965282983 → success（源 paas bd8049de6，快照 1b58503c）
-relay 2026-11-11T13:40:28+08:00 OK law-bench/platform:sha-1b58503 (6s)
-ccr   skopeo: Digest sha256:b0325b24…  Created 2026-11-11T05:25:37Z  amd64
-GitOps 三处引用 → sha-1b58503（platform.yaml 72/604 + platform-demo.yaml 75），提交 07425c4
-Argo  Synced → rollout success → pod platform-59f9949dd7-n2n4l
-pod 内 BUILD-INFO baseCommit bd8049de6；六标记 + server/input-requests.js 全在
-```
-
-### 16.2 半小时后又被换了一次——但这次是**包含**，不是覆盖
-
-```
-新片 sha-9d425e2 / baseCommit f69ef2ea（分支 fix/input-request-baseline，commit 14:07:51
-      "fix(input-request): 答案不投递到不存在的会话"）
-pod platform-67d59997d5-rm7m9（restarts platform=0 / browser-lane=0）
-```
-
-两条判据（照 paas-release §3.1，**先判内容再决定要不要重滚**）：
-
-1. **内容**：pod 内七处标记全在 —— `failureDetail` 2 / `latest row WITH USAGE` 1 /
-   `stopped early|` 1 / `context_budget` 1 / `usage_input_max` 6 / `firstInputTokens` 9 /
-   `input-requests` 1。
-2. **血缘**：`git merge-base --is-ancestor bd8049de6 f69ef2ea` → **YES**。
-
-⇒ **复用，不重滚。** 我的归因/分类/量纲/起点-顶点修复仍在产，对方的 input-request 修复叠在其上。
-这正是"时间晚 ≠ 覆盖"的正面例子：如果我按"谁后推送"去重滚，会把对方那笔修好的缺陷重回去。
-
-### 16.3 四个 cell 缺 `usage_input_max`：不是迁移坏，是**它们还没被打开**
-
-```
-[1da519d4] 列有 行6772 最近06:30Z  总列数 40  DDL 890
-[2b043ce0] 列无 行5    最近11-10    总列数 39  DDL 865
-[420a3344] 列无 行5    最近10-24    总列数 39  DDL 865
-[6db2b1b4] 列无 行162  最近11-11 01:50 总列数 39  DDL 865
-[de7ec3a6] 列无 行1    最近10-25    总列数 39  DDL 865
-```
-
-40 vs 39、890 vs 865（=加一条列定义的长度差），且**四者都已有 `usage_cached_input`** ——
-说明不是远古结构，只差这一条迁移。
-
-原因：增量迁移在 `createFleetDatabase` 打开 cell 库时执行，而 cell 是**按需启动**的
-（本次启动日志里只有 `1da519d4`、`3fdc7b8e` 两个 cell 起了进程）。这四个都是休眠 cell，
-新片上线后还没被打开过 —— 一旦有流量进来就会自动补列，不需要人工修。
-
-**留一个观察项**：若某个 cell 有流量却仍缺列，那才是真问题（`appendTurnEvent` 的扩展 INSERT
-会失败并退化到旧版 INSERT，静默丢掉全部计量列）。判据：`列无 && 最近写入 > 本次上线时刻`。
-
-### 16.4 一次启动期崩溃重启（未复现、未归因，不掩盖）
-
-```
-pod platform-59f9949dd7-n2n4l  platform: restarts=1
-lastState.terminated exitCode=1 reason=Error  startedAt 06:04:53Z finishedAt 06:07:15Z
-上一实例日志尾部：
-  triggerUncaughtException(err, true /* fromPromise */)
-  Error: aborted
-      at abortIncoming (node:_http_server:851:17)
-      at socketOnClose (node:_http_server:845:3)
-  code: 'ECONNRESET'   Node.js v25.9.0
-```
-
-- 进程**没有** `unhandledRejection` / `uncaughtException` 兜底（全仓只有 `a2a-client.js` 的一句注释提到这件事），
-  所以任何未接拒绝都会直接退进程 —— 这是放大器，不是原因。
-- 崩前日志是正常启动序列（gateway 3100、两个 cell listen、dsh runtime ready、bots registry 未就绪），
-  另有 `[line-renewal] lex auth config unreadable … aborted due to timeout` 与重复的 telegram poll fetch failed。
-- 新 pod（`sha-9d425e2`）跑 13 分钟 **restarts=0**，未复现。
-- **未定性**：`abortIncoming` 指向"服务器关闭时在飞请求被掐"，本次合并新增
-  `GET /api/input-requests/:id/wait` 长轮询是合理嫌疑（该处有 try/catch，但 `sendError` 在 socket
-  已断时是否再抛未验）。要定性需要下一次启动期抓到堆栈，不靠猜。
-
-### 16.5 上产后归因样本仍为空
-
-```
-06:03:02Z 起 回合 2 失败 0
-06:31:54Z 起 回合 1 失败 0
-```
-没有失败的上下文压力回合，所以 `cause` / `firstInputTokens` 的产线读数**还取不到**。
-判据不变：等出现压力失败行后，`detail` 应同时有 `cause`、`priorBasis=inputMax`、`firstInputTokens`；
-`errorKind` 应把早停记成 `timeout`、把窗口装不下记成 `context_budget`。

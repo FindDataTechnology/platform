@@ -1261,7 +1261,67 @@
         "summaryUnmapped": "{{count}} 件が選択待ち",
         "browseCatalog": "アプリディレクトリを見る"
       },
-      "filterPlaceholder": "接続を絞り込む…"
+      "filterPlaceholder": "接続を絞り込む…",
+      "doors": {
+        "title": "この鍵は何本必要か",
+        "lead": "ブランド別ではなく扉別",
+        "goConnect": "接続する",
+        "refresh": "更新",
+        "missingCount": "{count} 件中 {missing} 件が未接続",
+        "allReady": "{count} 件すべて準備完了",
+        "footnote": "顧客キーは 1 本で複数のラインを賄い、顧客単位で課金されます。第三者資格情報は各社のもの。下のカードは廃止まで各自の手順を保ちます。",
+        "loadFailed": "資格情報の状態を読めません：{detail}",
+        "ownTrack": "ライン固有の資格情報：{track}",
+        "noOwnTrack": "固有のフォールバックなし",
+        "state": {
+          "connected": "接続済み",
+          "missing": "未接続",
+          "unknown": "読み取り不可",
+          "stale": "失効"
+        },
+        "customerKey": {
+          "title": "顧客キー",
+          "subtitle": "词元キー 1 本を顧客単位で課金し、それを使う各ラインで共有します。"
+        },
+        "memberAssertion": {
+          "title": "メンバー委任",
+          "subtitle": "短命な署名アサーションで、あなたの代わりにそのラインで作業します。ログイン状態は保持しません。",
+          "offSubtitle": "既定は無効：委任を受け入れるラインはまだありません。各ラインは自前の資格情報を使います。",
+          "empty": "委任を宣言したラインはまだありません。"
+        },
+        "thirdParty": {
+          "title": "第三者資格情報",
+          "subtitle": "他システム自身の資格情報：マーケットログイン、コネクタ、Chatwoot、検索。統合する筋合いのものではありません。"
+        },
+        "refName": {
+          "ciyuan-account": "词元アカウント",
+          "registry": "ツールマーケットのログイン",
+          "facet-market": "マーケット端末ペアリング",
+          "connector": "コネクタアカウント",
+          "connector-bindings": "コネクタの紐付け",
+          "chatwoot": "Chatwoot テナント",
+          "search": "ウェブ検索",
+          "paper-trading": "模擬取引",
+          "line-wire-customer": "柏讯ラインの資格情報",
+          "line-lex": "识律ラインの資格情報"
+        },
+        "refPurpose": {
+          "ciyuan-account": "モデルと萬星の運用ツール",
+          "registry": "マーケットのツールを導入",
+          "facet-market": "谦面マーケット MCP を有効化",
+          "connector": "ホスト型 SaaS 資格情報",
+          "connector-bindings": "導入済みパックごとの供給",
+          "chatwoot": "自社テナント",
+          "search": "個人の検索キー",
+          "paper-trading": "模擬取引ツールを解放",
+          "line-wire-customer": "柏讯ラインの操作",
+          "line-lex": "识律ラインの操作"
+        },
+        "lineName": {
+          "lex": "识律",
+          "wire-customer": "柏讯"
+        }
+      }
     },
     "lines": {
       "title": "ライン操作",
@@ -2743,6 +2803,29 @@
     "cancelled": "質問をキャンセルしました",
     "customAnswer": "自由回答"
   },
+  "inputRequest": {
+    "title": "入力が必要です",
+    "waitingHint": "送信後に会話が続きます",
+    "submit": "送信",
+    "cancel": "リクエストを取消",
+    "answered": "送信済み",
+    "cancelled": "取消済み",
+    "expired": "期限切れ（無応答）",
+    "escalated": "エスカレーション済み",
+    "expiresIn": "残り {{minutes}} 分",
+    "fillRequired": "次を入力してください：{{fields}}",
+    "filePlaceholder": "リソース参照またはリンク",
+    "yes": "はい",
+    "no": "いいえ",
+    "pending": "入力待ち（リクエスト一覧から回答できます）"
+  },
+  "inputInbox": {
+    "title": "記入待ち",
+    "count": "{{count}} 件",
+    "empty": "記入待ちはありません",
+    "refresh": "更新",
+    "error": "読み込み失敗：{{message}}"
+  },
   "auth": {
     "login": "ログイン",
     "logout": "ログアウト"
@@ -3143,6 +3226,23 @@
     }
   },
   "fleets": {
+    "credentialPack": {
+      "title": "認証情報",
+      "needFills": "あと {{count}} 件入力",
+      "ready": "準備完了",
+      "connect": "接続する",
+      "doorCustomerKey": "ドア K · 顧客キー",
+      "doorMemberAssertion": "ドア A · 本人として実行",
+      "doorThirdParty": "サードパーティ",
+      "doorUnclassified": "未分類",
+      "reasonFallback": "先に接続が必要",
+      "unknown": "{{count}} 件のサービスがレジストリに見つからず判定できません",
+      "noCredential": "{{count}} 件のサービスは認証情報が不要",
+      "missingPacks": "{{count}} 件のパックがこの端末にありません",
+      "unreadable": "読み取り不可",
+      "loadFailed": "認証情報プランを読めません：{{message}}",
+      "loading": "このチームに必要な認証情報を計算しています…"
+    },
     "title": "エージェントチーム",
     "create": "エージェントチームを作成",
     "empty": "エージェントチームがありません。右上から作成してください",
@@ -4241,7 +4341,7 @@
     "market": {
       "subtitle": "能力の取得と管理：エージェント・ツール・スキル・プラグイン",
       "openStudio": "作成スタジオを開く",
-      "installed": "このマシンのインストール済みパック"
+      "installed": "このマシンのインストール済みエージェント"
     }
   },
   "hub": {
@@ -4312,30 +4412,8 @@
     },
     "agents": {
       "unavailableTitle": "この配備ではエージェント市場が無効です",
-      "unavailableBody": "市場が接続されていません。導入済みのパックは「マイ」にあり、そのまま利用できます。"
+      "unavailableBody": "市場が接続されていません。導入済みのエージェントは「マイ」にあり、そのまま利用できます。"
     }
-  },
-  "inputInbox": {
-    "title": "記入待ち",
-    "count": "{{count}} 件",
-    "empty": "記入待ちはありません",
-    "refresh": "更新",
-    "error": "読み込み失敗：{{message}}"
-  },
-  "inputRequest": {
-    "title": "入力が必要です",
-    "waitingHint": "送信後に会話が続きます",
-    "submit": "送信",
-    "cancel": "リクエストを取消",
-    "answered": "送信済み",
-    "cancelled": "取消済み",
-    "expired": "期限切れ（無応答）",
-    "escalated": "エスカレーション済み",
-    "expiresIn": "残り {{minutes}} 分",
-    "fillRequired": "次を入力してください：{{fields}}",
-    "filePlaceholder": "リソース参照またはリンク",
-    "yes": "はい",
-    "no": "いいえ"
   },
   "teamDirectory": {
     "title": "チームディレクトリ",

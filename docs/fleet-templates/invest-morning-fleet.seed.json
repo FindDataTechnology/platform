@@ -227,7 +227,7 @@
   "i18n": {
     "en": {
       "name": "Investment Morning Meeting",
-      "description": "Official fleet template: a three-tier cascaded investment morning meeting — the chief analyst aggregates the macro/sector researchers' morning reports and escalates decisions upward, while the risk officer is a passive post (woken by delegation or a decision reply).",
+      "description": "Official fleet template: a three-tier cascaded investment morning meeting — the chief analyst aggregates the macro/sector researchers' morning reports and escalates decisions upward, while the risk officer is a passive post (woken by delegation or by a decision reply). Demo: a three-tier organisation ({{fleetContext}} is injected only into a post's DIRECT subordinates, and the intermediate tier condenses upward), the trading-day rhythm, and an escalate-driven passive post. The orchestration section is a trigger+handoff cascade — the two researchers' morning checks complete and hand the baton to the chief — plus the chief dispatching a delegation to the risk officer. When minting and listing, packId/agents are filled in by the minting script; this file is the source of truth for the manifest and the test pins that it must pass fleet pre-validation.",
       "agents": {
         "invest-chief": {
           "name": "Chief analyst"

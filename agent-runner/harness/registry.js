@@ -11,6 +11,7 @@
 // [command, ...args] (JSON), e.g. {"acp-claude-code": ["claude-code-acp"]}.
 
 import { AcpHarnessAdapter } from "./acp.js";
+import { ownAcpConfigDir } from "./acp-config-dir.js";
 
 export const DEFAULT_HARNESS = "dsh";
 
@@ -74,13 +75,28 @@ export function createHarnessRegistry({ acpCommands = {}, acpEnv = {}, log = con
       // the deployment's own billing key is the override — the same
       // deployer-attribution semantics the dsh path's applyBillingKey carries.
       // acpMcpServers (compose-acp.js shape) rides to session/new untouched.
+      const childEnv = { ...spawnSpec.env, ...acpEnv, ...(spawnSpec.acpCredentialEnv ?? {}) };
+      // harden-acp-credential-channel + own-acp-harness-config: the credentials
+      // above ARE the channel, so a config file that also carries them is a
+      // persistent plaintext copy on the runner's volume (measured 2026-11-12: a
+      // hand-drifted 0644 settings.json holding the live token); and the model
+      // this harness actually routes on is the one declared in that same file
+      // (measured 2026-11-13: absent on agent-runner-c ⇒ every ACP turn died on
+      // `503 No available accounts`). One call owns both halves of the file.
+      // Guarded twice on purpose — the function degrades on its own, and this
+      // catch keeps even its own bugs from taking the spawn down.
+      try {
+        ownAcpConfigDir(childEnv, { log: childLog });
+      } catch (e) {
+        childLog.warn?.(`[acp] config-dir ownership threw (${e.message}); spawn continues`);
+      }
       return new AcpHarnessAdapter({
         key,
         spawnSpec: {
           command: entry.command,
           args: [...entry.args],
           cwd: spawnSpec.cwd,
-          env: { ...spawnSpec.env, ...acpEnv, ...(spawnSpec.acpCredentialEnv ?? {}) },
+          env: childEnv,
           provider: spawnSpec.provider,
           model: spawnSpec.model,
           ...(Array.isArray(spawnSpec.acpMcpServers) ? { acpMcpServers: spawnSpec.acpMcpServers } : {}),

@@ -280,7 +280,76 @@ test("attribution: several turns in flight is not guessed", () => {
     personaMembers: [m, twin],
   });
   assert.notEqual(many.kind, "turn", "no single post owns the call");
-  assert.equal(many.kind, "none", "the deployment default matches no post → honest rejection, never a guess");
+  // fix-report-attribution-concurrency 1.1：并发时不再走 preset 兜底。
+  // 这里全局 preset 不匹配任何岗，旧实现给 none；现在给更准的 ambiguous——
+  // 两者都是拒收，差别只在原因能否指名候选岗位，「不许猜」的原意不变。
+  assert.equal(many.kind, "ambiguous", "concurrent rounds ⇒ honest rejection naming the candidates");
+  assert.match(many.error, /several rounds are in flight/);
+});
+
+test("attribution: 并发且全局 preset 恰好命中某岗时仍须拒收（2026-11-12 生产洞）", () => {
+  // 生产形态：双 worker 同时跑两个岗，而 cell 的全局 preset 恰好等于其中一个岗的 persona。
+  // 旧实现会把**另一个**岗的报数记到这个岗头上（实测：漂移哨/主编的报数都落到「书记」）。
+  const clerk = fixtureMember(fleetDb, fixtureFleet(fleetDb).id, { title: "书记", targetId: "user.preset-7" });
+  const other = fixtureMember(fleetDb, clerk.fleetId, { title: "漂移哨", targetId: "drift-watch" });
+  const roster = (id) => String(id).toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+  const hit = resolveAttribution({
+    currentPreset: "user-preset-7", // 恰好等于书记的 roster id ⇒ 旧用法会命中书记
+    openTurns: [
+      { fleetId: clerk.fleetId, memberId: clerk.id, turnId: "turn_1" },
+      { fleetId: other.fleetId, memberId: other.id, turnId: "turn_2" },
+    ],
+    runningTasks: [],
+    personaMembers: [clerk, other],
+    rosterPresetId: roster,
+  });
+  assert.equal(hit.kind, "ambiguous", "并发时全局 preset 只是撞击，不是身份");
+  assert.match(hit.error, /cannot tell which post is reporting/);
+  assert.match(hit.error, new RegExp(clerk.fleetId + ":" + clerk.id));
+  assert.match(hit.error, new RegExp(other.fleetId + ":" + other.id));
+});
+
+test("attribution: 自报身份在并发下仍能精确归属（2.3）", () => {
+  const clerk = fixtureMember(fleetDb, fixtureFleet(fleetDb).id, { title: "书记", targetId: "user.preset-7" });
+  const other = fixtureMember(fleetDb, clerk.fleetId, { title: "漂移哨", targetId: "drift-watch" });
+  const roster = (id) => String(id).toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+  const hit = resolveAttribution({
+    currentPreset: "user-preset-7",
+    openTurns: [
+      { fleetId: clerk.fleetId, memberId: clerk.id, turnId: "turn_1" },
+      { fleetId: other.fleetId, memberId: other.id, turnId: "turn_2" },
+    ],
+    personaMembers: [clerk, other],
+    rosterPresetId: roster,
+    // bridge 从服务端写入的 patch env 里读到的坐标
+    selfIdentity: { fleetId: other.fleetId, memberId: other.id, persona: "drift-watch" },
+  });
+  assert.equal(hit.kind, "self-report");
+  assert.equal(hit.memberId, other.id, "自报赢过并发，且不倚赖全局 preset");
+});
+
+test("attribution: 自报坐标与岗位不符时不被采纳（不给指任意 id 开后门）", () => {
+  const clerk = fixtureMember(fleetDb, fixtureFleet(fleetDb).id, { title: "书记", targetId: "user.preset-7" });
+  const roster = (id) => String(id).toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+  const mismatched = resolveAttribution({
+    currentPreset: "user-preset-7",
+    openTurns: [],
+    personaMembers: [clerk],
+    rosterPresetId: roster,
+    // persona 与岗位对不上 ⇒ 自报无效，回落到 preset 级（这里恰好唯一命中书记）
+    selfIdentity: { fleetId: clerk.fleetId, memberId: clerk.id, persona: "someone-else" },
+  });
+  assert.notEqual(mismatched.kind, "self-report");
+  assert.equal(mismatched.memberId, clerk.id, "回落路径仍按既有优先级解析");
+
+  const ghost = resolveAttribution({
+    currentPreset: "user-preset-7",
+    openTurns: [],
+    personaMembers: [clerk],
+    rosterPresetId: roster,
+    selfIdentity: { fleetId: "fleet_ghost", memberId: "m_ghost", persona: "user.preset-7" },
+  });
+  assert.notEqual(ghost.kind, "self-report", "不存在的 pair 不被采纳");
 });
 
 test("attribution: chat lane (no in-flight turn) still resolves by live preset", () => {
@@ -721,20 +790,22 @@ function identityCtx(resolveFleetIdentity) {
     onRuntimeIdle: () => {},
     reserveRuntime: () => () => {},
     switchPresetTo: async () => ({ ok: true }),
-    // A job carrying a fleet tag may NOT skip model normalization: with no plan
-    // the round is refused ("post model resolution unavailable", cron-runner
-    // 872-878) because three live rounds once settled `ok` with `model=null`
-    // after the catalog fetch failed (ledger E28). The harness predates that
-    // rule, so it supplies the minimum plan a member post really has.
-    resolveFleetModel: async (preset) => ({
+    // Fleet-tagged jobs MUST carry a model plan (113233eb / ledger E28): a round
+    // that cannot resolve its post's model is a FAILED round, not a licence to
+    // run on whatever is live. Without these two seams the cadence rounds below
+    // died inside normalizeModelForJob — the identity resolver was never called
+    // (`seen.length 0 !== 2`), so the case read as a broken per-round turn
+    // segment. Same minimal shape as test-empty-turn-billing.mjs.
+    resolveFleetModel: async () => ({
       memberId: "m_1",
-      preset,
-      candidates: [{ model: "harness-model" }],
-      notices: [],
+      candidates: [{ model: "declared-model" }],
       explicitChain: false,
+      notices: [],
+      budgetBlocked: [],
+      effort: null,
+      contextBudget: null,
     }),
     switchModelTo: async () => ({ ok: true }),
-    recordFleetModelNotices: () => {},
     resolveFleetIdentity,
     prompts: [],
     dshBridge: {
@@ -1376,4 +1447,30 @@ test("edge context: the edge token renders in edge mode while the patrol token s
   await engine.idle();
   assert.equal(firedPrompts.length, before, "a failed edge render must not run the turn");
   cron.setFleetContextRenderer(null);
+});
+
+// ── 岗位身份的两个通道（fix-report-attribution-concurrency 2.2，2026-11-12 修正）──
+//
+// 生产实测：fleet 是**共用卫星**（SHARED_SATELLITE_SERVERS），client 配置里的 env
+// 没有任何进程会继承——三个 fleet-mcp.js 子进程的 FLEET_MCP_* 全为 0，报数照旧按
+// "唯一在飞回合"归因。所以身份改由中继逐请求经 headers 带进 tools/call 的保留键。
+// 这三条钉住解析优先级：中继注入 > 进程 env > 都没有（不自报）。
+import { selfIdentityFrom, FLEET_IDENTITY_ARG } from "../server/fleet-mcp-hints.js";
+
+test("selfIdentity: 中继注入的身份优先于进程 env", () => {
+  const got = selfIdentityFrom(
+    { [FLEET_IDENTITY_ARG]: { fleetId: "f_inj", memberId: "m_inj", persona: "p_inj" } },
+    { FLEET_MCP_FLEET_ID: "f_env", FLEET_MCP_MEMBER_ID: "m_env", FLEET_MCP_PERSONA: "p_env" },
+  );
+  assert.deepEqual(got, { fleetId: "f_inj", memberId: "m_inj", persona: "p_inj" });
+});
+
+test("selfIdentity: 没有中继注入时回落 env（逐 runtime stdio 的形态）", () => {
+  const got = selfIdentityFrom({}, { FLEET_MCP_FLEET_ID: "f_env", FLEET_MCP_MEMBER_ID: "m_env" });
+  assert.deepEqual(got, { fleetId: "f_env", memberId: "m_env" }, "缺 persona 时不编一个");
+});
+
+test("selfIdentity: 两处都没有 ⇒ null（不自报，服务端诚实拒收而不是猜）", () => {
+  assert.equal(selfIdentityFrom({}, {}), null);
+  assert.equal(selfIdentityFrom({ [FLEET_IDENTITY_ARG]: { fleetId: "only-fleet" } }, {}), null, "缺 memberId 不成对就不认");
 });

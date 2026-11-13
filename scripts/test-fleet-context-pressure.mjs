@@ -437,3 +437,60 @@ test("成本窗口把半截用量计入花费，但单独报出 partialTurns", a
   db.close();
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// ── 真实提示词大小来自 stream 帧，不是 assistant/message.usage（2026-11-11）──
+//
+// 上产后 34 个回合里 `detail.windowFull` 仍是 0，而同一批回合的 trace 里
+// 明明有 ratio 0.97 的。查出原因：
+//   assistant/message.usage.input = 该步增量（实测 633–2,082）
+//   platform/stream 的 usage.inputTokens = 整段提示词（同批实测 16k–124k）
+// 拿增量当"窗口占用"，`inputTokens >= 0.95 × window` 永远不成立 → 字段永不出现。
+test("窗口占用取 stream 帧的 inputTokens（不是单步增量）", async () => {
+  const { collectTurn } = await import("../server/cron-runner.js");
+  const ctx = makeCtx();
+  const collectors = new Map();
+  const p = collectTurn(ctx, "s-stream", 5000, new Map(), collectors, "s-stream");
+  const push = collectors.get("s-stream");
+  push({ method: "session.event", params: { event: { type: "request/context", data: { contextWindow: 128000 } } } });
+  // 单步增量：小
+  push({ method: "session.event", params: { event: { type: "assistant/message", data: { message: { content: [{ type: "text", text: "x" }] }, usage: { input: 700, output: 50 } } } } });
+  // 整段提示词：大（这才是账单上的输入）
+  push({ method: "platform/stream", params: { frame: { chunk: { type: "usage", usage: { inputTokens: 123918, outputTokens: 50 } } } } });
+  push({ method: "session.status", params: { status: "idle" } });
+  const out = await p;
+  assert.equal(out.lastInputTokens, 123918, "必须取 stream 帧的整段提示词，而不是 700 的增量");
+  assert.equal(out.contextWindow, 128000);
+
+  const { shapeTurnOutcome } = await import("../server/fleet-events.js");
+  const shaped = shapeTurnOutcome(
+    { ok: true, usage: { input: 700, output: 50 }, text: "x", toolBlocks: [{ kind: "tool", name: "t", result: "r" }], reported: true, contextWindow: out.contextWindow, inputTokens: out.lastInputTokens },
+    {},
+  );
+  assert.equal(shaped.detail?.windowFull, true, "0.97 的占用必须被写成 windowFull");
+});
+
+// ── 失败路径也必须能写 windowFull（2026-11-11）────────────────────────────
+//
+// 生产实测抓到的那条：一个回合 trace 里输入 157,986 / 窗口 128,000 = 1.23，
+// 结算却是 `turn_budget_exceeded`，detail 里**没有** windowFull。因为判定只写在
+// `shapeTurnOutcome`（成功路径）——而塞满窗口的回合恰恰是会在预算上失败的那批，
+// 于是字段在最需要它的群体上结构性缺席。
+test("超时失败路径也写 windowFull（不只是成功路径）", async () => {
+  const { timeoutError, isWindowFull, WINDOW_FULL_RATIO } = await import("../server/cron-runner.js");
+  assert.equal(WINDOW_FULL_RATIO, 0.95);
+
+  // 1.23 过线 → 必须写
+  const hot = timeoutError([], Date.now(), Date.now(), { compactions: 4, contextWindow: 128000, inputTokens: 157986 });
+  assert.equal(hot.detail.windowFull, true, "失败路径也必须留下窗口占用");
+  assert.equal(hot.detail.inputTokens, 157986);
+  assert.equal(hot.detail.contextWindow, 128000);
+
+  // 0.20 未过线 → 不写（不制造噪声）
+  const cool = timeoutError([], Date.now(), Date.now(), { compactions: 4, contextWindow: 128000, inputTokens: 25000 });
+  assert.equal(cool.detail.windowFull, undefined);
+
+  // 缺窗口或缺输入 → 不写（未知不是零）
+  assert.equal(timeoutError([], Date.now(), Date.now(), { compactions: 4, inputTokens: 999999 }).detail.windowFull, undefined);
+  assert.equal(isWindowFull(null, 999999), false);
+  assert.equal(isWindowFull(128000, null), false);
+});

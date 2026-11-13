@@ -565,8 +565,24 @@ export function createRoomRouter({
         basis: decision?.basis ?? "manual",
       },
     });
+    // The words to deliver are the ones being confirmed — not the operator's
+    // note about confirming them. `triggerSeq` names the original human row, so
+    // the seat answers the question that was asked; the reason stays in the
+    // route_reassigned event above as the audit trail. Before this, a
+    // needs_confirmation row whose speaker was finally confirmed sent
+    // 「由房间所有者手动改派」 as the latest message, and the agent answered a
+    // note about the reassignment instead of the utterance.
+    const seqNum = Number(triggerSeq);
+    const trigger = Number.isInteger(seqNum) && seqNum > 0 ? store.messageAt(room.id, seqNum) : null;
+    const utterance = String(trigger?.content ?? "").trim();
     for (const target of seats) {
-      await runTurn({ room: fresh, target, sender: { ref: by ?? "router" }, message: { content: reason }, mode: "direct" });
+      await runTurn({
+        room: fresh,
+        target,
+        sender: { ref: by ?? "router" },
+        message: utterance ? { seq: trigger.seq, content: utterance } : { content: reason },
+        mode: "direct",
+      });
     }
     return { ok: true, count: seats.length };
   }

@@ -30,6 +30,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { FLEET_IDENTITY_ARG } from "./fleet-mcp-hints.js";
 
 const SERVICE_VERSION = "1.0.0";
 
@@ -93,7 +94,24 @@ export function createMcpSatelliteHost({ satellites = [], host = "127.0.0.1", po
   // One local MCP server per request, whose handlers forward to the named
   // satellite. Stateless: nothing survives the response, so a satellite restart
   // needs no session bookkeeping (the caller's next request re-lists tools).
-  function buildEndpoint(name) {
+  // Per-request caller identity (fix-report-attribution-concurrency 2.1，2026-11-12
+  // 生产修正)：共用卫星读不到调用方的 env——它一个 cell 只有一份，被所有 runtime
+  // 共用。而报数归属需要的岗位坐标是**逐 runtime** 的（服务端写进该成员的私有
+  // patch），所以它随 patch 的 headers 进来，在这里按请求读出来，作为保留参数
+  // 交给卫星。
+  //
+  // 保留键的权威来源只有 header：调用方在 arguments 里自带的同名键一律先删掉再
+  // 写入（否则模型可以自己填一个别人的 memberId——那正是这条协议要防的伪造）。
+  // 没有这三个 header 的请求不注入，卫星回落到自己的 env / 不自报。
+  function fleetIdentityFromHeaders(headers = {}) {
+    const fleetId = headers["x-fleet-fleet-id"];
+    const memberId = headers["x-fleet-member-id"];
+    if (!fleetId || !memberId) return null;
+    const persona = headers["x-fleet-persona"];
+    return { fleetId: String(fleetId), memberId: String(memberId), ...(persona ? { persona: String(persona) } : {}) };
+  }
+
+  function buildEndpoint(name, fleetIdentity = null) {
     const server = new Server({ name, version: SERVICE_VERSION }, { capabilities: { tools: {} } });
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       const client = clients.get(name);
@@ -104,9 +122,12 @@ export function createMcpSatelliteHost({ satellites = [], host = "127.0.0.1", po
       const client = clients.get(name);
       if (!client) throw new McpError(ErrorCode.InternalError, `satellite "${name}" is not running`);
       calls += 1;
+      // 先剥掉调用方自带的保留键，再按 header 写回：模型改不了归属坐标。
+      const { [FLEET_IDENTITY_ARG]: _forged, ...args } = request.params.arguments ?? {};
+      const forwarded = fleetIdentity ? { ...args, [FLEET_IDENTITY_ARG]: fleetIdentity } : args;
       try {
         return await client.callTool(
-          { name: request.params.name, arguments: request.params.arguments },
+          { name: request.params.name, arguments: forwarded },
           undefined,
           { signal: extra.signal, timeout: 600000, resetTimeoutOnProgress: true },
         );
@@ -163,7 +184,7 @@ export function createMcpSatelliteHost({ satellites = [], host = "127.0.0.1", po
         return;
       }
     }
-    const server = buildEndpoint(name);
+    const server = buildEndpoint(name, fleetIdentityFromHeaders(req.headers));
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on("close", () => {
       transport.close().catch(() => {});

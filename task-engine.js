@@ -14,6 +14,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { storeDir } from "./paths.js";
+import cronParser from "cron-parser";
 import { atomicWriteJson, readJsonOr, createWriteChain } from "./lib/persistence.js";
 
 const TASK_STORAGE_DIR = storeDir("cron-store", process.env.CRON_STORAGE_PATH);
@@ -159,6 +160,17 @@ function nextCronSessionId(taskId) {
 // overlapping saves are queued (no lost update) and each write goes through a
 // unique temp file (no interleaved-write corruption).
 const writeChain = createWriteChain();
+/**
+ * Resolves once every task write queued SO FAR has landed. It does NOT queue a
+ * write of its own — that distinction is the point: a test can wait for the
+ * producer's persistence instead of racing it, and still fails if the producer
+ * never issued a save. (Replaces a 10s poll a loaded 2-core runner blew through,
+ * 2026-11-13.)
+ */
+function whenTasksPersisted() {
+  return writeChain.whenDrained();
+}
+
 function saveTasks() {
   return writeChain.mutate(async () => {
     // Serialize only the task data (excluding the live node-schedule handle).
@@ -240,6 +252,11 @@ function saveTasks() {
       projectId: t.projectId ?? null,
       aggregated: t.aggregated ?? false,
       paused: t.paused,
+      // Pause SOURCE (fix-fleet-operator-pause-durability): "operator" vs
+      // "fleet". Persisted for the same reason as lastMissedCountedUntil — the
+      // fleet converge pass judges on it, so an unpersisted value would let a
+      // restart turn an owner's stop back into "the fleet's to undo".
+      pausedBy: t.pausedBy ?? null,
       createdAt: t.createdAt,
       lastRun: t.lastRun,
       nextRun: t.nextRun,
@@ -304,6 +321,16 @@ function loadTasks() {
     } else if (t.state === "running") {
       t.state = "interrupted";
       t.error = "cell restarted during execution";
+      dirty = true;
+    }
+    if (t.pausedBy === undefined) {
+      // Legacy record (fix-fleet-operator-pause-durability): the field arrived
+      // with the operator/fleet split. Interpreting a missing value as "fleet"
+      // keeps pre-upgrade behaviour — a record paused before the split stays
+      // resumable by the converge pass, whereas defaulting to "operator" would
+      // silently freeze a whole class of parked posts. Only a paused record
+      // needs the marker; a running one carries null.
+      t.pausedBy = t.paused ? "fleet" : null;
       dirty = true;
     }
     if (t.state === "queued") {
@@ -545,6 +572,10 @@ function clientShape(t) {
     // the 默认项目 bucket. Read surfaces filter on it; the engine does not.
     projectId: t.projectId ?? null,
     paused: t.paused,
+    // Pause source rides the client shape too (fix-fleet-operator-pause-durability):
+    // the fleet reconcile reads jobs through this projection, so without it the
+    // "operator" marker would be invisible exactly where it is judged.
+    pausedBy: t.pausedBy ?? null,
     createdAt: t.createdAt,
     lastRun: t.lastRun,
     nextRun: t.nextRun,
@@ -1054,17 +1085,41 @@ function queueMaxAgeMs() {
 const INTERVAL_UNIT_MS = { minute: 60_000, hour: 3_600_000, day: 86_400_000, week: 604_800_000 };
 
 // The task's cadence period in ms, or null when it cannot be established.
-// Cron-expression tasks return null on purpose: task-engine has no cron parser,
-// and guessing would silently widen the policy on wrong data (see design D2 —
-// unknown keeps the existing behaviour rather than disabling the bound).
+//
+// Cron form is resolved through the same parser the scheduler itself uses
+// (cron-parser, the one cron.js fires with) instead of being declared
+// unknowable. The earlier "task-engine has no cron parser, so return null"
+// position was self-defeating: every fleet post's cadence IS a cron
+// expression, so the exemption above never applied to the rounds it was
+// written for. Measured 2026-11-13: a DAILY brief (`30 8 * * *`) was dropped
+// twice as "waited 10min > 10min", losing that day's round with no failure
+// recorded — `skipped` neither retries nor counts as missed.
+//
+// Unparseable or absent schedules still return null: unknown keeps the old
+// bound rather than widening the policy on bad data (design D2).
+function cronFormPeriodMs(t) {
+  const expr = t?.cron;
+  if (!expr || typeof expr !== "string") return null;
+  try {
+    const iter = cronParser.parseExpression(expr, { tz: t.tz || undefined });
+    const a = iter.next().toDate().getTime();
+    const b = iter.next().toDate().getTime();
+    const ms = b - a;
+    return Number.isFinite(ms) && ms > 0 ? ms : null;
+  } catch {
+    return null;
+  }
+}
+
 function schedulePeriodMs(t) {
   const interval = t?.interval;
-  if (!interval || typeof interval !== "object") return null;
-  const step = INTERVAL_UNIT_MS[interval.unit];
-  if (!Number.isFinite(step)) return null;
-  const n = Number(interval.number);
-  if (!Number.isFinite(n) || n < 1) return null;
-  return n * step;
+  if (interval && typeof interval === "object") {
+    const step = INTERVAL_UNIT_MS[interval.unit];
+    const n = Number(interval.number);
+    if (Number.isFinite(step) && Number.isFinite(n) && n >= 1) return n * step;
+    return null; // a malformed interval is bad data, not a licence to guess
+  }
+  return cronFormPeriodMs(t);
 }
 
 // Below this period a dropped round is cheap: the next occurrence is at most
@@ -1504,7 +1559,17 @@ async function runExecutionTurn(t, turnFn) {
   // inheriting the near-window context. Rotation is per fire and sticky — the
   // new id is what the runner reads (`job.sessionId || cron-<id>`).
   const overflowAsked = t.rotateNextSession === true;
-  if (t.trigger === "schedule" && (overflowAsked || shouldRotateSession(t.history))) {
+  // Rotate after a failed round too (ledger E35, live 2026-11-10). The
+  // threshold below reads TOKEN USAGE — and a round that died on an upstream
+  // 502/503 records no tokens at all, so `shouldRotateSession` never fires and
+  // the task keeps re-using the SAME rotated id forever. Once the child that
+  // owned that id is gone (bridge rebuild), every later round opens with
+  // `502 upstream_error` at revision 3 / index 1 — measured: the job's
+  // `sessionId` still carried `--r1794250091371` from 11:41 while rounds ran at
+  // 12:19. A failed round leaves nothing worth resuming, so start clean.
+  const lastOutcome = Array.isArray(t.history) ? t.history[t.history.length - 1] : null;
+  const lastFailed = Boolean(lastOutcome) && lastOutcome.success !== true;
+  if (t.trigger === "schedule" && (overflowAsked || lastFailed || shouldRotateSession(t.history))) {
     const previous = t.sessionId ?? null;
     t.sessionId = nextCronSessionId(t.id);
     t.sessionRotatedAt = Date.now();
@@ -1942,9 +2007,25 @@ function queueHealth({ now = Date.now(), budgetOf = null, graceMs = null } = {})
   // 2026-11-09: exactly that for ~20 minutes, with `fairness` pending = 0.
   const onChain = new Set(pendingExecutions.map((e) => e.id));
   if (inFlightExecutionId) onChain.add(inFlightExecutionId);
+  // 池已认领的也算在链上（fix-delegated-round-admission）：执行池把任务收进自己的
+  // `waiting` 并让 dispatcher 返回 true，但这里的 onChain 只认串行链的两处来源，
+  // 看不见池的等待队列；而周期清扫又按 `claims()` 跳过它们、不会自愈。后果不是
+  // "少算一条"，是**长期假降级**：cell 在正常干活，`orphaned` 恒 > 0、`degraded`
+  // 恒真、`/api/ready` 长期 503（2026-11-12 cell 1da519d4c1c0bf89 实测 11 条）。
+  // 判据必须与派发方共用一套认领语义（同 sweepStaleQueuedFires 的那条注释）。
+  // 派发器缺失或抛错时按"未认领"处理——探针可以保守报孤悬，不能反过来把真孤悬洗白。
+  const claimedByPool = (id) => {
+    const fn = slotDispatcherFn?.claims;
+    if (typeof fn !== "function") return false;
+    try {
+      return fn(id) === true;
+    } catch {
+      return false;
+    }
+  };
   const suspects = new Set();
   for (const t of tasks.values()) {
-    if (t.state === "queued" && !onChain.has(t.id)) suspects.add(t.id);
+    if (t.state === "queued" && !onChain.has(t.id) && !claimedByPool(t.id)) suspects.add(t.id);
   }
   const orphanIds = [...suspects].filter((id) => orphanCandidates.has(id));
   const orphaned = orphanIds.length;
@@ -1994,6 +2075,7 @@ export {
   isTransientFailure,
   loadTasks,
   saveTasks,
+  whenTasksPersisted,
   getRecord,
   allRecords,
   insertTask,

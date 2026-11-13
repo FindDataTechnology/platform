@@ -24,6 +24,7 @@ import { CiyuanAccountConnectPanel } from "@/components/extensions/CiyuanAccount
 import { ChatwootConnectPanel } from "@/components/extensions/ChatwootConnectPanel";
 import { SearchServiceCard } from "./SearchServiceCard";
 import { ConnectorBindingsView } from "./ConnectorBindingsView";
+import { CredentialDoors } from "./CredentialDoors";
 
 const GLOSSARY_BRANDS = ["ciyuan", "facet", "connector", "wire", "lex"] as const;
 
@@ -146,6 +147,13 @@ export function ConnectionsSection() {
           ))}
         </dl>
       </details>
+
+      {/* 按门总览（converge-line-identity-and-keys 4.2）：这里回答"一共要几把钥、
+          现在缺哪把"，下面的旧卡片回答"这个品牌连上了没有"。两侧都留到 4.4——
+          本区块只读状态 + 深链回旧卡片，没有重复任何铸造/存储/断开流程。 */}
+      <div className="mb-4">
+        <CredentialDoors />
+      </div>
 
       {/* The binding ledger comes FIRST and always renders (binding-first,
           add-connector-bindings 6.2): "which of my installed packs still needs

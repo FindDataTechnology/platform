@@ -1274,7 +1274,67 @@
         "summaryUnmapped": "{{count}} waiting for your choice",
         "browseCatalog": "Browse the app directory"
       },
-      "filterPlaceholder": "Filter connections…"
+      "filterPlaceholder": "Filter connections…",
+      "doors": {
+        "title": "What these keys cost you",
+        "lead": "grouped by door, not by brand",
+        "goConnect": "Connect",
+        "refresh": "Refresh",
+        "missingCount": "{missing} of {count} missing",
+        "allReady": "all {count} ready",
+        "footnote": "One customer key serves many lines; third-party credentials stay theirs. Unchanged cards below keep their own flows until they are retired.",
+        "loadFailed": "Could not read credential state: {detail}",
+        "ownTrack": "line's own credential: {track}",
+        "noOwnTrack": "no fallback of its own",
+        "state": {
+          "connected": "connected",
+          "missing": "not connected",
+          "unknown": "unreadable",
+          "stale": "expired"
+        },
+        "customerKey": {
+          "title": "Customer key",
+          "subtitle": "One 词元 key, billed to the customer, shared by every line that consumes it."
+        },
+        "memberAssertion": {
+          "title": "Member delegation",
+          "subtitle": "The platform acts as you on that line with a short-lived signed assertion — it never holds your login.",
+          "offSubtitle": "Off by default: no line accepts platform delegation yet. Lines keep using their own credential.",
+          "empty": "No line declares delegation yet."
+        },
+        "thirdParty": {
+          "title": "Third-party credentials",
+          "subtitle": "Other systems' own credentials — market login, connectors, Chatwoot, search. They are not ours to merge."
+        },
+        "refName": {
+          "ciyuan-account": "词元 account",
+          "registry": "Tool market login",
+          "facet-market": "Market device pairing",
+          "connector": "Connector account",
+          "connector-bindings": "Connector bindings",
+          "chatwoot": "Chatwoot tenant",
+          "search": "Web search",
+          "paper-trading": "Paper trading",
+          "line-wire-customer": "柏讯 line credential",
+          "line-lex": "识律 line credential"
+        },
+        "refPurpose": {
+          "ciyuan-account": "models and 萬星 operations tools",
+          "registry": "install market tools",
+          "facet-market": "enable 谦面 market MCP",
+          "connector": "hosted SaaS credentials",
+          "connector-bindings": "per-installed-pack supply",
+          "chatwoot": "your own tenant",
+          "search": "personal search key",
+          "paper-trading": "unlock paper-trading tools",
+          "line-wire-customer": "柏讯 line actions",
+          "line-lex": "识律 line actions"
+        },
+        "lineName": {
+          "lex": "识律",
+          "wire-customer": "柏讯"
+        }
+      }
     },
     "lines": {
       "title": "Line operations",
@@ -1777,7 +1837,7 @@
     },
     "account": {
       "menuLabel": "Account",
-      "mine": "My packs",
+      "mine": "My publications",
       "curate": "Content ops"
     },
     "langLabel": "Language",
@@ -1884,7 +1944,7 @@
       "routesTitle": "Three authoring routes",
       "route1": "In 壹座: Settings → Agents → New agent — compose skills, MCP references, and personas as a draft.",
       "route2": "One-click conversion: turn a custom preset into an agent draft (Settings → Custom presets → Publish), with a report of what was carried and what needs replacing.",
-      "route3": "From My packs (#/mine): submit an agent manifest directly to the publish endpoint; validation errors surface verbatim.",
+      "route3": "From My publications (#/mine): submit an agent manifest directly to the publish endpoint; validation errors surface verbatim.",
       "disciplineTitle": "Publishing discipline",
       "versions": "Every publish appends an immutable version; each version may carry a short note (≤500 characters).",
       "subscribe": "Subscribe and install are two acts: a subscription is recorded in the market; installing takes a definite version snapshot.",
@@ -2743,6 +2803,29 @@
     "cancelled": "Question cancelled",
     "customAnswer": "Custom answer"
   },
+  "inputRequest": {
+    "title": "Input needed",
+    "waitingHint": "The conversation continues after you submit",
+    "submit": "Submit",
+    "cancel": "Cancel request",
+    "answered": "Submitted",
+    "cancelled": "Cancelled",
+    "expired": "Expired (no answer)",
+    "escalated": "Escalated for review",
+    "expiresIn": "{{minutes}} min left",
+    "fillRequired": "Please fill in: {{fields}}",
+    "filePlaceholder": "Resource reference or link",
+    "yes": "Yes",
+    "no": "No",
+    "pending": "Waiting for your input (answer from the requests list)"
+  },
+  "inputInbox": {
+    "title": "Forms to fill",
+    "count": "{{count}}",
+    "empty": "Nothing waiting",
+    "refresh": "Refresh",
+    "error": "Failed to load: {{message}}"
+  },
   "auth": {
     "login": "Sign in",
     "logout": "Sign out"
@@ -3143,6 +3226,23 @@
     }
   },
   "fleets": {
+    "credentialPack": {
+      "title": "Credentials",
+      "needFills": "{{count}} to fill",
+      "ready": "All set",
+      "connect": "Connect",
+      "doorCustomerKey": "Door K · customer key",
+      "doorMemberAssertion": "Door A · acts as you",
+      "doorThirdParty": "Third-party",
+      "doorUnclassified": "Unclassified",
+      "reasonFallback": "Needs connecting first",
+      "unknown": "{{count}} service(s) not found in the registry — cannot judge",
+      "noCredential": "{{count}} service(s) need no credential",
+      "missingPacks": "{{count}} pack(s) no longer installed here",
+      "unreadable": "Unreadable",
+      "loadFailed": "Could not read the credential plan: {{message}}",
+      "loading": "Working out how many credentials this team needs…"
+    },
     "title": "Agent Teams",
     "create": "Create team",
     "empty": "No agent teams yet — create your first one",
@@ -3589,7 +3689,7 @@
     "saving": "Saving…"
   },
   "facetMine": {
-    "title": "My packs",
+    "title": "My publications",
     "subtitle": "Manage what you publish here: versions, listing, and visibility. Installing into a runtime stays a 壹座 surface (Settings → Agents → Mine). Public agents with a serving contract flow into the 萬星 catalog — external deployers run them with metered turns, and your share accrues automatically.",
     "loading": "Loading your agents…",
     "empty": "Nothing published yet — use the publish box below.",
@@ -4241,7 +4341,7 @@
     "market": {
       "subtitle": "Acquire and manage capability: agents, tools, skills, plugins",
       "openStudio": "Open Creator studio",
-      "installed": "Installed packs on this machine"
+      "installed": "Installed agents on this machine"
     }
   },
   "hub": {
@@ -4312,30 +4412,8 @@
     },
     "agents": {
       "unavailableTitle": "This deployment has no agent marketplace",
-      "unavailableBody": "No market is wired up here. Packs you already installed are still under Mine, and they work as before."
+      "unavailableBody": "No market is wired up here. Agents you already installed are still under Mine, and they work as before."
     }
-  },
-  "inputInbox": {
-    "title": "Forms to fill",
-    "count": "{{count}}",
-    "empty": "Nothing waiting",
-    "refresh": "Refresh",
-    "error": "Failed to load: {{message}}"
-  },
-  "inputRequest": {
-    "title": "Input needed",
-    "waitingHint": "The conversation continues after you submit",
-    "submit": "Submit",
-    "cancel": "Cancel request",
-    "answered": "Submitted",
-    "cancelled": "Cancelled",
-    "expired": "Expired (no answer)",
-    "escalated": "Escalated for review",
-    "expiresIn": "{{minutes}} min left",
-    "fillRequired": "Please fill in: {{fields}}",
-    "filePlaceholder": "Resource reference or link",
-    "yes": "Yes",
-    "no": "No"
   },
   "teamDirectory": {
     "title": "Team directory",

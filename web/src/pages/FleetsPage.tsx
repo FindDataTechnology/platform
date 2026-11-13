@@ -27,6 +27,7 @@ import { TeamsManagementView } from "@/components/fleet/TeamsManagementView";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { OwnerBoardStrip } from "@/components/fleet/OwnerBoardStrip";
+import { FleetCredentialPack } from "@/components/fleet/FleetCredentialPack";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1122,6 +1123,11 @@ export function FleetsPage() {
                           </Button>
                         )}
                       </div>
+                      {/* 舰队级凭据包（converge-line-identity-and-keys 4.1）：
+                          这个团队还要属主填几次凭据、填在哪。没有可答的问题时
+                          组件自己不渲染（空团队 / 已齐且无异常），所以这里不加
+                          条件——判据在组件里，别两处各说一套。 */}
+                      <FleetCredentialPack fleetId={detail.fleet.id} />
                       {/* Fleet config bar (fleet-config-overview): read-only
                           aggregate above the canvas — model/effort/budget
                           histograms + 24h edge traffic heatmap, all deriving

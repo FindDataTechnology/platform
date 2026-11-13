@@ -6,6 +6,7 @@ import { usePreviewStore } from "@/hooks/usePreviewStore";
 import { CronToolCard } from "@/components/CronToolCard";
 import { TaskCard } from "@/components/TaskCard";
 import { QuestionCard } from "@/components/QuestionCard";
+import { InputRequestCard } from "@/components/InputRequestCard";
 import { ActionCard } from "@/components/ActionCard";
 import { ConnectCta } from "@/components/ConnectCta";
 import { baseName, fileUrl, producedFilePaths, resolveRef } from "@/lib/file-preview";
@@ -123,6 +124,13 @@ function ToolBlockBase({ block, onToggle }: Props) {
   // The store mutates tool blocks in place, so the memoized card would never
   // see the landed result through the same object: hand it this render's
   // values, and the card re-renders exactly when its block does.
+  // 结构化输入请求（add-input-request-cards）：待答时是交互卡，落终态后是
+  // 只读摘要。与 propose_action 同为 suffix match（线上名是
+  // `mcp__input-request__request_input`）。
+  if (name.endsWith("__request_input")) {
+    return <InputRequestCard block={block} />;
+  }
+
   if (name.endsWith("__propose_action")) {
     return <ActionCard block={{ name, args, state, result }} />;
   }

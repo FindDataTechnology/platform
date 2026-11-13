@@ -103,7 +103,12 @@ export async function syncPackMemoryPolicy({
   try {
     const token = await podTokenFor(cfg, rootKey, fetchImpl);
     const u = new URL(`${cfg.url}/policy`);
-    u.searchParams.set("rootKey", rootKey);
+    // ★ 不要设 `rootKey`（2026-11-13 线上实测）。内存服务把「指名 root」保留给
+    // platform/runner 缝：pod 令牌带 rootKey 会被直接拒（`400 rootKey_is_platform_seam_only`），
+    // 而本函数是 degrade-open，于是这个 400 只变成一行 warn——**声明从来没写进去过**。
+    // 实测对照（临时根 d-zz-smoke-land）：带 rootKey → 400；不带 → 200 且 declared 落库。
+    // 令牌是按 `d/<pack>` 铸的，服务端自己从命名空间推 root；去掉参数反而更窄
+    // （这份凭据只能写它被铸出来的那个 root），这正是本路径不走平台令牌的理由。
     u.searchParams.set("scope", "root");
     const res = await fetchImpl(u, {
       method: "PUT",

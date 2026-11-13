@@ -377,7 +377,7 @@ function tokenMatches(expected, received) {
 // injected into the runner's env by the supervisor descriptor. Empty on a
 // deployment without a desktop bootstrap (dev/containers) → the feed stays
 // OPEN on LOOPBACK ONLY, exactly like the pre-change desktop dev posture.
-export function createLocalAgentFeed({ env = process.env, runnerId = null, seatTag = true } = {}) {
+export function createLocalAgentFeed({ env = process.env, runnerId = null, seatTag = true, ownerEmail = null } = {}) {
   const router = express.Router();
   // The bearer comes from the SETTINGS the cell was given. On a packaged
   // desktop that is settings.json (electron/config/settings.js injects it
@@ -419,6 +419,10 @@ export function createLocalAgentFeed({ env = process.env, runnerId = null, seatT
         agents: page,
         total_count: agents.length,
         has_next: offset + page.length < agents.length,
+        // 这个 feed 属于哪个 cell 的主人（fix-disclosure-gate-reachability D2 修订）。
+        // 是本 cell 自己的事实（部署行按 cell 存），不是配置项——所以由数据报出，
+        // 而不是让 runner 用 env 猜、也不是让网关跨服务去查 packs。
+        owner: ownerEmail ? String(ownerEmail).trim().toLowerCase() : null,
       });
     } catch (e) {
       res.status(500).json({ error: e?.message || "local feed failure" });
