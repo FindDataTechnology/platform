@@ -248,10 +248,10 @@ function TaskCard({
                 const outcome = h.state ?? (h.success === true ? "done" : h.success === false ? "failed" : "missed");
                 const tone =
                   outcome === "done"
-                    ? "text-emerald-600"
+                    ? "text-success"
                     : outcome === "failed"
                       ? "text-destructive"
-                      : "text-amber-600";
+                      : "text-warning";
                 return (
                   <li
                     key={`${h.time}-${h.duration ?? 0}-${outcome}`}
@@ -262,7 +262,7 @@ function TaskCard({
                     <span>{formatInJobTz(h.time, job.tz, locale)}</span>
                     {typeof h.duration === "number" ? <span>{(h.duration / 1000).toFixed(1)}s</span> : null}
                     {h.tokens?.total != null ? <span>{h.tokens.total} tok</span> : null}
-                    {h.catchUp ? <span className="rounded-sm bg-amber-500/15 px-1 text-amber-700">补跑</span> : null}
+                    {h.catchUp ? <span className="rounded-sm bg-warning/15 px-1 text-warning">补跑</span> : null}
                     {h.missed ? <span>{t("tasks.history.missed", { count: h.missed })}</span> : null}
                     {h.error ? <span className="truncate text-destructive">{h.error}</span> : null}
                   </li>

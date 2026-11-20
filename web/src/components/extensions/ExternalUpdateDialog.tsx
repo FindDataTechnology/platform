@@ -21,9 +21,9 @@ const LicenseChip = ({ state }: { state: ExternalUpdatePreview["licenseState"] }
   const { t } = useTranslation();
   const cls =
     state === "declared"
-      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      ? "bg-success/10 text-success"
       : state === "not-declared"
-        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+        ? "bg-warning/10 text-warning"
         : "bg-muted text-muted-foreground";
   return (
     <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs ${cls}`}>
@@ -39,8 +39,8 @@ function fmtBytes(n: number) {
 }
 
 const STATUS_CLS: Record<string, string> = {
-  added: "text-emerald-600 dark:text-emerald-400",
-  changed: "text-amber-600 dark:text-amber-400",
+  added: "text-success",
+  changed: "text-warning",
   removed: "text-destructive",
   unchanged: "text-muted-foreground",
 };
@@ -126,7 +126,7 @@ export function ExternalUpdateDialog({
           <div className="space-y-4 text-sm">
             <div className="flex flex-wrap items-center gap-2">
               <LicenseChip state={preview.licenseState} />
-              <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+              <span className="inline-flex items-center rounded bg-warning/10 px-1.5 py-0.5 text-xs text-warning">
                 {t("extensions.external.notReviewed")}
               </span>
               <span className="text-xs text-muted-foreground" data-testid="update-version-line">
@@ -183,7 +183,7 @@ export function ExternalUpdateDialog({
             )}
 
             {needsAck && preview.diff.changed && (
-              <label className="flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+              <label className="flex items-start gap-2 rounded-md bg-warning/10 p-2 text-xs text-warning">
                 <input
                   type="checkbox"
                   checked={acknowledged}
@@ -209,7 +209,7 @@ export function ExternalUpdateDialog({
         {!loading && result && (
           <div className="space-y-3 text-sm">
             <div
-              className={`rounded-md px-3 py-2 ${result.ok ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}
+              className={`rounded-md px-3 py-2 ${result.ok ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
               data-testid={result.ok ? "update-success" : "update-failure"}
             >
               {result.message}

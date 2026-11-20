@@ -1798,7 +1798,7 @@
     "loading": "Loading resources…",
     "loadMore": "Load more",
     "error": "Could not load the library: {{message}}",
-    "empty": "Ask the agent for a chart or a document and the result lands here; saving from a chat works too.",
+    "empty": "No artifacts yet",
     "emptyFiltered": "No resources match this filter.",
     "chartUnrenderable": "This chart could not be rendered.",
     "kind": {
@@ -1871,7 +1871,9 @@
         "unpinCanonical": "Unpin",
         "editTags": "Edit tags"
       }
-    }
+    },
+    "emptyAction": "Open chat",
+    "emptyTitle": "No artifacts yet"
   },
   "facetShell": {
     "entries": {
@@ -3555,7 +3557,8 @@
         "open": "Running",
         "ok": "Succeeded",
         "failed": "Failed",
-        "partial": "Partial"
+        "partial": "Partial",
+        "interrupted": "Interrupted"
       },
       "source": {
         "cron": "Schedule",

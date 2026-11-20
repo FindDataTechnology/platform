@@ -25,6 +25,18 @@
 //   prints a "tighten" hint. This is the same posture as the xingyan
 //   ai_readable_check ratchet: block new debt, reward paying old debt down.
 //
+// Accounted exceptions (do NOT "fix" these by excluding the file):
+//   web/src/components/bots/BotPlatformIcons.tsx — hex-color. These are
+//     third-party BRAND colors (Telegram blue, Feishu cyan, WeChat green,
+//     Slack aubergine, Mattermost indigo…), not UI state colors. A brand mark
+//     does not change with the theme and does not mean a runtime state, so it
+//     must not become a design token. The file stays scanned; the count is
+//     recorded so a stowaway *extra* hex still trips the gate.
+//   web/src/components/{EChart,FleetGraph,FleetConfigBar,PreviewDrawer,
+//     RunTimeline}.tsx — hex-color. Chart/canvas/SVG surfaces take resolved
+//     colors, not classes; migrating them onto cssVar() is tracked separately
+//     and the counts only move down.
+//
 // Usage:
 //   node scripts/design-lint.mjs                 full tree vs baseline
 //   node scripts/design-lint.mjs --changed       only git-diff files (HEAD+staged+untracked)

@@ -337,6 +337,15 @@ jobs:
       - name: Typecheck (web)
         run: npm run typecheck
 
+      # Color/primitive discipline, changed-set mode: a file touched by this
+      # push may not carry MORE literal-color debt than its baseline entry.
+      # This used to run nowhere — the script existed and the spec claimed it
+      # was in the unit chain, but no workflow, hook, or npm script called it,
+      # so 144 Tailwind palette shades accumulated unopposed. Full-tree mode
+      # stays in the unit chain as the backstop (unify-workbench-ui 6.2).
+      - name: Design discipline (changed set)
+        run: npm run design:lint:changed
+
       # The dsh bootstrap that used to sit here moved to the `e2e` matrix: it
       # exists only because the e2e server spawns the dsh runtime child
       # (dsh-bridge.js COMMAND), and nothing else in this job touches it. Its

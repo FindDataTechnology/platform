@@ -1871,7 +1871,9 @@
         "unpinCanonical": "取消正典",
         "editTags": "改 tags"
       }
-    }
+    },
+    "emptyAction": "去对话",
+    "emptyTitle": "还没有成果"
   },
   "facetShell": {
     "entries": {
@@ -3555,7 +3557,8 @@
         "open": "进行中",
         "ok": "成功",
         "failed": "失败",
-        "partial": "部分失败"
+        "partial": "部分失败",
+        "interrupted": "已中断"
       },
       "source": {
         "cron": "定时运行",

@@ -144,7 +144,7 @@ export function FleetTemplateWizard({ pack, onCancel, onDone }: {
             <div key={p.name} className="grid grid-cols-[8rem_1fr] items-center gap-2">
               <label className="text-xs text-muted-foreground" data-testid={`fleet-wizard-label-${p.name}`}>
                 {p.label ?? p.name}
-                {p.required && p.default === undefined && <span className="text-amber-600"> *</span>}
+                {p.required && p.default === undefined && <span className="text-warning"> *</span>}
               </label>
               {p.type === "boolean" ? (
                 <input

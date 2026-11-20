@@ -305,7 +305,7 @@ export function SessionToPresetDialog({ sessionId, agentPreset, onOpenChange }: 
               </div>
             )}
             {error ? (
-              <p className="text-sm text-red-600" data-testid="session-solution-error">
+              <p className="text-sm text-destructive" data-testid="session-solution-error">
                 {error}
               </p>
             ) : null}

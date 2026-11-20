@@ -344,9 +344,9 @@ export function ClusterComposerModal({ open, onOpenChange, onSuccess }: Props) {
               {creationStatus.agents.map((a) => (
                 <div key={a.agentId} className="flex items-center gap-2">
                   <span className={`w-1.5 h-1.5 rounded-full ${
-                    a.status === "active" ? "bg-green-500" : 
-                    a.status === "installing" ? "bg-yellow-500 animate-pulse" :
-                    "bg-gray-500"
+                    a.status === "active" ? "bg-success" : 
+                    a.status === "installing" ? "bg-warning animate-pulse" :
+                    "bg-muted-foreground"
                   }`}></span>
                   <span>{a.agentId}: {a.status}</span>
                 </div>

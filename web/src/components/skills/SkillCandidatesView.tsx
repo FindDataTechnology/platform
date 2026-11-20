@@ -89,7 +89,7 @@ export function SkillCandidatesView() {
               </span>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${
-                  c.status === "evaluated" ? "bg-primary/15 text-primary" : c.status === "rejected" || c.status === "promoted" ? "bg-muted text-muted-foreground" : "bg-amber-500/15 text-amber-600"
+                  c.status === "evaluated" ? "bg-primary/15 text-primary" : c.status === "rejected" || c.status === "promoted" ? "bg-muted text-muted-foreground" : "bg-warning/15 text-warning"
                 }`}
                 data-testid={`skill-candidate-status-${c.id}`}
               >

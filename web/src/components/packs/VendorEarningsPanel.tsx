@@ -85,7 +85,7 @@ export function VendorEarningsPanel() {
           <ul className="space-y-1 text-xs">
             {mine.map((p) => (
               <li key={p.id} className="flex gap-2 items-baseline" data-testid={`my-purchase-${p.id}`}>
-                <span className={p.direction === "refund" ? "text-amber-600" : "text-foreground"}>
+                <span className={p.direction === "refund" ? "text-warning" : "text-foreground"}>
                   {p.direction === "refund" ? "−" : "+"}
                   {money(p.priceUsd)}
                 </span>
@@ -93,7 +93,7 @@ export function VendorEarningsPanel() {
                   {p.kind === "period" ? t("packs.earnings.periodKind", { days: p.periodDays }) : t("packs.earnings.onceKind")}
                 </span>
                 <span
-                  className={`ml-auto font-mono text-[10px] ${p.status === "settled" ? "text-primary" : "text-amber-600"}`}
+                  className={`ml-auto font-mono text-[10px] ${p.status === "settled" ? "text-primary" : "text-warning"}`}
                   data-testid={`my-purchase-status-${p.id}`}
                 >
                   {p.status}

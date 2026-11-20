@@ -158,7 +158,7 @@ export function MiniSpan({
           <div key={tool.callId} className="flex items-center gap-1 text-[10px]" data-testid="mini-span-tool">
             <span
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                tool.status === "failed" ? "bg-destructive" : tool.status === "pending" ? "bg-amber-500 animate-pulse" : "bg-success"
+                tool.status === "failed" ? "bg-destructive" : tool.status === "pending" ? "bg-warning animate-pulse" : "bg-success"
               }`}
             />
             <span className="min-w-0 truncate font-mono text-muted-foreground" title={tool.name}>

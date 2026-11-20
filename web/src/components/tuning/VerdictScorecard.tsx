@@ -66,7 +66,7 @@ interface Payload {
 const OUTCOME_STYLE: Record<string, string> = {
   pass: "bg-primary/15 text-primary",
   fail: "bg-destructive/15 text-destructive",
-  inconclusive: "bg-amber-500/15 text-amber-600",
+  inconclusive: "bg-warning/15 text-warning",
 };
 
 export function VerdictScorecard() {
@@ -160,13 +160,13 @@ export function VerdictScorecard() {
           <span className="text-primary">{t("verdictScorecard.pass")} {data.counts.pass}</span>
           <span className="text-destructive">{t("verdictScorecard.fail")} {data.counts.fail}</span>
           {/* A separate chip on purpose: "could not decide" is not "did not pass". */}
-          <span className="text-amber-600">
+          <span className="text-warning">
             {t("verdictScorecard.inconclusive")} {data.counts.inconclusive}
           </span>
         </div>
       </div>
       {data.provisionalCount ? (
-        <p className="mt-2 text-xs text-amber-600" data-testid="verdict-scorecard-provisional">
+        <p className="mt-2 text-xs text-warning" data-testid="verdict-scorecard-provisional">
           {t("verdictScorecard.provisional", { count: data.provisionalCount })}
         </p>
       ) : null}
@@ -184,7 +184,7 @@ export function VerdictScorecard() {
                     : t(`verdictScorecard.comparison.${s.comparison}`)}
                 </span>
                 {s.provisional ? (
-                  <span className="text-amber-600">{t("verdictScorecard.rowProvisionalShort")}</span>
+                  <span className="text-warning">{t("verdictScorecard.rowProvisionalShort")}</span>
                 ) : null}
               </span>
             </li>
@@ -211,7 +211,7 @@ export function VerdictScorecard() {
               <span className="ml-1 font-mono">{v.ruler_digest.slice(0, 8)}</span>
             </p>
             {v.provisional ? (
-              <p className="mt-1 text-xs text-amber-600">{t("verdictScorecard.rowProvisional")}</p>
+              <p className="mt-1 text-xs text-warning">{t("verdictScorecard.rowProvisional")}</p>
             ) : null}
           </li>
         ))}

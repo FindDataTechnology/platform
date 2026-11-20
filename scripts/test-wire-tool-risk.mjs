@@ -121,12 +121,20 @@ test("A: existing facet/wanxing roster is untouched by the wire additions", () =
   // PRE-EXISTING per-line rosters above did not move. The total is asserted as
   // a lower bound plus the exact per-line sums so a new action is visible here
   // without this line having to be edited on every addition.
-  assert.ok(registry.listActions().length >= 20, "the roster only grows here");
-  assert.equal(
-    registry.listActions({ line: null }).length,
-    registry.listActions().filter((a) => a.line === null).length,
-    "line-less actions (board.read / board.view.*) are counted once, not under a line",
+  // The total only grows here; what must hold is that every action is counted
+  // under exactly one home. `listActions({line})` filters by truthiness, so
+  // `line: null` means "no filter" — the invariant is checked by summing the
+  // per-line rosters plus the line-less ones and comparing to the total.
+  const perLine = ["facet", "wanxing", "wire", "crm", "lex"].reduce(
+    (n, l) => n + registry.listActions({ line: l }).length,
+    0,
   );
+  const lineLess = registry.listActions().filter((a) => a.line == null);
+  for (const a of lineLess) {
+    assert.equal(a.target, "any", `${a.id} declares no line, so it must be target "any"`);
+  }
+  assert.equal(perLine + lineLess.length, registry.listActions().length, "every action has exactly one home");
+  assert.ok(registry.listActions().length >= 20, "the roster only grows here");
 });
 
 test("B: source tool-surface.json tool_risk equals the vendored snapshot (skips without checkouts)", (t) => {

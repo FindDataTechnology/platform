@@ -1798,7 +1798,7 @@
     "loading": "リソースを読み込み中…",
     "loadMore": "さらに読み込む",
     "error": "ライブラリを読み込めませんでした：{{message}}",
-    "empty": "エージェントにグラフや文書を頼むと、ここに自動保存されます。チャットからの保存も可能です。",
+    "empty": "成果はまだありません",
     "emptyFiltered": "この条件に一致するリソースはありません。",
     "chartUnrenderable": "このグラフを描画できませんでした。",
     "kind": {
@@ -1871,7 +1871,9 @@
         "unpinCanonical": "Unpin",
         "editTags": "Edit tags"
       }
-    }
+    },
+    "emptyAction": "チャットを開く",
+    "emptyTitle": "成果はまだありません"
   },
   "facetShell": {
     "entries": {
@@ -3555,7 +3557,8 @@
         "open": "実行中",
         "ok": "成功",
         "failed": "失敗",
-        "partial": "一部失敗"
+        "partial": "一部失敗",
+        "interrupted": "中断"
       },
       "source": {
         "cron": "定時実行",

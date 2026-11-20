@@ -13,6 +13,7 @@ import * as documents from "./documents.js";
 import * as resources from "./resources.js";
 import * as db from "./db.js";
 import * as trace from "./server/trace.js";
+import { resolvePersistedEffort } from "./server/effort-gate.js";
 import { startUsagePruneTimer } from "./server/usage-telemetry.js";
 import { matchPackListing } from "./server/pack-manifest-source.js";
 import * as bots from "./server/bots.js";
@@ -957,10 +958,24 @@ async function initDshAgent() {
     provider = pick.provider;
     model = pick.id;
     if (boundModel) console.log(`[dsh] cell binding: starting on ${provider}/${model}`);
-    // Restore the persisted thinking level, but only if this model still
-    // declares it (writeLlmProfile already projected it into settings.yaml).
-    const savedEffort = ctx.db.getPreference(`llm.effort.${provider}`) || null;
-    ctx.currentEffort = savedEffort && (pick.reasoningEfforts || []).includes(savedEffort) ? savedEffort : null;
+    // Restore the persisted thinking level THROUGH THE GATE, never by reading a
+    // key directly (fix-effort-is-per-model-not-per-provider): the level is a
+    // property of one model, so the key is `llm.effort.<provider>.<model>`; the
+    // legacy provider-wide key is a one-shot migration source that this call
+    // also clears. Reading the route-wide key here is what used to restore
+    // model A's level onto model B — the live "does not support reasoning
+    // effort" failure. `declaredLevels` accepts both catalogue shapes.
+    const restored = resolvePersistedEffort({
+      provider,
+      model,
+      declaredEfforts: pick.reasoningEfforts,
+      get: (k) => ctx.db.getPreference(k),
+      set: (k, v) => ctx.db.setPreference(k, v),
+    });
+    ctx.currentEffort = restored.level;
+    if (restored.migrated) {
+      console.log(`[dsh] thinking level migrated to ${provider}/${model} addressing`);
+    }
   } else {
     console.warn("[dsh] no LLM keys configured; chat non-functional (static + REST still served)");
   }

@@ -164,7 +164,7 @@ function PillarMemorySection({
       <section data-testid={testId}>
         <h4 className="mb-2 font-medium">{t("packs.specSheet.memoryTitle")}</h4>
         <ul className="space-y-1 text-xs text-destructive" data-testid={`${testId}-invalid`}>
-          {(memory.errors ?? []).map((e, i) => <li key={i}>{e}</li>)}
+          {(memory.errors ?? []).map((e) => <li key={e}>{e}</li>)}
         </ul>
       </section>
     );
@@ -180,7 +180,7 @@ function PillarMemorySection({
           return (
             <Fragment key={axis}>
               <dt className="font-mono text-muted-foreground">{axis}</dt>
-              <dd className={cn(differs && "text-amber-600 dark:text-amber-500")}>
+              <dd className={cn(differs && "text-warning")}>
                 {String(row.effective)}
                 {differs && (
                   <span className="ml-1 text-muted-foreground">
@@ -265,8 +265,8 @@ function RosterSection({ team, testId }: { team: SpecTeam; testId: string }) {
       <section data-testid={testId}>
         <h4 className="mb-2 font-medium">{t("packs.specSheet.roster")}</h4>
         <ul className="space-y-1 text-xs text-destructive" data-testid={`${testId}-invalid`}>
-          {(team.errors ?? []).map((e, i) => (
-            <li key={i}>{e}</li>
+          {(team.errors ?? []).map((e) => (
+            <li key={e}>{e}</li>
           ))}
         </ul>
       </section>

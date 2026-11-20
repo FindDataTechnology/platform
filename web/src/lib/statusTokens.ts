@@ -33,3 +33,19 @@ export function asStatusKind(value: string | null | undefined): StatusKind {
   if (v === "waiting" || v === "pending" || v === "queued" || v === "approved_pending" || v === "needs_attention") return "waiting";
   return "neutral";
 }
+
+// SVG stroke/fill and canvas draw contexts cannot take a Tailwind class, so they
+// need the token's computed value. Read it from the document at call time — the
+// token is a light-dark() pair and the browser has already resolved the right
+// half, so this follows the theme for free and never hardcodes a hex.
+// SSR/absent-document falls back to `currentColor` rather than inventing a color.
+export function cssVar(name: string): string {
+  if (typeof document === "undefined") return "currentColor";
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || "currentColor";
+}
+
+export function statusColor(status: string | null | undefined): string {
+  return cssVar(statusToken(status));
+}
+

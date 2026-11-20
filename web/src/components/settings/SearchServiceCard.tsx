@@ -49,7 +49,7 @@ function SourceBadge({ source }: { source: "stored" | "env" | null }) {
 }
 
 const testTone: Record<WebsearchTestResult["state"], string> = {
-  ok: "text-emerald-600",
+  ok: "text-success",
   "auth-rejected": "text-destructive",
   "upstream-degraded": "text-warning",
   unreachable: "text-destructive",
@@ -170,7 +170,7 @@ function UserKeyZone() {
           {busy ? t("settings.websearch.testing") : t("settings.websearch.test")}
         </button>
         {status === "saved" && (
-          <span data-testid="websearch-userkey-saved" className="text-xs text-emerald-600">
+          <span data-testid="websearch-userkey-saved" className="text-xs text-success">
             {t("settings.websearch.saved")}
           </span>
         )}
@@ -324,7 +324,7 @@ function SharedServiceZone() {
           </button>
         )}
         {status === "saved" && (
-          <span data-testid="websearch-saved" className="text-xs text-emerald-600">
+          <span data-testid="websearch-saved" className="text-xs text-success">
             {t("settings.websearch.saved")}
           </span>
         )}

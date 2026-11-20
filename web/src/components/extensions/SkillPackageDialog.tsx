@@ -215,7 +215,7 @@ export function SkillPackageDialog({
                   {preview.files.map((f) => (
                     <li key={f.path} className="flex items-center justify-between gap-2 rounded px-2 py-0.5 text-xs odd:bg-muted/40">
                       <span className="flex items-center gap-1.5 truncate">
-                        {f.script && <Icon name="terminal" className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
+                        {f.script && <Icon name="terminal" className="h-3 w-3 shrink-0 text-warning" />}
                         <span className="truncate" title={f.path}>{f.path}</span>
                       </span>
                       <span className="shrink-0 text-muted-foreground">
@@ -229,7 +229,7 @@ export function SkillPackageDialog({
               </div>
 
               {needsAck && (
-                <label className="flex items-start gap-2 rounded-md bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">
+                <label className="flex items-start gap-2 rounded-md bg-warning/10 p-2 text-xs text-warning">
                   <input
                     type="checkbox"
                     checked={acknowledged}
@@ -249,7 +249,7 @@ export function SkillPackageDialog({
 
           {result && (
             <div
-              className={`rounded-md px-3 py-2 ${result.ok ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive"}`}
+              className={`rounded-md px-3 py-2 ${result.ok ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}
               data-testid={result.ok ? "skill-package-success" : "skill-package-failure"}
             >
               {result.message}

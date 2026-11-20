@@ -11,6 +11,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { PageShell } from "@/components/ui/page-shell";
+import { EmptyState } from "@/components/ui/states-kit";
+import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import {
   asOfResource,
@@ -531,6 +534,7 @@ function ResourceCard({
 }
 
 export function ResourcesPage({ send }: ResourcesPageProps) {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const items = useResourcesStore((s) => s.items);
   const total = useResourcesStore((s) => s.total);
@@ -630,127 +634,127 @@ export function ResourcesPage({ send }: ResourcesPageProps) {
   const visibleGroups: ResourceGroup[] = typeFilter === "file" ? FILE_GROUPS : [...RESOURCE_GROUPS];
 
   return (
-    <div className="flex h-full flex-col bg-background" data-testid="resources-page">
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold">{t("resources.title")}</h1>
-          <span className="text-xs text-muted-foreground" data-testid="resources-total">
-            {t("resources.count", { count: total })}
-          </span>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter}
-                className={`rounded-md px-3 py-1 text-sm ${
-                  typeFilter === filter
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-muted"
-                }`}
-                onClick={() => setTypeFilter(filter)}
-                data-testid={`resources-filter-${filter}`}
-              >
-                {t(`resources.filter.${filter}`)}
-              </button>
-            ))}
-            <input
-              className="w-56 rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-              placeholder={t("resources.search")}
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              data-testid="resources-search"
-            />
-          </div>
-        </div>
-
-        {/* Memory tier + tag filters (add-unified-memory-and-outputs): draft/
-            stable/canonical（草稿/成果/正典）三档与 tags 芯片筛选，服务端过滤。 */}
-        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="resources-tier-row">
-          <span className="text-xs text-muted-foreground">{t("resources.memory.tier.label")}</span>
-          {([null, ...TIERS] as const).map((tier) => (
-            <button
-              key={`tier-${tier ?? "all"}`}
-              className={`shrink-0 rounded-md px-2.5 py-1 text-xs ${
-                tierFilterState === tier ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
-              }`}
-              onClick={() => setTierFilter(tier)}
-              data-testid={`resources-tier-${tier ?? "all"}`}
-            >
-              {tier === null ? t("resources.memory.tier.all") : t(`resources.memory.tier.${tier}`)}
-            </button>
-          ))}
-          {unionTags.length > 0 && (
-            <>
-              <span className="ml-2 text-xs text-muted-foreground">{t("resources.memory.tags.label")}</span>
-              {unionTags.map((tag) => (
+    <PageShell
+      title={t("resources.title")}
+      titleTestId="resources-title"
+      subtitle={t("resources.count", { count: total })}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+              {FILTERS.map((filter) => (
                 <button
-                  key={`tag-${tag}`}
-                  className={`shrink-0 rounded-md px-2 py-0.5 text-xs border ${
-                    tagFilterState.includes(tag) ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                  key={filter}
+                  className={`inline-flex h-7 items-center rounded-md px-3 text-sm ${
+                    typeFilter === filter
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-muted"
                   }`}
-                  onClick={() => toggleTagFilter(tag)}
-                  data-testid={`resources-tag-${tag}`}
+                  onClick={() => setTypeFilter(filter)}
+                  data-testid={`resources-filter-${filter}`}
                 >
-                  {tag}
+                  {t(`resources.filter.${filter}`)}
                 </button>
               ))}
-            </>
-          )}
+              <input
+                className="w-56 rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                placeholder={t("resources.search")}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                data-testid="resources-search"
+              />
         </div>
-
-        {/* Time window and file-kind groups (openspec: add-resource-filters).
-            Both rows are server-applied and combine with the tab and the search;
-            a change refetches immediately — there is no apply action. */}
-        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="resources-time-row">
-          <span className="text-xs text-muted-foreground">{t("resources.time.label")}</span>
-          <div className="flex max-w-full flex-nowrap gap-1 overflow-x-auto">
-            {TIME_PRESETS.map((preset) => (
+      }
+      filters={
+        <>
+          {/* Memory tier + tag filters (add-unified-memory-and-outputs): draft/
+              stable/canonical（草稿/成果/正典）三档与 tags 芯片筛选，服务端过滤。 */}
+          <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="resources-tier-row">
+            <span className="text-xs text-muted-foreground">{t("resources.memory.tier.label")}</span>
+            {([null, ...TIERS] as const).map((tier) => (
               <button
-                key={preset}
-                className={`shrink-0 rounded-md px-2.5 py-1 text-xs ${
-                  timePreset === preset
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:bg-muted"
+                key={`tier-${tier ?? "all"}`}
+                className={`inline-flex h-7 shrink-0 items-center rounded-md px-2.5 text-xs ${
+                  tierFilterState === tier ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"
                 }`}
-                onClick={() => setTimePreset(preset)}
-                data-testid={`resources-time-${preset}`}
+                onClick={() => setTierFilter(tier)}
+                data-testid={`resources-tier-${tier ?? "all"}`}
               >
-                {t(`resources.time.${preset}`)}
+                {tier === null ? t("resources.memory.tier.all") : t(`resources.memory.tier.${tier}`)}
               </button>
             ))}
+            {unionTags.length > 0 && (
+              <>
+                <span className="ml-2 text-xs text-muted-foreground">{t("resources.memory.tags.label")}</span>
+                {unionTags.map((tag) => (
+                  <button
+                    key={`tag-${tag}`}
+                    className={`shrink-0 rounded-md px-2 py-0.5 text-xs border ${
+                      tagFilterState.includes(tag) ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                    onClick={() => toggleTagFilter(tag)}
+                    data-testid={`resources-tag-${tag}`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
-        </div>
 
-        {/* Absent on the charts tab: the tab is already the group filter there.
-            The chart chip is absent on the files tab for the same reason. */}
-        {typeFilter === "chart" ? null : (
-          <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="resources-group-row">
-            <span className="text-xs text-muted-foreground">{t("resources.group.label")}</span>
-            {visibleGroups.map((group) => {
-              const checked = groups.includes(group);
-              const count = facets[group] ?? 0;
-              return (
+          {/* Time window and file-kind groups (openspec: add-resource-filters).
+              Both rows are server-applied and combine with the tab and the search;
+              a change refetches immediately — there is no apply action. */}
+          <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="resources-time-row">
+            <span className="text-xs text-muted-foreground">{t("resources.time.label")}</span>
+            <div className="flex max-w-full flex-nowrap gap-1 overflow-x-auto">
+              {TIME_PRESETS.map((preset) => (
                 <button
-                  key={group}
-                  className={`shrink-0 rounded-md border px-2.5 py-1 text-xs ${
-                    checked
-                      ? "border-primary/40 bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted"
-                  } ${count === 0 ? "opacity-50" : ""}`}
-                  onClick={() => toggleGroup(group)}
-                  disabled={count === 0 && !checked}
-                  aria-pressed={checked}
-                  data-testid={`resources-group-${group}`}
-                  data-checked={checked ? "true" : "false"}
-                  data-count={count}
+                  key={preset}
+                  className={`inline-flex h-7 shrink-0 items-center rounded-md px-2.5 text-xs ${
+                    timePreset === preset
+                      ? "bg-primary/15 text-primary"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                  onClick={() => setTimePreset(preset)}
+                  data-testid={`resources-time-${preset}`}
                 >
-                  {t(`resources.group.${group}`)} ({count})
+                  {t(`resources.time.${preset}`)}
                 </button>
-              );
-            })}
+              ))}
+            </div>
           </div>
-        )}
-      </div>
 
+          {/* Absent on the charts tab: the tab is already the group filter there.
+              The chart chip is absent on the files tab for the same reason. */}
+          {typeFilter === "chart" ? null : (
+            <div className="mt-2 flex flex-wrap items-center gap-2" data-testid="resources-group-row">
+              <span className="text-xs text-muted-foreground">{t("resources.group.label")}</span>
+              {visibleGroups.map((group) => {
+                const checked = groups.includes(group);
+                const count = facets[group] ?? 0;
+                return (
+                  <button
+                    key={group}
+                    className={`inline-flex h-7 shrink-0 items-center rounded-md border px-2.5 text-xs ${
+                      checked
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    } ${count === 0 ? "opacity-50" : ""}`}
+                    onClick={() => toggleGroup(group)}
+                    disabled={count === 0 && !checked}
+                    aria-pressed={checked}
+                    data-testid={`resources-group-${group}`}
+                    data-checked={checked ? "true" : "false"}
+                    data-count={count}
+                  >
+                    {t(`resources.group.${group}`)} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </>
+      }
+    >
       <div className="flex-1 overflow-auto p-6">
         {error ? (
           <div className="mb-4 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive" data-testid="resources-error">
@@ -762,11 +766,20 @@ export function ResourcesPage({ send }: ResourcesPageProps) {
             {t("resources.loading")}
           </div>
         ) : items.length === 0 ? (
-          <div
-            className="flex h-40 items-center justify-center px-6 text-center text-sm text-muted-foreground"
-            data-testid="resources-empty"
-          >
-            {filtered ? t("resources.emptyFiltered") : t("resources.empty")}
+          <div data-testid="resources-empty">
+            {filtered ? (
+              <EmptyState title={t("resources.emptyFiltered")} />
+            ) : (
+              <EmptyState
+                title={t("resources.emptyTitle")}
+                hint={t("resources.empty")}
+                action={
+                  <Button size="sm" onClick={() => navigate("/chat")} data-testid="resources-empty-cta">
+                    {t("resources.emptyAction")}
+                  </Button>
+                }
+              />
+            )}
           </div>
         ) : (
           <>
@@ -810,6 +823,6 @@ export function ResourcesPage({ send }: ResourcesPageProps) {
           </>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

@@ -96,7 +96,7 @@ function TurnList() {
                     {turn.fleet && (
                       <button
                         type="button"
-                        className="rounded bg-blue-500/15 px-1.5 py-0.5 text-xs text-blue-600 dark:text-blue-400 hover:bg-blue-500/25"
+                        className="rounded bg-primary/15 px-1.5 py-0.5 text-xs text-primary hover:bg-primary/25"
                         title={t("trace.fleetBadge")}
                         data-testid={`trace-fleet-badge-${turn.turnId}`}
                         onClick={(e) => {

@@ -1798,7 +1798,7 @@
     "loading": "Chargement des ressources…",
     "loadMore": "Charger plus",
     "error": "Impossible de charger la bibliothèque : {{message}}",
-    "empty": "Demandez un graphique ou un document à l’agent : le résultat arrive ici ; on peut aussi enregistrer depuis la discussion.",
+    "empty": "Aucun livrable pour l'instant",
     "emptyFiltered": "Aucune ressource ne correspond à ce filtre.",
     "chartUnrenderable": "Ce graphique n'a pas pu être affiché.",
     "kind": {
@@ -1871,7 +1871,9 @@
         "unpinCanonical": "Unpin",
         "editTags": "Edit tags"
       }
-    }
+    },
+    "emptyAction": "Ouvrir le chat",
+    "emptyTitle": "Aucun livrable pour l'instant"
   },
   "facetShell": {
     "entries": {
@@ -3555,7 +3557,8 @@
         "open": "En cours",
         "ok": "Réussie",
         "failed": "Échouée",
-        "partial": "Partielle"
+        "partial": "Partielle",
+        "interrupted": "Interrompu"
       },
       "source": {
         "cron": "Planifiée",

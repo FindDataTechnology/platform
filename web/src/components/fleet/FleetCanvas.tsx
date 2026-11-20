@@ -44,6 +44,7 @@ import {
   type GraphMember,
 } from "@/lib/fleet-layout";
 import type { LiveTurn, TurnResultEntry } from "@/store/fleet-store";
+import { STATUS_TOKENS, cssVar, type StatusKind } from "@/lib/statusTokens";
 
 // ── input shapes (MemberView projections; kept local so the page owns less) ──
 
@@ -104,16 +105,18 @@ type SourceData = {
   connectable: boolean;
 } & Record<string, unknown>;
 
-const STATUS_RING: Record<string, string> = {
-  on_duty: "#22c55e",
-  paused: "#94a3b8",
-  missing: "#f59e0b",
-  vacant: "#ef4444",
-  passive: "#94a3b8",
+// Ring color per post status. Values are token NAMES, resolved at draw time by
+// `cssVar` — the tokens are light-dark() pairs, so the ring follows the theme.
+const STATUS_RING: Record<string, StatusKind> = {
+  on_duty: "running",
+  paused: "paused",
+  missing: "waiting",
+  vacant: "failed",
+  passive: "paused",
   // fix-fleet-failure-visibility: a post whose rounds keep failing produces
   // NOTHING while its trigger keeps firing — louder than `missing` (which at
   // least means "no signal"), distinct from the vacancy red.
-  failing: "#dc2626",
+  failing: "failed",
 };
 
 function trendGlyph(t: CanvasSlot["trend"]): string {
@@ -149,7 +152,14 @@ const HIDDEN_HANDLE = { style: { opacity: 0, width: 8, height: 8 } } as const;
 // sibling layer: if offset-path is unsupported (older Safari) or the kill
 // switch is on, the group renders nothing and the base edge is unaffected.
 
-const FAIL_RED = "#ef4444";
+const FAIL_RED = STATUS_TOKENS.failed;
+
+// MiniMap draws to a canvas: it needs resolved colors, not class names.
+function minimapColor(n: { type?: string; data?: unknown }): string {
+  const status = n.type === "post" ? (n.data as PostData | undefined)?.post?.status : undefined;
+  const kind: StatusKind = (status && STATUS_RING[status]) || "neutral";
+  return cssVar(STATUS_TOKENS[kind]);
+}
 const DECAY_WINDOW_MS = 2_500;
 const MAX_PARTICLES_PER_EDGE = 6;
 
@@ -230,7 +240,7 @@ const edgeTypes = { particle: ParticleEdge };
 function PostNodeView({ data, id, selected }: NodeProps<Node<PostData>>) {
   const { t, i18n } = useTranslation();
   const post = data.post;
-  const ring = STATUS_RING[post.status] ?? "#94a3b8";
+  const ring = cssVar(STATUS_TOKENS[STATUS_RING[post.status] ?? "neutral"]);
   const [hovered, setHovered] = useState(false);
   return (
     <div
@@ -238,7 +248,7 @@ function PostNodeView({ data, id, selected }: NodeProps<Node<PostData>>) {
       onMouseLeave={() => setHovered(false)}
       data-testid={`canvas-node-${id}`}
       className={`w-[220px] rounded-lg border bg-card p-2 text-left shadow-sm transition-shadow ${
-        data.live ? "border-blue-500/60 shadow-[0_0_0_3px_rgba(59,130,246,0.25)]" : "border-border"
+        data.live ? "border-primary/60 shadow-[0_0_0_3px_var(--color-primary)] shadow-[0_0_0_3px_color-mix(in_oklab,var(--color-primary)_25%,transparent)]" : "border-border"
       }`}
     >
       <div className="flex items-center gap-1.5">
@@ -249,7 +259,7 @@ function PostNodeView({ data, id, selected }: NodeProps<Node<PostData>>) {
         ) : null}
         <span className="relative flex h-2.5 w-2.5 shrink-0" title={post.statusReason}>
           {data.live ? (
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: "#3b82f6" }} />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: cssVar("--color-primary") }} />
           ) : null}
           <span
             className="relative inline-flex h-2.5 w-2.5 rounded-full"
@@ -306,7 +316,7 @@ function PostNodeView({ data, id, selected }: NodeProps<Node<PostData>>) {
         ) : null}
         {post.effectiveModel ? (
           <span
-            className={`truncate rounded-full px-1.5 py-px ${post.modelNotice ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-muted"}`}
+            className={`truncate rounded-full px-1.5 py-px ${post.modelNotice ? "bg-warning/15 text-warning" : "bg-muted"}`}
             title={post.modelNotice ?? undefined}
           >
             {post.effectiveModel}
@@ -337,11 +347,11 @@ function SourceNodeView({ data, id }: NodeProps<Node<SourceData>>) {
       data-testid={`canvas-node-${id}`}
       className="flex w-[150px] items-center gap-1.5 rounded-lg border border-dashed border-border bg-muted/40 px-2 py-1.5"
     >
-      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: NODE_COLORS[data.kind] ?? "#64748b" }} />
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: NODE_COLORS[data.kind] ?? cssVar(STATUS_TOKENS.neutral) }} />
       <span className="truncate text-[11px] text-muted-foreground" title={data.label}>
         {data.label}
       </span>
-      {data.live ? <span className="ml-auto h-1.5 w-1.5 animate-ping rounded-full bg-blue-500" /> : null}
+      {data.live ? <span className="ml-auto h-1.5 w-1.5 animate-ping rounded-full bg-primary" /> : null}
       <Handle type="target" position={Position.Left} isConnectable={data.connectable} {...HIDDEN_HANDLE} />
       <Handle type="source" position={Position.Right} isConnectable={data.connectable} {...HIDDEN_HANDLE} />
     </div>
@@ -573,7 +583,7 @@ export function FleetCanvas({
     () =>
       laid.links.map((l) => {
         const key = `${l.from}→${l.to}:${l.kind}`;
-        const color = KIND_COLORS[l.kind] ?? "#94a3b8";
+        const color = KIND_COLORS[l.kind] ?? cssVar(STATUS_TOKENS.neutral);
         const turns = trafficByKey.get(key) ?? 0;
         const liveCount = liveEdgeCounts.get(key) ?? 0;
         const fading = decayEdges.get(key) ?? [];
@@ -584,13 +594,13 @@ export function FleetCanvas({
           source: l.from,
           target: l.to,
           animated: liveCount > 0,
-          data: { activeCount: liveCount, fading, color: draft ? "#3b82f6" : color, edgeKey: key },
+          data: { activeCount: liveCount, fading, color: draft ? cssVar("--color-primary") : color, edgeKey: key },
           style: {
-            stroke: draft ? "#3b82f6" : color,
+            stroke: draft ? cssVar("--color-primary") : color,
             strokeWidth: 1.5 + Math.min(2.5, Math.sqrt(turns) * 0.5),
             ...(draft ? { strokeDasharray: "7 4" } : {}),
           },
-          markerEnd: { type: MarkerType.ArrowClosed, color: draft ? "#3b82f6" : color, width: 16, height: 16 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: draft ? cssVar("--color-primary") : color, width: 16, height: 16 },
         };
       }),
     [laid, liveEdgeCounts, trafficByKey, draftKeySet, decayEdges],
@@ -640,7 +650,7 @@ export function FleetCanvas({
       <div className="mb-1 flex flex-wrap gap-2 text-[10px] text-muted-foreground">
         {legendKinds.map((k) => (
           <span key={k} className="inline-flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: KIND_COLORS[k] ?? "#94a3b8" }} />
+            <span className="inline-block h-2 w-2 rounded-full" style={{ background: KIND_COLORS[k] ?? cssVar(STATUS_TOKENS.neutral) }} />
             {t(`fleets.orch.edge.${k}`)}
           </span>
         ))}
@@ -677,7 +687,7 @@ export function FleetCanvas({
         >
           <Background gap={20} />
           <Controls showInteractive={false} />
-          <MiniMap pannable zoomable nodeColor={(n) => (n.type === "post" ? (STATUS_RING[(n.data as PostData).post?.status] ?? "#64748b") : "#64748b")} />
+          <MiniMap pannable zoomable nodeColor={minimapColor} />
         </ReactFlow>
       </div>
     </div>

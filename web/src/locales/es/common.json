@@ -1798,7 +1798,7 @@
     "loading": "Cargando recursos…",
     "loadMore": "Cargar más",
     "error": "No se pudo cargar la biblioteca: {{message}}",
-    "empty": "Pide al agente un gráfico o un documento y el resultado aparece aquí; también puedes guardar desde la conversación.",
+    "empty": "Aún no hay entregables",
     "emptyFiltered": "Ningún recurso coincide con este filtro.",
     "chartUnrenderable": "No se pudo representar este gráfico.",
     "kind": {
@@ -1871,7 +1871,9 @@
         "unpinCanonical": "Unpin",
         "editTags": "Edit tags"
       }
-    }
+    },
+    "emptyAction": "Abrir chat",
+    "emptyTitle": "Aún no hay entregables"
   },
   "facetShell": {
     "entries": {
@@ -3555,7 +3557,8 @@
         "open": "En curso",
         "ok": "Completada",
         "failed": "Fallida",
-        "partial": "Parcial"
+        "partial": "Parcial",
+        "interrupted": "Interrumpido"
       },
       "source": {
         "cron": "Programada",

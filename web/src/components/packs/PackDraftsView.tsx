@@ -652,7 +652,7 @@ function PackDraftEditor({
       {bridgeReport && (bridgeReport.pendingSkills.length > 0 || bridgeReport.pendingServers.length > 0) && (
         <div
           data-testid="pack-bridge-report"
-          className="border border-amber-500/40 bg-amber-500/5 rounded-md p-3 space-y-1"
+          className="border border-warning/40 bg-warning/5 rounded-md p-3 space-y-1"
         >
           <p className="text-xs font-medium text-foreground">
             {t("packs.bridge.title", {

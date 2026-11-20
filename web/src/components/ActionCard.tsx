@@ -75,15 +75,18 @@ function statusIcon(state: string) {
 
 function riskBadge(risk: string) {
   const color =
+    // Severity tier carries the color; the word carries the kind. Five invented
+    // hues were the old shape — the status vocabulary already names every tier
+    // (web-design-system: an invented sixth state color is debt).
     risk === "read"
-      ? "bg-green-500/10 text-green-600 dark:text-green-400"
+      ? "bg-success/10 text-success"
       : risk === "write"
-        ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
-        : risk === "destructive" || risk === "cost"
-          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-          : risk === "publish"
-            ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-            : "bg-gray-500/10 text-gray-600 dark:text-gray-400";
+        ? "bg-primary/10 text-primary"
+        : risk === "destructive"
+          ? "bg-destructive/10 text-destructive"
+          : risk === "cost" || risk === "publish"
+            ? "bg-warning/10 text-warning"
+            : "bg-muted text-muted-foreground";
   return <span className={cn("rounded px-2 py-0.5 text-xs font-medium", color)}>{risk}</span>;
 }
 

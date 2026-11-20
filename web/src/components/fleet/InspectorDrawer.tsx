@@ -289,7 +289,7 @@ export function MemberInspector({
             key={k}
             type="button"
             data-testid={`inspector-tab-${k}`}
-            className={`rounded-md px-2 py-1 ${tab === k ? "bg-blue-500/10 text-blue-600 dark:text-blue-400" : "text-muted-foreground hover:bg-muted"}`}
+            className={`rounded-md px-2 py-1 ${tab === k ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
             onClick={() => setTab(k)}
           >
             {tabLabels[k]}
@@ -311,7 +311,7 @@ export function MemberInspector({
                 </p>
               ) : null}
               {(member.missedRounds ?? 0) > 0 ? (
-                <p className="text-amber-600" data-testid="inspector-missed">
+                <p className="text-warning" data-testid="inspector-missed">
                   {t("fleets.evidence.missedRounds")}: {member.missedRounds}{" "}
                   {t("fleets.evidence.missedUnit")}
                   {member.catchUpPending ? ` · ${t("fleets.evidence.catchUpPending")}` : ""}
@@ -326,7 +326,7 @@ export function MemberInspector({
                 </p>
                 <p className="text-muted-foreground">
                   {t("fleets.inspector.effective")}:{" "}
-                  <span className={member.modelNotice ? "text-amber-600 dark:text-amber-400" : ""} title={member.modelNotice ?? undefined}>
+                  <span className={member.modelNotice ? "text-warning" : ""} title={member.modelNotice ?? undefined}>
                     {member.effectiveModel || "—"}
                   </span>
                   {member.modelNotice ? ` (${member.modelNotice})` : ""}
@@ -358,7 +358,7 @@ export function MemberInspector({
             {member.lastTurn ? (
               <div>
                 <p className="font-medium">{t("fleets.inspector.lastTurn")}</p>
-                <p className={`mt-1 ${member.lastTurn.status === "ok" ? "text-success" : member.lastTurn.status === "skipped" ? "text-amber-600 dark:text-amber-400" : "text-destructive"}`}>
+                <p className={`mt-1 ${member.lastTurn.status === "ok" ? "text-success" : member.lastTurn.status === "skipped" ? "text-warning" : "text-destructive"}`}>
                   {member.lastTurn.status}
                   {member.lastTurn.errorKind ? ` · ${member.lastTurn.errorKind}` : ""}
                   {member.consecutiveFailures >= 3 ? ` · ${t("fleets.turn.consecutive")} ×${member.consecutiveFailures}` : ""}
@@ -387,7 +387,7 @@ export function MemberInspector({
                 {/* A downgraded post must say WHY in the same breath as the
                     colour (fix-fleet-failure-visibility): streak, cause, since. */}
                 {member.status === "failing" ? (
-                  <p className="mt-1 text-amber-600 dark:text-amber-400" data-testid="inspector-failing">
+                  <p className="mt-1 text-warning" data-testid="inspector-failing">
                     {t("fleets.failure.streak", { n: member.failureStreak ?? member.consecutiveFailures ?? 0 })}
                     {member.lastErrorKind ? ` · ${t("fleets.failure.lastKind")}: ${member.lastErrorKind}` : ""}
                     {member.failingSince ? ` · ${t("fleets.failure.since")}: ${fmtTime(member.failingSince, locale)}` : ""}
@@ -519,7 +519,7 @@ export function MemberInspector({
             {turns.length === 0 ? <p className="text-muted-foreground">{t("fleets.turn.neverRun")}</p> : null}
             {turns.map((tu) => (
               <div key={tu.id} className="flex items-center gap-2 rounded-md border border-border px-2 py-1" data-testid={`inspector-turn-${tu.id}`}>
-                <span className={tu.status === "ok" ? "text-success" : tu.status === "failed" ? "text-destructive" : tu.status === "skipped" ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"}>{tu.status}</span>
+                <span className={tu.status === "ok" ? "text-success" : tu.status === "failed" ? "text-destructive" : tu.status === "skipped" ? "text-muted-foreground" : "text-warning"}>{tu.status}</span>
                 <span className="text-muted-foreground">{t(`fleets.runs.source.${tu.source}`)}</span>
                 <span className="ml-auto text-muted-foreground">{fmtTime(tu.endedAt, locale)}</span>
                 {tu.sessionId ? (

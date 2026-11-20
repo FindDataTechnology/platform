@@ -103,7 +103,7 @@ export function ProviderCard({ provider, isAdmin, onEdit, onDelete, onModelsChan
             </span>
             {reserved && provider.override?.active && (
               <span
-                className="micro-label rounded bg-amber-500/15 px-1.5 py-0.5 text-amber-600 dark:text-amber-400"
+                className="micro-label rounded bg-warning/15 px-1.5 py-0.5 text-warning"
                 data-testid="llm-override-active"
               >
                 {t("modelsPage.overrideActive")}

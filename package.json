@@ -37,7 +37,9 @@
     "app:typecheck": "npm --prefix app run typecheck",
     "packs:export-bundle": "node scripts/export-pack-bundle.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
-    "lint:changed": "node scripts/lint-changed.mjs"
+    "lint:changed": "node scripts/lint-changed.mjs",
+    "design:lint": "node scripts/design-lint.mjs",
+    "design:lint:changed": "node scripts/design-lint.mjs --changed"
   },
   "dependencies": {
     "@deepseek-ai/cordis": "4.0.4",

@@ -272,6 +272,13 @@
     line-height: 1.2;
     cursor: pointer;
     text-underline-offset: 2px;
+    /* Hit area, not decoration: the 12px glyph alone renders ~15px tall and a
+       mouse target that small is a miss. 28px is the floor the xs Button shares,
+       so both kinds of small control measure the same. */
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 4px;
   }
   .inline-action:hover {
     text-decoration: underline;

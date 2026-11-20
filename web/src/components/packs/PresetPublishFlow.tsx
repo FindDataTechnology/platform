@@ -302,7 +302,7 @@ export function PresetPublishFlow({
               )}
             </section>
             {(pendingSkills.length > 0 || pendingServers.length > 0) && (
-              <div className="border border-amber-500/40 bg-amber-500/5 rounded-md p-3 space-y-1" data-testid="preset-publish-report">
+              <div className="border border-warning/40 bg-warning/5 rounded-md p-3 space-y-1" data-testid="preset-publish-report">
                 <p className="text-xs font-medium text-foreground">{t("presetPublish.reportTitle")}</p>
                 <ul className="text-xs text-muted-foreground list-disc pl-4">
                   {pendingSkills.map((s) => (
@@ -345,7 +345,7 @@ export function PresetPublishFlow({
                 <h4 className="font-medium">{t("presetPublish.deployTitle")}</h4>
                 <p className="text-xs text-muted-foreground">{t("presetPublish.deployHint")}</p>
                 {billing?.linked && billing.accountState === "none" && (
-                  <div className="text-xs rounded-md px-2 py-2 bg-amber-500/10 text-amber-700" data-testid="preset-publish-no-account">
+                  <div className="text-xs rounded-md px-2 py-2 bg-warning/10 text-warning" data-testid="preset-publish-no-account">
                     <p>{t("packs.detail.noAccountHintNew")}</p>
                     <Button
                       size="sm"

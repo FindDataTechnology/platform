@@ -177,10 +177,10 @@ function AssistantTurnBase({
           <span
             data-testid="turn-retry"
             data-retry={String(turn.retry.retry)}
-            className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-600 dark:text-amber-400"
+            className="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2 py-0.5 text-[11px] text-warning"
             title={turn.retry.message ?? undefined}
           >
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" aria-hidden="true" />
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-warning" aria-hidden="true" />
             {turn.retry.started
               ? t("turn.retryStarted")
               : turn.retry.maxRetries !== null

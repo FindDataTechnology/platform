@@ -36,7 +36,7 @@ const SPAN_H = 6;
 const STATUS_BAR: Record<string, string> = {
   ok: "bg-success/70",
   failed: "bg-destructive/80",
-  interrupted: "bg-amber-500/70",
+  interrupted: "bg-warning/70",
 };
 
 function fmtDur(ms: number | null): string {
@@ -338,7 +338,7 @@ export function RunTimeline({ fleetId, memberTitles }: { fleetId: string; member
                 onClick={() => setSelected(r.runId === selected ? null : r.runId)}
                 data-testid={`run-row-${r.runId}`}
                 className={`flex flex-wrap items-center gap-2 rounded-md border px-2 py-1.5 text-left text-xs ${
-                  r.runId === selected ? "border-blue-500/50 bg-blue-500/5" : "border-border bg-card hover:bg-muted/40"
+                  r.runId === selected ? "border-primary/50 bg-primary/5" : "border-border bg-card hover:bg-muted/40"
                 }`}
               >
                 <span
@@ -348,8 +348,8 @@ export function RunTimeline({ fleetId, memberTitles }: { fleetId: string; member
                       : r.status === "failed"
                         ? "bg-destructive/15 text-destructive"
                         : r.status === "open"
-                          ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
-                          : "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                          ? "bg-primary/15 text-primary"
+                          : "bg-warning/15 text-warning"
                   }`}
                 >
                   {t(`fleets.runs.status.${r.status}`)}
@@ -374,7 +374,7 @@ export function RunTimeline({ fleetId, memberTitles }: { fleetId: string; member
                 {new Date(window.start).toLocaleTimeString()} → {new Date(window.end).toLocaleTimeString()}
               </span>
               {replayAt != null ? (
-                <span className="rounded-full bg-blue-500/15 px-2 py-0.5 text-blue-600 dark:text-blue-400" data-testid="runs-replaying">
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-primary" data-testid="runs-replaying">
                   {t("fleets.runs.replaying")}
                 </span>
               ) : null}
@@ -475,7 +475,7 @@ export function RunTimeline({ fleetId, memberTitles }: { fleetId: string; member
                                   return (
                                     <div
                                       key={sp.callId}
-                                      className="absolute rounded-sm bg-slate-500/70"
+                                      className="absolute rounded-sm bg-muted-foreground/70"
                                       style={{ left: `${((spLeft - left) / Math.max(width, 0.001)) * 100}%`, width: `${(spWidth / Math.max(width, 0.001)) * 100}%`, height: SPAN_H, top: 0 }}
                                       title={`${sp.name} · ${sp.end ? fmtDur(sp.end - sp.start) : "?"}`}
                                       data-testid={`run-span-${sp.callId}`}

@@ -21,9 +21,9 @@ const LicenseChip = ({ state, licenseText }: { state: ExternalSkillEntry["licens
   const { t } = useTranslation();
   const cls =
     state === "declared"
-      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+      ? "bg-success/10 text-success"
       : state === "not-declared"
-        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+        ? "bg-warning/10 text-warning"
         : "bg-muted text-muted-foreground";
   const label = t(`extensions.external.license.${state}`);
   return (
@@ -36,7 +36,7 @@ const LicenseChip = ({ state, licenseText }: { state: ExternalSkillEntry["licens
 const NotReviewedMark = () => {
   const { t } = useTranslation();
   return (
-    <span className="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-xs text-amber-600 dark:text-amber-400">
+    <span className="inline-flex items-center rounded bg-warning/10 px-1.5 py-0.5 text-xs text-warning">
       {t("extensions.external.notReviewed")}
     </span>
   );
@@ -143,7 +143,7 @@ export function ExternalSourceTab() {
               </span>
             )}
             {group.stale && (
-              <span className="text-xs text-amber-600 dark:text-amber-400">
+              <span className="text-xs text-warning">
                 {t("extensions.external.stale", { time: fmtTime(group.snapshotAt) })}
               </span>
             )}
