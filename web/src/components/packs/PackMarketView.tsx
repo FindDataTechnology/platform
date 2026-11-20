@@ -372,7 +372,7 @@ export function PackMarketView({
             {hasOfficialRows && (
               <button
                 onClick={() => setOfficialFilter(!officialOnly)}
-                className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                className={`inline-flex h-7 items-center rounded-full border px-2.5 text-xs transition-colors ${
                   officialOnly ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"
                 }`}
                 data-testid="pack-official-chip"
@@ -386,7 +386,7 @@ export function PackMarketView({
                 setDomain("");
                 void refresh(search, "", "");
               }}
-              className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+              className={`inline-flex h-7 items-center rounded-full border px-2.5 text-xs transition-colors ${
                 category === "" && domain === "" ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -404,7 +404,7 @@ export function PackMarketView({
                     void refresh(search, line.word, "");
                   }}
                   data-line-count={line.count}
-                  className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                  className={`inline-flex h-7 items-center rounded-full border px-2.5 text-xs transition-colors ${
                     active
                       ? "border-primary text-primary"
                       : empty
@@ -431,7 +431,7 @@ export function PackMarketView({
                     setDomain(next);
                     void refresh(search, category, next);
                   }}
-                  className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                  className={`inline-flex h-7 items-center rounded-full border px-2.5 text-xs transition-colors ${
                     domain === d.slug ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground"
                   }`}
                 >

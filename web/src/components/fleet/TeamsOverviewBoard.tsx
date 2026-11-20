@@ -353,16 +353,16 @@ export function TeamsOverviewBoard({
                 type="button"
                 onClick={() => setViewPersisted(m)}
                 data-testid={`teams-view-mode-${m}`}
-                className={`px-2 py-0.5 text-xs ${view === m ? "bg-primary/15 font-medium text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                className={`inline-flex h-7 items-center px-2 text-xs ${view === m ? "bg-primary/15 font-medium text-primary" : "text-muted-foreground hover:bg-muted"}`}
               >
                 {t(`agentTeams.overview.viewMode.${m}`)}
               </button>
             ))}
           </span>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onOpenManage} data-testid="teams-goto-manage">
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpenManage} data-testid="teams-goto-manage">
             {t("agentTeams.views.manage")}
           </Button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onOpenOwner} data-testid="teams-goto-owner">
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onOpenOwner} data-testid="teams-goto-owner">
             {t("agentTeams.views.owner")}
           </Button>
         </span>
@@ -371,7 +371,7 @@ export function TeamsOverviewBoard({
       {rosterError ? (
         <div className="flex items-center justify-between rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" data-testid="teams-roster-error">
           <span>{rosterError}</span>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onRetryRoster}>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onRetryRoster}>
             {t("agentTeams.overview.retry")}
           </Button>
         </div>

@@ -807,7 +807,25 @@
       "emptyHintPasteOnly": "No connector accounts yet. Mint a PAT on the connector and paste it here.",
       "slotPlaceholder": "Account name (optional)",
       "contextLine": "Connect your SaaS accounts once and mint access tokens for agent platforms.",
-      "learnMore": "Learn more"
+      "learnMore": "Learn more",
+      "inventory": {
+        "title": "SaaS connected in the connector",
+        "loading": "Reading…",
+        "unknown": "Could not read: {{reason}}",
+        "empty": "Anything you connect shows up here — pick one in the connector.",
+        "browse": "Browse the catalog ↗",
+        "open": "Open in connector ↗",
+        "requiredByPack": "Required by a pack",
+        "reason": {
+          "no_credential": "you have no connector account yet",
+          "unauthorized": "the account credential died; reconnect it",
+          "unavailable": "the connector is unreachable right now",
+          "not_found": "the connector has no such endpoint",
+          "unreachable": "the connector is unreachable right now",
+          "db_unavailable": "the local database is unavailable",
+          "other": "{{code}}"
+        }
+      }
     },
     "paperTrading": {
       "title": "Wire · Paper Trading",

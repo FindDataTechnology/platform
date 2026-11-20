@@ -807,7 +807,25 @@
       "emptyHintPasteOnly": "まだコネクタアカウントがありません。コネクタで PAT を発行してここに貼り付けてください。",
       "slotPlaceholder": "アカウント名（任意）",
       "contextLine": "SaaS アカウントを一度接続し、エージェント プラットフォーム用のアクセストークンを発行します。",
-      "learnMore": "製品を知る"
+      "learnMore": "製品を知る",
+      "inventory": {
+        "title": "コネクタで接続済みの SaaS",
+        "loading": "読み込み中…",
+        "unknown": "読み取れません：{{reason}}",
+        "empty": "接続したものがここに表示されます。コネクタで選んでください。",
+        "browse": "カタログを見る ↗",
+        "open": "コネクタで開く ↗",
+        "requiredByPack": "パックが要求",
+        "reason": {
+          "no_credential": "コネクタのアカウントがまだありません",
+          "unauthorized": "アカウントの資格情報が失効しました。再接続してください",
+          "unavailable": "コネクタに現在到達できません",
+          "not_found": "コネクタにそのエンドポイントはありません",
+          "unreachable": "コネクタに現在到達できません",
+          "db_unavailable": "ローカル DB が利用できません",
+          "other": "{{code}}"
+        }
+      }
     },
     "paperTrading": {
       "title": "柏訊・ペーパートレード",

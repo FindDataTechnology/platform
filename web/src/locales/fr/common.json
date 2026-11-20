@@ -807,7 +807,25 @@
       "emptyHintPasteOnly": "Aucun compte connecteur pour l'instant. Créez un PAT sur le connecteur et collez-le ici.",
       "slotPlaceholder": "Nom du compte (facultatif)",
       "contextLine": "Connectez vos comptes SaaS une fois et émettez des jetons d'accès pour vos plateformes d'agents.",
-      "learnMore": "En savoir plus"
+      "learnMore": "En savoir plus",
+      "inventory": {
+        "title": "SaaS connectés dans le connecteur",
+        "loading": "Lecture…",
+        "unknown": "Lecture impossible : {{reason}}",
+        "empty": "Ce que vous connectez apparaît ici — choisissez-en un dans le connecteur.",
+        "browse": "Parcourir le catalogue ↗",
+        "open": "Ouvrir dans le connecteur ↗",
+        "requiredByPack": "Requis par un pack",
+        "reason": {
+          "no_credential": "vous n'avez pas encore de compte connecteur",
+          "unauthorized": "l'identifiant du compte a expiré ; reconnectez-le",
+          "unavailable": "le connecteur est injoignable pour l'instant",
+          "not_found": "le connecteur n'a pas cet endpoint",
+          "unreachable": "le connecteur est injoignable pour l'instant",
+          "db_unavailable": "la base locale est indisponible",
+          "other": "{{code}}"
+        }
+      }
     },
     "paperTrading": {
       "title": "Wire · Trading Simulé",

@@ -807,7 +807,25 @@
       "emptyHintPasteOnly": "Aún no hay cuentas del conector. Crea un PAT en el conector y pégalo aquí.",
       "slotPlaceholder": "Nombre de cuenta (opcional)",
       "contextLine": "Conecta tus cuentas SaaS una vez y emite tokens de acceso para plataformas de agentes.",
-      "learnMore": "Más información"
+      "learnMore": "Más información",
+      "inventory": {
+        "title": "SaaS conectados en el conector",
+        "loading": "Leyendo…",
+        "unknown": "No se pudo leer: {{reason}}",
+        "empty": "Lo que conectes aparecerá aquí: elige uno en el conector.",
+        "browse": "Explorar el catálogo ↗",
+        "open": "Abrir en el conector ↗",
+        "requiredByPack": "Requerido por un pack",
+        "reason": {
+          "no_credential": "todavía no tienes cuenta del conector",
+          "unauthorized": "la credencial de la cuenta caducó; vuelve a conectarla",
+          "unavailable": "el conector no es accesible ahora",
+          "not_found": "el conector no tiene ese endpoint",
+          "unreachable": "el conector no es accesible ahora",
+          "db_unavailable": "la base de datos local no está disponible",
+          "other": "{{code}}"
+        }
+      }
     },
     "paperTrading": {
       "title": "Wire · Trading Simulado",

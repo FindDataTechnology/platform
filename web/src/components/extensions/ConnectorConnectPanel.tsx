@@ -10,6 +10,12 @@
 // visible in BOTH states and hides only when the baseline has no connector
 // row. Rendered beside RegistryConnectPanel (McpMarketView header + the
 // add-server dialog) so both MCP credential surfaces share one mental model.
+//
+// The SaaS inventory below the account list (connector-inventory-in-connections)
+// answers the other half of "what do I have": the accounts say WHO the user is
+// at the connector, the inventory says WHAT they connected there. It reads its
+// own endpoint because that read makes an outbound call — the connections
+// aggregate every other page reads stays local and fast.
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,6 +29,122 @@ import { connectorLearnMoreUrl } from "@/lib/connector-mint";
 interface ConnectorConnectPanelProps {
   compact?: boolean;
   className?: string;
+}
+
+/** One row of the SaaS inventory (`GET /api/connector/inventory`). */
+export interface ConnectorInventoryRow {
+  service: string;
+  connectionName: string;
+  authType?: string;
+  requiredByPack: boolean;
+}
+
+/**
+ * The inventory read's three outcomes. `unknown` is its own state and never
+ * collapses into "you have none": no account, a dead PAT and an unreachable
+ * connector all land there with a code, and that code decides which sentence
+ * the card shows.
+ */
+type InventoryState =
+  | { state: "loading" }
+  | { state: "unknown"; code: string }
+  | { state: "ok"; rows: ConnectorInventoryRow[]; connectorUrl: string | null };
+
+/**
+ * The inventory section, presentational only. Split out so the three outcomes
+ * can be rendered and pinned without a store, a router or a network: the
+ * distinction between "could not read" and "nothing connected" is exactly the
+ * kind of thing that decays silently when it can only be seen at runtime.
+ */
+export function ConnectorInventorySection({ inventory }: { inventory: InventoryState }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-3 space-y-1 border-t border-border pt-3" data-testid="connector-inventory">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-foreground">{t("extensions.connector.inventory.title")}</span>
+        {inventory.state === "ok" && inventory.rows.length > 0 && (
+          <span className="text-xs text-muted-foreground" data-testid="connector-inventory-count">
+            {inventory.rows.length}
+          </span>
+        )}
+        <div className="flex-1" />
+        {inventory.state === "ok" && inventory.connectorUrl && (
+          <a
+            href={`${inventory.connectorUrl}/me#catalog`}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="connector-inventory-browse"
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            {t("extensions.connector.inventory.browse")}
+          </a>
+        )}
+      </div>
+
+      {inventory.state === "loading" && (
+        <p className="text-xs text-muted-foreground" data-testid="connector-inventory-loading">
+          {t("extensions.connector.inventory.loading")}
+        </p>
+      )}
+
+      {inventory.state === "unknown" && (
+        <p className="text-xs text-muted-foreground" data-testid="connector-inventory-unknown" data-code={inventory.code}>
+          {t("extensions.connector.inventory.unknown", {
+            reason: t(`extensions.connector.inventory.reason.${inventory.code}`, {
+              defaultValue: t("extensions.connector.inventory.reason.other", { code: inventory.code }),
+            }),
+          })}
+        </p>
+      )}
+
+      {inventory.state === "ok" && inventory.rows.length === 0 && (
+        <p className="text-xs text-muted-foreground" data-testid="connector-inventory-empty">
+          {t("extensions.connector.inventory.empty")}
+        </p>
+      )}
+
+      {inventory.state === "ok" && inventory.rows.length > 0 && (
+        <ul className="space-y-1" data-testid="connector-inventory-rows">
+          {inventory.rows.map((row) => (
+            <li
+              key={`${row.service}:${row.connectionName}`}
+              data-testid="connector-inventory-row"
+              data-service={row.service}
+              data-required={row.requiredByPack ? "1" : "0"}
+              className="flex flex-wrap items-center gap-2 rounded-md border border-border/60 px-3 py-1.5"
+            >
+              <Icon name="database" size={13} className="text-muted-foreground" />
+              <span className="text-sm">{row.service}</span>
+              {row.connectionName !== "default" && (
+                <span className="text-xs text-muted-foreground">{row.connectionName}</span>
+              )}
+              {row.requiredByPack && (
+                <span
+                  data-testid="connector-inventory-required"
+                  className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary"
+                >
+                  {t("extensions.connector.inventory.requiredByPack")}
+                </span>
+              )}
+              {row.authType && <span className="text-xs text-muted-foreground">{row.authType}</span>}
+              <div className="flex-1" />
+              {inventory.connectorUrl && (
+                <a
+                  href={`${inventory.connectorUrl}/me?add=${encodeURIComponent(row.service)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  data-testid="connector-inventory-open"
+                  className="text-xs text-primary hover:underline"
+                >
+                  {t("extensions.connector.inventory.open")}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export function ConnectorConnectPanel({ compact = false, className = "" }: ConnectorConnectPanelProps) {
@@ -43,12 +165,39 @@ export function ConnectorConnectPanel({ compact = false, className = "" }: Conne
   const [pasteSlot, setPasteSlot] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [inventory, setInventory] = useState<InventoryState>({ state: "loading" });
 
   // Self-fetch once: the panel is mount-safe everywhere (the registry panel
   // relies on its mount sites fetching; the connector card owns its fetch).
   useEffect(() => {
     refreshConnectorConnection();
   }, [refreshConnectorConnection]);
+
+  // The inventory read is independent of the account fetch above and must not
+  // block it: a slow connector delays only this section.
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/connector/inventory")
+      .then(async (r) => {
+        const body = await r.json().catch(() => null);
+        if (!alive) return;
+        if (!r.ok || !body || body.state === "unknown") {
+          setInventory({ state: "unknown", code: String(body?.code ?? `http_${r.status}`) });
+          return;
+        }
+        setInventory({
+          state: "ok",
+          rows: Array.isArray(body.connections) ? (body.connections as ConnectorInventoryRow[]) : [],
+          connectorUrl: typeof body.connectorUrl === "string" ? body.connectorUrl : null,
+        });
+      })
+      .catch(() => {
+        if (alive) setInventory({ state: "unknown", code: "unreachable" });
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Unknown (not fetched / unauthenticated) renders nothing — same rule as the
   // registry panel: never claim "not connected" before the state is known.
@@ -233,6 +382,12 @@ export function ConnectorConnectPanel({ compact = false, className = "" }: Conne
             : t("extensions.connector.emptyHintPasteOnly")}
         </p>
       )}
+
+      {/* The other half of "what do I have": accounts say WHO the user is at
+          the connector, this says WHAT they connected THERE. Unknown and empty
+          are different sentences — an outage must never read as "you have
+          nothing", which would send the user off to re-connect everything. */}
+      <ConnectorInventorySection inventory={inventory} />
 
       {/* Manual paste — the collapsed, always-available fallback. */}
       {pasteOpen && (

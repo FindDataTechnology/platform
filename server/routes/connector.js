@@ -130,6 +130,25 @@ function reapplyProfile(ctx, email, groups) {
     ?.catch((e) => console.warn(`[connector] profile update failed: ${e.message}`));
 }
 
+// The browser-facing projection of the user's own connections. Pure on purpose
+// (the route below is the only I/O): field-by-field, never a spread, so a
+// connector row growing a column cannot leak into a payload the browser reads.
+// `declared` is the set of providers some applied pack asks for — matched by
+// provider, not by connection name: a pack asks for a SYSTEM, and two
+// connections to one system both satisfy it.
+export function projectInventory(connectionRows, declaredProviders) {
+  const declared = declaredProviders instanceof Set ? declaredProviders : new Set();
+  const rows = Array.isArray(connectionRows) ? connectionRows : [];
+  return rows
+    .filter((row) => row && typeof row.service === "string" && row.service)
+    .map((row) => ({
+      service: String(row.service),
+      connectionName: typeof row.connectionName === "string" && row.connectionName ? row.connectionName : "default",
+      ...(typeof row.authType === "string" && row.authType ? { authType: row.authType } : {}),
+      requiredByPack: declared.has(String(row.service)),
+    }));
+}
+
 export function registerConnectorRoutes(ctx) {
   const { app, db } = ctx;
 
@@ -260,5 +279,56 @@ export function registerConnectorRoutes(ctx) {
     connectorCredentials.disconnect(email, slot);
     res.json({ ok: true, ...connectionPayload(email) });
     reapplyProfile(ctx, email, user?.groups ?? null);
+  });
+
+  // The user's own SaaS connections, asked of the connector itself
+  // (connection-center, connector-inventory-in-connections).
+  //
+  // Why its own route instead of a field on GET /api/connections: the
+  // aggregation endpoint is a pure local read consumed by the app-center
+  // badges, the door overview and the binding ledger. This one makes an
+  // outbound call with an 8s timeout; hanging it off the aggregate would let
+  // one unreachable connector slow down every page that reads connection
+  // state. The card fetches it on mount instead.
+  //
+  // "Cannot read" and "read zero" are different facts and stay different: no
+  // usable account / dead PAT / unreachable connector all answer `unknown`
+  // with a code, never an empty list.
+  app.get("/api/connector/inventory", async (req, res) => {
+    if (!requireOwner(req, res, ctx)) return;
+    if (!db.isDbReady()) {
+      return res.status(503).json({ state: "unknown", code: "db_unavailable" });
+    }
+    const email = identity(req)?.email ?? null;
+    const bindingsModule = await import("../../connector-bindings.js");
+    const client = bindingsModule.tenantClient(email);
+    // No origin (self-hosted without a connector row) or no active token: we
+    // cannot ask. Null from tenantClient is exactly that, by contract.
+    if (!client) return res.json({ state: "unknown", code: "no_credential" });
+    const answer = await client.connections();
+    if (!answer.ok) return res.json({ state: "unknown", code: answer.code });
+    // Providers some applied pack declares. Same source as the binding ledger
+    // (declaration + role-mapping resolution), so a row's "required" label and
+    // the ledger's rows can never disagree. Matched by PROVIDER, not by
+    // connection name: a pack asks for a system, and two connections to one
+    // system both satisfy it.
+    let declared = new Set();
+    try {
+      declared = new Set(
+        bindingsModule
+          .listBindings(email)
+          .map((row) => (typeof row.provider === "string" ? row.provider.trim() : ""))
+          .filter(Boolean),
+      );
+    } catch {
+      /* no ledger (no DB): nothing is declared, which is not an error */
+    }
+    const rows = Array.isArray(answer.body?.connections) ? answer.body.connections : [];
+    res.json({
+      state: "ok",
+      connectorUrl: client.origin,
+      mePath: "/me",
+      connections: projectInventory(rows, declared),
+    });
   });
 }

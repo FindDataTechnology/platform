@@ -807,7 +807,25 @@
       "emptyHintPasteOnly": "尚未连接任何连接器账号。在连接器铸造 PAT 后粘贴到这里。",
       "slotPlaceholder": "账号名（可选）",
       "contextLine": "连一次 SaaS 账户，为 agent 平台铸造访问令牌。",
-      "learnMore": "了解产品"
+      "learnMore": "了解产品",
+      "inventory": {
+        "title": "你在连接器里已连的 SaaS",
+        "loading": "正在读取…",
+        "unknown": "无法读取：{{reason}}",
+        "empty": "连好之后会出现在这里——去连接器里挑一个。",
+        "browse": "浏览可连接的目录 ↗",
+        "open": "前往连接器 ↗",
+        "requiredByPack": "包要求",
+        "reason": {
+          "no_credential": "你还没有连接器账号",
+          "unauthorized": "账号凭据已失效，需重新连接",
+          "unavailable": "连接器暂时不可达",
+          "not_found": "连接器没有这个接口",
+          "unreachable": "连接器暂时不可达",
+          "db_unavailable": "本地数据库不可用",
+          "other": "{{code}}"
+        }
+      }
     },
     "paperTrading": {
       "title": "柏讯·模拟交易",
