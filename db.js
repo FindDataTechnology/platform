@@ -1727,20 +1727,39 @@ export function appendMessage(sessionId, role, content, createdAt, blocksJson) {
   return { seq, id: Number(info.lastInsertRowid) };
 }
 
+// Sessions minted by automation — the schedule engine's per-round rotation
+// (`cron-<taskId>--r<ts>`), cluster members (`cron-<id>--<agentKey>`), and a2a
+// delegations (`task-<id>`). These are execution records, not conversations:
+// they are minted one per round, so a busy fleet adds thousands of rows that
+// the sidebar would page through to show five. Kept in one place so the feed
+// filter and its tests cannot drift apart.
+export const AUTOMATED_SESSION_PREFIXES = ["cron-", "task-"];
+
 // List session rows, most-recently-updated first. Scope (add-session-ownership):
 //   undefined          — no scoping (auth-off: the deployment is one user)
 //   { owner: email }   — only that user's rows (NULL-owner rows excluded:
 //                        under auth-on they are admin-visible only)
 //   { includeAll: true } — every row (admin group / ops console)
+//   .excludeAutomated  — additionally drop AUTOMATED_SESSION_PREFIXES rows
+//                        (slim-session-list-feed: the user-facing list feed)
 export function listChatSessions(scope) {
   if (!dbReady) return [];
   const base = `SELECT s.id, s.title, s.created_at AS createdAt, s.updated_at AS updatedAt, s.path, s.agent_preset AS agentPreset, s.workspace, s.project_id AS projectId, s.owner,
               (SELECT COUNT(*) FROM chat_messages m WHERE m.session_id = s.id) AS messageCount
        FROM chat_sessions s`;
-  if (scope?.owner && !scope.includeAll) {
-    return db.prepare(`${base} WHERE s.owner = ? ORDER BY s.updated_at DESC`).all(scope.owner);
+  // Filtered in SQL, not in JS: the excluded rows are ~99% of the table, and
+  // reading then discarding them is the cost this filter exists to remove.
+  const where = [scope?.owner && !scope.includeAll ? "s.owner = ?" : null];
+  if (scope?.excludeAutomated) {
+    where.push(`NOT (${AUTOMATED_SESSION_PREFIXES.map(() => "s.id LIKE ?").join(" OR ")})`);
   }
-  return db.prepare(`${base} ORDER BY s.updated_at DESC`).all();
+  const clauses = where.filter(Boolean);
+  const sql = clauses.length ? `${base} WHERE ${clauses.join(" AND ")} ORDER BY s.updated_at DESC` : `${base} ORDER BY s.updated_at DESC`;
+  const params = [
+    ...(scope?.owner && !scope.includeAll ? [scope.owner] : []),
+    ...(scope?.excludeAutomated ? AUTOMATED_SESSION_PREFIXES.map((p) => `${p}%`) : []),
+  ];
+  return db.prepare(sql).all(...params);
 }
 
 export function getSessionPath(id) {
@@ -1765,7 +1784,7 @@ export function getSessionMeta(id) {
   if (!dbReady) return null;
   return db
     .prepare(
-      "SELECT id, title, created_at AS createdAt, updated_at AS updatedAt, path, agent_preset AS agentPreset, workspace, owner FROM chat_sessions WHERE id = ?"
+      "SELECT id, title, created_at AS createdAt, updated_at AS updatedAt, path, agent_preset AS agentPreset, workspace, project_id AS projectId, owner FROM chat_sessions WHERE id = ?"
     )
     .get(id);
 }

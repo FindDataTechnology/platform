@@ -54,55 +54,21 @@ function git(cwd, ...argv) {
 }
 
 /**
- * The fixture base, built ONCE per test file.
+ * A throwaway CLONE of this repo, so a test can commit a deliberately broken
+ * tree without touching the real one.
  *
- * Each test still needs its own tree it can mangle, but cloning this repo four
- * times is ~8s apiece on a 270MB history — the whole suite was 150s, of which
- * the gate itself is 2.7s. So one base clone is made, and each test gets a
- * `--shared` clone OF THE BASE, which is milliseconds.
+ * A clone, not a worktree: a worktree registers itself in the real repo's
+ * `git worktree list`, so a test run inside CI would leave entries on the
+ * builder's repo, and a concurrent run could see another test's fixture.
  *
- * A clone at all (rather than a worktree) because a worktree registers itself in
- * the real repo's `git worktree list` — a CI run would leave entries on the
- * builder's repo and concurrent runs could see each other's fixtures.
- *
- * The upstream ref is materialized by hand. The gate looks for `gitee/main` then
- * `origin/main`; a clone carries only `origin/main` pointed at whatever the
- * parent had, so the fixture pins `gitee/main` at HEAD to make "HEAD is the
- * upstream" unambiguous.
+ * `refs/remotes/gitee/main` is materialized by hand because the gate under test
+ * reasons about `gitee/main` and a clone only carries `origin/main` — without
+ * it every check answers `unknown` and the red proofs would prove nothing.
  */
-let baseDir = null;
-let baseError = null;
-
-function fixtureBase() {
-  if (baseDir || baseError) return baseDir;
-  try {
-    const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "ship-readiness-base-")), "repo");
-    execFileSync("git", ["clone", "--quiet", "--local", "--no-hardlinks", ROOT, dir], { stdio: "pipe" });
-    execFileSync("git", ["update-ref", "refs/remotes/gitee/main", "HEAD"], { cwd: dir, stdio: "pipe" });
-    baseDir = dir;
-  } catch (err) {
-    baseError = String(err.stderr ?? err.message).slice(0, 120);
-  }
-  return baseDir;
-}
-
-test.after(() => {
-  if (baseDir) fs.rmSync(path.dirname(baseDir), { recursive: true, force: true });
-});
-
-/** A private, disposable copy of the fixture base. */
 function scratchWorktree(t) {
-  const base = fixtureBase();
-  if (!base) {
-    t.skip(`could not build the fixture base: ${baseError}`);
-    return null;
-  }
   const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "ship-readiness-")), "repo");
   try {
-    execFileSync("git", ["clone", "--quiet", "--shared", base, dir], { stdio: "pipe" });
-    // `--shared` carries objects, not remote-tracking refs: the base's
-    // `refs/remotes/gitee/main` does NOT come along, and without it the gate
-    // answers `unknown` for every check. Re-point it at the base's HEAD.
+    execFileSync("git", ["clone", "--quiet", "--local", "--no-hardlinks", ROOT, dir], { stdio: "pipe" });
     execFileSync("git", ["update-ref", "refs/remotes/gitee/main", "HEAD"], { cwd: dir, stdio: "pipe" });
     fs.copyFileSync(
       path.join(ROOT, "scripts", "check-ship-readiness.mjs"),
@@ -132,29 +98,11 @@ function dropWorktree(dir) {
 
 test("negative control: a clean checkout of this repo passes every offline check", () => {
   const r = runGate(ROOT);
-  // The offline run still resolves HEAD vs the upstream. If that cannot be
+  // The offline run still resolves HEAD vs gitee/main. If that cannot be
   // resolved the gate says `unknown` (exit 2), which is NOT a pass — so this
   // test must distinguish "clean" from "could not tell".
   assert.notEqual(r.code, 2, `the gate could not judge this checkout:\n${r.out}`);
   assert.equal(r.code, 0, `a clean checkout must be green:\n${r.out}`);
-});
-
-test("CI shape: with only origin/main and HEAD at it, the gate still judges", (t) => {
-  // GitHub Actions has no `gitee` remote — only `origin`. When the gate resolved
-  // `gitee/main` alone, every CI run answered `unknown` → exit 2 → the image job
-  // failed on a perfectly good tree (this wiring was added to image.yml, so the
-  // shape must be proven, not assumed).
-  const dir = scratchWorktree(t);
-  if (!dir) return;
-  try {
-    git(dir, "update-ref", "-d", "refs/remotes/gitee/main");
-    git(dir, "update-ref", "refs/remotes/origin/main", "HEAD");
-    const r = runGate(dir);
-    assert.equal(r.code, 0, `the CI shape must be judgeable, not "unknown":\n${r.out}`);
-    assert.match(r.out, /origin\/main/, "the output must name which upstream it used");
-  } finally {
-    dropWorktree(dir);
-  }
 });
 
 test("red proof: HEAD importing a module that is not in HEAD is caught", (t) => {

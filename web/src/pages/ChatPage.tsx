@@ -98,13 +98,6 @@ export function ChatPage({ send, onToggleNav }: Props) {
       }
     };
     window.addEventListener("message", onMessage);
-    // Announce that the listener is live, so the host can deliver context that
-    // cannot be "too early" — its own first send races this registration
-    // (2026-11-20: page/view were dropped on the first delivery and nothing
-    // re-sent them, while `board` survived via the iframe URL).
-    if (window.parent !== window) {
-      window.parent.postMessage({ type: "copilot-context-hello" }, window.location.origin);
-    }
     return () => window.removeEventListener("message", onMessage);
   }, [embedMode]);
   // The board the host reports wins; the URL's `board` param is the first-frame

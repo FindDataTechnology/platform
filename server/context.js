@@ -415,17 +415,24 @@ export function createAppContext(config) {
     const lists = new Map();
     for (const key of new Set([...ctx.clients].map(scopeKey))) {
       try {
-        lists.set(key, ctx.withTurnStatus(await chatHistory.listSessions(key === "*" ? undefined : JSON.parse(key))));
+        // User-facing feed (slim-session-list-feed): automation sessions are
+        // ~99% of the table and grow one row per scheduled round, so they are
+        // excluded in SQL. Each connection's own viewed session is put back
+        // below — the header names it, so it must be in the list.
+        const scope = key === "*" ? {} : JSON.parse(key);
+        lists.set(key, { scope, rows: await chatHistory.listSessions({ ...scope, excludeAutomated: true }) });
       } catch (e) {
         console.error("[sessions] scoped list failed:", e.message);
-        lists.set(key, []);
+        lists.set(key, { scope: null, rows: [] });
       }
     }
     if (version !== ctx.sessionVersion) return;
     for (const ws of ctx.clients) {
       if (ws.readyState !== ws.OPEN) continue;
       const current = ws.viewedSession ?? (ctx.authEnabled ? null : chatHistory.currentSessionId());
-      ctx.send(ws, { type: "sessions", sessions: lists.get(scopeKey(ws)) ?? [], current });
+      const entry = lists.get(scopeKey(ws));
+      const rows = entry ? chatHistory.ensureSessionInList(entry.rows, ws.viewedSession, entry.scope) : [];
+      ctx.send(ws, { type: "sessions", sessions: ctx.withTurnStatus(rows), current });
     }
   };
 
