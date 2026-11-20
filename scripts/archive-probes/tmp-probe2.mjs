@@ -1,0 +1,17 @@
+import { chromium } from "@playwright/test";
+import fs from "node:fs";
+const SESSION = fs.readFileSync("/tmp/wt-session.txt", "utf8").trim();
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ storageState: { cookies: [{ name: "paas_session", value: SESSION, domain: "platform.finddatatech.cloud", path: "/", httpOnly: true, secure: true, sameSite: "Lax" }] }, ignoreHTTPSErrors: true });
+const p = await ctx.newPage();
+p.on("console", (m) => { if (m.type() === "error") console.log("[console.error]", m.text().slice(0, 200)); });
+p.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));
+await p.goto("https://platform.finddatatech.cloud/studio", { waitUntil: "domcontentloaded" });
+await p.getByTestId("agent-studio").waitFor({ timeout: 20000 });
+console.log("studio shell ✓");
+await p.getByTestId("studio-new-agent").click();
+await p.waitForTimeout(1500);
+const ids = await p.evaluate(() => [...document.querySelectorAll("[data-testid]")].map((n) => n.getAttribute("data-testid")).filter((t) => t && t.startsWith("studio-")));
+console.log([...new Set(ids)].join("\n"));
+await p.screenshot({ path: "/tmp/wt-shots/03-studio.png" });
+await browser.close();

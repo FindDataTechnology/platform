@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>谦面 Facet — 智能体市场</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- 跨线副驾（spread-line-copilot 3.7 + harden-copilot-ask-and-intent 4.4）：
+         一行 loader，宿主不写 postMessage 协议。绑定在萬星侧（line=facet → 谦面专家），
+         匿名默认关（登录访客走 popup 升级）。
+
+         谦面是 pathname 路由（App.tsx 用 history.replaceState，不是 hash），所以
+         context() 读 pathname+search；pushContext 在 popstate 时推一次。
+         本线暂不声明 intents——页面动作白名单待产品定（design D4）。 -->
+    <script>
+      (function () {
+        var api = (window.WanxingCopilot = window.WanxingCopilot || {});
+        api.context = function () {
+          return { line: "谦面", page: location.pathname + location.search };
+        };
+        window.addEventListener("popstate", function () {
+          try {
+            api.pushContext && api.pushContext();
+          } catch (_) {}
+        });
+      })();
+    </script>
+    <script src="https://wanxing.finddatatech.cloud/copilot.js" data-line="facet" defer></script>
+  </body>
+</html>

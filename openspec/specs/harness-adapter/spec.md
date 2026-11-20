@@ -1,0 +1,281 @@
+# harness-adapter Specification
+
+## Purpose
+
+Defines the agent-level harness adapter contract: how the agent-runner drives any AI harness
+(dsh today, ACP-speaking agents like Claude Code next) through one interface — spawn, turns,
+usage, lifecycle, and capability self-report — so serving a deployed agent is independent of the
+harness process behind it.
+
+## Requirements
+
+### Requirement: The harness adapter contract is agent-level and harness-neutral
+
+The runner SHALL drive every hosted agent through a harness adapter implementing one contract:
+spawn a harness runtime for one composed agent home, run a turn for a session id (returning the
+assistant text and any usage the harness reports), cancel/stop the runtime, expose the runtime
+pid for footprint sampling, and report its capabilities. The contract SHALL be agent-level only:
+density tricks (multi-agent co-hosting), wire session namespacing, persona/model parking, and
+live-control RPCs are harness-implementation details and SHALL NOT appear in the interface.
+Two adapters SHALL be interchangeable behind the interface — a test suite drives the same
+contract assertions against every adapter implementation.
+
+#### Scenario: Adapters are interchangeable behind the contract
+
+- **WHEN** the contract test suite runs against the dsh adapter and an ACP adapter
+- **THEN** both satisfy the same spawn/turn/stop/pid/capabilities assertions without
+  harness-specific branches in the test body
+
+#### Scenario: Harness-specific depth stays inside the implementation
+
+- **WHEN** the ACP adapter is inspected
+- **THEN** it exposes no pod-density, wire-namespacing, or preset-parking surface — those
+  concepts exist only in the dsh adapter's internals
+
+### Requirement: Capabilities are self-reported and absence degrades open
+
+An adapter SHALL report its capabilities (at minimum: whether live model switching, session
+cancel, streaming deltas, and per-session persona selection are available). Callers SHALL
+degrade open on absent capabilities: a missing capability field means unknown, not unsupported —
+the runner keeps its legacy paths, and a control call against an unsupported capability SHALL
+fail with a structured error naming the missing capability rather than silently no-op or crash.
+
+#### Scenario: A control call on an unsupported capability fails structurally
+
+- **WHEN** the host asks an ACP-adapter agent for a live persona switch it does not support
+- **THEN** the call fails with a structured error naming the unsupported capability, and the
+  agent's current composition is untouched
+
+#### Scenario: Absent capability metadata degrades open
+
+- **WHEN** an adapter reports no capabilities at all (older implementation)
+- **THEN** the runner proceeds with its legacy paths and never refuses the agent for
+  missing capability metadata
+
+### Requirement: The ACP adapter drives any ACP-speaking agent binary over stdio
+
+The ACP adapter SHALL drive an external harness process over stdio using the Agent Client
+Protocol: `initialize` handshake, lazy `session/new` per conversation context (absolute cwd),
+optional `session/set_config_option` for model selection, `session/prompt` per turn settling on
+the reported stop reason, `session/cancel` for cancellation, and usage parsed from the wire's
+`usage_update` notifications when present. A harness whose declared binary cannot start, whose
+handshake fails, or whose turn ends without assistant text SHALL surface the same structured
+error families the dsh path uses (cold-start failure, failed turn, empty turn) so metering and
+billing semantics stay uniform across harnesses. Sessions SHALL persist across adapter restarts
+by the same session id when the ACP agent supports session resume; where it does not, a
+restarted adapter SHALL start the conversation fresh and SHALL NOT mix histories.
+
+#### Scenario: An ACP turn returns assistant text and usage
+
+- **WHEN** a deployed ACP-harness agent serves one A2A turn
+- **THEN** the turn settles with the assistant's text, and usage is recorded when the wire
+  carried `usage_update`
+
+#### Scenario: An empty ACP turn settles as a failed turn
+
+- **WHEN** an ACP harness's turn ends without any assistant text
+- **THEN** the turn fails with the same empty-turn error family the dsh path uses, and the
+  meter records it as a failed turn
+
+#### Scenario: Restart continuity follows the ACP agent's own resume support
+
+- **WHEN** the ACP adapter restarts and a known session id receives another message
+- **THEN** the conversation resumes when the ACP agent supports it; otherwise it starts fresh
+  on that context without mixing histories and without error
+
+### Requirement: Harness selection is declared per deployment and gated at deploy time
+
+A deployment descriptor MAY declare its harness (`harness` field; absent = the runner's default
+harness). A pack's serving contract SHALL be able to declare that harness as a bounded NAME
+(the runner-side allowlist resolves a name, never a command), and the manifest validator SHALL
+admit that declaration — a gate that reads a field the publish path refuses is a broken seam.
+The runner SHALL report the harnesses it can host in its heartbeat, and the deploy gate SHALL
+refuse — naming the missing harness and the target runner — a deployment whose declared harness
+is not in the target runner's reported set; unknown or absent self-report SHALL degrade open,
+exactly like the model-roster gate. The heartbeat SHALL also carry the runner's pod co-hosting
+mode (density) so fleet views can tell solo runners from pod runners; an absent density field
+SHALL degrade open (read as a solo runner). Routing a deployment to a runner SHALL use the existing
+runner assignment channel; no second placement mechanism SHALL be introduced.
+
+#### Scenario: A harness-mismatched deployment is refused at deploy time
+
+- **WHEN** a descriptor declares `harness: acp-claude-code` and the target runner reports only dsh
+- **THEN** the deploy is refused with an error naming the harness and the runner
+
+#### Scenario: A declared harness publishes and reaches the deploy gate
+
+- **WHEN** a pack's serving contract declares `harness: acp-claude-code` and the pack is published
+- **THEN** the manifest validates (the declaration is a legal serving key) and a deploy of the
+  published version to a runner reporting only dsh is refused with the mismatch error
+
+#### Scenario: The heartbeat reports hostable harnesses
+
+- **WHEN** a runner with both dsh and ACP adapters heartbeats
+- **THEN** its runner_stats row carries the harness set the deploy gate reads
+
+#### Scenario: The heartbeat reports the runner's density mode
+
+- **WHEN** a runner configured for pod co-hosting heartbeats
+- **THEN** its runner_stats row carries a truthy pod density field, and a solo runner carries a
+  falsy one
+
+#### Scenario: Unknown harness metadata degrades open
+
+- **WHEN** the target runner's heartbeat carries no harness field (older runner)
+- **THEN** the deploy proceeds under the legacy behavior
+
+### Requirement: Pack content materializes into the target harness's native layout
+
+The runner's composition SHALL be harness-aware: a deployment's pack content — persona, skills,
+MCP references, and data-workspace declaration — SHALL be materialized into the layout the
+declared harness natively reads. For the default dsh harness this SHALL be the existing
+private-home pipeline, unchanged; for an ACP harness this SHALL be a private per-agent
+workspace carrying the persona as the harness's native project-instructions file, one
+harness-native skill entry per pack skill, the MCP references on the harness's
+session-creation channel as authorized streamable-http servers, and the data workspace
+exposed through the process environment. Composition SHALL NOT materialize artifacts the
+target harness cannot read (no dsh home for a non-dsh spawn). Pack parts with no honest
+equivalent on the target harness SHALL fail closed with a structured error naming them
+(deployment secrets) or degrade with a recorded warning (tool allowlists) — never silently
+drop. Deployer billing SHALL be preserved across harnesses: a deployment pinning a billing
+key reference authenticates its harness process with the deployer's key, uniform with the
+dsh path's attribution semantics. A hosted harness name without a layout mapping SHALL serve
+bare — workspace, environment, model — with the unmapped content parts named in a warning.
+
+#### Scenario: An ACP deployment's pack content lands in the harness-native workspace
+
+- **WHEN** an ACP-harness deployment with a persona, two skills, one MCP reference, and a
+  data-workspace declaration is composed
+- **THEN** its private workspace carries the persona as the harness's project-instructions
+  file, one harness-native skill entry per skill, the MCP reference rides the
+  session-creation channel as a streamable-http server bearing the caller's authorization,
+  and the data workspace reaches the process as environment markers
+
+#### Scenario: The dsh composition pipeline is unchanged
+
+- **WHEN** a deployment on the default dsh harness is composed and spawned
+- **THEN** it materializes exactly the private dsh home the runner produced before
+  harness-aware composition — no harness-native workspace files appear in a dsh home, and
+  no dsh home is built for a non-dsh spawn
+
+#### Scenario: Deployment secrets are refused, not silently dropped
+
+- **WHEN** an ACP-harness deployment declares deployment secrets and composition runs
+- **THEN** composition fails with a structured error naming the secrets and the harness's
+  lack of a controlled channel for them — the agent never starts half-credentialed, and the
+  failure distinguishes itself from a fetch failure
+
+#### Scenario: An unmapped harness serves bare with the gap named
+
+- **WHEN** a hosted harness name has no layout mapping and its deployment declares pack
+  content beyond the bare spawn inputs
+- **THEN** the deployment still serves with its workspace, environment, and model, and a
+  recorded warning names every content part that found no native mapping
+
+#### Scenario: The deployer's billing key applies on the non-default harness
+
+- **WHEN** an ACP-harness deployment pins a billing key reference while its runner holds a
+  standing harness credential
+- **THEN** the spawned harness process authenticates with the deployer's key, so its turns
+  bill the deployer with the same attribution semantics as the dsh path
+
+### Requirement: Every outgoing HTTP call from platform processes carries a timeout
+
+Gateway and server processes SHALL issue no outbound HTTP call without a bounded timeout: a shared fetch wrapper with a default timeout (overridable per call site) SHALL cover the login path (WeChat code2Session exchange) and the MCP bridge family, and all remaining bare `fetch` call sites. Timeout errors SHALL surface as structured failures distinguishable as retryable, not as hangs.
+
+#### Scenario: Login exchange cannot hang the browser session
+
+- **WHEN** the WeChat code2Session endpoint is unreachable and a user logs in
+- **THEN** the exchange fails with a timeout error within the configured bound and the login surface shows a retryable failure
+
+#### Scenario: Loopback self-call timeout self-heals
+
+- **WHEN** an MCP bridge call to a loopback service stalls beyond the timeout
+- **THEN** the call fails with a structured timeout error and the calling lane records a retryable failure instead of hanging
+
+### Requirement: Core execution modules carry contract tests
+
+The four untested core execution modules SHALL each carry a minimum contract test: `server/cron-runner.js` (state transitions and catch-up decisions via extracted pure functions), `gateway/index.js` (assembly smoke asserting the OpenAPI paths shape), `gateway/cell-report.js` (report payload shape), and `agent-runner/harness/acp.js` (adapter contract parity with the dsh adapter's test seam). These tests SHALL run in the standard unit lane.
+
+#### Scenario: Cron-runner decisions are testable pure functions
+
+- **WHEN** the catch-up/retry decision logic is extracted from cron-runner into pure functions
+- **THEN** a unit test covers fire/skip/backoff decisions across the tolerance window boundary cases
+
+#### Scenario: Gateway assembly smoke
+
+- **WHEN** the gateway app assembles in test mode
+- **THEN** an assertion on the OpenAPI paths shape passes (assembly regression guard)
+
+### Requirement: Harness credentials never persist in a harness config directory
+
+An ACP harness's credentials SHALL reach the child process only through the spawn environment the runner injects
+(`AGENT_RUNNER_ACP_ENV`, plus a deployment's own credential override) — the channel the harness actually reads, per
+add-harness-adapter D9. Whenever the spawn names a harness config directory (`CLAUDE_CONFIG_DIR`) that directory SHALL NOT
+retain credential values: at every spawn the runner SHALL inspect its `settings.json` and, when it carries a credential
+value — `env.ANTHROPIC_AUTH_TOKEN`, `env.ANTHROPIC_API_KEY`, or a top-level `apiKey` / `primaryApiKey` — SHALL rewrite the
+file without those keys at mode 0600, logging the dropped key names and never their values. The guard SHALL act only on a
+directory the spawn names explicitly, and MUST NOT fall back to the CLI's default `$HOME/.claude`, because that is also where
+an operator's own harness configuration lives in exactly that shape. A file that cannot be parsed, read, or rewritten SHALL
+be left as found and reported by path; the runner MUST NOT treat an unsanitized file as sanitized, and MUST NOT fail or
+refuse the spawn because of this guard — a dirty config file is a disclosure to log, not a reason to take the agent down.
+Removing credentials SHALL NOT by itself create a settings file: the only reason the runner writes a file it did not find is
+the model declaration required by "The runner declares the harness model in the config directory it names".
+
+#### Scenario: A settings file carrying the live token is stripped at spawn
+
+- **WHEN** the runner spawns an ACP child whose named config directory's `settings.json` carries `env.ANTHROPIC_AUTH_TOKEN`
+- **THEN** the file is rewritten without that key at mode 0600, the log line names the dropped key only (never the value),
+  and the child still authenticates from the injected environment
+
+#### Scenario: A clean config directory is left untouched
+
+- **WHEN** the named config directory has no `settings.json`, or one whose settings carry no credential value
+- **THEN** no credential key is written, and a file that was already clean is not rewritten for the credential pass's sake —
+  a file may still be created or corrected by the model declaration in "The runner declares the harness model in the
+  config directory it names", which is the only reason the runner writes a file it did not find
+
+#### Scenario: Only the directory the spawn names is guarded
+
+- **WHEN** the spawn sets no `CLAUDE_CONFIG_DIR`, and a `$HOME/.claude/settings.json` carries a credential value
+- **THEN** that file is neither rewritten nor re-moded, and nothing is logged — the runner does not reach into a home
+  directory it was not pointed at
+
+#### Scenario: An unparseable file degrades open and is named
+
+- **WHEN** the named config directory's `settings.json` is not valid JSON, or cannot be read or rewritten
+- **THEN** the file is left as found, the runner reports it by path, and the spawn still proceeds
+
+### Requirement: The runner declares the harness model in the config directory it names
+
+When the spawn names a harness config directory (`CLAUDE_CONFIG_DIR`) and the injected spawn environment declares
+`ANTHROPIC_MODEL`, the runner SHALL ensure that directory's `settings.json` declares that model in its top-level `model`
+field — creating the file at mode 0600 when it is absent, and updating only that field when it differs. When the injected
+environment also declares `ANTHROPIC_BASE_URL`, the runner SHALL mirror it into the file's `env.ANTHROPIC_BASE_URL`, because
+the file's own copy is what the harness resolves first. Every other setting in the file SHALL be preserved as found, no
+credential key may be introduced by this write, and the declaration SHALL be idempotent: a file that already declares the
+injected model and base URL is left byte-identical. When the injected environment declares no `ANTHROPIC_MODEL`, the runner
+SHALL invent none and leave an absent file absent. As with the credential pass, the runner MUST NOT fall back to
+`$HOME/.claude`, MUST NOT fail or refuse the spawn because of this declaration, and SHALL report a file it could not write by
+path without echoing its contents.
+
+#### Scenario: A runner with no settings file gets the declared model
+
+- **WHEN** the named config directory has no `settings.json` and the injected env declares `ANTHROPIC_MODEL`
+- **THEN** the runner creates it at mode 0600 declaring that model, and the injected `ANTHROPIC_BASE_URL` when declared
+
+#### Scenario: A settings file declaring another model is corrected, not replaced
+
+- **WHEN** the file declares a different model from the injected `ANTHROPIC_MODEL` and carries other settings
+- **THEN** only `model` and `env.ANTHROPIC_BASE_URL` (when the env declares one) change, every other setting survives, and
+  the log names the correction without dumping the file
+
+#### Scenario: An already-correct declaration is left byte-identical
+
+- **WHEN** the file already declares the injected model and base URL
+- **THEN** nothing is written
+
+#### Scenario: No declared model means no invention
+
+- **WHEN** the named config directory has no `settings.json` and the injected env declares no `ANTHROPIC_MODEL`
+- **THEN** no file is created and the spawn proceeds unchanged

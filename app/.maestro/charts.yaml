@@ -1,0 +1,84 @@
+# Charts flow (automate-nonweb-acceptance 2.2): the assistant answers with an
+# ```echarts fence (the chaos stub's `chart` mode) and the app must render a
+# live chart — asserted through the native ChartView states, since a Maestro
+# run cannot see inside a WebView. Pair targets a SECOND mock instance whose
+# LLM points at the chaos gateway; clearState guarantees a fresh pairing token
+# rather than inheriting the dead-LLM instance's.
+#
+# Env: CHARTS_INSTANCE (mock base, e.g. http://10.0.2.2:9412), CHARTS_CODE.
+appId: com.finddata.platform
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      text: '连接你的壹座|Connect to your Yizuo'
+    timeout: 90000
+- tapOn:
+    id: 'server-input'
+- inputText: ${CHARTS_INSTANCE}
+- hideKeyboard
+- tapOn:
+    id: 'code-input'
+- inputText: ${CHARTS_CODE}
+- hideKeyboard
+- tapOn:
+    id: 'bind-button'
+- extendedWaitUntil:
+    visible:
+      text: '.*对话|.*Chat'
+    timeout: 30000
+
+# Four series, routed by the prompt's wording (the stub reads the last user
+# turn). Each turn: chart-ok must appear AND chart-fallback must not.
+- tapOn:
+    id: 'composer-input'
+- inputText: 'draw a bar chart'
+- hideKeyboard
+- tapOn:
+    id: 'send-button'
+- extendedWaitUntil:
+    visible:
+      id: 'chart-ok'
+    timeout: 90000
+- assertNotVisible:
+    id: 'chart-fallback'
+
+- tapOn:
+    id: 'composer-input'
+- inputText: 'draw a line chart'
+- hideKeyboard
+- tapOn:
+    id: 'send-button'
+- extendedWaitUntil:
+    visible:
+      id: 'chart-ok'
+    timeout: 90000
+- assertNotVisible:
+    id: 'chart-fallback'
+
+- tapOn:
+    id: 'composer-input'
+- inputText: 'draw a pie chart'
+- hideKeyboard
+- tapOn:
+    id: 'send-button'
+- extendedWaitUntil:
+    visible:
+      id: 'chart-ok'
+    timeout: 90000
+- assertNotVisible:
+    id: 'chart-fallback'
+
+- tapOn:
+    id: 'composer-input'
+- inputText: 'draw a scatter chart'
+- hideKeyboard
+- tapOn:
+    id: 'send-button'
+- extendedWaitUntil:
+    visible:
+      id: 'chart-ok'
+    timeout: 90000
+- assertNotVisible:
+    id: 'chart-fallback'

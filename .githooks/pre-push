@@ -1,0 +1,75 @@
+#!/bin/sh
+# Push-time hygiene for the shared release line (openspec: release-line-hygiene).
+#
+# ── ① 公开仓只收 main ──────────────────────────────────────────────────────
+# 2026-11-13 事故：本仓 `origin` 被指到了 GitHub 的**公开**镜像仓
+# scs001/platform-image-verify，于是一次普通的 `git push origin <分支>` 把三千多个
+# **未经快照裁剪**的内部文件公开了约 40 分钟。镜像仓只该收 make-public-snapshot.mjs
+# 裁剪过的 main——往里推任何别的分支都绕过全部三道快照闸。
+#
+# 判据是「这个仓**现在**是不是公开」，不是一个字符串。按后缀拦会把私有镜像
+# （`scs001/platform` 2026-11-14 经 gh api 复核仍是 private）一起拦下，而被误拒的人
+# 只会去用 --no-verify——闸于是既没保护公开面，也失去了唯一能看到推送的地方。
+# 反过来，真正的泄露形态是「仓库可见性被改了」，字符串同样拦不住。所以：
+#   - 后缀命中候选 ⇒ 问 GitHub 真实可见性（gh api repos/<slug> --jq .visibility）；
+#   - private       ⇒ 放行任何 ref，并打印一行「已核为 private」，让日志留下依据；
+#   - 其余任何答案  ⇒ 退回旧行为，只放行 main|master。
+# 取不到答案就按「公开」处理：泄露不可撤销，误拒只是一句话的成本。
+remote_name="$1"
+remote_url="$2"
+
+case "$remote_url" in
+  *platform-image-verify*|*FindDataTechnology/platform.git*|*FindDataTechnology/platform|*scs001/platform.git*|*scs001/platform)
+    # `</dev/null` matters: git hands this script the ref list on stdin, and a
+    # helper that reads stdin would swallow the refs it is supposed to judge.
+    slug=$(printf '%s' "$remote_url" | sed -e 's#.*github\.com[:/]##' -e 's#\.git$##' -e 's#/*$##')
+    visibility=$(gh api "repos/$slug" --jq .visibility 2>/dev/null </dev/null || true)
+    if [ "$visibility" = "private" ]; then
+      echo "pre-push: $slug 经 gh api 核为 private —— 非 main 的 ref 放行（公开仓仍只收 main）" >&2
+      allow_branch=1
+    else
+      allow_branch=0
+    fi
+
+    while read -r local_ref _local_sha remote_ref _remote_sha; do
+      [ -z "$remote_ref" ] && continue
+      case "$remote_ref" in
+        refs/heads/main|refs/heads/master) ;;
+        *)
+          if [ "$allow_branch" = "1" ]; then
+            :
+          elif [ "${ALLOW_PUBLIC_BRANCH_PUSH:-0}" = "1" ]; then
+            echo "pre-push: 公开仓分支推送被显式放行（ALLOW_PUBLIC_BRANCH_PUSH=1）：$remote_ref" >&2
+          else
+            echo "" >&2
+            echo "pre-push: 拒绝把 $remote_ref 推到公开仓 $remote_name ($remote_url)。" >&2
+            echo "          公开仓只收 make-public-snapshot.mjs 裁剪过的 main。" >&2
+            echo "          （$slug 的 gh api 可见性 = ${visibility:-未知}）" >&2
+            echo "          推分支请用私有真源：git push gitee $local_ref:<分支名>" >&2
+            echo "          确实要推这个 ref，置 ALLOW_PUBLIC_BRANCH_PUSH=1 再试。" >&2
+            exit 1
+          fi
+          ;;
+      esac
+    done
+    ;;
+esac
+
+# Tests drive this script with a stubbed `gh`; the lint step is not what they
+# exercise. Never set this on a real push.
+if [ "${PRE_PUSH_TEST_MODE:-0}" = "1" ]; then exit 0; fi
+
+# ── ② 落后提示（advisory，永不阻断）─────────────────────────────────────────
+# 本仓的常规做法是从「当前分支」开新分支。当前分支若落后 origin/main 上千笔，
+# 新分支一出生就是旧的：它上面的 change 清单、测试、源码全是旧状态，会有人据此
+# 认为「这项工作还没开始」并把已经上产的东西重做一遍（2026-11-18 一天两次）。
+#
+# 只提示、不阻断、不自动 rebase：阻断会让发布卡在无关的 rebase 后面，而替别人
+# 自动 rebase 他的分支比提示更糟。脚本自身永远 exit 0。
+node scripts/stale-branch-notice.mjs
+
+# ── ② 只检查这次推送改动的文件 ─────────────────────────────────────────────
+# Judges ONLY the files this push changes: pre-existing debt in untouched files
+# is not the pusher's to clear, and blocking on it would teach people to bypass
+# the gate entirely. Same implementation as CI (scripts/lint-changed.mjs).
+exec node scripts/lint-changed.mjs

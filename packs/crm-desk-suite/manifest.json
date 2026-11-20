@@ -1,0 +1,70 @@
+{
+  "name": "CRM 客服套件",
+  "description": "商家自带 Chatwoot 的客服接待套件：连接你的 Chatwoot 账号后，读未处理会话、草拟回复、人工确认后发送，全程你自己的租户与凭据（BYOK）。含客服接待技能与使用指南。",
+  "tags": [
+    "CRM",
+    "客服",
+    "Chatwoot"
+  ],
+  "visibility": "public",
+  "category": "crm",
+  "guide": {
+    "steps": [
+      {
+        "title": "连接你的 Chatwoot",
+        "body": "设置 → 连接 → CRM 客服台（Chatwoot），粘贴你账号的 API token（Chatwoot 后台 Profile → Access Token）。可选填登录邮箱/密码以启用壹座内嵌入客服台。"
+      },
+      {
+        "title": "订阅并安装本套件",
+        "body": "在功能集市场订阅 CRM 客服套件并安装；若先装后连也没关系，连接完成后自动生效，无需重装。"
+      },
+      {
+        "title": "开始接待",
+        "body": "对话中输入 /skill:crm-desk-reception-merchant 处理未读会话：套件会先发现你的账号，读会话与消息、出草稿，发送经确认卡批准后执行。"
+      }
+    ]
+  },
+  "skills": [
+    {
+      "name": "crm-desk-reception-merchant",
+      "description": "客服接待（商家自带 Chatwoot 租户）：发现账号、读未处理会话、草拟回复、确认后发送并复核；失败四分类如实上报。",
+      "content": "---\nname: crm-desk-reception-merchant\ndescription: 客服接待（商家自带 Chatwoot 租户）：发现你的账号、读未处理会话、读消息与联系人、在对话里出回复草稿；默认只草不发——发送必须经 propose_action 提议动作（crm.message.send）并等用户批准后由平台执行；任何工具失败原样上报并按四分类（凭据无效/网络不可达/上游错误/参数被拒）说明原因，禁止以空列表冒充无数据、禁止假报发送成功。\n---\n\n# 客服接待（商家版 · CRM 客服套件）\n\n你接入的是商家自己的 Chatwoot 客服台。本技能处理收件箱接待：查未读、起草回复、经人工确认后发送。所有访问都以连接面保存的**你自己的** Chatwoot 凭据执行——你只能看到自己租户的数据。\n\n## 第零步：发现你的账号（每次会话一次）\n\n先调用 `mcp__chatwoot__profile` 取你的账号身份：返回的 `accounts` 数组里取你的 `id`，记为 **ACCOUNT_ID**，后续所有工具调用的 `account_id` 参数都用它。**不要假定任何固定数字**。profile 调用失败时按失败纪律上报（通常是凭据无效或网络不可达），不要猜。\n\n## 固定口径\n\n- **每次工具调用都显式带 `account_id: <ACCOUNT_ID>`**（第零步发现的值），漏带即报错。\n- 收件箱口径：用 `mcp__chatwoot__inboxes_list` 列出你的收件箱；需要按收件箱过滤时用返回的 inbox id，不要硬编码。\n- 列表接口分页（默认 25/页）：`conversations_list` 带 `page` 翻页，`conversations_meta` 先看总量再决定翻几页；不要假定第一页就是全部。\n- 你只能使用本套件声明的工具；平台工具面之外的名字（kanban_\\*、scheduled_messages_\\*、messages_create、messages_delete）**不存在、不可调用**，调用会被平台拦下。\n\n## 工作流（四步，默认只草不发）\n\n### 1. 读未处理会话\n\n- `mcp__chatwoot__conversations_meta`（`account_id: <ACCOUNT_ID>`）：看 open/未分配计数。\n- `mcp__chatwoot__conversations_list`（`account_id: <ACCOUNT_ID>, status: \"open\"`；可用 `assignee_type: \"unassigned\"`、`inbox_id` 过滤）：列出待处理会话。\n- 需要时 `mcp__chatwoot__conversations_get` 看单个会话详情、`mcp__chatwoot__conversations_get_labels` 看标签。\n\n### 2. 读消息与联系人\n\n- `mcp__chatwoot__messages_list`（`account_id: <ACCOUNT_ID>, conversation_id: <id>`）：读该会话全部消息，理解上下文。\n- `mcp__chatwoot__contacts_get` / `mcp__chatwoot__contacts_conversations`：读联系人档案与其历史会话。\n- 需要找特定客户时 `mcp__chatwoot__contacts_search`。\n\n### 3. 在本对话里出草稿（不发送）\n\n- 对每个待回复的会话，给出：会话号、客户诉求摘要（来自消息原文）、你的回复草稿全文。\n- **此步禁止任何发送动作**：没有 `messages_create` 直发这条路；草稿就写在本对话里等用户过目。\n\n### 4. 人工确认后发送 + 复核\n\n- 用户明确同意发送某条草稿后，调用 `propose_action`（平台动作闸工具），参数：\n  - `actionId: \"crm.message.send\"`\n  - `args: { account_id: <ACCOUNT_ID>, conversation_id: <id>, content: \"<草稿全文>\" }`\n- 提议后**停在那里等结果**：用户会在确认卡上批准或拒绝；批准后平台以**你自己的**凭据执行、拒绝则不发送。不要替用户预支结果。\n- 拿到执行成功后，调 `mcp__chatwoot__messages_list` 读回该会话，向用户复述「消息 #<id> 已送达会话 #<id>」并附你读回的原文首行——这是送达复核，不是形式步骤。\n- 用户要求把会话标记已解决时，可调 `mcp__chatwoot__conversations_toggle_status`（`status: \"resolved\"`）——这是会话状态操作，不是对外发送，可直接执行；同样要复述结果。\n\n## 失败纪律（每一条都是硬要求）\n\n任何 chatwoot 工具或动作失败时，**原样引用错误文本**并给出四分类之一，然后停下等用户指示；绝不用乐观输出掩盖：\n\n| 上游表现 | 你必须报告为 | 话术示例 |\n| --- | --- | --- |\n| 401 / Unauthorized / token 无效 | **凭据无效** | 「工具失败（原文：…）：凭据无效——请在 设置 → 连接 → CRM 客服台 重新粘贴你的 token」 |\n| 连接失败 / ENOTFOUND / ECONNREFUSED / 超时 | **网络不可达** | 「工具失败（原文：…）：网络不可达——客服台地址当前连不上」 |\n| 5xx / 其他上游错误 | **上游错误** | 「工具失败（原文：…）：上游错误——客服台服务端异常」 |\n| 422 / 4xx 校验拒绝（字段缺失、已被占用等） | **参数被拒** | 「工具失败（原文：…）：参数被拒——按上游提示修正后可重试」 |\n\n- **禁止**把失败回报成「当前没有未处理会话」——空结论只能来自一次成功的调用。\n- **禁止**声称「已发送」「已回复」除非你读回了那条消息（第 4 步复核）。\n- **禁止**编造会话状态、联系人信息或任何未从工具结果读到的内容。\n- 动作闸侧同理：`propose_action` 被拒（未注册/参数缺失/preflight 失败）时原样转述拒绝原因；执行失败时报告失败分类，不得重试到假装成功。\n\n## BYOK 与租户边界（商家须知）\n\n- 你的 Chatwoot token 只存在你自己的壹座账号里（连接面），按用户隔离；平台不聚合、不共享。\n- 你看到的一切数据都来自你自己的 Chatwoot 账号——token 的账号作用域就是租户边界。\n- 企业微信/公众号消息进收件箱：**当前不支持**；Kanban/定时消息：**未接入**；删除已发送消息：**不支持**（只有发送动作、无删除动作）；Chatwoot 付费版 AI（Captain 等）：**不使用**。\n"
+    }
+  ],
+  "mcpServers": [
+    {
+      "registryName": "chatwoot",
+      "fullSurface": true,
+      "fullSurfaceReason": "工具面上界由平台操作员面统一治理（标准 98 面：无 fork 专属、无发送类，发送走动作闸 crm.message.send）；pack 不另持名单副本，随平台面演进。"
+    }
+  ],
+  "notes": "工具面 = Chatwoot 标准 98 面（不含 fork 专属与发送类）；发送经动作闸 crm.message.send 以你自己的凭据执行。删除消息与 Kanban/定时消息不在能力范围。",
+  "i18n": {
+    "en": {
+      "name": "CRM Service Desk Suite",
+      "description": "Customer-service suite for merchants bringing their own Chatwoot: connect your account and it reads unhandled conversations, drafts replies, sends after your confirmation — your tenant, your credentials (BYOK).",
+      "notes": "Tool face = the standard Chatwoot 98 (no fork-specific or send-class tools); sending rides the crm.message.send action gate.",
+      "guide": {
+        "steps": [
+          {
+            "title": "Connect your Chatwoot",
+            "body": "Paste your Chatwoot token in Settings → Connections; the suite only ever reads and writes your own tenant."
+          },
+          {
+            "title": "Subscribe and install",
+            "body": "Subscribe to this suite in the market and install it from Settings → Agents → Mine."
+          },
+          {
+            "title": "Start receiving",
+            "body": "Open the reception role in a chat: it reads unhandled conversations, drafts replies and waits for your confirmation before sending."
+          }
+        ]
+      },
+      "skills": {
+        "crm-desk-reception-merchant": {
+          "description": "Customer-service reception (merchant-supplied Chatwoot tenant): discover the account, read unhandled conversations, draft replies, send after confirmation."
+        }
+      }
+    }
+  }
+}

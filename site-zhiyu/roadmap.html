@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智语 · 路线图 — 以下为方向，非在产</title>
+<meta name="description" content="智语（Zhiyu）的路线图页：视频会议接入与社交/IM 会话两条方向。每条都写明今天到哪一步、缺什么才能说已上线。本页不承诺日期。">
+<meta property="og:title" content="智语 · 路线图 — 以下为方向，非在产">
+<meta property="og:description" content="方向 · 今天到哪一步 · 缺什么。不是路线图转在产声明，本页不承诺任何交付日期。">
+<meta name="robots" content="index,follow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='46' fill='%230a0f1e'/%3E%3Ccircle cx='50' cy='50' r='30' fill='none' stroke='%23e0895f' stroke-width='2.2'/%3E%3Ccircle cx='50' cy='20' r='6' fill='%23e0895f'/%3E%3Ccircle cx='76' cy='63' r='6' fill='%234fd0d8'/%3E%3Ccircle cx='24' cy='63' r='6' fill='none' stroke='%23978e79' stroke-width='2' stroke-dasharray='3 3'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Serif+SC:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=20261118">
+</head>
+<body>
+
+<a class="skip-link" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="22" height="22"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="16" cy="4.4" r="3" fill="currentColor"/><circle cx="26" cy="21.7" r="3" fill="#4fd0d8"/><circle cx="6" cy="21.7" r="3" fill="none" stroke="#978e79" stroke-width="1.2" stroke-dasharray="2 2"/></svg>
+    </span>
+    <span class="brand-name">智语</span>
+    <span class="brand-en">Zhiyu</span>
+    <span class="brand-tag">路线图 · roadmap</span>
+    <nav class="topnav" aria-label="主导航">
+      <a href="index.html">← 回首页</a>
+      <a class="cta-mini" href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">开一间房</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="rm-wrap">
+
+    <!-- 页首声明：这一屏的唯一职责是让读者别把下面读成在产 -->
+    <section class="rm-hero">
+      <p class="rm-kicker mono">roadmap · 随事实更新</p>
+      <h1 class="rm-title">以下为方向，非在产。</h1>
+      <p class="rm-lead">
+        智语首页只讲已经上线的面——那六个章节里有真机证据，首页也因此写着一句「以上全部在产。不是路线图」。
+        这一页不一样：它装的是<strong>还没有做、但我们在认真想</strong>的两件事。
+      </p>
+      <p class="rm-lead">
+        每条方向都按四段写：方向是什么、为什么是它、今天到哪一步、缺什么才能说已上线。
+        <strong>本页不给日期。</strong>不是藏，是给不出来——能给的只有"到哪一步了"。
+      </p>
+      <ul class="rm-legend mono" aria-label="状态取值释义">
+        <li><span class="rm-status" data-status="shipped">在产</span> 已上线运行，首页有对应章节可点过去</li>
+        <li><span class="rm-status" data-status="in-flight">在途</span> 已立项，尚未上线</li>
+        <li><span class="rm-status" data-status="direction">方向</span> 还没立项，只是在想</li>
+      </ul>
+    </section>
+
+    <!-- 方向一 · 视频会议接入 -->
+    <article class="rm-card" data-direction="remote-meeting">
+      <header class="rm-card-head">
+        <h2 class="rm-card-title">视频会议：让团队真的坐进那场会</h2>
+        <span class="rm-status" data-status="direction">方向</span>
+      </header>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">方向是什么</h3>
+        <p>智能体以<strong>参会者身份</strong>加入一场视频会议（Zoom、腾讯会议、飞书会议这类）：
+          它在会里，听见、被听见，会后或会中把内容带进房间，由团队作答，必要时把结论写回会议。</p>
+      </div>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">为什么是它</h3>
+        <p>今天的会议能力只到「<strong>每人用自己的设备录自己那一路</strong>」——每一路只代表一个人，
+          按到达顺序入房，不声称跨设备严格时间序。这是诚实的做法，但它要求每个参会者都装了智语。</p>
+        <p>真正常见的会是：五个人在腾讯会议里，只有一个人是我们的用户。机器人入会才解决这种场景；
+          录后处理解决不了，因为它需要所有人配合。</p>
+      </div>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">今天到哪一步</h3>
+        <ul class="rm-steps">
+          <li class="done">会议采集通道：长音频切片、逐片转写、按时间轴拼回、局部可用——<a class="xlink" href="index.html#space">已在产</a>（采集本身复用房间的席位与保留规则）</li>
+          <li class="done">无归属音频不猜人：多人混录落「需要确认」，等一次人工选择</li>
+          <li class="todo">机器人以参会者身份入会：<strong>尚未实现</strong></li>
+          <li class="todo">录制：<strong>尚未实现</strong>（现有的是各端自录，不是会议侧录制）</li>
+        </ul>
+      </div>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">缺什么才能说已上线</h3>
+        <ul class="rm-gaps">
+          <li>逐个平台核实开放能力边界——机器人能否入会、能否取字幕或音轨、要不要企业版权限。
+              <strong>这件事必须真机做，不能照文档推断</strong>，各平台差异很大。</li>
+          <li>录制合规：机器人入场时必须在会里公开声明在录音；国内与海外的告知义务不同。</li>
+          <li>说话人归属：会议平台本来知道谁在说话，这条路比"每人自录"更准，但要按平台逐家对接。</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- 方向二 · 社交与 IM 会话 -->
+    <article class="rm-card" data-direction="social-im">
+      <header class="rm-card-head">
+        <h2 class="rm-card-title">社交与 IM 会话：群在哪里，团队就在哪里</h2>
+        <span class="rm-status" data-status="in-flight" data-work="add-slack-channel">在途</span>
+      </header>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">方向是什么</h3>
+        <p>把一支团队的对外入口挂进群聊：群里的每个人各得一座<strong>匿名席</strong>，
+          消息落进房间、由团队回答、回答寄回群里。同一支团队，同一个入口，可以同时挂在多个群里。</p>
+      </div>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">为什么是它</h3>
+        <p>中国人谈事的地方是群。企业微信里能跑通，说明这条路是对的；但一个群里的人和另一个群里的人，
+          今天要各配一次、各绑一间房。</p>
+        <p>我们想做的是把"对外是谁"从<strong>房间</strong>手里收回<strong>团队</strong>手里：
+          一支团队一个入口，入口可以挂在任何群后面。</p>
+      </div>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">今天到哪一步</h3>
+        <ul class="rm-steps">
+          <li class="done">企业微信群：<strong>端到端真机跑通</strong>——入站、回合、回答落群、长消息切段</li>
+          <li class="partial">飞书 / Telegram / 微信公众号：同一条桥、同一套限速与预算闸，<strong>尚未逐一做端到端验收</strong></li>
+          <li class="todo">Slack 这类群聊式 IM：<strong>尚未实现</strong></li>
+          <li class="done">团队级入口（一支团队一个地址，而不是一间房一个令牌）：<strong>已上线</strong>——团队号可以挂网站嵌入与企业微信群两处，会议门还没做</li>
+        </ul>
+      </div>
+
+      <div class="rm-block">
+        <h3 class="rm-h mono">缺什么才能说已上线</h3>
+        <ul class="rm-gaps">
+          <li>群聊平台的接入：每个平台一套签名校验与会话键规则，逐个做、逐个验。</li>
+          <li>会议入口与更多群聊平台（Slack 已接入，尚待真机验收）。</li>
+          <li>飞书 / Telegram / 公众号三条既有通道的端到端验收补齐——它们已经接好了，但没验过就不算。</li>
+        </ul>
+      </div>
+    </article>
+
+    <p class="rm-foot mono">
+      这一页会随事实改变而改变；它不会随期待改变。<br>
+      首页那六个章节里写的每一条，都能在真机上点一遍。
+    </p>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container foot-grid">
+    <p class="foot-brand"><span class="brand-name">智语</span> <span class="brand-en">Zhiyu</span> — agent teams 与人类的沟通底座</p>
+    <nav class="foot-links mono" aria-label="页脚导航">
+      <a href="index.html">首页</a>
+      <a href="https://agent.finddatatech.cloud/" target="_blank" rel="noopener">素材广场 · 素材</a>
+      <a href="https://yongyi.finddatatech.cloud/" target="_blank" rel="noopener">永忆 · 记忆</a>
+      <a href="https://wanxing.finddatatech.cloud/" target="_blank" rel="noopener">万星 · 执行</a>
+    </nav>
+    <p class="foot-corp mono">FindData Technology</p>
+  </div>
+</footer>
+
+</body>
+</html>

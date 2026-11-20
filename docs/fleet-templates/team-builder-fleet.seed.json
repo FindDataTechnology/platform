@@ -1,0 +1,402 @@
+{
+  "name": "Builder 建队队",
+  "version": "1.0.0",
+  "description": "官方 Builder 建队队：把「造东西」的四条造物通道 + 一个分诊入口编成一支可实化的五岗队——团队架构师（造常驻团队）、蓝图构造师（造可上架模板）、智能体作者（造会话专家）、分身工坊（造对外分身）。它自己也是 starter 序列的一员，但不是领域成品：装上不会替你干活，你叫它才动。五岗都用 existing-persona 指向各 Builder pack 发布的 catalog agent —— 该包未安装时该岗如实报「本部署缺少对应的智能体包」，其余三岗照常工作，不整体失败。只产草稿：批准、铸造、发布、试跑都在主人侧完成（builder-team-templates 的窄面纪律）。",
+  "agents": [
+    {
+      "id": "tb-triage",
+      "name": "分诊台",
+      "persona": "你是 Builder 建队队的分诊岗（也是本队的入口）。用户说想造点什么时，你先判断属于哪种产物，再派单——不自己代做：\n\n① 「要一支常驻的团队，按节奏跑」→ 派给团队架构师（dispatch）。\n② 「要一个可上架、可复用的模板」→ 派给蓝图构造师。\n③ 「要一个会话里即用的专家」→ 派给智能体作者。\n④ 「要把我的知识做成对外的分身」→ 派给分身工坊。\n\n判断不了一句话就够：是「一次性用完」，还是「一直盯着」？前者多半是专家，后者多半是团队。\n\n【职责边界】只分诊与派单：不写技能、不编 manifest、不发布、不实例化。四岗各自的活归它们。\n【输出契约】每次派单前用一句话复述你判断的产物类型与理由；若用户描述跨两类，说明区别并请他二选一，不替他决定。"
+    }
+  ],
+  "fleet": {
+    "name": "Builder 建队队",
+    "members": [
+      {
+        "ref": "triage",
+        "title": "分诊台",
+        "parentRef": null,
+        "target": {
+          "kind": "pack-preset",
+          "packId": "{{PACK_ID}}",
+          "presetId": "tb-triage"
+        },
+        "kpiSlots": [
+          {
+            "key": "routed",
+            "label": "本轮派单数"
+          },
+          {
+            "key": "unclear",
+            "label": "需澄清条数"
+          }
+        ]
+      },
+      {
+        "ref": "team-architect",
+        "title": "团队架构师",
+        "parentRef": "triage",
+        "target": {
+          "kind": "existing-persona",
+          "id": "fleet-architect"
+        },
+        "kpiSlots": [
+          {
+            "key": "drafts_made",
+            "label": "本轮出的团队草稿数"
+          },
+          {
+            "key": "awaiting_approval",
+            "label": "待你批准数"
+          }
+        ]
+      },
+      {
+        "ref": "blueprint-architect",
+        "title": "蓝图构造师",
+        "parentRef": "triage",
+        "target": {
+          "kind": "existing-persona",
+          "id": "blueprint-architect"
+        },
+        "kpiSlots": [
+          {
+            "key": "blueprints_validated",
+            "label": "本轮过校验的蓝图数"
+          },
+          {
+            "key": "validation_failures",
+            "label": "校验未过项数"
+          }
+        ]
+      },
+      {
+        "ref": "pack-author",
+        "title": "智能体作者",
+        "parentRef": "triage",
+        "target": {
+          "kind": "existing-persona",
+          "id": "pack-author"
+        },
+        "kpiSlots": [
+          {
+            "key": "experts_drafted",
+            "label": "本轮出的专家草稿数"
+          },
+          {
+            "key": "missing_servers",
+            "label": "需开户的服务器数"
+          }
+        ]
+      },
+      {
+        "ref": "facade-builder",
+        "title": "分身工坊",
+        "parentRef": "triage",
+        "target": {
+          "kind": "existing-persona",
+          "id": "builder"
+        },
+        "kpiSlots": [
+          {
+            "key": "facades_drafted",
+            "label": "本轮出的分身草稿数"
+          }
+        ],
+        "note": "纯技能引导岗：无 MCP 面，产出是 manifest 文本"
+      }
+    ],
+    "orchestration": {
+      "edges": [
+        {
+          "kind": "dispatch",
+          "from": "triage",
+          "to": "team-architect"
+        },
+        {
+          "kind": "dispatch",
+          "from": "triage",
+          "to": "blueprint-architect"
+        },
+        {
+          "kind": "dispatch",
+          "from": "triage",
+          "to": "pack-author"
+        },
+        {
+          "kind": "dispatch",
+          "from": "triage",
+          "to": "facade-builder"
+        }
+      ]
+    },
+    "i18n": {
+      "en": {
+        "name": "Builder Crew",
+        "members": {
+          "triage": {
+            "title": "Triage",
+            "kpiSlots": {
+              "routed": {
+                "label": "Routed this round"
+              },
+              "unclear": {
+                "label": "Needing clarification"
+              }
+            }
+          },
+          "team-architect": {
+            "title": "Team Architect",
+            "kpiSlots": {
+              "drafts_made": {
+                "label": "Team drafts"
+              },
+              "awaiting_approval": {
+                "label": "Awaiting your approval"
+              }
+            }
+          },
+          "blueprint-architect": {
+            "title": "Blueprint Architect",
+            "kpiSlots": {
+              "blueprints_validated": {
+                "label": "Blueprints validated"
+              },
+              "validation_failures": {
+                "label": "Validation failures"
+              }
+            }
+          },
+          "pack-author": {
+            "title": "Pack Author",
+            "kpiSlots": {
+              "experts_drafted": {
+                "label": "Expert drafts"
+              },
+              "missing_servers": {
+                "label": "Servers to onboard"
+              }
+            }
+          },
+          "facade-builder": {
+            "title": "Facade Builder",
+            "kpiSlots": {
+              "facades_drafted": {
+                "label": "Facade drafts"
+              }
+            }
+          }
+        }
+      },
+      "ja": {
+        "name": "Builder 建隊隊",
+        "members": {
+          "triage": {
+            "title": "トリアージ",
+            "kpiSlots": {
+              "routed": {
+                "label": "本轮の割当数"
+              },
+              "unclear": {
+                "label": "要確認件数"
+              }
+            }
+          },
+          "team-architect": {
+            "title": "チームアーキテクト",
+            "kpiSlots": {
+              "drafts_made": {
+                "label": "チーム草稿数"
+              },
+              "awaiting_approval": {
+                "label": "承認待ち"
+              }
+            }
+          },
+          "blueprint-architect": {
+            "title": "ブループリントコンストラクター",
+            "kpiSlots": {
+              "blueprints_validated": {
+                "label": "検証通過の設計数"
+              },
+              "validation_failures": {
+                "label": "検証失敗"
+              }
+            }
+          },
+          "pack-author": {
+            "title": "エージェント作者",
+            "kpiSlots": {
+              "experts_drafted": {
+                "label": "専門エージェント草稿数"
+              },
+              "missing_servers": {
+                "label": "要接続サーバー"
+              }
+            }
+          },
+          "facade-builder": {
+            "title": "分身工房",
+            "kpiSlots": {
+              "facades_drafted": {
+                "label": "分身草稿数"
+              }
+            }
+          }
+        }
+      },
+      "es": {
+        "name": "Escuadrón Builder",
+        "members": {
+          "triage": {
+            "title": "Triaje",
+            "kpiSlots": {
+              "routed": {
+                "label": "Derivados en esta ronda"
+              },
+              "unclear": {
+                "label": "Pendientes de aclarar"
+              }
+            }
+          },
+          "team-architect": {
+            "title": "Arquitecto de Equipos",
+            "kpiSlots": {
+              "drafts_made": {
+                "label": "Borradores de equipo"
+              },
+              "awaiting_approval": {
+                "label": "Esperando tu aprobación"
+              }
+            }
+          },
+          "blueprint-architect": {
+            "title": "Constructor de Planos",
+            "kpiSlots": {
+              "blueprints_validated": {
+                "label": "Planos validados"
+              },
+              "validation_failures": {
+                "label": "Fallos de validación"
+              }
+            }
+          },
+          "pack-author": {
+            "title": "Autor de Agentes",
+            "kpiSlots": {
+              "experts_drafted": {
+                "label": "Borradores de experto"
+              },
+              "missing_servers": {
+                "label": "Servidores por conectar"
+              }
+            }
+          },
+          "facade-builder": {
+            "title": "Fábrica de Facades",
+            "kpiSlots": {
+              "facades_drafted": {
+                "label": "Borradores de facade"
+              }
+            }
+          }
+        }
+      },
+      "fr": {
+        "name": "Équipe Builder",
+        "members": {
+          "triage": {
+            "title": "Triage",
+            "kpiSlots": {
+              "routed": {
+                "label": "Orientés ce tour"
+              },
+              "unclear": {
+                "label": "À clarifier"
+              }
+            }
+          },
+          "team-architect": {
+            "title": "Architecte d'Équipe",
+            "kpiSlots": {
+              "drafts_made": {
+                "label": "Brouillons d'équipe"
+              },
+              "awaiting_approval": {
+                "label": "En attente de votre approbation"
+              }
+            }
+          },
+          "blueprint-architect": {
+            "title": "Constructeur de Blueprints",
+            "kpiSlots": {
+              "blueprints_validated": {
+                "label": "Blueprints validés"
+              },
+              "validation_failures": {
+                "label": "Échecs de validation"
+              }
+            }
+          },
+          "pack-author": {
+            "title": "Auteur d'Agents",
+            "kpiSlots": {
+              "experts_drafted": {
+                "label": "Brouillons d'expert"
+              },
+              "missing_servers": {
+                "label": "Serveurs à connecter"
+              }
+            }
+          },
+          "facade-builder": {
+            "title": "Atelier de Facades",
+            "kpiSlots": {
+              "facades_drafted": {
+                "label": "Brouillons de façade"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "i18n": {
+    "en": {
+      "name": "Builder Crew",
+      "description": "The official Builder crew: a triage post plus four roles covering the four ways to build something — a standing team (Team Architect), a publishable template (Blueprint Architect), a reusable in-chat expert (Pack Author), and a customer-facing facade (Facade Builder). It is on the starter sequence but is not a domain team: installing it does not start any work — it wakes when you call it. Each role targets a Builder pack's published catalog agent; a role whose pack is not installed reports that plainly while the other three keep working. Drafts only: approval, casting, publishing and trials are the owner's.",
+      "agents": {
+        "tb-triage": {
+          "name": "Triage"
+        }
+      }
+    },
+    "ja": {
+      "name": "Builder 建隊隊",
+      "description": "公式 Builder 建隊隊：ものづくりの四つの経路を実体化可能な四崗の隊に編成します——常駐チーム（チームアーキテクト）、公開可能なテンプレート（ブループリントコンストラクター）、会話内で使える専門家（エージェント作者）、対外向けの分身（分身工房）。starter 序列の一員ですが領域チームではありません：導入しても勝手に働かず、呼ばれたときに動きます。各崗は各 Builder パックが公開するカタログエージェントを指し、そのパックが未導入なら該当崗がその旨を明示し、残り三崗は通常通り動作します。草稿のみ：承認・鋳造・公開・試走は主人が行います。",
+      "agents": {
+        "tb-triage": {
+          "name": "トリアージ"
+        }
+      }
+    },
+    "es": {
+      "name": "Escuadrón Builder",
+      "description": "El escuadrón oficial Builder: cuatro roles que cubren las cuatro formas de construir algo — un equipo permanente (Arquitecto de Equipos), una plantilla publicable (Constructor de Planos), un experto reutilizable en el chat (Autor de Agentes) y una fachada de cara al cliente (Fábrica de Facades). Está en la secuencia inicial pero no es un equipo de dominio: instalarlo no inicia ningún trabajo, se activa cuando lo llamas. Cada rol apunta al agente de catálogo publicado por su pack Builder; un rol cuyo pack no está instalado lo dice claramente mientras los otros tres siguen funcionando. Solo borradores: aprobación, fundición, publicación y pruebas son del propietario.",
+      "agents": {
+        "tb-triage": {
+          "name": "Triaje"
+        }
+      }
+    },
+    "fr": {
+      "name": "Équipe Builder",
+      "description": "L'équipe officielle Builder : quatre rôles couvrant les quatre façons de construire quelque chose — une équipe permanente (Architecte d'Équipe), un modèle publiable (Constructeur de Blueprints), un expert réutilisable dans le chat (Auteur d'Agents) et une façade tournée client (Atelier de Facades). Elle figure dans la séquence de démarrage mais n'est pas une équipe métier : l'installer ne lance aucun travail, elle se réveille quand vous l'appelez. Chaque rôle cible l'agent de catalogue publié par son pack Builder ; un rôle dont le pack n'est pas installé le dit clairement pendant que les trois autres continuent de fonctionner. Brouillons uniquement : approbation, forge, publication et essais restent au propriétaire.",
+      "agents": {
+        "tb-triage": {
+          "name": "Triage"
+        }
+      }
+    }
+  }
+}

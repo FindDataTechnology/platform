@@ -1,0 +1,1050 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wanxing.finddatatech.cloud/contracts/wanxing-public-api.v1.json",
+  "title": "Wanxing public read surfaces — consumer contract",
+  "x-contract-rev": "3",
+  "description": "The response shapes that sibling lines rely on. Only consumed fields are constrained; anything else may be added freely (additive changes do not bump the revision). Bumping x-contract-rev is required for any rename, removal, or semantic change of a field named here. Consumers: paas/scripts/plaza-export.mjs (catalog export — reads the projection counters below as a hard gate), paas/facet/supply-catalog.js (spine), paas/server/routes/fleets.js (owner cross-line), paas/services/ops-console (fleet board), fd-lex (copilot loader — not covered here, see copilot.js contract), fd-wire (A2A receipt — covered by /turn below), wanxing-ops-mcp (catalog + card), fd-industry-data (A2A work-order dispatch).",
+  "$defs": {
+    "facadeCatalogResponse": {
+      "type": "object",
+      "description": "GET /api/facades-catalog — the public facade projection. Consumers: paas/scripts/plaza-export.mjs (facades + the two projection counters), paas/facet/supply-catalog.js (producer).",
+      "required": [
+        "facades"
+      ],
+      "properties": {
+        "facades": {
+          "type": "array",
+          "description": "Projected facade entries. A malformed upstream row never appears here — it is counted in `dropped` instead."
+        },
+        "dropped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Upstream rows the projection discarded entirely (missing/unusable id). Consumed by plaza-export as a hard gate: >0 fails the export, because the plaza would otherwise publish a silently shorter catalog."
+        },
+        "coerced": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rows kept although a required field was not a string (blank fields are published). Consumed by plaza-export as a hard gate."
+        },
+        "viewer": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "anonymous"
+          ],
+          "description": "Serving plane's own admission result; reserved, not an authorisation decision."
+        },
+        "source_absent": {
+          "type": "boolean",
+          "description": "Present only when the upstream feed is unconfigured or has never landed. Absence is honest (empty array), never a fabricated row."
+        }
+      }
+    },
+    "dataAnchorsCatalogResponse": {
+      "type": "object",
+      "description": "GET /api/data-anchors-catalog — the DAAS data-anchor projection. Consumers: paas/scripts/plaza-export.mjs (anchors + the two projection counters), paas/facet/supply-catalog.js (producer).",
+      "required": [
+        "anchors"
+      ],
+      "properties": {
+        "anchors": {
+          "type": "array",
+          "description": "Projected data-anchor entries (official-data species). Same drop discipline as the facade face."
+        },
+        "dropped": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Upstream rows the projection discarded entirely (missing/unusable id). Consumed by plaza-export as a hard gate."
+        },
+        "coerced": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Rows kept although a required field was not a string. Consumed by plaza-export as a hard gate."
+        },
+        "as_of": {
+          "type": "string",
+          "description": "Upstream snapshot instant the projection was computed against."
+        },
+        "source_absent": {
+          "type": "boolean",
+          "description": "Present only when the upstream feed is unconfigured or has never landed."
+        }
+      }
+    },
+    "agentsResponse": {
+      "type": "object",
+      "description": "GET /api/wanxing/v1/agents — the deployed-instance view. Consumers: paas/facet/supply-catalog.js (every field below), wanxing-ops-mcp (browse tool).",
+      "required": [
+        "agents"
+      ],
+      "properties": {
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/catalogEntry"
+          }
+        },
+        "page": {
+          "type": "number",
+          "description": "Present only on a paged request."
+        },
+        "page_size": {
+          "type": "number",
+          "description": "Present only on a paged request."
+        },
+        "total": {
+          "type": "number",
+          "description": "Present only on a paged request; counts the filtered set."
+        },
+        "facets": {
+          "type": "object",
+          "description": "Present only when facets=1. Computed over the UNFILTERED public list.",
+          "required": [
+            "total",
+            "featured",
+            "categories"
+          ],
+          "properties": {
+            "total": {
+              "type": "number"
+            },
+            "featured": {
+              "type": "number"
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "count"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "count": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "clusters": {
+              "type": "number",
+              "description": "Distinct cluster ids over the UNFILTERED public list (chips render whole, so the count never moves when a filter is applied)."
+            }
+          }
+        }
+      }
+    },
+    "catalogEntry": {
+      "type": "object",
+      "required": [
+        "slug",
+        "name",
+        "description"
+      ],
+      "properties": {
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Public route identity. The spine joins its deployment bookkeeping by this value."
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ],
+          "description": "Pack version as published."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "skills": {
+          "type": "array"
+        },
+        "capabilities": {
+          "type": "object"
+        },
+        "examples": {
+          "type": "array",
+          "description": "Declared example prompts; absent when undeclared."
+        },
+        "chatable": {
+          "type": "boolean",
+          "description": "Chatability marker. Absent when not chatable. The spine copies this verbatim into the supply catalog."
+        },
+        "category": {
+          "type": "string",
+          "description": "Curation LABEL from the packs table. Absent when uncurated — that never hides the entry."
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Curation label; only ever present as true."
+        },
+        "turns7d": {
+          "type": "number",
+          "description": "External turns (api+chat) in the last 7 days. Honest zero."
+        },
+        "cluster": {
+          "type": "object",
+          "description": "Present only for members of a cluster-declaring pack."
+        },
+        "facade": {
+          "type": "boolean",
+          "description": "Present only for facade-declaring agents."
+        },
+        "facade_stance": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "serving",
+            "idle",
+            "paused",
+            "unknown"
+          ],
+          "description": "Live instance status, derived from the deployment pause flag plus turns7d. The spine passes this through unchanged into its facade species."
+        },
+        "status_as_of": {
+          "type": "string",
+          "description": "The snapshot instant the status was derived from — lets a consumer tell a fresh 'idle' from a frozen 'unknown'."
+        }
+      }
+    },
+    "opsUsageResponse": {
+      "type": "object",
+      "description": "GET /api/wanxing/v1/ops/usage — service-credential only. Consumer: paas/server/routes/fleets.js filters byCaller by email.",
+      "required": [
+        "byCaller",
+        "byAgent"
+      ],
+      "properties": {
+        "byCaller": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "email",
+              "turns",
+              "minutes",
+              "usd",
+              "pending"
+            ],
+            "properties": {
+              "callerId": {
+                "type": "number"
+              },
+              "email": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The owner cross-line view matches on this."
+              },
+              "turns": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "minutes": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "usd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pending": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "byAgent": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "agent",
+              "turns",
+              "minutes",
+              "usd",
+              "pending"
+            ],
+            "properties": {
+              "agent": {
+                "type": "string"
+              },
+              "turns": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "minutes": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "usd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "pending": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "fleetBoardResponse": {
+      "type": "object",
+      "description": "GET /api/fleet/v1/board — observer board behind the facade's console gate. Consumer: paas/services/ops-console (renders every field below).",
+      "required": [
+        "states",
+        "runners",
+        "ingest_lag",
+        "settled_pending",
+        "wake_ms"
+      ],
+      "properties": {
+        "window": {
+          "type": "string"
+        },
+        "agents_total": {
+          "type": "number"
+        },
+        "states": {
+          "type": "object",
+          "description": "state name → count (latest per agent within the states window).",
+          "additionalProperties": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "runners": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "children": {
+                "type": "number"
+              },
+              "queued": {
+                "type": "number"
+              },
+              "budget_mb": {
+                "type": "number"
+              },
+              "budget_mb_limit": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "agents": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "ingest_lag": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "type": "string"
+              },
+              "event_age_ms": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "arrival_age_ms": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "settled_pending": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "count": {
+              "type": "number"
+            },
+            "usd": {
+              "type": "number"
+            }
+          }
+        },
+        "wake_ms": {
+          "type": "object",
+          "required": [
+            "p50",
+            "p95"
+          ],
+          "properties": {
+            "p50": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "p95": {
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          }
+        },
+        "turns": {
+          "type": "number"
+        },
+        "errors": {
+          "type": "number"
+        },
+        "minutes_billed": {
+          "type": "number"
+        },
+        "usd": {
+          "type": "number"
+        },
+        "budget_kills": {
+          "type": "number"
+        },
+        "reaped": {
+          "type": "number"
+        },
+        "states_window": {
+          "type": "string",
+          "description": "The window the `states` distribution is counted over — not the top-level `window`. Consumers must label the pills with this, or a 2h distribution reads as a 24h one."
+        },
+        "runner_liveness": {
+          "type": "object",
+          "description": "Explicit liveness beside the 30-minute snapshot: `runners` answers \"what did it last say\", this answers \"is it still there\". ABSENT semantics are the point — a runner missing here is not reported alive. Consumer: wanxing-web OpsView.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "last_seen_at": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "The runner's last beat, ms epoch. null only when the row exists without a timestamp."
+              },
+              "age_ms": {
+                "type": "number",
+                "description": "now - last_seen_at, clamped at 0. This is the number the legend thresholds on."
+              },
+              "beats": {
+                "type": "number",
+                "description": "Cumulative beat count for the runner."
+              },
+              "presence": {
+                "type": "string",
+                "enum": [
+                  "ok",
+                  "stale",
+                  "lost"
+                ],
+                "description": "ok = fresh beat; stale = late but inside tolerance; lost = silence we are willing to call a loss. Three states, never two — none of them may collapse into 'absent' (a runner missing from this map is not reported alive)."
+              }
+            }
+          }
+        },
+        "leases": {
+          "type": "object",
+          "description": "Work leases over the lease window. Present even when empty, because \"no sender yet\" and \"nothing stuck\" must not render alike — `available` is the difference, and OpsView renders three distinct states from it.",
+          "properties": {
+            "available": {
+              "type": "boolean",
+              "description": "false = no lease event has ever been seen (the sender never came up)."
+            },
+            "events": {
+              "type": "number"
+            },
+            "expired_in_window": {
+              "type": "number"
+            },
+            "active": {
+              "type": "number"
+            },
+            "window_ms": {
+              "type": "number"
+            },
+            "units": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "unit": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "state": {
+                    "type": "string",
+                    "description": "claimed | renewed | expired — the kind suffix."
+                  },
+                  "holder": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "attempt": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "at": {
+                    "type": [
+                      "number",
+                      "null"
+                    ]
+                  },
+                  "age_ms": {
+                    "type": "number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "cells": {
+          "type": "object",
+          "description": "Freshest cell_stats per cell identity within the 30-minute window (id → row, latest wins — these are snapshots, not an event stream). Deliberately NOT folded into agents/states: cell identities would blur the resident picture. Consumer: wanxing-web OpsView/FleetView.",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "shortterm": {
+          "type": "object",
+          "description": "Counters summed over the same cell_stats rows: how many cells reported, what their executions and workers are doing right now. Consumer: wanxing-web OpsView.",
+          "properties": {
+            "cells": {
+              "type": "number"
+            },
+            "running": {
+              "type": "number"
+            },
+            "queued": {
+              "type": "number"
+            },
+            "workers_busy": {
+              "type": "number"
+            },
+            "workers_idle": {
+              "type": "number"
+            },
+            "workers_cap": {
+              "type": "number"
+            }
+          }
+        },
+        "agent_health": {
+          "type": "array",
+          "description": "Per-agent health from the observer's own pass (surface-silent-agent-failures): a stale pass refreshes on demand so a panel never reads an empty section. Consumers index it BY `agent`, so that key is the join. wanxing-web FleetView + OpsView.",
+          "items": {
+            "type": "object",
+            "required": [
+              "agent"
+            ],
+            "properties": {
+              "agent": {
+                "type": "string",
+                "description": "The join key consumers index by."
+              },
+              "consecutive": {
+                "type": "number",
+                "description": "Leading streak of failed TURNS (not hours) — a low-traffic agent that failed twice is not '3 hours bad'."
+              },
+              "consecutiveHours": {
+                "type": "number",
+                "description": "Same streak counted in hourly buckets (kept for the web's hour read)."
+              },
+              "declared_every_ms": {
+                "type": "number",
+                "description": "Present only for agents that declare a rhythm: the period they promised."
+              },
+              "errors": {
+                "type": "number"
+              },
+              "expected_turns": {
+                "type": "number",
+                "description": "Present only with a declared rhythm: how many turns the window implies."
+              },
+              "health": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "ok | silent | degraded | failing | paused; null only for a stale (unjudged) entry. OpsView filters on failing/degraded."
+              },
+              "lastErrorKind": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The cause of the latest error (classified kind, or 'budget'/'unknown'); null when the window had no errors."
+              },
+              "since": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "description": "When the current state began (ms epoch); null when unjudged."
+              },
+              "stale": {
+                "type": "boolean",
+                "description": "Always present. true = the pause flag could not be read this pass, so the entry is unjudged rather than healthy."
+              },
+              "stalled": {
+                "type": "boolean",
+                "description": "Present only when 'should have run at least stallMinExpected times, ran zero'. This is what separates 'nobody used it' from 'it should have fired and did not'."
+              },
+              "turns": {
+                "type": "number"
+              },
+              "window_hours": {
+                "type": "number",
+                "description": "The health window the counters were folded over (hours). Consumers must label the panel with this, or a 3-hour count reads as a 24-hour one."
+              }
+            }
+          }
+        },
+        "missions": {
+          "type": "array",
+          "description": "Mission roll-up from the event stream (id → status/trail/spent folded from mission events). Consumer: wanxing-web MissionsView.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "trail": {
+                "type": "array"
+              },
+              "spent": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "at": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "turnReceipt": {
+      "type": "object",
+      "description": "POST /api/wanxing/v1/a2a/{slug} (JSON-RPC message/send) — the synchronous receipt shape fd-wire pins (wire-wanxing-direct-dispatch D1) and wanxing-ops-mcp relays.",
+      "required": [
+        "jsonrpc"
+      ],
+      "properties": {
+        "jsonrpc": {
+          "type": "string"
+        },
+        "id": {},
+        "result": {
+          "type": "object",
+          "description": "The A2A reply. Two producers, one shape: the runner answers message/send with the Message itself (parts/kind + an id), so the id arrives as `messageId`; the facade's own queue-composed receipt (desktop seat queue) uses `message_id`. Both spellings mean the same thing and both are declared here — a consumer pinning only one of them silently loses the id on the other path. fd-wire reads `result.messageId`; wanxing-ops-mcp relays `result` verbatim.",
+          "properties": {
+            "role": {
+              "type": "string",
+              "description": "A2A Message role on the runner's reply (\"agent\"). Absent on the facade's queue-composed acknowledgement, which is not a Message."
+            },
+            "kind": {
+              "type": "string",
+              "description": "Message kind; \"message\" on the facade's composed receipt."
+            },
+            "parts": {
+              "type": "array",
+              "description": "The reply content. fd-wire concatenates every text part in order; a receipt without parts is a protocol error on that lane.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "text"
+                ],
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "description": "Part kind; \"text\" is the only kind the wire lane consumes."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The part's text payload."
+                  },
+                  "metadata": {
+                    "type": "object"
+                  }
+                }
+              }
+            },
+            "messageId": {
+              "type": "string",
+              "description": "A2A-canonical id, echoed by the runner's reply. Consumers use it to correlate a receipt with a turn; absent means the caller's own id stands. THE spelling fd-wire reads."
+            },
+            "message_id": {
+              "type": "string",
+              "description": "The facade's queue-composed receipt spells the same id this way (desktop-seat queue path). Declared so a consumer can accept both without guessing."
+            },
+            "context_id": {
+              "type": "string",
+              "description": "Conversation context on the facade-composed receipt."
+            },
+            "contextId": {
+              "type": "string",
+              "description": "A2A-canonical spelling of the same field (runner passthrough)."
+            },
+            "task_id": {
+              "type": "string",
+              "description": "Set when the turn was queued to a desktop seat rather than run inline."
+            },
+            "async": {
+              "type": "boolean",
+              "description": "True when the receipt is an acknowledgement of a queued turn, not its result."
+            },
+            "message": {
+              "type": "object",
+              "description": "The A2A alternative where the Message is wrapped: {result:{message:{parts,…}}}. Consumers must read parts from result OR result.message."
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "number"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "agentCard": {
+      "type": "object",
+      "description": "GET /api/wanxing/v1/a2a/{slug}/.well-known/agent-card.json — the A2A discovery card. Consumers: wanxing-ops-mcp (relays it), any A2A client resolving an agent before calling it.",
+      "required": [
+        "name",
+        "description",
+        "url",
+        "capabilities",
+        "skills"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": [
+            "string",
+            "number",
+            "null"
+          ]
+        },
+        "provider": {
+          "type": "object",
+          "description": "Redacted on the public card: a `url` pointing at a private/unroutable address is REMOVED, not rewritten. Absent url = the provider is not publicly reachable (see redact-agent-card-private-endpoints)."
+        },
+        "capabilities": {
+          "type": "object",
+          "description": "Defaults to {streaming: true} when the registry entry declares none."
+        },
+        "skills": {
+          "type": "array"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "examples": {
+          "type": "array",
+          "description": "Declared example prompts; absent when undeclared (absent keeps the shape)."
+        },
+        "default_input_modes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Defaults to [\"text\"]."
+        },
+        "default_output_modes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Defaults to [\"text\"]."
+        },
+        "preferred_transport": {
+          "type": "string",
+          "description": "Defaults to \"jsonrpc\"."
+        },
+        "facade": {
+          "type": "boolean",
+          "description": "Present only for facade entries; ordinary agents omit it."
+        },
+        "facade_stance": {
+          "type": "string",
+          "description": "Rides with `facade`; defaults to \"hosted\"."
+        },
+        "url": {
+          "type": "string",
+          "description": "ALWAYS the facade's own a2a endpoint for this slug — never the internal runtime address. This is the field the redaction discipline protects."
+        },
+        "chatable": {
+          "type": "boolean",
+          "description": "The route appends it (not publicCard): present only when the chat gate admits this caller — the same fact /chat/{slug}/status answers. Absent means not chatable."
+        },
+        "cluster": {
+          "type": "object",
+          "description": "The route appends it (not publicCard): present only when the pack's manifest declares a cluster. Carries {id, ...}; `slug` + `url` are added when the cluster is a listed service unit."
+        }
+      }
+    },
+    "copilotHost": {
+      "type": "object",
+      "description": "public/copilot.js 的宿主协议（postMessage）。消费者：识律控制台等各产品线的宿主页面——它们只声明三个钩子，消息由这份 loader 收发。这是唯一被消费、又不是 HTTP 面的一块，所以只在该文件里具名、不参与 JSON 传输。信任边界：只有同源且来自自己 frame 的消息被接受（ev.origin 与 ev.source 双检），payload 必须带同一个 slug。",
+      "required": [
+        "hostToWidget",
+        "widgetToHost",
+        "hooks"
+      ],
+      "properties": {
+        "hostToWidget": {
+          "type": "array",
+          "description": "宿主（loader）发给 iframe 内组件的消息类型。",
+          "items": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "wx-copilot-init",
+                  "wx-copilot-identity",
+                  "wx-copilot-context",
+                  "wx-copilot-intent-result"
+                ]
+              },
+              "intents": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "init 携带：宿主能真正执行的动作名。组件只把声明过的意图渲染成可执行——没声明的给普通问答卡，绝不给死按钮。"
+              },
+              "token": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "identity 携带：每回合的身份。null 表示宿主没有身份，组件按自己的档位走（开放则匿名，否则升级登录）。"
+              },
+              "context": {
+                "type": "object",
+                "description": "context 携带：页面上下文（page/entity 等），ready 时与路由变化时推。"
+              },
+              "askId": {
+                "type": [
+                  "string",
+                  "number",
+                  "null"
+                ]
+              },
+              "questionId": {
+                "type": [
+                  "string",
+                  "number",
+                  "null"
+                ]
+              },
+              "ok": {
+                "type": "boolean",
+                "description": "intent-result 携带：动作是否真的执行了。"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "widgetToHost": {
+          "type": "array",
+          "description": "iframe 内组件发给宿主的消息类型。",
+          "items": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "wx-copilot-ready",
+                  "wx-copilot-identity-request",
+                  "wx-copilot-state",
+                  "wx-copilot-intent"
+                ]
+              },
+              "slug": {
+                "type": "string",
+                "description": "每条消息都带；不匹配宿主自己的 slug 一律丢弃。"
+              },
+              "open": {
+                "type": "boolean",
+                "description": "state 携带：折叠与否。宿主据此把 iframe 缩到 80px——整高透明框会吃掉宿主页面那一角的点击。"
+              },
+              "verb": {
+                "type": "string",
+                "description": "intent 携带：要宿主执行的动作名，必须出现在 init 声明的集合里。"
+              },
+              "arg": {},
+              "askId": {},
+              "questionId": {}
+            }
+          }
+        },
+        "hooks": {
+          "type": "array",
+          "description": "宿主可声明的四个可选钩子；缺省全部降级（无身份→组件用自己档位；无 context→不推上下文；无 intents→给普通问答卡；无 onEvent→没有可观测性，但一轮也不会坏）。",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "enum": [
+                  "identify",
+                  "context",
+                  "intents",
+                  "onEvent"
+                ]
+              },
+              "async": {
+                "type": "boolean",
+                "description": "identify 可为 async（每回合调用一次）；intents 的值是一张 verb→函数 的表，不是函数。"
+              }
+            }
+          }
+        }
+      }
+    },
+    "prefsResponse": {
+      "type": "object",
+      "description": "GET /api/wanxing/v1/prefs/{slug} 与 PUT 同一路由的响应（调用键即凭证）。消费者：谦面 `facet prefs` 子命令（paas facet/cli/facet.js）——它读 prefs.callbackUrl / callbackSecretSet / reapMinutes。密钥只报存在，永不回显值。",
+      "required": [
+        "prefs"
+      ],
+      "properties": {
+        "prefs": {
+          "type": "object",
+          "required": [
+            "callbackUrl",
+            "callbackSecretSet",
+            "reapMinutes"
+          ],
+          "properties": {
+            "callbackUrl": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "回合完成回调地址；未设即 null。"
+            },
+            "callbackSecretSet": {
+              "type": "boolean",
+              "description": "签名密钥是否已设——只报存在，不回显值。"
+            },
+            "reapMinutes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "外部上下文收割窗（分钟）；未设为 null（回落平台默认）。"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

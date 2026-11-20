@@ -1,0 +1,42 @@
+{
+  "x-contract-rev": "1",
+  "description": "The pause/resume WRITE rule, as a cross-repo fixture. The registry's metadata.paused is the single source of truth and BOTH doors (wanxing facade console, 壹座 packs surface) write it — so the payload they write must be identical, not merely equivalent. The one place it is easy to get subtly wrong: resuming REMOVES the key rather than writing false, because every reader tests `=== true` and a lingering explicit false is a different shape that the next consumer will trip over.",
+  "target": "PUT /api/agents{agentPath} with this body (falling back to POST /api/agents/register on refusal)",
+  "cases": [
+    {
+      "name": "pause an entry that has no metadata yet",
+      "entry": { "visibility": "public", "name": "A" },
+      "paused": true,
+      "expect": { "visibility": "public", "name": "A", "metadata": { "paused": true } },
+      "note": "metadata is created; only the paused key is added."
+    },
+    {
+      "name": "pause an entry that already carries other metadata",
+      "entry": { "visibility": "public", "metadata": { "rhythm": "0 8 * * *", "model": "m1" } },
+      "paused": true,
+      "expect": { "visibility": "public", "metadata": { "rhythm": "0 8 * * *", "model": "m1", "paused": true } },
+      "note": "Sibling metadata MUST survive: a pause that drops the rhythm would silently unschedule the agent."
+    },
+    {
+      "name": "resume a paused entry — the key is REMOVED, not set to false",
+      "entry": { "visibility": "public", "metadata": { "paused": true, "rhythm": "0 8 * * *" } },
+      "paused": false,
+      "expect": { "visibility": "public", "metadata": { "rhythm": "0 8 * * *" } },
+      "note": "THE case this fixture exists for. `metadata.paused === undefined` is the resumed state; writing `paused: false` leaves a shape no reader expects."
+    },
+    {
+      "name": "resume an entry that was never paused (idempotent)",
+      "entry": { "visibility": "public", "metadata": { "rhythm": "0 8 * * *" } },
+      "paused": false,
+      "expect": { "visibility": "public", "metadata": { "rhythm": "0 8 * * *" } },
+      "note": "Resuming a running agent is a no-op, not an error."
+    },
+    {
+      "name": "resume an entry whose metadata becomes empty",
+      "entry": { "metadata": { "paused": true } },
+      "paused": false,
+      "expect": { "metadata": {} },
+      "note": "Recorded as the CURRENT behaviour: the metadata object stays present but empty (this implementation never drops it). Pinned so a future refactor is a deliberate change, not an accident."
+    }
+  ]
+}
