@@ -127,32 +127,41 @@ Published packs, versions, and subscription records SHALL migrate from the 壹�
 
 ### Requirement: The facet web shell carries a product intro view
 
-The facet web shell SHALL serve a static, mechanism-first product intro view at the hash root `#/` as the default landing, replacing the retired intro band. The view SHALL describe the product's own mechanics, not a product-line tour: (a) a hero carrying the value line 千人千面 — AI 编辑器的功能集与工具分发市场, a subtitle stating that packs bundle skills, MCP references, and agent personas, **and that team packs may additionally declare memory, a console (dashboard), and a roster** — for browsing, subscribing, and publishing with a one-line install into Claude Code / Cursor; a fact row (anonymous browsing; publish and subscribe after login, on the same identity as 壹座), and CTAs into the packs market and the MCP catalog; (b) three feature cards — what a pack contains (skill sources, MCP references, and agent personas; **a team pack may also declare the memory axes, console blocks, and roster, each rendered as its own section when declared and stated explicitly as undeclared when not** — plus version, tags, and author; the detail view exposes every skill's full body and the version history), subscribe and install are two different acts (a subscription is recorded in the market, shared with the 壹座 Store), and version snapshots (an install takes a definite version; re-running `install` takes a new snapshot; the CLI writes no MCP configuration and holds no credentials); (c) a text path figure — creator --publish--> the market --subscribe--> 壹座 (one-click install into the conversation runtime, MCP credentials already wired) and the market --CLI install--> Claude Code / Cursor skill directories (skill snapshot on disk, MCP references printed); (d) a quick start carrying the published CLI form `npx @finddatatechonology/facet install <pack id or URL containing the id>` (Claude Code by default; `--target cursor` and `--project <dir>` optional); and (e) a backlink to the official site's facet line page.
+The facet web shell SHALL serve a static product intro view at the hash root `#/` as the default landing, replacing the retired intro band. The view SHALL state what the product **enables**, not only how a pack is packaged: (a) a hero carrying the value line 千人千面 — AI 编辑器的功能集与工具分发市场, a subtitle stating that packs bundle skills, MCP references, and agent personas, and that a team pack may additionally declare memory, a console, and a roster, for browsing, subscribing, and publishing with a one-line install into the AI editors the CLI supports, a fact row (anonymous browsing; publish and subscribe after login, on the same identity as 壹座), and CTAs into the packs market and the MCP catalog; (b) a **team-templates** section stating that a pack may be a fleet template whose roles declare a cadence, KPI slots, orchestration edges and acceptance assertions, so installing one into a platform yields a team of posts that fire on schedule — this section SHALL NOT be omitted on the grounds that not every pack is a team; (c) a **creation-path** section presenting the studio as the route from a described team to a running one, naming its four stages (AI draft → human adopt → cast/publish → instantiate a team), and stating that the model drafts while the human's adoption is the single gate — the studio entry SHALL be reachable from this section; (d) three cards — what a pack contains (skill sources, MCP references, agent personas; a team pack may also declare the memory axes, console blocks, and roster, each rendered as its own section when declared and stated explicitly as undeclared when not — plus version, tags, and author; the detail view exposes every skill's full body and the version history), subscribe and install are two different acts, and version snapshots; (e) a text path figure — creator --publish--> the market --subscribe--> 壹座 (one-click install into the conversation runtime, MCP credentials already wired) and the market --CLI install--> the supported editors' skill directories (skill snapshot on disk, MCP references printed); (f) a quick start carrying the published CLI form `npx @finddatatechonology/facet install <pack id or URL containing the id>` with `--target` naming the supported editors; and (g) a backlink to the official site's facet line page.
 
-The line-page backlink SHALL follow the active locale (`/zh/products/facet` under zh, `/products/facet` otherwise). Facts SHALL be limited to what is verifiable at build time — no counts. The install command SHALL stay single-sourced (the packs footnote carries only the `facet help` pointer, no duplicated install line). Copy SHALL come from i18n keys authored in all five locales (en is the source of truth; `scripts/check-locales.js` enforces key-set parity, so "fallback" is a safety net, not the authoring mode). The view SHALL be fully static — no market or catalog live data, no loading or empty states.
+The line-page backlink SHALL follow the active locale (`/zh/products/facet` under zh, `/products/facet` otherwise). Facts SHALL be limited to what is verifiable at build time — **no counts** (no pack totals, no percentages, no "N editors" claims). Naming which editors the CLI supports IS permitted and is not a count: it is the CLI's contract, and the CLI is its source. The install command SHALL stay single-sourced (the packs footnote carries only the `facet help` pointer, no duplicated install line). Copy SHALL come from i18n keys authored in all five locales (en is the source of truth; `scripts/check-locales.js` enforces key-set parity, so "fallback" is a safety net, not the authoring mode). The view SHALL be fully static — no market or catalog live data, no loading or empty states; the studio entry renders as a link whose visibility follows the confirmed login state, never a data fetch.
 
-The intro view's description of what a pack contains SHALL agree with the pack detail view's section set: any content class the detail view renders as its own section (memory, console, roster) SHALL be named on the intro as an optional declaration of a team pack, and MUST NOT be presented as content every pack carries. The intro SHALL NOT claim a content class the detail view does not render.
+The intro view's description of what a pack contains SHALL agree with the pack detail view's section set: any content class the detail view renders as its own section (memory, console, roster) SHALL be named on the intro as an optional declaration of a team pack, and MUST NOT be presented as content every pack carries.
 
 #### Scenario: first visit lands on the intro
 
 - **WHEN** a visitor opens the facet domain without a hash
-- **THEN** the mechanism-first intro renders as the landing with CTAs into the packs market and the MCP catalog, and no credential is required
+- **THEN** the intro renders as the landing with CTAs into the packs market, the MCP catalog, and (when signed in) the studio, and no credential is required to read it
+
+#### Scenario: intro states what the product enables
+
+- **WHEN** the intro view renders
+- **THEN** its body names what a pack contains, that a team pack can yield a scheduled team of posts, and how the studio turns a described team into a running one — not only how a pack is packaged
 
 #### Scenario: intro describes the product's own mechanics
 
 - **WHEN** the intro view renders
 - **THEN** its body names what a pack contains, distinguishes subscribing from installing, explains version snapshots, and draws the install paths as a text figure — rather than touring the five product lines
 
-#### Scenario: optional team content is named as optional
+#### Scenario: team templates are presented as a first-class use
 
-- **WHEN** the intro view renders on a market whose packs include team templates
-- **THEN** memory, console, and roster are presented as declarations a team pack MAY carry, not as content every pack holds
-- **AND** the view states that an undeclared class is shown explicitly as undeclared rather than as empty
+- **WHEN** the intro view renders
+- **THEN** the team-template section is present and explains cadence, KPI slots, orchestration edges and acceptance assertions, regardless of what share of the catalogue is a team today
 
-#### Scenario: intro and detail view agree on the section set
+#### Scenario: creation path names the human gate
 
-- **WHEN** a visitor reads the intro's description of what a pack contains and then opens any pack's detail view
-- **THEN** every content class the intro names as optional corresponds to a section the detail view can render, and the intro names no content class that the detail view never renders
+- **WHEN** the intro's creation-path section renders
+- **THEN** it names the four stages and states that the human's adoption, not the model's output, is what enters the pack
+
+#### Scenario: no counts are claimed
+
+- **WHEN** the intro copy is reviewed against the catalogue
+- **THEN** it carries no pack total, percentage, or other figure that a newer catalogue would falsify; naming the editors the CLI supports is allowed because the CLI is its source
 
 #### Scenario: CLI fact stays verifiable and single-sourced
 
@@ -168,6 +177,11 @@ The intro view's description of what a pack contains SHALL agree with the pack d
 
 - **WHEN** the packs market API or the MCP catalog API is unreachable or slow
 - **THEN** the intro view renders identically, with no loading state and no dependency on any live API
+
+#### Scenario: intro and detail view agree on the section set
+
+- **WHEN** a visitor reads the intro's description of what a pack contains and then opens any pack's detail view
+- **THEN** every content class the intro names as optional corresponds to a section the detail view can render, and the intro names no content class that the detail view never renders
 
 ### Requirement: The facet shell carries a docs view
 
@@ -686,3 +700,51 @@ slug 未公开、团队不存在或团队已归档时，该页 SHALL 返回 404 
 
 - **WHEN** 访客请求一个未公开控制台或已归档团队的 slug
 - **THEN** 返回"未公开"页面，响应内不含团队名、成员或任何块数据
+
+### Requirement: 登录完成后落在用户的工作面
+
+谦面的登录完成落地 SHALL 由发起登录的入口决定，MUST NOT 一律落回介绍页。
+
+外壳上**主动发起**的登录（页头的「登录」按钮、账号菜单里指向登录的条目）SHALL 携带同源返回路径，指向已登录用户的默认工作面（创作台 `#/studio`）。**因某个动作被迫**发起的登录（例如订阅/安装时被要求先登录）SHALL 携带该动作所在的地址，完成后回到该地址，MUST NOT 跳到工作面而丢掉用户原本的意图。
+
+返回路径 SHALL 沿用既有的同源校验（相对路径、单个前导斜杠、非同源绝对地址降级为根），MUST NOT 因本要求放宽任何一条。
+
+当该部署未启用直登（登录通道不可用）时，登录入口 MUST NOT 出现；因此「登录后落工作面」在那种部署里不适用，且 MUST NOT 表现为一个指向不可达工作面的死链。
+
+#### Scenario: 主动登录落在创作台
+
+- **WHEN** 未登录访客点击页头的「登录」
+- **THEN** 登录完成后落在创作台视图，而不是介绍页
+
+#### Scenario: 被动登录回到原处
+
+- **WHEN** 未登录访客在某个 pack 的详情里触发订阅，被要求先登录
+- **THEN** 登录完成后回到触发订阅的那一页，而不是被送到创作台
+
+#### Scenario: 非同源返回路径被降级
+
+- **WHEN** 登录请求携带一个其他主机的返回地址
+- **THEN** 该地址被降级为站点根，MUST NOT 发生跳往其他主机的重定向
+
+### Requirement: 已登录访客在门面页得到进入工作面的入口
+
+已登录访客打开谦面的公开门面（介绍视图 `#/`）时，该页 SHALL 提供一个显眼的「进入创作台」主入口。
+
+该页 MUST NOT 在未声明意图的情况下自动把已登录访客重定向离开——`#/` 是谦面的公开地址，登录状态不改变它的意义（收藏或分享该地址的访客看到的仍是同一页）。
+
+该入口 SHALL 只在登录状态已确认时出现；登录状态尚未确认时 MUST NOT 先渲染一个随后消失的入口（那会让页面在加载中闪一次）。
+
+#### Scenario: 已登录访客看到主入口
+
+- **WHEN** 已登录访客打开谦面根地址
+- **THEN** 介绍页照常渲染，并显示一个指向创作台的主入口
+
+#### Scenario: 不强制跳走
+
+- **WHEN** 已登录访客直接访问 `#/`
+- **THEN** 页面停在介绍视图，MUST NOT 未经用户动作即跳转到创作台
+
+#### Scenario: 登录态未知时不闪
+
+- **WHEN** 页面刚加载、身份探测尚未返回
+- **THEN** 不渲染「进入创作台」入口；身份确认后才出现

@@ -918,3 +918,33 @@ post 声明了显式链（model/fallbackModel 任一非空）时，回合起点 
 
 - **WHEN** 同一种压力失败分别发生在串行链与 worker 池上
 - **THEN** 两条车道写出的 `detail` 形状一致（压力标记、压缩次数、窗口），不存在只有一处能读出原因的失败
+
+### Requirement: 降级重试的结局必留降级徽记
+
+当引擎按解析链对某阵执行降级重试时，无论重试结局如何，系统 SHALL 在该阵的回合结果事件 `detail` 中至少落 `degradedTo`（实际接棒的模型档），并一并保留该门自有的补充事实：零产出重试门 SHALL 落 `retryReason`，单次预算超限门 SHALL 落 `singleBudgetExceeded`。
+
+- 重试成功时该阵结局记 `ok`，`detail` SHALL 保留原 `detail` 中的既有键；
+- 重试仍败时该阵结局记 `failed`，徽记 SHALL 不得因「原本没有 `detail`」而丢失；`errorKind`、`usage`、`error` 摘要三者的既有口径 SHALL 不被改写；
+- 原 `detail` 为空时 SHALL 新建对象承载徽记，非空时 SHALL 合并且不覆盖既有键。
+
+降级徽记 SHALL NOT 改变何时重试：解析链上没有未试跳时，引擎 SHALL 只执行一次、不产生降级徽记，其失败原因仍按原有归因写入。历史回合 SHALL NOT 被回填徽记。
+
+#### Scenario: 重试成功留痕
+
+- **WHEN** 某阵在链首模型上因上游失败且零产出落败，链上还有未试过的下一跳并成功接棒
+- **THEN** 该阵结局为 `ok`，`detail` 同时含 `degradedTo=<下一跳模型>` 与 `retryReason`，且该阵原有 `detail` 键一个不少
+
+#### Scenario: 重试仍败也不得丢痕
+
+- **WHEN** 同一阵降级到下一跳后仍以零产出失败，且该阵此前没有 `detail`
+- **THEN** 该阵结局为 `failed`，`detail` 仍含 `degradedTo` 与 `retryReason`，`errorKind` 与空 `usage` 的判定与未降级时逐字一致
+
+#### Scenario: 三道降级门口径一致
+
+- **WHEN** 降级由重试门（`retryReason` 为 `fast_upstream` 或 `zero_output`）或单次预算超限门（`singleBudgetExceeded`）发起
+- **THEN** 两处的失败分支都留下 `degradedTo` 及各门自有的补充键，不存在「某道门只在成功时留痕」的口径差
+
+#### Scenario: 没有下一跳就不重试
+
+- **WHEN** 该阵的解析链只有一跳（岗位未声明模型与备胎、舰队未设默认，只剩 cell 默认）
+- **THEN** 引擎只执行一次、不产生 `degradedTo`/`retryReason`，失败按原件归因——「无徽记」在此为合法态，不得读作「降级门失效」

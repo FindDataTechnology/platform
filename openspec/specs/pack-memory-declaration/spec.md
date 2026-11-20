@@ -117,6 +117,10 @@ pack 内的每个 agent 条目 SHALL 可声明自己的 `memory` 块，按 agent
 
 pack 预览与团队管理面 SHALL 对每一轴给出：声明值、继承来源、生效值、是否已执行。某轴无法解析为有效值时 MUST 报错并指名该轴，MUST NOT 静默回落到默认值。
 
+`executed` SHALL 只在该版本的代码里**能指出消费方**时为真。判据不是「这个子键有取值」，而是「哪段代码读它」：读不出来源就必须标未执行，MUST NOT 因为解析成功而标成已生效。声明了但没人执行的子键 SHALL 同时出现在未执行清单里，使调用方一眼看出「写下了，但还没人执行它」。
+
+pack 预览 SHALL 由 pack 已安装的 manifest 现算（`memoryRows()` 一类纯函数），MUST NOT 依赖记忆服务是否可达：预览回答的是「pack 要求什么」，与「记忆服务里存着什么」是两个问题，两者 MUST NOT 混成一份响应。`knowledge.memory` SHALL 作为 `read` 轴的等价写法并入预览（`enabled: false` 等价 `scope: "off"`）。
+
 `knowledge` 段的合并是**整段替换**（覆盖层提到该段即整体顶掉上一层的段），与根仓的逐键继承不同。当某层的声明因此没有进入生效值时，读面 MUST 标出它被哪一层顶掉，MUST NOT 呈现为它仍在生效。
 
 #### Scenario: 三列并排可见
@@ -133,3 +137,13 @@ pack 预览与团队管理面 SHALL 对每一轴给出：声明值、继承来�
 
 - **WHEN** 蓝图声明 `knowledge.memory.scope: shared`，部署覆盖提到该段但未给 `scope`
 - **THEN** 读面把 `shared` 标为被部署层顶掉（`shadowed_by`），生效值取平台默认，调用方不会误以为蓝图的值仍在生效
+
+#### Scenario: 没有消费方的轴如实标未执行
+
+- **WHEN** pack 声明 `store.home: fleet`、`read.scope: off`、`write.authority: shared`，而该版本的物化路径、注入梯子与采集路径都不读这三项
+- **THEN** 三行各自的 `executed` 均为 `false`，且都出现在未执行清单里，`declared`/`effective` 仍如实给出声明值
+
+#### Scenario: 预览不因记忆服务不可达而失败
+
+- **WHEN** 记忆服务不可达，调用方请求某 pack 的声明预览
+- **THEN** 预览仍返回该 pack 的七行四列（数据来自已安装的 manifest），MUST NOT 因此报错或返回一份全默认的表

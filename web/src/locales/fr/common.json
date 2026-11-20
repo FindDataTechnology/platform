@@ -1899,7 +1899,8 @@
       "packs": "Marché des agents",
       "mcp": "MCP et compétences",
       "docs": "Guide",
-      "studio": "Atelier de création"
+      "studio": "Atelier de création",
+      "fleets": "Mes équipes"
     },
     "account": {
       "menuLabel": "Compte",
@@ -1916,6 +1917,31 @@
       "dismiss": "Fermer"
     },
     "loggedInAs": "Connecté en tant que {{email}}"
+  },
+  "facetFleets": {
+    "title": "Mes équipes",
+    "create": "Nouvelle équipe",
+    "empty": "Aucune équipe pour l'instant : créez-en une.",
+    "newFleetName": "Nouvelle équipe",
+    "readonlyPlatform": "Lecture seule : importée de la plateforme",
+    "origin": {
+      "facet": "Créée ici",
+      "platform": "Depuis la plateforme"
+    }
+  },
+  "fleetPlane": {
+    "executor": {
+      "none": "Aucun exécuteur connecté : ce déploiement organise les équipes mais ne les exécute pas."
+    },
+    "members": {
+      "title": "Postes",
+      "harness": "Harness : {{name}}",
+      "noHarness": "Aucun exécuteur déclaré"
+    },
+    "detail": {
+      "empty": "Choisissez ou créez une équipe"
+    },
+    "shareLink": "Lien de partage"
   },
   "facetDocs": {
     "title": "Guide",

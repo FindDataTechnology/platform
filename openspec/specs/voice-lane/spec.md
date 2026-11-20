@@ -97,19 +97,18 @@ The deployment SHALL hold a `voice` configuration block `{enabled, asrModel, tts
 
 ### Requirement: Composer 语音输入走专用路径
 
-The composer SHALL offer a microphone control that records with `MediaRecorder`（start on click, stop on second click）and a dedicated audio-file entry（`accept="audio/*"`）, both sending the audio to `/api/voice/transcriptions` and inserting the returned text into the composer input without auto-sending. The audio path SHALL NOT use the document attachment path. The composer SHALL show the states recording / transcribing / error, tolerate multi-second transcription, and when the error response carries `connect` render a 去连接 action. When voice is unavailable（disabled or no key）the voice entries SHALL NOT render; when the browser lacks `MediaRecorder` only the microphone SHALL hide.
+The composer SHALL offer a talk control that records with the **client platform's own recorder**（web：`MediaRecorder`；小程序：`RecorderManager`；移动端：原生录音器）and a dedicated audio-file entry（`accept="audio/*"`）, both sending the audio to `/api/voice/transcriptions` and inserting the returned text into the composer input without auto-sending. On web the recorded artifact, the interaction（click to start, click to stop）and the state transitions SHALL remain exactly as before.
 
-The microphone take SHALL be a container the lane accepts — the browser's streaming containers（WebM/Opus, Ogg/Opus, fragmented MP4）SHALL NOT be what gets uploaded, since the lane rejects all three. The file entry continues to forward whatever the user picks, subject to the same container gate.
+The audio path SHALL NOT use the document attachment path on any client. The composer SHALL show the states recording / transcribing / error, tolerate multi-second transcription, and when the error response carries `connect` render a 去连接 action. When voice is unavailable（disabled or no key）the voice entries SHALL NOT render on any client; when the client's recorder is unavailable only the talk control SHALL hide and the audio-file entry SHALL stay.
+
+Recording SHALL be cancelable, and a cancelled recording SHALL produce no upload and no insertion. The client SHALL validate the artifact's duration and container **before** uploading: an artifact that would exceed the platform upload limit or uses an unsupported container SHALL be refused locally with a readable reason and no request SHALL be sent. Leaving the page or backgrounding the app while transcribing SHALL NOT leave the control stuck: on return the control SHALL either resume the pending state or land in an honest error state.
+
+A single cross-client state machine SHALL govern the control（idle / requesting / recording / transcribing / error），shared by all clients, and each client SHALL plug in only a recorder adapter — the three clients MUST NOT each carry their own copy of the transition logic.
 
 #### Scenario: 录音转写插入输入框
 
-- **WHEN** the user clicks the microphone, speaks, and clicks again
+- **WHEN** the user starts recording, speaks, and stops
 - **THEN** the composer shows transcribing, then the transcript appears appended in the input（space-joined to existing text）and the input is focused; nothing is sent
-
-#### Scenario: 录音产物是被接受的容器
-
-- **WHEN** the microphone take is uploaded
-- **THEN** its bytes form a complete WAV container（16 kHz mono PCM）that the lane accepts, not a WebM/Ogg/fragmented-MP4 stream — so the same take transcribes on Chrome and Firefox, not only on browsers that happen to produce MP4/AAC
 
 #### Scenario: 音频文件转写
 
@@ -119,12 +118,42 @@ The microphone take SHALL be a container the lane accepts — the browser's stre
 #### Scenario: 不可用时无入口
 
 - **WHEN** `/api/config` reports `voice.enabled: false` or status reports not available
-- **THEN** neither the microphone nor the voice file entry renders
+- **THEN** neither the talk control nor the voice file entry renders
 
 #### Scenario: 转写失败如实显示
 
 - **WHEN** the transcription request fails
 - **THEN** the composer shows a sanitized error state and, if the response carries `connect`, a 去连接 action to that panel
+
+#### Scenario: 小程序按住说话
+
+- **WHEN** 用户在小程序聊天页按住说话控件、说话、松手
+- **THEN** 控件进入 transcribing，随后转写文本追加进输入框且不自动发送
+
+#### Scenario: 移动端按住说话
+
+- **WHEN** 用户在 App 聊天页按住说话控件、说话、松手
+- **THEN** 与小程序同样的状态序列与插入语义，输入框获得焦点
+
+#### Scenario: 取消录音零副作用
+
+- **WHEN** 用户在录音过程中滑动或点击取消
+- **THEN** 录音停止并被丢弃，不发起任何转写请求，输入框内容不变
+
+#### Scenario: 超限或格式不支持时本地拒绝
+
+- **WHEN** 录音时长换算后的体积超过平台上传上限，或录音器只能产出不受支持的容器
+- **THEN** 客户端在上传前给出可读原因，不发起请求（不产生必然失败的网络往返）
+
+#### Scenario: 转写中切后台
+
+- **WHEN** 用户在 transcribing 状态切换到后台并返回
+- **THEN** 控件不停留在 transcribing，而是恢复为待确认状态（有结果则插入、无结果则如实报错）
+
+#### Scenario: 录音器缺失时只隐藏说话控件
+
+- **WHEN** 客户端没有可用的录音器（权限或平台不支持），而语音服务本身可用
+- **THEN** 只有说话控件不渲染，音频文件入口仍然渲染并可用
 
 ### Requirement: 回复可朗读
 
@@ -153,3 +182,42 @@ The Models settings section SHALL show a voice card with the current status（av
 
 - **WHEN** a non-administrator opens the Models section
 - **THEN** the voice card shows status without editable fields
+
+### Requirement: 移动端录音先取授权，被拒后给出可走的路
+
+移动端 SHALL 在首次录音前请求录音权限。授权被拒时 SHALL NOT 反复触发系统授权框；SHALL 以可读说明
+告知「语音输入需要录音权限」，并 SHALL 提供一条可执行的下一步（前往设置或改用音频文件入口）。
+未获得授权时 SHALL NOT 进入录音态，也 SHALL NOT 产生任何上传。
+
+权限状态 SHALL 在页面内被重新读取：用户从设置返回后，无需重启小程序/App 即可恢复录音入口。
+
+#### Scenario: 首次录音请求授权
+
+- **WHEN** 用户首次点击说话控件
+- **THEN** 客户端请求录音权限，获准后进入录音态
+
+#### Scenario: 被拒后不再弹系统框
+
+- **WHEN** 用户此前拒绝了录音权限并再次点击说话控件
+- **THEN** 不弹出系统授权框，改为呈现可读说明与下一步动作，不进入录音态
+
+#### Scenario: 从设置返回后恢复
+
+- **WHEN** 用户在系统设置中开启录音权限后返回应用并再次点击
+- **THEN** 无需重启即可进入录音态
+
+### Requirement: 三端转写走同一协议，不在客户端分叉
+
+小程序与移动端 SHALL 使用与 web 相同的 `/api/voice/transcriptions`（multipart `file`）与
+`/api/voice/status`，MUST NOT 为某一端新增转写端点或修改请求形状。客户端 SHALL 依据
+`/api/voice/status` 的 `available` 与 `reason` 决定是否渲染入口，MUST NOT 自行猜测可用性。
+
+#### Scenario: 同一端点三端共用
+
+- **WHEN** 小程序、App 与 web 各发起一次转写
+- **THEN** 三者命中同一端点、同一字段名与同一响应形状，服务端无需按端分支
+
+#### Scenario: 状态读决定入口
+
+- **WHEN** 语音服务未配置凭据，`/api/voice/status` 返回不可用
+- **THEN** 三端都不渲染任何语音入口

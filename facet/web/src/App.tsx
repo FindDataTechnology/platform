@@ -16,6 +16,7 @@ import { Container } from "./Container";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { CurateView } from "./CurateView";
 import { DocsView } from "./DocsView";
+import { FleetsView } from "./FleetsView";
 import { IntroView } from "./IntroView";
 import { McpCatalog } from "./McpCatalog";
 import { MineView } from "./MineView";
@@ -30,7 +31,7 @@ import { SiteMark } from "./SiteMark";
 // studio (add-supply-studio-migration 1.6): the supply-domain creation face —
 // signed-in only (documents are owner-scoped; anonymous deep links fall back
 // to the intro landing, same gate as #/mine).
-type View = "intro" | "packs" | "mcp" | "docs" | "mine" | "curate" | "studio";
+type View = "intro" | "packs" | "mcp" | "docs" | "mine" | "curate" | "studio" | "fleets";
 
 /** Identity probe result, in THREE states, and the difference matters:
  *    undefined — the probe has not answered yet (paint nothing identity-gated)
@@ -51,6 +52,7 @@ const VIEW_HASH: Record<View, string> = {
   mine: "#/mine",
   curate: "#/curate",
   studio: "#/studio",
+  fleets: "#/fleets",
 };
 
 /** Hash → view, gated by identity; unknown/empty/unauthorized fall back to intro.
@@ -67,6 +69,7 @@ function viewFromHash(hash: string, user: WhoamiUser): View {
   if (path === "#/docs") return "docs";
   if (path === "#/mine") return user ? "mine" : "intro";
   if (path === "#/studio") return user ? "studio" : "intro";
+  if (path === "#/fleets") return user ? "fleets" : "intro";
   if (path === "#/curate") return user?.admin ? "curate" : "intro";
   return "intro";
 }
@@ -360,7 +363,8 @@ export function App() {
     "docs",
     // The creation face is the one signed-in entry that earns a tab: it is
     // where a creator spends their session (add-supply-studio-migration 1.6).
-    ...((user ? ["studio"] : []) as View[]),
+    // 我的团队 (facet-owns-its-fleets 4.3) is the same kind of signed-in entry.
+    ...((user ? ["studio", "fleets"] : []) as View[]),
   ];
 
   // Author-only and admin-only surfaces live behind the account control
@@ -517,7 +521,12 @@ export function App() {
               <CurateView />
             </Container>
           )}
-          {view === "studio" && <StudioView onExit={() => go("packs")} />}
+          {view === "studio" && <StudioView onExit={() => go("packs")} onOpenFleets={() => go("fleets")} />}
+          {view === "fleets" && (
+            <Container>
+              <FleetsView />
+            </Container>
+          )}
             </>
           )}
         </ErrorBoundary>

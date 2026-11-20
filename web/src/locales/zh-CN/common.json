@@ -1899,7 +1899,8 @@
       "packs": "智能体市场",
       "mcp": "MCP 与技能",
       "docs": "使用指南",
-      "studio": "创作台"
+      "studio": "创作台",
+      "fleets": "我的团队"
     },
     "account": {
       "menuLabel": "账号",
@@ -1916,6 +1917,31 @@
       "dismiss": "关闭"
     },
     "loggedInAs": "已登录：{{email}}"
+  },
+  "facetFleets": {
+    "title": "我的团队",
+    "create": "新建团队",
+    "empty": "还没有团队——新建一个。",
+    "newFleetName": "新团队",
+    "readonlyPlatform": "只读：来自平台的镜像",
+    "origin": {
+      "facet": "本域创建",
+      "platform": "来自平台"
+    }
+  },
+  "fleetPlane": {
+    "executor": {
+      "none": "未接入执行方——本部署只组织团队，不运行团队。"
+    },
+    "members": {
+      "title": "岗位",
+      "harness": "执行 harness：{{name}}",
+      "noHarness": "未声明执行方"
+    },
+    "detail": {
+      "empty": "选择或新建一个团队"
+    },
+    "shareLink": "分享链接"
   },
   "facetDocs": {
     "title": "使用指南",

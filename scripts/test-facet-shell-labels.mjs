@@ -42,6 +42,7 @@ const ZH_ENTRIES = {
   mcp: "MCP 与技能",
   docs: "使用指南",
   studio: "创作台",
+  fleets: "我的团队",
 };
 const ZH_ACCOUNT = { menuLabel: "账号", mine: "我的发布", curate: "内容运营" };
 

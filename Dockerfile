@@ -289,7 +289,7 @@ COPY --chown=node:node --from=builder /app/web/dist ./web/dist
 # npm-published @finddata/facet package, not part of the runtime. That last rule
 # is why credential-pattern.js exists: marketplace-repo.js (the offline exporter,
 # NOT shipped) imports facet/cli/, so the runtime needed the pattern without it.
-COPY --chown=node:node --from=builder /app/facet/index.js /app/facet/identity.js /app/facet/mcp-catalog.js /app/facet/supply-catalog.js /app/facet/marketplace-json.js /app/facet/pairing.js /app/facet/publish-gate.js /app/facet/mcp-registry-json.js /app/facet/credential-pattern.js /app/facet/studio.js /app/facet/preview-sandbox.js /app/facet/machine-paths.js /app/facet/team-console-proxy.js ./facet/
+COPY --chown=node:node --from=builder /app/facet/index.js /app/facet/identity.js /app/facet/mcp-catalog.js /app/facet/supply-catalog.js /app/facet/marketplace-json.js /app/facet/pairing.js /app/facet/publish-gate.js /app/facet/mcp-registry-json.js /app/facet/credential-pattern.js /app/facet/studio.js /app/facet/preview-sandbox.js /app/facet/machine-paths.js /app/facet/team-console-proxy.js /app/facet/fleets-db.js /app/facet/fleets-routes.js ./facet/
 COPY --chown=node:node --from=builder /app/facet/web/dist ./facet/web/dist
 
 # Application source: all root .js (server.js, paths.js, local-services.js,

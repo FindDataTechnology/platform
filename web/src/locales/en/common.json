@@ -1899,7 +1899,8 @@
       "packs": "Agent market",
       "mcp": "MCP & skills",
       "docs": "Guide",
-      "studio": "Creator studio"
+      "studio": "Creator studio",
+      "fleets": "My teams"
     },
     "account": {
       "menuLabel": "Account",
@@ -1916,6 +1917,31 @@
       "dismiss": "Dismiss"
     },
     "loggedInAs": "Signed in as {{email}}"
+  },
+  "facetFleets": {
+    "title": "My teams",
+    "create": "New team",
+    "empty": "No teams yet — create one.",
+    "newFleetName": "New team",
+    "readonlyPlatform": "Read-only: imported from the platform",
+    "origin": {
+      "facet": "Created here",
+      "platform": "From platform"
+    }
+  },
+  "fleetPlane": {
+    "executor": {
+      "none": "No executor attached — this deployment organizes teams but does not run them."
+    },
+    "members": {
+      "title": "Posts",
+      "harness": "Harness: {{name}}",
+      "noHarness": "No executor declared"
+    },
+    "detail": {
+      "empty": "Pick or create a team"
+    },
+    "shareLink": "Share link"
   },
   "facetDocs": {
     "title": "Guide",

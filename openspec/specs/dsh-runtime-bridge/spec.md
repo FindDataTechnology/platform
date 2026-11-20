@@ -282,6 +282,8 @@ The composed dsh runtime SHALL register a user-questions provider so that `ask_u
 
 The platform SHALL deliver answers and cancellations for pending asks to the runtime over the existing host-to-runtime request channel. An answer SHALL resolve the pending tool call with the structured answer batch; a cancellation SHALL resolve it with a cancelled error the model can observe and recover from.
 
+An ask SHALL NOT remain pending when no surface can answer it. When a delivered ask arrives while the asking session has no connected viewer, the platform SHALL wait a bounded grace window (default 90 seconds, configurable; `0` disables this gate) for a viewer to attach, and if none has attached by the end of that window it SHALL resolve the ask itself with an explicit unattended answer batch — one entry per question carrying `selected: []` and a `custom` notice stating that nobody is present, that the model must not ask again this turn, and that it must proceed on the available facts and record the open question where the owner will see it. The platform SHALL NOT synthesize a choice among the offered options, and SHALL leave the ask untouched when an answer, a cancellation, or a viewer arrives first. Every unattended resolution SHALL leave a structured host log line naming the session, the ask id, and the grace window used.
+
 #### Scenario: answer resolves the tool call
 
 - **WHEN** the platform delivers an answer for a pending ask
@@ -292,6 +294,15 @@ The platform SHALL deliver answers and cancellations for pending asks to the run
 - **WHEN** the platform delivers a cancellation for a pending ask
 - **THEN** the tool call completes with a cancelled error and the model continues the turn
 
+#### Scenario: an ask nobody can answer is resolved by the platform
+
+- **WHEN** an ask is delivered for a session that has no connected viewer and no viewer attaches within the grace window
+- **THEN** the platform resolves the ask with an unattended answer whose custom text tells the model to proceed without asking again, and the turn continues instead of waiting for its budget to expire
+
+#### Scenario: a viewer arriving within the grace window keeps the ask pending
+
+- **WHEN** an ask is delivered for a session with no connected viewer and a viewer attaches before the grace window expires
+- **THEN** the platform sends no unattended answer and the ask stays pending for that viewer to answer
 ### Requirement: Runtime lifecycle releases pending asks safely
 
 WHEN the runtime exits, restarts, or its turn aborts while an ask is pending, the ask SHALL be released — never left permanently wedged — and connected surfaces SHALL observe the failure through the tool call's error outcome.

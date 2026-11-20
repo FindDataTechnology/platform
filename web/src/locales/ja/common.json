@@ -1899,7 +1899,8 @@
       "packs": "エージェント市場",
       "mcp": "MCP とスキル",
       "docs": "ガイド",
-      "studio": "作成スタジオ"
+      "studio": "作成スタジオ",
+      "fleets": "マイチーム"
     },
     "account": {
       "menuLabel": "アカウント",
@@ -1916,6 +1917,31 @@
       "dismiss": "閉じる"
     },
     "loggedInAs": "ログイン中：{{email}}"
+  },
+  "facetFleets": {
+    "title": "マイチーム",
+    "create": "新しいチーム",
+    "empty": "チームはまだありません。作成してください。",
+    "newFleetName": "新しいチーム",
+    "readonlyPlatform": "読み取り専用：プラットフォームから取り込み",
+    "origin": {
+      "facet": "この環境で作成",
+      "platform": "プラットフォーム由来"
+    }
+  },
+  "fleetPlane": {
+    "executor": {
+      "none": "実行主体は未接続です。この配備はチームを編成するだけで、実行はしません。"
+    },
+    "members": {
+      "title": "ポスト",
+      "harness": "実行 harness：{{name}}",
+      "noHarness": "実行主体の宣言なし"
+    },
+    "detail": {
+      "empty": "チームを選択または作成してください"
+    },
+    "shareLink": "共有リンク"
   },
   "facetDocs": {
     "title": "ガイド",

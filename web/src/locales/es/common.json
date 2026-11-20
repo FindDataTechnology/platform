@@ -1899,7 +1899,8 @@
       "packs": "Mercado de agentes",
       "mcp": "MCP y habilidades",
       "docs": "Guía",
-      "studio": "Estudio de creación"
+      "studio": "Estudio de creación",
+      "fleets": "Mis equipos"
     },
     "account": {
       "menuLabel": "Cuenta",
@@ -1916,6 +1917,31 @@
       "dismiss": "Cerrar"
     },
     "loggedInAs": "Sesión iniciada como {{email}}"
+  },
+  "facetFleets": {
+    "title": "Mis equipos",
+    "create": "Nuevo equipo",
+    "empty": "Aún no hay equipos: crea uno.",
+    "newFleetName": "Nuevo equipo",
+    "readonlyPlatform": "Solo lectura: importado de la plataforma",
+    "origin": {
+      "facet": "Creado aquí",
+      "platform": "De la plataforma"
+    }
+  },
+  "fleetPlane": {
+    "executor": {
+      "none": "Sin ejecutor conectado: este despliegue organiza equipos pero no los ejecuta."
+    },
+    "members": {
+      "title": "Puestos",
+      "harness": "Harness: {{name}}",
+      "noHarness": "Sin ejecutor declarado"
+    },
+    "detail": {
+      "empty": "Elige o crea un equipo"
+    },
+    "shareLink": "Enlace para compartir"
   },
   "facetDocs": {
     "title": "Guía",

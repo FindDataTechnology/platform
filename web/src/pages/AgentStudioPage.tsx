@@ -94,14 +94,21 @@ const trialOf = (b: Blueprint | null): TrialReport | null => {
 // to claim it (the host moves its own view or opens a real link), false to let
 // this page's router handle it. Both props are optional, so 壹座 keeps its
 // exact behaviour.
+//
+// onDeployTeam (facet-owns-its-fleets D5): the facet host owns its own fleet
+// store, so "deploy the cast team" must NOT jump to the run domain. When the
+// host supplies this, `deployTeam` hands the cast document to it and stays in
+// this domain — no automatic cross-domain window. Absent (壹座) → unchanged.
 export function AgentStudioPage({
   runOrigin,
   onExit,
   onNavigate,
+  onDeployTeam,
 }: {
   runOrigin?: string;
   onExit?: () => void;
   onNavigate?: (to: string) => boolean;
+  onDeployTeam?: (doc: { id: string; name?: string; castPackId?: string | null; castPackVersion?: number | null }) => void | Promise<void>;
 } = {}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -583,6 +590,13 @@ export function AgentStudioPage({
   // paused) then navigate to the live fleet. No new endpoint, no new field.
   const deployTeam = useCallback(async () => {
     if (!doc?.castPackId) return;
+    // Host-owned fleet store (facet-owns-its-fleets D5): the host claims the
+    // action and stays in its own domain. It provides the "open on platform"
+    // exit itself as an explicit, secondary user action.
+    if (onDeployTeam) {
+      await onDeployTeam({ id: doc.id, name: doc.name, castPackId: doc.castPackId, castPackVersion: doc.castPackVersion });
+      return;
+    }
     // Cross-domain branch (D4 honest boundary): on the facet host the run
     // domain is a different process and login — hand off via deep link with
     // the cast pack attached; the 壹座 face (single release, task 4.2) opens
@@ -626,7 +640,7 @@ export function AgentStudioPage({
     } finally {
       setBusy(null);
     }
-  }, [doc, go, t, runOrigin]);
+  }, [doc, go, t, runOrigin, onDeployTeam]);
 
   // ── emit ports (never mutate the document; re-validate at emit) ──────────
   const selectedAgent = useMemo(

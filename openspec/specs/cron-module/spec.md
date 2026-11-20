@@ -606,6 +606,7 @@ A task that is paused SHALL NOT be flagged by this check: not running is the own
 
 - **WHEN** 岗位声明 `cadence.softStopRatio = 0.1`（低于下界 0.5）
 - **THEN** 软停比率取默认 0.8
+
 ### Requirement: 轮换效果与累积人口必须能由一条只读读数复算
 
 系统 SHALL 提供一个只读读数（`scripts/cron-session-metrics.mjs`），一次给出**三项必须一起读**的量，
@@ -670,7 +671,6 @@ prompt；时间一律按 `started_at`（epoch 毫秒整数）。
 - **THEN** 命令仍以 0 退出并只打印事实
 - **AND** SHALL NOT 以退出码表达判断（该判断属于具体 change 的解锁条件，不属于这个读数）
 
-
 ### Requirement: 定时回合的历史行必须带出本轮的上下文占用与运行时窗口
 
 每个 cron 回合结束时，其历史行 SHALL 记录该回合出现过的**最大 prompt 占用**（`inputTokens +
@@ -713,7 +713,6 @@ SHALL NOT 以部署常量、`0` 或其它推算值顶替。
 - **WHEN** 运维读取任务列表，其中某任务最新回合的历史行两个数齐全
 - **THEN** 该行带出占比读数（形如 `session 83% of 128000`）
 - **AND** 两数不全的任务不带出占比读数，SHALL NOT 显示 `0%` 或 `unknown%`
-
 
 ### Requirement: 会话轮换的触发只认真执行过的回合
 
@@ -817,3 +816,51 @@ SHALL NOT 以部署常量、`0` 或其它推算值顶替。
 
 - **WHEN** 末行为 `{kind:"execution", state:"failed", success:false, error:"502"}`
 - **THEN** 派生报告 SHALL 生成，summary 指明执行失败且 blockers 含该 error 文本
+
+### Requirement: 早停结论落到任务执行记录，两种结算形状同等对待
+
+一轮回合在跑完之前被停下时，任务执行记录 SHALL 携带执行器自己给出的结论；执行器以哪种形状结算 SHALL NOT 影响该结论是否落盘。
+
+- 结论 SHALL 从**两种结算形状**读取，二者同等有效：① 结算为**抛错**、结论已摊平到顶层（`budgetSoftStop` / `contextOverflow` / `contextPressure`）；② 结算为**正常返回**的失败对象、结论嵌在 `detail` 里（`detail.budgetSoftStop` / `detail.overflow` / `detail.contextPressure`）。只读其中一层 SHALL 视为不满足本要求（2026-11-15 实证：工人池车道走 ②，而读侧只读 ①，于是该车道自陈承载大部分流量、其结论却一条都没落过盘）。
+- 扁平名与嵌套名的对应关系 SHALL 逐条写明：扁平 `contextOverflow` ↔ 嵌套 `detail.overflow`；`budgetSoftStop` 与 `contextPressure` 两层同名。把两者当成一对一改名 SHALL 视为不满足本要求。
+- 「下一轮换会话」的决定 SHALL 同样由上述两种形状的溢出结论驱动；该决定依赖错误文案的措辞 SHALL 视为不满足本要求（文案匹配只保留为无结构化结论时的回退）。
+- 任务执行记录行 SHALL 携带收尾车道的结论：补数已执行时记 `wrapUp`（含 `ok` 与 `chars`，失败时附 `error`）；补数被跳过时记 `salvageSkipped`（`isFleet` / `interrupted` / `pressure` / `softStop` / `reported`）。两者都缺时，读面无法区分「停下但交出了一份报告」与「停下且什么都没交」——这两种形态的操作员动作不同。
+- 记录结论 SHALL NOT 改变回合的成功/失败判定：被停下的回合仍不是成功，因为它没有跑完。
+
+#### Scenario: 工人车道的软停回合在任务记录上带标记
+
+- **WHEN** 一轮回合在工人池车道上被预算软停、执行器以**正常返回**的失败对象结算（结论在 `detail` 里）
+- **THEN** 任务执行记录的该行带失败状态、命名该次停止的消息，以及软停标记
+- **AND** 该标记在落盘后的存储记录里仍然存在
+
+#### Scenario: 抛错结算的软停仍带标记
+
+- **WHEN** 一轮回合被预算软停、执行器以**抛错**结算（结论已摊平到顶层）
+- **THEN** 任务执行记录的该行同样带软停标记，与工人车道的形状无差别
+
+#### Scenario: 工人车道的溢出结论驱动下一轮换会话
+
+- **WHEN** 工人车道的回合以 `detail.overflow` 宣告上下文溢出、而错误文案里没有任何溢出措辞
+- **THEN** 下一轮 SHALL 在新会话上开始
+
+#### Scenario: 只有上下文压力不换会话
+
+- **WHEN** 工人车道的回合以 `detail.contextPressure` 宣告压力、但没有 `detail.overflow`
+- **THEN** 下一轮保留原会话，同时该行的压力结论仍然落盘
+
+#### Scenario: 收尾结论出现在任务记录行上
+
+- **WHEN** 一轮被停下的回合触发了收尾补数并拿到内容
+- **THEN** 该行带 `wrapUp`，其中 `ok` 为真且 `chars` 为补到的字符数
+- **AND** 补数被跳过时该行带 `salvageSkipped` 及跳过原因，而不是留空
+
+#### Scenario: 自行失败的回合不带标记
+
+- **WHEN** 一轮回合以上游连接中断之类的普通错误失败
+- **THEN** 该行不带软停标记、不带压力标记、也不带收尾结论
+- **AND** 「没问过收尾」这件事本身仍以 `salvageSkipped` 记录，不与「问过但失败」同形
+
+#### Scenario: 成功回合不带标记
+
+- **WHEN** 一轮回合正常跑完
+- **THEN** 该行不带软停标记，其成功判定不变

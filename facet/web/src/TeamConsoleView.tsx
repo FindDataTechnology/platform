@@ -12,11 +12,10 @@
 //   · it offers no write action. A share page is a reading surface: no start,
 //     no pause, no dispatch, no decision answer.
 //
-// Degradation: when 壹座 is unreachable the shared component renders its own
-// "temporarily unavailable" state. The market plane (pack browsing, detail,
-// downloads) is a different code path and stays up — the independence promise
-// in the facet-platform spec is about the market, and this page is explicitly
-// the optional surface.
+// Degradation: the share page reads the facet's OWN fleet store (fleet-owns-its
+// fleets). If the slug is not in this deployment's `fleets.db` the page says
+// so — it does NOT fall back to proxying another host, because a deployment
+// with no platform behind it must behave identically.
 
 import { useEffect, useState } from "react";
 import { TeamConsole } from "@/components/console/TeamConsole";
@@ -42,9 +41,10 @@ export function TeamConsoleView() {
       <TeamConsole
         slug={slug}
         surface="share"
-        // On the facet domain `/api/*` is the facet's own API; this proxy is the
-        // one read path to 壹座's public console endpoint.
-        endpoint={`/api/team-console/${encodeURIComponent(slug)}`}
+        // Direct read against this host's own fleet store (facet-owns-its-fleets
+        // 3.1). `/api/fleets/by-slug/:slug/console` is the facet's API — no proxy
+        // hop, so the page renders with 壹座 entirely down.
+        endpoint={`/api/fleets/by-slug/${encodeURIComponent(slug)}/console`}
       />
     </div>
   );

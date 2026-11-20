@@ -39,6 +39,7 @@ import { registerMarketplaceJson } from "./marketplace-json.js";
 import { createFacetPairing, registerPairingRoutes, withAppBearer } from "./pairing.js";
 import { registerSameNamePublishGate } from "./publish-gate.js";
 import { registerStudioRoutes } from "./studio.js";
+import { registerFleetRoutes } from "./fleets-routes.js";
 import { machineSurfaceGuard } from "./machine-paths.js";
 
 const PORT = Number(process.env.PORT || 8080);
@@ -173,6 +174,13 @@ registerSameNamePublishGate(app, { registry, resolveUser });
 // Mounted always; the web face routes in facet/web (task 1.6, single release
 // with the 壹座-side teardown).
 registerStudioRoutes(app, { resolveUser, registry, dataRoot: DATA_ROOT });
+
+// Facet-owned fleet organization plane (facet-owns-its-fleets): the fleet
+// list, organization detail and console read/write against this process's own
+// fleets.db — no platform proxy. Organization only: nothing here dispatches a
+// turn or starts an executor. Mounted BEFORE registerPackRoutes so the more
+// specific `/api/fleets/*` paths match first.
+registerFleetRoutes(app, { resolveUser, dataRoot: DATA_ROOT, adminGroups });
 
 registerPackRoutes(app, {
   registry,

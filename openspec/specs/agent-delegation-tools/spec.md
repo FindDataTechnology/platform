@@ -100,3 +100,49 @@ When every task delegated in one conversation turn holds a terminal state (done,
 #### Scenario: 历史任务不重分组
 - **WHEN** 升级前入队、无分组键的任务随重启恢复并全部终态
 - **THEN** 它们按发起会话聚合为一组并注入一次，与升级前一致
+
+### Requirement: 委托目标的预设 id 归一为运行期 roster id
+
+委托创建时，persona 目标的 id SHALL 经 `rosterPresetId()` 归一为运行期 roster id 后再落库；
+自派判定与 facade 名单比对 SHALL 在归一之后比较。
+
+理由是实测的：目录/预设 API 的 id 形如 `user.preset-7`（点号），运行期 roster 目录名只允许
+`[a-z0-9-]`，因此真能解析的是 `user-preset-7`。不归一就落库，执行期会得到
+`Unknown agent preset: user.preset-7`——任务建成功、排队、开跑、失败，而报错只在任务历史里。
+
+#### Scenario: 点号形式的目标仍能执行
+
+- **WHEN** 调用方按目录名册传入 `user.preset-7`
+- **THEN** 任务记录的 `preset` 是 `user-preset-7`（运行期可解析的形式），该轮能真实开跑
+
+#### Scenario: 自派拒绝对两种拼法都生效
+
+- **WHEN** 当前会话跑在 `user-preset-7` 上，调用方以 `user.preset-7` 派发给自己
+- **THEN** 请求被拒（`already running under`），而不是被当成"另一个岗位"入队后失败
+
+#### Scenario: 名单比对同样归一
+
+- **WHEN** facade 的委托名单里写的是点号形式，而调用方传的是短横形式（或反之）
+- **THEN** 只要归一后相同就算命中，不因拼法不同而被误拒
+
+### Requirement: 对话发起的委托轮按人触发登记
+
+由对话（`POST /api/delegation/tasks`）创建的委托轮 SHALL 以 `humanPriority: true` 落库，
+与主人的 `execute-now` 同一档；SHALL NOT 以普通排期轮的身份进入准入与执行池的挑选判定。
+
+理由是可测的：执行池在满负荷时，唯一能越过 cap 的通道是「人类优先轮 + 额外席位未占用」
+（`human && !humanExtraOut`）；其余轮次一律取队头第一条可派的。委托轮若不带该标记，
+在 cadence 轮持续到达的 cell 上会结构性排在它们后面，而它本身**永远不会老化**（manual 不按年龄丢），
+于是表现为「已入队、永不执行、零报错」。
+
+该标记 SHALL 只影响准入与挑选次序，SHALL NOT 改变老化、顶替或执行语义。
+
+#### Scenario: 满负荷池里委托轮仍能开工
+
+- **WHEN** 执行池已满载（运行中的 worker 数等于 cap），且队头是其它的排期轮
+- **THEN** 一条新创建的委托轮仍会被派发执行（占用人类优先的额外席位），而不是无限期排在排期轮之后
+
+#### Scenario: 委托轮不因标记而改变执行语义
+
+- **WHEN** 一条带人类优先标记的委托轮被执行
+- **THEN** 它的回合、会话、回执聚合与不带该标记时完全一致（只有被挑中的时机不同）
