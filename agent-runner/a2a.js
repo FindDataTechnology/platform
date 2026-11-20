@@ -136,19 +136,11 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
       }
       if (method === "tasks/cancel") {
         const message = params?.message ?? params;
+        const contextId = message?.context_id ?? message?.contextId ?? tasks.get(taskId)?.context_id ?? null;
+        const sessionId = sessionKeyFor(contextId ?? `${entry.path}`);
+        // Refuse to cancel what is already over, and say what it is — an
+        // overwritten terminal state would erase why it ended.
         const before = tasks.get(taskId);
-        // The session to stop is the one the ATTEMPT started on, recorded at
-        // accept. Re-deriving it from `context_id` looks equivalent and is not:
-        // the facade's cancel relay carries only the task id (no context), so
-        // the derivation fell through to `${entry.path}` — a session that never
-        // existed — the active probe answered false, and the runner replied
-        // `not-running` while the turn kept running. Measured live 2026-11-20:
-        // cancel returned in 1.4 s with `state: running`, turn completed.
-        //
-        // Falling back to the derivation is only for a task this process never
-        // opened (a caller supplying its own id on a fresh runner).
-        const contextId = message?.context_id ?? message?.contextId ?? before?.context_id ?? null;
-        const sessionId = before?.session_id ?? sessionKeyFor(contextId ?? `${entry.path}`);
         if (before && before.state !== "running") {
           return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
         }
