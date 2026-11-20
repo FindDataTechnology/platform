@@ -10,6 +10,10 @@
 
 房间主办 SHALL 能在空间设置里开启嵌入：必须**先提交站点 domain 白名单**（至少一条，至多 ≤10），平台生成一个防猜的 widget 令牌（≥128 bit），签发可复制的 snippet（`<script src="{host}/zhiyu/widget.js" data-room="{token}">` 与其 iframe 直开 URL）。白名单与令牌 SHALL 可随时改配或一键吊销；令牌本身不持久化明文（存哈希）。
 
+令牌 SHALL 以一个 target 解析落地：`target_kind="room"`（缺省，绑定本房间）或 `target_kind="fleet"`
+（绑定一支团队号，见 `zhiyu-team-account`）。缺省与既有各行 SHALL 解析为 `room` 目标，
+其加载、白名单、吊销、访客铸席与续访行为 SHALL 与本条引入前逐字节等价。
+
 #### Scenario: 未设白名单无法开启
 
 - **WHEN** 主办未提交任何域名即请求开启嵌入
@@ -19,6 +23,11 @@
 
 - **WHEN** 主办吊销一个已发放的 widget 令牌
 - **THEN** 该令牌其后的首次 widget 加载与任意 API 请求一律 403，原有其他令牌不受影响
+
+#### Scenario: 既有令牌解析为房间目标
+
+- **WHEN** 一份在本变更前签发的 widget 令牌被加载
+- **THEN** 其解析结果与行为（目标房、铸席、白名单）与本变更前完全一致
 
 ### Requirement: widget 公共资源与动态 CSP
 

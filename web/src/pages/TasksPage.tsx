@@ -7,6 +7,7 @@
 // a bad expression.
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/states-kit";
 import { PageShell } from "@/components/ui/page-shell";
 import { useEffect, useMemo, useState } from "react";
 import { showToast } from "@/components/ui/toast";
@@ -815,25 +816,30 @@ export function TasksPage({ send }: TasksPageProps) {
         )}
 
         {jobs.length === 0 && !formOpen ? (
-          <div className="flex h-40 flex-col items-center justify-center gap-3 text-sm text-muted-foreground" data-testid="cron-empty">
-            {t("tasks.empty")}
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="text-xs">{t("tasks.templates.label")}</span>
+          <div data-testid="cron-empty">
+            <EmptyState
+              title={t("tasks.empty")}
+              hint={t("tasks.templates.label")}
+              action={
+                <div className="flex flex-wrap items-center justify-center gap-2">
               {TEMPLATES.map((tpl) => (
-                <button
+                <Button
                   key={tpl.key}
-                  type="button"
+                  size="xs"
+                  variant="outline"
+                  className="rounded-full"
                   onClick={() => {
                     applyTemplate(tpl);
                     setFormOpen(true);
                   }}
                   data-testid={`cron-empty-template-${tpl.key}`}
-                  className="inline-flex h-7 items-center rounded-full border border-border px-2.5 text-xs hover:border-primary/40 hover:text-foreground"
                 >
                   {t(`tasks.templates.${tpl.key}.name`)}
-                </button>
-              ))}
-            </div>
+                  </Button>
+                ))}
+                </div>
+              }
+            />
           </div>
         ) : (
           visibleJobs.map((job) => (

@@ -6,19 +6,27 @@ The inbound and outbound bridge between external chat platforms (企业微信 se
 ## Requirements
 
 ### Requirement: The server accepts inbound bot messages from configured chat platforms
-The server SHALL expose per-bot webhook endpoints (`/api/bots/webhook/:botId/:secret`) for 企业微信 (WeCom self-built app), 飞书 (Feishu custom app), Telegram, and 微信公众号 (WeChat official account), each authenticating the request via the platform's own verification mechanism (signature check or payload decryption) plus a per-bot secret in the path BEFORE any payload content reaches the agent. Unauthenticated or unverified requests SHALL be rejected with 403 and their content SHALL NOT be logged.
+
+The server SHALL expose per-bot webhook endpoints (`/api/bots/webhook/:botId/:secret`) for 企业微信 (WeCom self-built app), 飞书 (Feishu custom app), Telegram, 微信公众号 (WeChat official account), Slack, and Mattermost, each authenticating the request via the platform's own verification mechanism (signature check, payload decryption, or a platform-issued per-webhook token) plus a per-bot secret in the path BEFORE any payload content reaches the agent. Unauthenticated or unverified requests SHALL be rejected with 403 and their content SHALL NOT be logged.
+
+A platform whose inbound path requires no callback at all (it is polled or subscribed by the server) SHALL still be a first-class bot type: its adapter declares that shape and the server registers no webhook route for it, so the absence of a callback path is structural rather than a convention someone can forget.
 
 #### Scenario: platform URL verification handshake
 - **WHEN** a platform sends its verification request (WeCom echo, Feishu challenge, WeChat echostr) to a configured bot's webhook
 - **THEN** the server SHALL reply with the platform-required literal response
 
 #### Scenario: forged request rejected
-- **WHEN** a request reaches a bot webhook with an invalid secret, signature, or undecryptable payload
+- **WHEN** a request reaches a bot webhook with an invalid secret, signature, undecryptable payload, or wrong per-webhook token
 - **THEN** the server SHALL return 403 without processing or logging the content
 
 #### Scenario: inbound message round-trip
 - **WHEN** a verified text message arrives from an external chat
 - **THEN** the server SHALL run one agent turn on the session bound to that (bot, chat) pair and deliver the assistant's final text back to the originating chat via the platform's send API
+
+#### Scenario: a server-subscribed platform needs no callback
+- **WHEN** a bot type's inbound path is a connection the server opens to the platform
+- **THEN** no webhook route is registered for that type
+- **AND** its messages still produce turns and its answers still reach the chat
 
 ### Requirement: Each external chat maps to its own persistent agent session
 The server SHALL derive a stable session id per (bot, external chat id) pair, independent of the web chat session, and SHALL resume that conversation across runtime restarts via dsh's session persistence. Concurrent turns from different chats SHALL run in parallel; turns within one chat SHALL be serialized in arrival order.
@@ -123,11 +131,26 @@ The server SHALL expose `GET /api/bots/:id/qr` returning `{ strategy, url|null, 
 - **THEN** its QR SHALL still resolve (the QR advertises an entry the operator may be preparing), with no status side effects
 
 ### Requirement: Proactive outbound send
+
 The server SHALL provide an admin-gated `POST /api/bots/:id/send` endpoint delivering text to a previously-seen chat key via the platform's send API, for use by cron jobs and integrations.
+
+Each platform SHALL declare its outbound capability shape, and that declaration SHALL be the answer the binding surface reports — "this bot is bound" and "this bot can deliver" are different questions and MUST NOT be conflated. The declared shape SHALL come from a closed set (credentials-in-request with no caller allowlist / proactive but caller-address gated / passive reply-window only / no outbound path at all), and an undeclared platform SHALL answer "no outbound path" rather than a guessed one.
+
+The set of platforms covered by the capability check SHALL be derived from the authoritative platform list, MUST NOT be a hand-maintained subset: a hand-maintained list silently exempts every platform added after it was written, turning a missing declaration into a silently undeliverable bot.
 
 #### Scenario: proactive push
 - **WHEN** an authenticated admin POSTs `{ chatKey, text }`
 - **THEN** the message SHALL be delivered through the bot's platform send API
+
+#### Scenario: capability is reported honestly
+- **WHEN** the binding surface reports a bot whose platform delivers without a caller allowlist
+- **THEN** it SHALL report that the bot can deliver now
+- **AND** MUST NOT report "no outbound path"
+
+#### Scenario: newly added platform cannot skip its declaration
+- **WHEN** a platform is added to the authoritative platform list without an outbound declaration
+- **THEN** the capability check SHALL fail and name that platform
+- **AND** the failure SHALL NOT depend on someone remembering to add the platform to a second list
 
 ### Requirement: Webhook authentication under forward auth
 When `AUTH_MODE=forward_auth` is active, bot webhook routes SHALL be exempt from the proxy-injected identity header requirement (external platforms cannot supply it) and SHALL rely exclusively on their platform verification; all other bot management routes SHALL remain behind the proxy as usual.

@@ -1,0 +1,17 @@
+{
+  "_comment": "Route families that are deliberately NOT mounted from a production entrypoint. Every entry needs path + symbol + reason + date; wildcards and directory-level entries are rejected. Mounted families must not appear here.",
+  "entries": [
+    {
+      "path": "server/blueprint-author.js",
+      "symbol": "registerBlueprintAuthorRoutes",
+      "reason": "Retired with the blueprint-studio teardown (add-supply-studio-migration W2 4.6): the creation surface moved to the facet host. Kept in-tree only as the loopback bridge's dead building block; server.js's own comment records the retirement.",
+      "date": "2026-11-20"
+    },
+    {
+      "path": "server/routes/bot-events.js",
+      "symbol": "registerBotEventRoutes",
+      "reason": "Untracked work-in-progress in the working tree (adopt-fd-bot-transport 6.1). Not a regression: no tracked revision ever mounted it. Remove this exemption once the change lands and the file is committed with its mount.",
+      "date": "2026-11-20"
+    }
+  ]
+}

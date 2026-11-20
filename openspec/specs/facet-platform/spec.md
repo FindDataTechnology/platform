@@ -127,9 +127,11 @@ Published packs, versions, and subscription records SHALL migrate from the 壹�
 
 ### Requirement: The facet web shell carries a product intro view
 
-The facet web shell SHALL serve a static, mechanism-first product intro view at the hash root `#/` as the default landing, replacing the retired intro band. The view SHALL describe the product's own mechanics, not a product-line tour: (a) a hero carrying the value line 千人千面 — AI 编辑器的功能集与工具分发市场, a subtitle stating that packs bundle skills, MCP references, and agent personas for browsing, subscribing, and publishing with a one-line install into Claude Code / Cursor, a fact row (anonymous browsing; publish and subscribe after login, on the same identity as 壹座), and CTAs into the packs market and the MCP catalog; (b) three feature cards — what a pack contains (skill sources, MCP references, agent personas, plus version, tags, and author; the detail view exposes every skill's full body and the version history), subscribe and install are two different acts (a subscription is recorded in the market, shared with the 壹座 Store), and version snapshots (an install takes a definite version; re-running `install` takes a new snapshot; the CLI writes no MCP configuration and holds no credentials); (c) a text path figure — creator --publish--> the market --subscribe--> 壹座 (one-click install into the conversation runtime, MCP credentials already wired) and the market --CLI install--> Claude Code / Cursor skill directories (skill snapshot on disk, MCP references printed); (d) a quick start carrying the published CLI form `npx @finddatatechonology/facet install <pack id or URL containing the id>` (Claude Code by default; `--target cursor` and `--project <dir>` optional); and (e) a backlink to the official site's facet line page.
+The facet web shell SHALL serve a static, mechanism-first product intro view at the hash root `#/` as the default landing, replacing the retired intro band. The view SHALL describe the product's own mechanics, not a product-line tour: (a) a hero carrying the value line 千人千面 — AI 编辑器的功能集与工具分发市场, a subtitle stating that packs bundle skills, MCP references, and agent personas, **and that team packs may additionally declare memory, a console (dashboard), and a roster** — for browsing, subscribing, and publishing with a one-line install into Claude Code / Cursor; a fact row (anonymous browsing; publish and subscribe after login, on the same identity as 壹座), and CTAs into the packs market and the MCP catalog; (b) three feature cards — what a pack contains (skill sources, MCP references, and agent personas; **a team pack may also declare the memory axes, console blocks, and roster, each rendered as its own section when declared and stated explicitly as undeclared when not** — plus version, tags, and author; the detail view exposes every skill's full body and the version history), subscribe and install are two different acts (a subscription is recorded in the market, shared with the 壹座 Store), and version snapshots (an install takes a definite version; re-running `install` takes a new snapshot; the CLI writes no MCP configuration and holds no credentials); (c) a text path figure — creator --publish--> the market --subscribe--> 壹座 (one-click install into the conversation runtime, MCP credentials already wired) and the market --CLI install--> Claude Code / Cursor skill directories (skill snapshot on disk, MCP references printed); (d) a quick start carrying the published CLI form `npx @finddatatechonology/facet install <pack id or URL containing the id>` (Claude Code by default; `--target cursor` and `--project <dir>` optional); and (e) a backlink to the official site's facet line page.
 
 The line-page backlink SHALL follow the active locale (`/zh/products/facet` under zh, `/products/facet` otherwise). Facts SHALL be limited to what is verifiable at build time — no counts. The install command SHALL stay single-sourced (the packs footnote carries only the `facet help` pointer, no duplicated install line). Copy SHALL come from i18n keys authored in all five locales (en is the source of truth; `scripts/check-locales.js` enforces key-set parity, so "fallback" is a safety net, not the authoring mode). The view SHALL be fully static — no market or catalog live data, no loading or empty states.
+
+The intro view's description of what a pack contains SHALL agree with the pack detail view's section set: any content class the detail view renders as its own section (memory, console, roster) SHALL be named on the intro as an optional declaration of a team pack, and MUST NOT be presented as content every pack carries. The intro SHALL NOT claim a content class the detail view does not render.
 
 #### Scenario: first visit lands on the intro
 
@@ -140,6 +142,17 @@ The line-page backlink SHALL follow the active locale (`/zh/products/facet` unde
 
 - **WHEN** the intro view renders
 - **THEN** its body names what a pack contains, distinguishes subscribing from installing, explains version snapshots, and draws the install paths as a text figure — rather than touring the five product lines
+
+#### Scenario: optional team content is named as optional
+
+- **WHEN** the intro view renders on a market whose packs include team templates
+- **THEN** memory, console, and roster are presented as declarations a team pack MAY carry, not as content every pack holds
+- **AND** the view states that an undeclared class is shown explicitly as undeclared rather than as empty
+
+#### Scenario: intro and detail view agree on the section set
+
+- **WHEN** a visitor reads the intro's description of what a pack contains and then opens any pack's detail view
+- **THEN** every content class the intro names as optional corresponds to a section the detail view can render, and the intro names no content class that the detail view never renders
 
 #### Scenario: CLI fact stays verifiable and single-sourced
 
@@ -211,7 +224,6 @@ The view SHALL be fully static — no market or catalog live data, no loading or
 
 ### Requirement: Shell views are addressable hash routes
 
-
 The facet web shell SHALL address its views by hash: `#/` (intro) as the default landing, `#/packs` (packs market), `#/mcp` (MCP service catalog, carrying the per-server depth views and the skills catalog), `#/docs` (the documentation view), `#/studio` (the creation face, visible to signed-in users), and the identity-conditional author surfaces — `#/mine` (creator console, visible to signed-in users) and `#/curate` (curation board, visible to admins). The tab control and the hash SHALL stay in sync in both directions: switching a tab updates the hash, and loading or navigating to a hash renders the matching view with that entry active. An unknown or empty hash SHALL fall back to `#/`.
 
 Shell entries SHALL be split by weight: the public tabs are the four browsing views, a signed-in viewer additionally gets the creation face as a tab, and the author-only and admin-only surfaces SHALL be reachable from the account control rather than occupying the primary tab row. Demoting an entry SHALL NOT remove its hash: `#/mine` and `#/curate` SHALL keep resolving for a viewer whose identity grants them, so existing deep links and bookmarks continue to work, and navigating to a conditional hash without the grant SHALL fall back to the intro landing (the data plane rejects the calls anyway).
@@ -219,7 +231,6 @@ Shell entries SHALL be split by weight: the public tabs are the four browsing vi
 A view the shell borrows from the 壹座 web app SHALL render completely on the facet shell. The shell itself SHALL add no router dependency for its own views; where a borrowed view requires routing context, the shell SHALL supply a local route table scoped to that view, and every navigation affordance inside a borrowed view SHALL either resolve within that local table or be replaced by a real external link to 壹座 — a control whose destination does not exist on the host SHALL NOT be rendered as an active affordance. Depth views SHALL remain reachable within `#/mcp` without adding new top-level hashes.
 
 The server side of the shell SHALL keep three path classes apart: API paths (`/api/**`, `/auth/**`) are never answered with the shell document; machine-surface paths (`/llms.txt`, `/llms-full.txt`, `/catalog.json`, `/robots.txt`) SHALL be answered with 404, because this host owns no machine surface and a soft HTML success is indistinguishable from a real one to a crawler; every remaining path MAY serve the shell document so hash routes resolve on direct entry.
-
 
 #### Scenario: deep link and refresh
 

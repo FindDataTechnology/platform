@@ -5,19 +5,34 @@ The cell's task-worker slots: on-demand dsh runtime instances, each pinned to on
 ## Requirements
 
 ### Requirement: Workers spawn on demand with persona affinity
-The pool SHALL execute a due task targeting persona P on an idle worker bound to P. When no such worker exists and the pool is under its cap, one SHALL be spawned for P; when the pool is at cap, the task SHALL queue until a slot frees. A worker SHALL keep its persona for its entire lifetime. A worker's turn SHALL be prompted under the SAME per-round child conversation id the primary chain derives (`roundChildSessionId`), never the stable mirror session id: the mirror id stays the transcript/sidebar id, while the runtime conversation rotates per round so a worker round never re-reads its own accumulated history. The worker's collector, abort registry and slot watchdog SHALL all key on that child id.
+
+The pool SHALL execute a due task targeting persona P on an idle worker bound to P. When no such worker exists and the pool is under its cap, one SHALL be spawned for P. When the pool is at its cap, the task SHALL queue — but "at cap" SHALL mean **cap workers that are either busy or bound to a persona some queued task still targets**: an idle worker whose persona no queued task targets SHALL NOT lock the slot. The pool SHALL retire such a worker (graceful shutdown, same path as the idle reap) and start the due task's worker within that same slot, so the total worker count never exceeds the cap. Retirement SHALL prefer the longest-unused idle worker and MUST NOT take an idle worker whose persona still has a queued task. With no retirable idle worker the task SHALL queue exactly as before. A worker SHALL keep its persona for its entire lifetime. A worker's turn SHALL be prompted under the SAME per-round child conversation id the primary chain derives (`roundChildSessionId`), never the stable mirror session id: the mirror id stays the transcript/sidebar id, while the runtime conversation rotates per round so a worker round never re-reads its own accumulated history. The worker's collector, abort registry and slot watchdog SHALL all key on that child id.
 
 #### Scenario: Spawn on demand
+
 - **WHEN** a task targeting persona P is due, no worker bound to P exists, and the pool is under cap
 - **THEN** a worker is spawned bound to P and the task executes on it
 
 #### Scenario: Reuse an idle same-persona worker
+
 - **WHEN** a task targeting persona P is due and an idle worker bound to P exists
 - **THEN** the task executes on that worker without spawning another
 
 #### Scenario: Queue at cap
-- **WHEN** a task is due, no matching idle worker exists, and the pool is at its cap
-- **THEN** the task remains queued until a worker slot frees, and no worker is spawned
+
+- **WHEN** a task is due, no matching idle worker exists, the pool holds cap workers, and no idle worker may be retired (none is idle, or every idle worker's persona still has a queued task)
+- **THEN** the task remains queued until a worker slot frees, and the total worker count does not exceed the cap
+
+#### Scenario: 空闲 worker 不占名额
+
+- **WHEN** 池已满（4 个 worker），其中 2 个空闲且其岗位没有任何排队任务，此时一条岗位不匹配的排期轮到期
+- **THEN** 池回收一个最久未用的空闲 worker 并在同一名额内为新岗位启动 worker，该排期轮立即开跑
+- **AND** 整个过程 worker 总数不超过 `TASK_WORKER_MAX`，且回收留一行日志说明被回收的岗位
+
+#### Scenario: 岗位仍有人等的空闲 worker 不被回收
+
+- **WHEN** 池已满，唯一的空闲 worker 绑定的岗位仍有若干排队任务，此时另一岗位的轮次到期
+- **THEN** 该空闲 worker SHALL NOT 被回收，新岗位的轮次留在队列里等槽释放（与变更前一致）
 
 #### Scenario: Worker round rotates its runtime conversation
 
