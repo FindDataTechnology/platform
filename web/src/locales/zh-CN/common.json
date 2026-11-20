@@ -2545,7 +2545,8 @@
       "rosterOnDemand": "按需触发",
       "rosterEdges": "编排边 {{n}} 条",
       "memoryDeclaredWas": "（声明值 {{v}}）",
-      "dashboardBlocks": "{{n}} 块"
+      "dashboardBlocks": "{{n}} 块",
+      "compactExternalSystems": "外部系统 {{n}}"
     },
     "checklist": {
       "title": "发布体检",

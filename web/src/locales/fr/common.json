@@ -2545,7 +2545,8 @@
       "rosterOnDemand": "déclenché à la demande",
       "rosterEdges": "{{n}} arêtes d'orchestration",
       "memoryDeclaredWas": "(déclaré {{v}})",
-      "dashboardBlocks": "{{n}} blocs"
+      "dashboardBlocks": "{{n}} blocs",
+      "compactExternalSystems": "{{n}} système(s) externe(s)"
     },
     "checklist": {
       "title": "Contrôle avant publication",

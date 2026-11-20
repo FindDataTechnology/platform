@@ -2545,7 +2545,8 @@
       "rosterOnDemand": "triggered on demand",
       "rosterEdges": "{{n}} orchestration edges",
       "memoryDeclaredWas": "(declared {{v}})",
-      "dashboardBlocks": "{{n}} blocks"
+      "dashboardBlocks": "{{n}} blocks",
+      "compactExternalSystems": "{{n}} external system(s)"
     },
     "checklist": {
       "title": "Publish check",

@@ -2545,7 +2545,8 @@
       "rosterOnDemand": "bajo demanda",
       "rosterEdges": "{{n}} aristas de orquestación",
       "memoryDeclaredWas": "(declarado {{v}})",
-      "dashboardBlocks": "{{n}} bloques"
+      "dashboardBlocks": "{{n}} bloques",
+      "compactExternalSystems": "{{n}} sistema(s) externo(s)"
     },
     "checklist": {
       "title": "Revisión de publicación",

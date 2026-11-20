@@ -2545,7 +2545,8 @@
       "rosterOnDemand": "オンデマンド実行",
       "rosterEdges": "編成エッジ {{n}} 本",
       "memoryDeclaredWas": "（宣言値 {{v}}）",
-      "dashboardBlocks": "{{n}} ブロック"
+      "dashboardBlocks": "{{n}} ブロック",
+      "compactExternalSystems": "外部システム {{n}}"
     },
     "checklist": {
       "title": "公開前チェック",

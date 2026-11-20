@@ -264,12 +264,19 @@ test("the outbound client sends depth only for delegated traffic, and refuses at
     await assert.rejects(() => runA2aTurn("http://agent.test/", "干活", { depth: 2, gatewayToken: "g", agentToken: "a" }));
     assert.equal(sent.at(-1)["X-Delegation-Depth"], "2");
 
+    // The cap is checked BEFORE any fetch, so this count must not move.
+    // (Threshold: the two calls above are 2 fetches each since the 2026-11-18
+    // transient-retry policy — the stub throws a plain Error, which that policy
+    // classifies as transient and retries once. That is why the assertion below
+    // is "unchanged by the third call" rather than a fixed total: this case is
+    // about the BOUND, not about how many attempts a failure costs.)
+    const before = sent.length;
     await assert.rejects(
       () => runA2aTurn("http://agent.test/", "干活", { depth: DELEGATION_DEPTH_BOUND, gatewayToken: "g", agentToken: "a" }),
       /depth bound/,
       "the client refuses to chain past the cap even if the caller asks",
     );
-    assert.equal(sent.length, 2, "the over-bound call never left the process");
+    assert.equal(sent.length, before, "the over-bound call never left the process");
   } finally {
     globalThis.fetch = realFetch;
   }

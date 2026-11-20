@@ -72,7 +72,6 @@ packs.editor.pillars.storeHome  # pack 编辑器/市场（在途车道 PackPilla
 packs.editor.pillars.title  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
 packs.editor.pillars.undeclared  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
 packs.editor.pillars.writeAuthority  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
-packs.specSheet.compactExternalSystems  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackCard.tsx · 2026-11-18 存量
 settings.ciyuanAccount.capacity  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
 settings.ciyuanAccount.pricing  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
 settings.ciyuanAccount.pricingOffpeak  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
