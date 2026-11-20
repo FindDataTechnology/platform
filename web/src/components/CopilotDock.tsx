@@ -58,6 +58,10 @@ const OPEN_EVENT = "copilot-dock:open";
  *  dock is a singleton in App and the board lives in the router outlet, so a
  *  window event is the only shared seam without a new context provider. */
 export const BOARD_VIEW_EVENT = "copilot-dock:view-summary";
+/** The dock asks a mounted board to (re)publish its summary. The board publishes
+ *  on mount, which happens LONG before the dock is opened — so without this the
+ *  dock opens holding nothing and the model gets a context with no view on it. */
+const BOARD_VIEW_REQUEST = "copilot-dock:view-summary-request";
 
 /** Whether an `/agents` `?tab=` value addresses the pack market — the surface
  *  whose focused assistant is the 谦面 line.
@@ -280,11 +284,27 @@ export function CopilotDock({ send, navCollapsed = false }: Props) {
   //
   // Sent on every line change (not just on open) — a bar frozen at the frame
   // that first opened is the bug this payload shape exists to fix.
+  //
+  // TIMING (2026-11-20, caught on prod): posting when the effect first runs
+  // reaches a frame whose document has NOT loaded yet — `contentWindow` exists
+  // the instant `src` is set, but the embed's listener is registered by its own
+  // React effect, which runs after that document commits. The message was
+  // silently dropped and the model got a prefix with no page/view on it (the
+  // board line survived only because it rides the iframe URL). So: send on the
+  // frame's `load`, AND on every later change while it stays loaded.
+  // Ask the mounted board for its summary the moment the dock opens (see
+  // BOARD_VIEW_REQUEST). A no-op when no board is mounted.
+  useEffect(() => {
+    if (!open) return;
+    window.dispatchEvent(new Event(BOARD_VIEW_REQUEST));
+  }, [open, boardLine]);
+
   useEffect(() => {
     if (!open) return;
     const frame = document.querySelector<HTMLIFrameElement>("[data-testid=copilot-frame]");
-    if (frame && frame.contentWindow) {
-      frame.contentWindow.postMessage(
+    if (!frame) return;
+    const send = () => {
+      frame.contentWindow?.postMessage(
         {
           type: "copilot_context",
           board: boardLine,
@@ -293,7 +313,10 @@ export function CopilotDock({ send, navCollapsed = false }: Props) {
         },
         window.location.origin,
       );
-    }
+    };
+    send();
+    frame.addEventListener("load", send);
+    return () => frame.removeEventListener("load", send);
   }, [boardLine, open, location.pathname, boardViewSummary]);
 
   // The market tab's inspected pack (add-facet-copilot D2): subscribe while

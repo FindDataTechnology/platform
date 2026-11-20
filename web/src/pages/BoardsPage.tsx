@@ -23,6 +23,7 @@ import { EChart } from "@/components/EChart";
 import { useAppConfig } from "@/hooks/useAppConfig";
 import { ActionCard, type ActionProposal } from "@/components/ActionCard";
 import { CopilotDockTrigger, BOARD_VIEW_EVENT } from "@/components/CopilotDock";
+const BOARD_VIEW_REQUEST = "copilot-dock:view-summary-request";
 import { PageShell } from "@/components/ui/page-shell";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/states-kit";
@@ -136,10 +137,14 @@ export function BoardsPage() {
     const summary = visible.length
       ? `${visible.length} 块（${visible.slice(0, 6).join(" / ")}${visible.length > 6 ? " 等" : ""}）`
       : "空";
-    window.dispatchEvent(
-      new CustomEvent(BOARD_VIEW_EVENT, { detail: { line: data.line, summary } }),
-    );
+    const publish = () =>
+      window.dispatchEvent(new CustomEvent(BOARD_VIEW_EVENT, { detail: { line: data.line, summary } }));
+    publish();
+    // Re-answer when the dock asks: it opens long after this board mounted, so
+    // the one-shot publish above has long been forgotten by then.
+    window.addEventListener(BOARD_VIEW_REQUEST, publish);
     return () => {
+      window.removeEventListener(BOARD_VIEW_REQUEST, publish);
       window.dispatchEvent(new CustomEvent(BOARD_VIEW_EVENT, { detail: { line: data.line, summary: "" } }));
     };
   }, [data, currentTab]);
