@@ -184,3 +184,78 @@ With an empty query the grid SHALL render every card unchanged. A query that mat
 - **THEN** that card SHALL remain rendered and marked as retained because it holds pending input
 - **AND** the typed value SHALL NOT be cleared, unmounted away, or otherwise lost
 - **AND** a query matching no card at all SHALL still render an explicit no-match line rather than an empty grid region
+
+### Requirement: 连接器已连 SaaS 清单的只读投影
+
+平台 SHALL expose `GET /api/connector/inventory`，返回当前用户**在连接器里已配置的连接**清单，使设置页能回答「我到底连了哪些外部系统」——不再只有「我的账号」与「包要什么」两半。
+
+每行 SHALL 携带：连接器的 provider service id、连接名、authType（连接器不报告时省略），以及该 provider 是否被**某个已应用的包**声明（与绑定账本同一份来源：包声明 + 角色映射解析后的 provider 集合）。「被包声明」SHALL 按 provider 判定，SHALL NOT 按连接名判定。
+
+该投影 MUST NOT 出现在 `GET /api/connections` 的响应里：聚合端点被应用中心徽章、对话内连接引导等面广泛读取，而本投影需要对连接器发起一次外部请求；把它挂在聚合上会让一个不可达的连接器拖慢每一个读连接状态的页面。
+
+#### Scenario: 自建连接可见
+
+- **WHEN** 用户在自己的连接器账号下连了 GitHub，但没有任何已装包声明 GitHub
+- **THEN** 清单包含该行，并标注它不被任何包要求
+
+#### Scenario: 被包要求的连接有来源标注
+
+- **WHEN** 用户连了 `kingdee-cloud` 且某个已应用包的绑定解析后声明了该 provider
+- **THEN** 该行标注为「包要求」，与自建行可区分
+
+### Requirement: 清单的读不到与读到空必须分开
+
+投影 SHALL 区分「无法读取」与「读到零条」两种事实：没有可用账号、凭据失效、连接器不可达或超时 SHALL 报告为**未知**（明确的失败码，MUST NOT 以空数组呈现）；连接器正常应答且该用户名下没有任何已配置连接时 SHALL 报告为空数组。
+
+投影 MUST NOT 在响应里出现任何 token、PAT id、密钥或其它凭据材料，也包括连接器侧的内部 id；只有 service、连接名、authType 与来源标注。
+
+#### Scenario: 读不到不等于空
+
+- **WHEN** 用户没有 active 连接器账号、或该账号 PAT 已失效、或连接器不可达/超时
+- **THEN** 投影报告为未知（失败码），MUST NOT 报告为零条连接
+
+#### Scenario: 真·空清单
+
+- **WHEN** 连接器正常应答且该用户名下没有任何已配置连接
+- **THEN** 投影为空数组，UI 呈现「还没有连接」而不是「无法读取」
+
+#### Scenario: 投影不含凭据
+
+- **WHEN** 检查投影的任意字段与任意嵌套层级
+- **THEN** 不出现 token、PAT id、密钥、连接器内部 id
+
+### Requirement: 清单行可深链到连接器的连接表单
+
+每一行 SHALL 可深链到连接器侧该 provider 的连接表单（`{connector origin}/me?add=<service>`），使「去连一个新的」与「去改这一个」落在同一个表单上。连接器 origin 缺席的部署（自托管未接连接器）SHALL 不渲染该链接，而不是渲染一个空跳。
+
+#### Scenario: 行尾深链直达该 provider 的表单
+
+- **WHEN** 用户点击某清单行的「前往连接器」
+- **THEN** 新标签打开连接器 origin 的 `/me?add=<该行 service>`，落点已预填该 provider
+
+#### Scenario: 无连接器行的部署不给空跳
+
+- **WHEN** 部署的 `mcp.json` 没有 connector 行
+- **THEN** 不渲染目录深链，投影报告为未知，页面不报错
+
+### Requirement: 设置页连接器卡片呈现该清单
+
+设置 → 连接的「萬星·连接器」卡片 SHALL 呈现该清单，紧接在账号列表之后；每行 SHALL 呈现 provider 名、连接名（与 provider 名不同时）与来源标注，并在 origin 可用时呈现深链。UI SHALL 用两句不同的话分别表达「无法读取」与「还没有连接」。
+
+#### Scenario: 卡片呈现已连清单
+
+- **WHEN** 已登录用户在设置 → 连接打开连接器卡片，且其连接器账号下有已配置连接
+- **THEN** 卡片在账号列表之后逐行呈现这些连接，自建行与包要求行可区分
+
+#### Scenario: 两种空状态措辞不同
+
+- **WHEN** 清单为未知
+- **THEN** 卡片呈现「无法读取」类措辞（并说明可能原因）
+- **WHEN** 清单为真·空
+- **THEN** 卡片呈现「还没有连接」类措辞
+- **AND** 两者 MUST NOT 复用同一句话
+
+#### Scenario: 无包无账号也不空白
+
+- **WHEN** 用户既没有装任何声明绑定的包，也还没连过任何 SaaS
+- **THEN** 卡片仍呈现清单区的空态与「去连接器浏览」入口，而不是整段消失
