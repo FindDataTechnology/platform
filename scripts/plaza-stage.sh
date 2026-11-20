@@ -22,10 +22,7 @@ PLAZA_DIR="${2:?用法: plaza-stage.sh <tar包> <站点根> [staging目录]}"
 STAGE="${3:-${PLAZA_DIR%/}.stage.$$}"
 
 MACHINE_FACES=(llms.txt llms-full.txt catalog.json)
-# favicon.svg / og.png 必须在此列：index.html 的 rel="icon" 与 og:image 指向它们，
-# 白名单漏掉时文件即使进了 tar 也不会被落位，页面就声明了一个 404 的地址
-# （2026-11-20 实测：包里有、站点根没有）。
-SITE_ITEMS=(index.html style.css script.js locales generated deploy favicon.svg og.png)
+SITE_ITEMS=(index.html style.css script.js locales generated deploy)
 
 rm -rf "$STAGE"
 mkdir -p "$STAGE"

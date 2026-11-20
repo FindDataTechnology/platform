@@ -30,13 +30,8 @@ export function registerChatHistoryRoutes(ctx) {
           ? { includeAll: true }
           : { owner: req.user?.email ?? "" }
         : undefined;
-      // Same feed semantics as the WS `sessions` event (slim-session-list-feed):
-      // automation rounds are execution records, not conversations. The current
-      // session stays listed so its row/title resolves.
-      const rows = await chatHistory.listSessions({ ...scope, excludeAutomated: true });
-      const listed = chatHistory.ensureSessionInList(rows, chatHistory.currentSessionId(), scope);
       res.json({
-        sessions: ctx.withTurnStatus(listed),
+        sessions: ctx.withTurnStatus(await chatHistory.listSessions(scope)),
         current: chatHistory.currentSessionId(),
       });
     } catch (err) {

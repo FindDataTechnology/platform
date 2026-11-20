@@ -1362,10 +1362,15 @@ async function runA2aRemoteTurn(ctx, job, timeoutMs) {
     });
     if (out.text) chatHistory.recordMessage(sessionId, "assistant", out.text);
     ctx.sessionCollectors.delete(sessionId);
-    // Per-connection list refresh: `broadcast` would ship one unscoped list to
-    // every client (the pre-existing ownership gap) and would now re-inject the
-    // automation row this round just created (slim-session-list-feed).
-    void ctx.broadcastSessions?.();
+    const version = ctx.sessionVersion;
+    chatHistory
+      .listSessions()
+      .then((sessions) => {
+        if (version === ctx.sessionVersion) {
+          ctx.broadcast({ type: "sessions", sessions: ctx.withTurnStatus?.(sessions) ?? sessions, current: chatHistory.currentSessionId() });
+        }
+      })
+      .catch(() => {});
     // Turn metering (add-turn-metering D3): a2a runs on the REMOTE executor —
     // the enqueue default already says remote for a2a targets, but the executor
     // states it anyway (the claimant/executor rule), and a2a has no persona
@@ -1918,9 +1923,15 @@ export async function runPersonaTurn(ctx, job, timeoutMs, activeTurns, { started
   // Refresh the sidebar/list so a returning client sees the job session's
   // new output (this is the sessions broadcast finishTurn makes on the web
   // path; the cron path never sends `done`, which belongs to live turns).
-  // Per-connection (slim-session-list-feed + the ownership scope `broadcast`
-  // never applied).
-  void ctx.broadcastSessions?.();
+  const version = ctx.sessionVersion;
+  chatHistory
+    .listSessions()
+    .then((sessions) => {
+      if (version === ctx.sessionVersion) {
+        ctx.broadcast({ type: "sessions", sessions: ctx.withTurnStatus?.(sessions) ?? sessions, current: chatHistory.currentSessionId() });
+      }
+    })
+    .catch((e) => console.error("[cron] sessions refresh failed:", e.message));
 
   // metering rides the seam return (add-turn-metering): attempt() stamps it
   // per attempt; a no-attempt ending (shouldn't reach here) falls back to the
@@ -2228,9 +2239,15 @@ async function runClusterTurn(ctx, job, { turnTimeoutMs, activeTurns, startedAt 
       console.warn(`[cluster] digest write-back failed for ${cluster.id} (degrade open): ${e?.message || e}`);
     }
   }
-  // Per-connection refresh (slim-session-list-feed; also closes the ownership
-  // gap `broadcast` had here — one unscoped list went to every client).
-  void ctx.broadcastSessions?.();
+  const version = ctx.sessionVersion;
+  chatHistory
+    .listSessions()
+    .then((sessions) => {
+      if (version === ctx.sessionVersion) {
+        ctx.broadcast({ type: "sessions", sessions: ctx.withTurnStatus?.(sessions) ?? sessions, current: chatHistory.currentSessionId() });
+      }
+    })
+    .catch((e) => console.error("[cluster] sessions refresh failed:", e.message));
 
   const okCount = results.filter((r) => r.status === "ok").length;
   const memberModels = Object.fromEntries(results.filter((r) => r.model).map((r) => [r.name, r.model]));

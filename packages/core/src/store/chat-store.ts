@@ -1256,17 +1256,7 @@ export const useChatStore = create<State>((set) => ({
           }
           return {
             sessions: m.sessions,
-            // A list broadcast is NOT a view switch while one is settling
-            // (fix-cold-open-stuck-skeleton): `current` names the server's live
-            // session, which during a cron round's refresh is often a session
-            // this client is not viewing. Letting it write here flipped the
-            // view out from under a pending switch, so the switch's own
-            // `session_loaded` then failed the stale-load guard and the
-            // skeleton never resolved.
-            currentSessionId:
-              state.pendingSession || state.pendingNewSession
-                ? state.currentSessionId
-                : (m.current ?? state.currentSessionId),
+            currentSessionId: m.current ?? state.currentSessionId,
             sessionCache,
             sessionWindowMeta,
           };
@@ -1301,14 +1291,8 @@ export const useChatStore = create<State>((set) => ({
           // one, another viewer's load of a session this client still
           // server-views — feeds the cache and leaves the view alone.
           // Pessimistic clients keep the legacy apply-everything contract.
-          //
-          // The comparison base is the SWITCH TARGET, not the current view id
-          // (fix-cold-open-stuck-skeleton): an unrelated broadcast must not be
-          // able to make this switch's own load look foreign. `isNewChatArrival`
-          // is checked first — a new-session handshake resolves structurally,
-          // and its minted id never equals the pending target.
-          const switchTarget = state.pendingSession ?? state.currentSessionId;
-          const applies = !state.optimisticSessions || isNewChatArrival || m.id === switchTarget;
+          const applies =
+            !state.optimisticSessions || isNewChatArrival || m.id === state.currentSessionId;
           if (!applies) {
             return {
               sessionCache: cacheWrite(state.sessionCache, m.id, mapped),

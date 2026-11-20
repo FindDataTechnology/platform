@@ -1425,34 +1425,18 @@ export class ChildManager {
     const route = this.groups.get(key) ?? { childKey: key, pod: false };
     const child = this.children.get(route.childKey);
     if (!child) return { ok: true, stopped: "not-running" };
-    // ONE id for both the probe and the cancel. The adapter keys its active
-    // map by WIRE id (`<agentKey>--<sessionId>` under pod composition), so
-    // probing with the bare session id answered `false` for every pod member —
-    // the cancel then reported "not-running" and **actually stopped nothing**,
-    // while the facade relayed it as a 200. Measured live 2026-11-20 against
-    // `packs-99umqiqxf5tprugl6sifag-probe-agent`: `tasks/cancel` returned
-    // `state: running`, the turn finished normally.
-    // Candidate ids, in the order the adapter could have keyed them. The
-    // adapter keys a pod member's collector by its WIRE id and a solo session
-    // by the bare id, and which one applies is decided by the ADAPTER's own
-    // membership map (`podMembers`), not by the manager's routing group — the
-    // two can disagree after an in-place upgrade reshapes a pack. Probing both
-    // shapes costs one Map lookup and removes the class of bug where the probe
-    // says "nothing running" while a turn is very much running.
-    const wireId = route.pod ? DshHarnessAdapter.wireSessionId(key, sessionId) : sessionId;
-    const candidates = wireId === sessionId ? [sessionId] : [wireId, sessionId];
-    const isActive = typeof child.isActive === "function"
-      ? candidates.find((c) => child.isActive(c) === true) ?? null
-      : null;
-    if (typeof child.isActive === "function" && isActive === null) {
+    // The adapter's own active-session map is the only honest "is something
+    // running here" answer (the same probe the external-context reap uses).
+    if (typeof child.isActive === "function" && child.isActive(sessionId) === false) {
       return { ok: true, stopped: "not-running" };
     }
     const caps = (() => {
       try { return child.adapter?.capabilities?.() ?? {}; } catch { return {}; }
     })();
     if (caps.cancel !== true) return { ok: true, stopped: "unsupported" };
+    const wireId = route.pod ? DshHarnessAdapter.wireSessionId(key, sessionId) : sessionId;
     try {
-      await child.request("session/cancel", { sessionId: isActive ?? wireId });
+      await child.request("session/cancel", { sessionId: wireId });
       return { ok: true, stopped: "cancelled" };
     } catch (e) {
       return { ok: false, stopped: "error", message: e?.message || String(e) };
