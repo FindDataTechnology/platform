@@ -10,6 +10,7 @@ import express from "express";
 import { GATEWAY_SECRET_HEADER } from "../auth.js";
 import { reload as reloadBot } from "../bots.js";
 import { outboundCapabilityOfBot } from "../bots/adapter.js";
+import { capabilityFromFdBot } from "../fd-bot-client.js";
 import { hasLiveResponseWindow } from "../bots/wecom-bot.js";
 import { fetchWithTimeout } from "../../lib/fetch-with-timeout.js";
 
@@ -45,7 +46,14 @@ export function registerZhiyuImBridgeRoutes(ctx) {
   // can this leg deliver at all, right now? 2026-11-18 production had a bound
   // room, a live room, and 19 undelivered answers — "bound and alive" never
   // implied "can deliver", and the panel never said so.
-  const outboundStateFor = (bot) => {
+  //
+  // A bot on the fd-bot transport asks fd-bot instead (adopt-fd-bot-transport
+  // 6.2). Two outcomes must stay distinguishable in the panel:
+  //   service unreachable → canSendNow null + "transport-unreachable"
+  //   platform has no outbound path → canSendNow false + "no-outbound-path"
+  // Collapsing the first into the second sends the operator to rebind a bot
+  // that is configured correctly.
+  const outboundStateForFallback = (bot) => {
     const cap = outboundCapabilityOfBot(bot);
     let canSendNow = cap.mode === "url-keyed" || cap.mode === "proactive-ip-gated";
     let detail = null;
@@ -68,6 +76,39 @@ export function registerZhiyuImBridgeRoutes(ctx) {
       detail = "no-outbound-path";
     }
     return { mode: cap.mode, inbound: cap.inbound, canSendNow, detail };
+  };
+
+  // Async because a bot on fd-bot needs a round trip. Non-fd-bot bots keep the
+  // synchronous answer they always had (the adapter declares its own capability;
+  // nothing else to ask).
+  const outboundStateFor = async (bot) => {
+    if (bot.transport !== "fd-bot" || !bot.fdBotBindingId) return outboundStateForFallback(bot);
+    const cap = await capabilityFromFdBot(bot).catch((err) => ({ available: false, reason: "unreachable", detail: err.message }));
+    if (!cap.available) {
+      return {
+        mode: null,
+        inbound: null,
+        transport: "fd-bot",
+        canSendNow: null,
+        detail: "transport-unreachable",
+        transportError: cap.detail ?? cap.reason ?? null,
+      };
+    }
+    if (cap.mode === "none") {
+      return { mode: cap.mode, inbound: cap.inbound, transport: "fd-bot", canSendNow: false, detail: "no-outbound-path" };
+    }
+    return {
+      mode: cap.mode,
+      inbound: cap.inbound,
+      transport: "fd-bot",
+      canSendNow: cap.mode === "url-keyed" || cap.mode === "proactive-ip-gated",
+      detail:
+        cap.mode === "passive-window"
+          ? "reply-window-leg"
+          : cap.mode === "proactive-ip-gated"
+            ? "egress-must-be-allowlisted"
+            : null,
+    };
   };
 
   app.get("/api/zhiyu-im-bridge/bots/:botId/room", async (req, res) => {
@@ -95,7 +136,7 @@ export function registerZhiyuImBridgeRoutes(ctx) {
       zhiRoomId,
       enabled: bot.enabled,
       roomLive,
-      outbound: outboundStateFor(bot),
+      outbound: await outboundStateFor(bot),
     });
   });
 
@@ -153,7 +194,7 @@ export function registerZhiyuImBridgeRoutes(ctx) {
       // does not own; a leg with mode "none" would bind a room to a bot that
       // cannot deliver — the exact silent failure this change exists for.
       let outboundBotId = bot.zhiOutboundBotId ?? null;
-      if (req.body && Object.prototype.hasOwnProperty.call(req.body, "outboundBotId")) {
+      if (req.body && Object.hasOwn(req.body, "outboundBotId")) {
         const requested = String(req.body.outboundBotId ?? "").trim();
         if (!requested) {
           outboundBotId = null; // explicit clear: back to "same leg as inbound"

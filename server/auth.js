@@ -48,6 +48,11 @@ export const AUTH_EXEMPT_PREFIXES = [
   "/chart-assets/",
   "/api/bots/webhook/",
   "/api/bots/relay/",
+  // fd-bot's subscriber push (adopt-fd-bot-transport 6.1). A transport service
+  // holds no browser session; it carries the binding's delivery token, which the
+  // subscriber itself supplied when creating the binding. Rotating that token
+  // rotates this access.
+  "/api/bots/events",
   "/api/mp/login",
   "/api/mp/login-bindcode",
   "/api/app/pair",

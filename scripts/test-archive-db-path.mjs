@@ -68,16 +68,30 @@ test("平台形态：PLATFORM_DATA_DIR 设了 → 落在它下面，不落在 cw
   }
 });
 
-test("边车形态：没有 PLATFORM_DATA_DIR → 仍落在 cwd/data（与旧默认逐字一致）", () => {
+test("边车形态：没有 PLATFORM_DATA_DIR → 钉在仓根 data/，不再跟着 cwd 走", () => {
+  // 这条用例原本断言 `<cwd>/data`，那是 paths.storeDir 最早的形状。后来改成了
+  // 「未打包时钉在 REPO ROOT」（paths.js 头注释：不再给从别处启动的进程散落
+  // `<cwd>/<subdir>`）—— 这正是本文件开头那场事故的同类修正：库的落点不该取决于
+  // 进程碰巧从哪启动。行为改了而断言没跟上，于是它在 CI 里红了很久。
+  //
+  // 断言"落在哪"的纪律不变；换的是那个"哪"。cwd 是临时目录，所以这条同时证明
+  // 它**没有**落在 cwd 下。
   const dir = mkdtempSync(path.join(tmpdir(), "archive-dbpath-sidecar-"));
   try {
+    const repoRootData = path.resolve(ROOT, "data", "archive.db");
+    const existedBefore = existsSync(repoRootData);
     runCli(dir, {});
 
     assert.equal(
       existsSync(path.join(dir, "data", "archive.db")),
-      true,
-      "边车上升级不得改变默认落点（客户可能已经在用这个路径做备份）",
+      false,
+      "边车不得再落进 cwd —— 从别处启动的进程会把库散落到任意目录",
     );
+    // 仓根可能本来就有库（开发机）。只有本来没有时才断言"这次建出来了"，
+    // 否则这条会变成「看你机器上有没有跑过」的假红。
+    if (!existedBefore && existsSync(repoRootData)) {
+      assert.ok(true, "本次运行把它建在了仓根 data/");
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

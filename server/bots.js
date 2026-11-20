@@ -14,6 +14,7 @@
 import { stripReasoningLeak } from "./reasoning-leak.js";
 import crypto from "node:crypto";
 import { adapterForBot, validateCredentials } from "./bots/adapter.js";
+import { sendThrough, fdBotConfigured } from "./fd-bot-client.js";
 import { isGenericBotType, packBotMeta, PACK_BOT_CREDENTIAL_KEY } from "../lib/generic-bot-types.js";
 import { observeTurnTap } from "./observe-tap.js";
 import { gateOutboundMessage, noteBypassAttempt } from "../lib/outbound-message.js";
@@ -510,7 +511,7 @@ export function parseAnswer(text, questions) {
 async function deliverAskAttempt(entry, text) {
   const { bot, adapter, chatKey } = entry;
   const reply = (body) =>
-    adapter.sendText(bot.credentials, chatKey, body).catch((e) => {
+    deliverText(bot, adapter, chatKey, body).catch((e) => {
       console.warn(`[bots] "${bot.name}" send failed: ${e.message}`);
     });
   const outcome = parseAnswer(text, entry.questions);
@@ -653,7 +654,7 @@ function firstOpenField(card, from) {
 async function deliverInputAttempt(entry, text) {
   const { bot, adapter, chatKey, request } = entry;
   const reply = (body) =>
-    adapter.sendText(bot.credentials, chatKey, body).catch((e) => {
+    deliverText(bot, adapter, chatKey, body).catch((e) => {
       console.warn(`[bots] "${bot.name}" send failed: ${e.message}`);
     });
   const card = request.card;
@@ -1027,7 +1028,7 @@ async function runTurn({ bot, adapter }, sessionId, chatKey, text) {
       console.warn(`[bots] "${bot.name}" reply withheld by disclosure gate (${gate.reason})`);
       return;
     }
-    await adapter.sendText(bot.credentials, chatKey, body);
+    await deliverText(bot, adapter, chatKey, body);
     // 台账写入 (3.2)：只存 digest，不存原文。写失败不阻断发送——发送已经
     // 发生了，把失败留给日志而不是回滚一条已发出的消息。
     if (gate.ok && gate.ledger) {
@@ -1173,6 +1174,39 @@ export function noteOutboundBypass(source, detail = null) {
 //
 // 无委托状（owner 主动外发）→ fallback → 照发（行为不变），但不入代理发言台账：
 // 混进去会把「主人自己发的」算成「代理判断正确」，污染放量样本。
+/**
+ * Send one message through whichever transport this bot row is on
+ * (adopt-fd-bot-transport 6.3). This is the ONLY place that decides, so the two
+ * paths cannot drift: every caller above it already applied the disclosure gate
+ * and the guards, and neither knows which leg carries the bytes.
+ *
+ * fd-bot answers `{ok:false, failure}` with HTTP 200 for platform verdicts
+ * (ip-not-allowed / reply-window-closed / other). Those are THROWN here as an
+ * Error carrying `.failure`, because every caller treats "did not land" as a
+ * failure — but the classification survives for the caller to report.
+ * A transport failure (service down) throws with `.code = "fd_bot_unreachable"`.
+ */
+async function deliverText(bot, adapter, chatKey, text) {
+  if (bot.transport === "fd-bot" && bot.fdBotBindingId) {
+    if (!fdBotConfigured()) {
+      // Configured to use fd-bot but the cell has no address for it: refuse
+      // loudly. Falling back to the legacy adapter would double-deliver once
+      // fd-bot comes back and re-delivers its queue.
+      const err = new Error("bot is on the fd-bot transport but FD_BOT_URL/FD_BOT_SECRET are not set");
+      err.code = "fd_bot_unreachable";
+      throw err;
+    }
+    const verdict = await sendThrough({ bindingId: bot.fdBotBindingId, chatKey, text });
+    if (!verdict.ok) {
+      const err = new Error(verdict.detail || `send failed (${verdict.failure})`);
+      err.failure = verdict.failure;
+      throw err;
+    }
+    return;
+  }
+  await adapter.sendText(bot.credentials, chatKey, text);
+}
+
 export async function sendTo(botId, chatKey, text) {
   const entry = state.bots.get(botId);
   if (!entry) throw new Error("Bot not found or not running");
@@ -1194,7 +1228,7 @@ export async function sendTo(botId, chatKey, text) {
     err.violations = gate.disclosure?.violations ?? [];
     throw err;
   }
-  await entry.adapter.sendText(bot.credentials, chatKey, text);
+  await deliverText(bot, entry.adapter, chatKey, text);
   if (gate.ok && gate.ledger) {
     try { recordOutboundLedger?.(gate.ledger); } catch { /* 台账失败不阻断已发出的消息 */ }
   }
@@ -1286,7 +1320,7 @@ export async function relaySend(channel, rawText) {
 
   try {
     await withTimeout(
-      entry.adapter.sendText(bot.credentials, binding.chatKey, text),
+      deliverText(bot, entry.adapter, binding.chatKey, text),
       RELAY_SEND_TIMEOUT_MS,
     );
   } catch (err) {

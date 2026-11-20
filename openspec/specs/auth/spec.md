@@ -157,6 +157,7 @@ The bridge table SHALL NOT be the only ledger. Every entry by which a request ca
 | `/chart-assets/` | none — static chart-rendering library, no data | always public |
 | `/api/bots/webhook/` | per-bot path secret + the chat platform's signature/decryption | identical refusal for unknown/disabled/bad secret |
 | `/api/bots/relay/` | bearer (`BOT` relay token) | 401 |
+| `/api/bots/events` | bearer (`BOTS_EVENTS_TOKEN`, constant-time) — the token the subscriber itself gave fd-bot when creating the binding | 404 unconfigured (inert, never a weaker form), 401 wrong |
 | `/api/mp/login`, `/api/mp/login-bindcode` | the platform's own `wx.login` code2session exchange (+ bind code) | 503 when MP credentials absent |
 | `/api/app/pair`, `/api/app/challenge`, `/api/app/login` | device pairing bind code / device-key challenge signature | 503 when no token secret |
 | `/api/ops/` | bearer (`PACK_USAGE_TOKEN`) | 503 unconfigured, 401 wrong |

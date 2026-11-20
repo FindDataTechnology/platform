@@ -1391,6 +1391,28 @@ const MIGRATIONS = [
       `CREATE INDEX IF NOT EXISTS idx_marketing_events_name ON marketing_events(name)`,
     ],
   },
+  {
+    version: 125,
+    // adopt-fd-bot-transport 6.3: which transport carries this bot's messages.
+    //
+    // Two nullable columns, and "both null" is the pre-change behaviour byte for
+    // byte — every existing row keeps running through the in-cell adapter. A row
+    // is switched by writing `transport='fd-bot'` plus the binding id fd-bot
+    // returned, which is what the subscriber endpoint uses to map an incoming
+    // envelope back to THIS bot (a platform type is not enough: two bots may
+    // share one platform).
+    //
+    // No CHECK constraint tying the two together: SQLite cannot add one to an
+    // existing table without a rebuild, and the write route already refuses a
+    // half pair. `transport` is the readable switch; the binding id is the
+    // address.
+    apply: (db) => {
+      const cols = new Set(db.prepare("PRAGMA table_info(bots)").all().map((c) => c.name));
+      if (!cols.has("transport")) db.exec("ALTER TABLE bots ADD COLUMN transport TEXT");
+      if (!cols.has("fd_bot_binding_id")) db.exec("ALTER TABLE bots ADD COLUMN fd_bot_binding_id TEXT");
+      db.exec("CREATE INDEX IF NOT EXISTS idx_bots_fd_bot_binding ON bots(fd_bot_binding_id)");
+    },
+  },
 ];
 
 function nowIso() {
@@ -3850,7 +3872,7 @@ export function deleteUserPreset(id) {
 // server/bots.js — never hand a row straight to res.json().
 
 const BOT_COLS =
-  "id, type, name, enabled, secret, credentials, effort, context_budget AS contextBudget, zhi_room_id AS zhiRoomId, zhi_account_id AS zhiAccountId, zhi_bridge_cursor AS zhiBridgeCursor, zhi_outbound_bot_id AS zhiOutboundBotId, owner_email AS ownerEmail, persona, allow_tools AS allowTools, allowed_senders AS allowedSenders, created_at AS createdAt";
+  "id, type, name, enabled, secret, credentials, effort, context_budget AS contextBudget, zhi_room_id AS zhiRoomId, zhi_account_id AS zhiAccountId, zhi_bridge_cursor AS zhiBridgeCursor, zhi_outbound_bot_id AS zhiOutboundBotId, owner_email AS ownerEmail, persona, allow_tools AS allowTools, allowed_senders AS allowedSenders, transport, fd_bot_binding_id AS fdBotBindingId, created_at AS createdAt";
 
 function hydrateBot(row) {
   if (!row) return null;
@@ -3940,6 +3962,21 @@ export function updateBot(id, { name, credentials, enabled, effort, contextBudge
   }
   if (updates.length) stmt(`UPDATE bots SET ${updates.join(", ")} WHERE id = @id`).run(params);
   return getBot(id);
+}
+
+// Transport switch (adopt-fd-bot-transport 6.3). Separate from updateBot so the
+// pair is always written together: `fd-bot` without a binding id is a bot no
+// envelope can be routed to, and the route refuses it rather than storing a
+// half state. A plain `legacy` clears the binding id.
+export function setBotTransport(botId, transport, fdBotBindingId = null) {
+  if (!dbReady) return null;
+  if (transport !== "legacy" && transport !== "fd-bot") return null;
+  stmt("UPDATE bots SET transport = @transport, fd_bot_binding_id = @binding WHERE id = @id").run({
+    id: botId,
+    transport: transport === "legacy" ? null : "fd-bot",
+    binding: transport === "legacy" ? null : fdBotBindingId || null,
+  });
+  return getBot(botId);
 }
 
 // add-zhiyu-im-bridge: the output bridge's restart-safe cursor (room message

@@ -15,7 +15,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +23,32 @@ import { derivePillars, PILLAR_ORDER, PILLAR_STATE } from "../lib/pack-pillars.j
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FLEET_PACKS = join(HERE, "..", "..", "fleet-packs");
+
+// A self-contained manifest for the PURITY cases. Their subject is the
+// derivation's determinism, not the real corpus — pinning them to a sibling
+// repo made them unjudgeable in CI for no gain. Deliberately minimal (two
+// agents, no pillar declarations): the derivation must still be pure over it,
+// and an empty-by-choice input proves more about purity than a rich one.
+const INLINE_MANIFEST = {
+  kind: "team",
+  name: "内联纯度夹具",
+  boundary: { name: "内联纯度夹具" },
+  fleet: { name: "内联纯度夹具" },
+  agents: [
+    { id: "a-one", name: "一岗", persona: "你是一岗。" },
+    { id: "a-two", name: "二岗", persona: "你是二岗。" },
+  ],
+};
+
+// The corpus cases read ANOTHER repo (`fleet-packs`), reachable locally only by
+// the sibling-directory accident `../fleet-packs`. The CI runner and the public
+// snapshot have neither, so every one of these cases has been failing with
+// ENOENT since it landed — a gate that never judged anything while reading as
+// red noise. Missing fixture = cannot judge, said out loud; NOT a pass.
+// (Same pattern and wording as test-blueprint-member-closure.mjs ⑦.)
+const NO_CROSS_REPO = existsSync(FLEET_PACKS)
+  ? false
+  : "../fleet-packs 不在本树（跨仓夹具：CI runner 与公开快照都没有）——判不出，不是通过";
 const load = (rel) => JSON.parse(readFileSync(join(FLEET_PACKS, rel), "utf8"));
 
 function allManifests(dir = FLEET_PACKS, out = []) {
@@ -36,7 +62,7 @@ function allManifests(dir = FLEET_PACKS, out = []) {
 
 // ── corpus parity ───────────────────────────────────────────────────────────
 
-test("存量语料：投研铸造舰三柱齐全且岗位收窄生效", () => {
+test("存量语料：投研铸造舰三柱齐全且岗位收窄生效", { skip: NO_CROSS_REPO }, () => {
   const d = derivePillars(load("invest/invest-team-forge/manifest.json"));
   assert.equal(d.memory.state, PILLAR_STATE.PRESENT);
   assert.deepEqual(Object.keys(d.memory.axes).sort(), ["process", "read", "store", "write"]);
@@ -61,7 +87,7 @@ test("存量语料：投研铸造舰三柱齐全且岗位收窄生效", () => {
   assert.deepEqual(d.dashboard.blocks.find((b) => b.block === "team").surfaces, ["platform", "share"]);
 });
 
-test("存量语料：ERP 团队控制台有声明、记忆未声明（三态不合并）", () => {
+test("存量语料：ERP 团队控制台有声明、记忆未声明（三态不合并）", { skip: NO_CROSS_REPO }, () => {
   const d = derivePillars(load("erp/erp-order-to-cash-fleet/manifest.json"));
   assert.equal(d.memory.state, PILLAR_STATE.UNDECLARED);
   assert.equal(d.memory.axes, undefined, "未声明不得造空 axes");
@@ -69,7 +95,7 @@ test("存量语料：ERP 团队控制台有声明、记忆未声明（三态不�
   assert.equal(d.dashboard.state, PILLAR_STATE.PRESENT);
 });
 
-test("存量语料：老包三柱全未声明，且不出现任何计数", () => {
+test("存量语料：老包三柱全未声明，且不出现任何计数", { skip: NO_CROSS_REPO }, () => {
   const d = derivePillars(load("adopted/dev-review-team/manifest.json"));
   for (const p of PILLAR_ORDER) {
     assert.equal(d[p].state, PILLAR_STATE.UNDECLARED, `${p} 应为未声明`);
@@ -78,7 +104,7 @@ test("存量语料：老包三柱全未声明，且不出现任何计数", () =>
   }
 });
 
-test("全量回归：全部语料零抛错，且 memory/console 声明计数与手工统计一致", () => {
+test("全量回归：全部语料零抛错，且 memory/console 声明计数与手工统计一致", { skip: NO_CROSS_REPO }, () => {
   const files = allManifests();
   assert.ok(files.length >= 60, `语料数量异常：${files.length}`);
   let mem = 0;
@@ -158,12 +184,12 @@ test("一柱坏不牵连另一柱：坏记忆 + 好控制台", () => {
 // ── purity + scoped projection ──────────────────────────────────────────────
 
 test("纯函数：同一输入连跑两次逐字段相等", () => {
-  const m = load("invest/invest-team-forge/manifest.json");
+  const m = INLINE_MANIFEST;
   assert.deepEqual(derivePillars(m), derivePillars(m));
 });
 
 test("派生不读 env：改环境变量后结果不变", () => {
-  const m = load("invest/invest-team-forge/manifest.json");
+  const m = INLINE_MANIFEST;
   const before = derivePillars(m);
   const saved = { ...process.env };
   try {
@@ -179,7 +205,7 @@ test("派生不读 env：改环境变量后结果不变", () => {
   }
 });
 
-test("作用域派生是全局派生的确定性投影", () => {
+test("作用域派生是全局派生的确定性投影", { skip: NO_CROSS_REPO }, () => {
   const m = load("invest/invest-team-forge/manifest.json");
   const all = derivePillars(m);
   const one = derivePillars(m, { agentId: "inv-forge-designer" });
@@ -195,7 +221,7 @@ test("作用域派生是全局派生的确定性投影", () => {
   assert.deepEqual(one.memory.guidance[0], all.memory.guidance.find((g) => g.agentId === "inv-forge-designer"));
 });
 
-test("未知 agentId 不报错：包级事实照常，岗位维度为空", () => {
+test("未知 agentId 不报错：包级事实照常，岗位维度为空", { skip: NO_CROSS_REPO }, () => {
   const m = load("invest/invest-team-forge/manifest.json");
   const d = derivePillars(m, { agentId: "no-such-role" });
   assert.equal(d.toolkit.roles.length, 0, "指名一个不存在的角色不得回落成全量");
@@ -204,7 +230,7 @@ test("未知 agentId 不报错：包级事实照常，岗位维度为空", () =>
   assert.equal(d.memory.rows["store.home"].effective, "member", "包级事实仍然可读");
 });
 
-test("仅岗位级记忆声明：整柱有值，且按岗位给出各自的解析链", () => {
+test("仅岗位级记忆声明：整柱有值，且按岗位给出各自的解析链", { skip: NO_CROSS_REPO }, () => {
   const d = derivePillars(load("invest/invest-team-forge-roles/manifest.json"));
   assert.equal(d.memory.state, PILLAR_STATE.PRESENT);
   assert.deepEqual(d.memory.axes, {}, "没有包级轴 —— 不造");
@@ -251,7 +277,7 @@ test("6.1 草稿编译器与导入反编译都原样携带三支柱声明", asyn
 // 详情面 = `/api/packs/:id` + `derivePillars(manifest)`。两者都只碰「声明」，
 // 不碰「运行」：没有任何条目、回合数或成员邮箱。这条闸把该边界钉住——因为
 // 「有一个统一详情页」最容易被误读成「所有数据都能在这一页看到」。
-test("7.3 派生结果只含声明事实：无运行态条目、回合数、成员邮箱", () => {
+test("7.3 派生结果只含声明事实：无运行态条目、回合数、成员邮箱", { skip: NO_CROSS_REPO }, () => {
   const m = load("invest/invest-team-forge/manifest.json");
   const d = derivePillars(m);
   const wire = JSON.stringify(d);
@@ -263,7 +289,7 @@ test("7.3 派生结果只含声明事实：无运行态条目、回合数、成�
   assert.ok(d.memory.guidance.every((g) => typeof g.text === "string"));
 });
 
-test("7.3 console 块在派生里只有声明（id/params/surfaces），无块数据", () => {
+test("7.3 console 块在派生里只有声明（id/params/surfaces），无块数据", { skip: NO_CROSS_REPO }, () => {
   const d = derivePillars(load("invest/invest-team-forge/manifest.json"));
   for (const b of d.dashboard.blocks ?? []) {
     // Declared shape only: the block id, the author's params, the surfaces.

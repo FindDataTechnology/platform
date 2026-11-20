@@ -73,7 +73,16 @@ test("'shipped' markers point at an anchor that really exists on the homepage", 
   }
 });
 
-test("'in-flight' markers name work that really exists in the repo", () => {
+// `openspec/changes/` is excluded from the public snapshot, so in that tree the
+// evidence for an in-flight marker cannot exist — every marker would read as a
+// lie. Missing evidence = cannot judge, said out loud; NOT a pass. (Same
+// wording as test-blueprint-member-closure.mjs ⑦.)
+const CHANGES_DIR = path.join(root, "openspec", "changes");
+const NO_CHANGES_DIR = fs.existsSync(CHANGES_DIR)
+  ? false
+  : "openspec/changes/ 不在本树（随内部规划文档排除出公开面）——判不出，不是通过";
+
+test("'in-flight' markers name work that really exists in the repo", { skip: NO_CHANGES_DIR }, () => {
   // The evidence is checked HERE, never printed on the page: a visitor must not
   // have to read our process vocabulary to trust the label.
   const cards = [...roadmap().matchAll(/<article[^>]*>[\s\S]*?<\/article>/g)].map((m) => m[0]);

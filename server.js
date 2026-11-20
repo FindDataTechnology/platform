@@ -72,6 +72,7 @@ import { registerResourceRoutes } from "./server/routes/resources.js";
 import { registerMemoryRoutes } from "./server/routes/memory.js";
 import { registerBotRoutes, WEBHOOK_PREFIX } from "./server/routes/bots.js";
 import { registerBotRelayRoutes, RELAY_PREFIX } from "./server/routes/bot-relay.js";
+import { registerBotEventRoutes, EVENTS_PREFIX } from "./server/routes/bot-events.js";
 import { createClusterRoutes, startAutoTerminationJob } from "./server/routes/clusters.js";
 import { createFleetRoutes, resolveFleetTarget } from "./server/routes/fleets.js";
 import { registerPackAuthorRoutes } from "./server/pack-author.js";
@@ -87,6 +88,8 @@ import { renderChatFleetContext } from "./server/fleet-chat-context.js";
 import { recordTurnEvent } from "./server/fleet-events.js";
 import { setEffortDeclarations } from "./server/fleet-model.js";
 import { createFleetTurnLedger } from "./server/fleet-runs.js";
+import { createTurnClaimStore } from "./lib/turn-claim-store.js";
+import { contractEpochMs } from "./lib/turn-claim.js";
 import { fleetMemoryFor, createFleetMemoryCapture, createHealthFlipTracker } from "@finddatatechnology/yongyi-client";
 import { igniteFleetEdges } from "./server/fleet-handoffs.js";
 import { triggerFleetEventWake } from "./server/fleet-event-wake.js";
@@ -96,7 +99,8 @@ import { renderDecisionSegment } from "./server/fleet-decisions.js";
 import { runDueDeputyDigests } from "./server/fleet-delegation-digest.js";
 import { runDueDigests } from "./server/fleet-digest.js";
 import { memoryRefClientFor } from "./server/memory-refs.js";
-import { rosterPresetId, auditorFacesByPreset } from "./dsh-profile.js";
+import { rosterPresetId, auditorFacesByPreset, targetPaths, catalogPresetDefinitions } from "./dsh-profile.js";
+import { fingerprintForCell } from "./lib/cell-fingerprint.js";
 import { auditorMcpFace } from "./lib/auditor-tool-face.js";
 import * as lineTokenRenewal from "./server/line-token-renewal.js";
 import * as lineCredentialsLib from "./line-credentials.js";
@@ -242,7 +246,7 @@ const jsonBodyParser = express.json();
 const packJsonBodyParser = express.json({ limit: "24mb" });
 const PACK_BODY_PREFIXES = ["/api/packs", "/api/pack-drafts", "/api/mypacks"];
 app.use((req, res, next) => {
-  if (req.path.startsWith(WEBHOOK_PREFIX) || req.path.startsWith(RELAY_PREFIX)) return next();
+  if (req.path.startsWith(WEBHOOK_PREFIX) || req.path.startsWith(RELAY_PREFIX) || req.path === EVENTS_PREFIX) return next();
   // ERP 代理转发的是「原始请求」：body 若先被 json parser 吃掉，代理只能拿到
   // 重新序列化的对象（丢字节、丢重复键）。故该前缀跳过解析，由 erp-proxy.js
   // 自己读原始流（add-erp-supply-chain-gateway-proxy）。
@@ -319,6 +323,13 @@ registerActionsRoutes(ctx);
 startActionExpiryJob(ctx);
 // Board routes (add-line-boards-and-action-gate): GET /api/boards/:line.
 registerBoardRoutes(ctx);
+// Input-request lane (add-input-request-cards): create/read/wait/answer/cancel
+// + the TTL sweeper that applies the unattended policy.
+registerInputRequestRoutes(ctx);
+startInputRequestExpiryJob(ctx);
+// The same tool over streamable HTTP, for harnesses whose MCPs are mounted as
+// http rows (ACP). Inert unless INPUT_REQUEST_MCP_TOKEN is set.
+mountInputRequestMcp(ctx.app);
 // Task stats lane (unify-wanxing-management-plane): read-only counts for the
 // gateway's fleet relay; standard cell auth, no loopback exemption.
 registerTaskRoutes(ctx);
@@ -338,7 +349,13 @@ registerWanxingFleetRoutes(ctx);
 // gate never sees it (see AUTH_EXEMPT_PREFIXES).
 ctx.app.use(
   LOCAL_FEED_BASE,
-  createLocalAgentFeed({ env: ctx.env ?? process.env, runnerId: process.env.WANXING_PLUGIN_RUNNER_ID ?? null }),
+  createLocalAgentFeed({
+    env: ctx.env ?? process.env,
+    runnerId: process.env.WANXING_PLUGIN_RUNNER_ID ?? null,
+    // 这个 cell 的主人 —— 裁决通道的路由键（fix-disclosure-gate-reachability D2 修订）。
+    // 本 cell 自己的事实，由读面报出，runner 不再靠 env 猜。
+    ownerEmail: ctx.cellUserEmail ?? null,
+  }),
 );
 // Convergence on boot (add-desktop-residency-hardening 4.x): the cell is what
 // the resident steward starts, so a login / wake / post-update restart lands
@@ -352,6 +369,11 @@ startDesiredMergeLoop({ env: ctx.env ?? process.env });
 // Delegation REST bridge (loopback delegation MCP child; manual-trigger tasks).
 registerDelegationRoutes(ctx);
 registerFleetArchitectRoutes(ctx);
+registerFleetArchitectRoutes(ctx, { mount: "/api/runner-fleet/architect", readOnly: true });
+// Team directory, cell side (add-agent-team-directory): the owner's publish /
+// patch / withdraw face plus `GET /api/teams/cards`, the payload the platform
+// gateway samples. Truth stays here in `team_cards`; the gateway holds no copy.
+registerTeamCardRoutes(ctx);
 // Mini-program identity endpoints (bindcode mint / login / login-bindcode /
 // unbind) — mounted with the other /api routes, before the static SPA fallback.
 registerMpRoutes(ctx);
@@ -398,6 +420,17 @@ createClusterRoutes(app, ctx);
 // Agent fleets (agent-fleet-core): fleet/post CRUD + materialization
 // reconcile over the task engine. Same auth semantics as clusters.
 createFleetRoutes(app, ctx);
+// Runner lane (add-fleet-bridge-endpoint-for-agent-runner 2.1): the SAME router
+// registered a second time under `/api/runner-fleet/fleets`, where a
+// bearer-authenticated runner pod reaches it. The guard narrows that mount to
+// the bridge verbs only — the router also carries owner-facing routes (create /
+// patch fleet, members, cadence) a runner token must never reach.
+const runnerFleetVerbs = (req, res, next) => {
+  const bridged = `/api/fleets${req.path}`;
+  if (!FLEET_BRIDGE_PATHS.has(bridged)) return res.status(404).json({ error: "not found" });
+  return next();
+};
+createFleetRoutes(app, ctx, { mount: "/api/runner-fleet/fleets", guard: runnerFleetVerbs });
 // Blueprint studio routes RETIRED (add-supply-studio-migration 4.6, W2): the
 // creation surface moved to the facet host (facet/studio.js mounts the same
 // modules there). 壹座 keeps only the promotion channel (fleets /promote) and
@@ -439,6 +472,11 @@ registerFacetMarketRoutes(ctx);
 // 各线操作 MCP 凭据 (line-credentials): wire-customer / lex (browser silent
 // mint ID tokens) + wanxing-caller (pasted sk-) — same family.
 registerLineCredentialRoutes(ctx);
+// 凭据降级读面（converge-line-identity-and-keys 4.2）：只读、按人；
+// 数据源是 profile 写入时落的 federated.degraded.<owner>.<ref>。
+registerCredentialDegradationRoutes(ctx);
+// 舰队级凭据包（4.1）：只读规划，不写库、不新增状态读面。
+registerFleetCredentialPackRoutes(ctx);
 // 商家 Chatwoot BYOK 凭据（add-crm-desk-pack-embed）：粘贴 token(+嵌入用登录对)。
 registerChatwootCredentialRoutes(ctx);
 // CRM 客服台嵌入反代（add-crm-desk-pack-embed 6.x）：go 铸发 + 同源代理。
@@ -457,6 +495,7 @@ registerPaperTradingRoutes(ctx);
 // would otherwise match POST /api/bots/:id/send with id = "relay", and the
 // admin-gated handler there would answer a machine caller.
 registerBotRelayRoutes(ctx);
+registerBotEventRoutes(ctx);
 registerBotRoutes(ctx);
 // Preview drawer file serving — mounted with the other /api routes, BEFORE the
 // static SPA fallback, so the catch-all cannot shadow /api/files.
@@ -596,6 +635,13 @@ attachWebSocket(ctx);
 
 // Dynamic cluster auto-termination (agent-cluster-platform)
 startAutoTerminationJob(ctx);
+
+// WeChat kf pull loop (add-wecom-kf-ingest). kf only keeps 3 days of messages, so a
+// missing puller is a permanent gap, not a delay. Off unless KF_SYNC_ENABLED=1 and
+// credentials are present; the db handle is opened lazily so an unused channel
+// leaves no empty data/kf.db behind. Status face: /api/archive/kf/sync-status.
+const kfSync = maybeStartKfSyncJob({ getDb: getKfDatabase });
+ctx.kfSyncStatus = () => (kfSync ? kfSync.status() : { running: false, disabledReason: "未启动" });
 
 // Demo sandbox only (openspec: mp-demo-sandbox): periodically wipe the shared
 // conversation state so visitors never see each other's sessions. The timer
@@ -1520,13 +1566,61 @@ ctx.reportRejectionStats = ({ windowMs, now = Date.now() } = {}) => {
   }
 };
 
+// Turn claims (harden-agent-runtime-spine, agent-turn-claim): "this attempt
+// exists" as a fact that outlives the process. Built on the SAME fleets.db
+// handle the ledger writes, so a claim and its result row are always in the
+// same file — a split there would make "the row exists but the claim does not"
+// a possible state, and every read face would have to guess which one to trust.
+//
+// Degrade-open at CONSTRUCTION only: if the table cannot be created (a
+// pre-migration file), the store is null and the ledger behaves exactly as it
+// did before. A claim write failing LATER is not degrade-open — `begin` throws,
+// which is the spec's "认领未落库 ⇒ 明确失败".
+ctx.turnClaims = (() => {
+  try {
+    const store = createTurnClaimStore({ db: getFleetDatabase().db, emit: (ev) => ctx.broadcast?.({ type: "fleet_claim", ...ev }) });
+    console.log(`[turn-claims] ready (heartbeat contract epoch ${contractEpochMs() ?? "unset"})`);
+    return store;
+  } catch (e) {
+    console.warn(`[turn-claims] store unavailable — claims disabled: ${e?.message || e}`);
+    return null;
+  }
+})();
+
 // Run ledger (agent-fleet-runs): the execution instance behind the cockpit's
 // live canvas and replay timeline. begin/end/settle are called from the
 // cron-runner seam; dispatch (routes/fleets.js) and the handoff trigger below
 // read it to stamp chain positions on the tasks they ignite. Hourly sweep ages
 // closed headers and over-floor turn rows out (dual-condition retention).
+//
+// `fingerprintFor` is the cell-side configuration identity (runtime-fingerprint):
+// read from the composed patches + skills roots the child boots on, NOT from
+// the catalog entry (an entry drifts from the home that exists, and the drift
+// is what the fingerprint is for). The ledger caches it per preset.
 ctx.fleetTurnLedger = createFleetTurnLedger({
   db: getFleetDatabase(),
+  claims: ctx.turnClaims,
+  fingerprintFor: ({ presetId }) => {
+    try {
+      const paths = targetPaths();
+      return fingerprintForCell({
+        mcpPatchPath: paths.mcpPatch,
+        // The skills patch is where `customSkillDirs` lives; the fingerprint
+        // module reads the roots FROM it (one source — the file the child reads)
+        // rather than re-deriving them here.
+        skillsPatchPath: path.join(path.dirname(paths.presetsPatch), "skills.patch.yml"),
+        presetDefs: catalogPresetDefinitions(),
+        presetId,
+        model: ctx.session?.model?.id ?? null,
+        provider: null,
+        effort: null,
+        matrixVersion: String(process.env.DSH_MATRIX_VERSION ?? "") || null,
+      });
+    } catch (e) {
+      console.warn(`[runtime-fingerprint] gather failed: ${e?.message || e}`);
+      return null;
+    }
+  },
   broadcast: (msg) => ctx.broadcast(msg),
   engineRecords: () => engine.allRecords(),
   trace,
@@ -1646,12 +1740,30 @@ const sweepRuns = () => {
     // header open forever). The ledger knows whether a run is still working.
     const settled = ctx.fleetTurnLedger?.sweepOpenRuns?.() ?? 0;
     if (settled) console.warn(`[fleet-runs] settled ${settled} leaked open run header(s)`);
+    // Claim lanes (agent-turn-claim): lapsed attempts close as
+    // lease_expired — "interrupted, re-runnable", never "failed". The sweep is
+    // the ONLY place expiry becomes a fact, so it runs on the same tick as the
+    // header sweep rather than on a timer of its own.
+    const lapsed = ctx.fleetTurnLedger?.sweepClaims?.() ?? [];
+    if (lapsed.length) console.warn(`[turn-claims] closed ${lapsed.length} lapsed attempt(s) as lease_expired`);
   } catch (e) {
     console.warn(`[fleet-runs] sweep failed: ${e?.message || e}`);
   }
 };
 sweepRuns();
 setInterval(sweepRuns, 60 * 60 * 1000).unref();
+
+// Claim heartbeats run far more often than the sweeper: the lease is 3× one
+// heartbeat, so a stale beat must not wait an hour to be corrected. This is the
+// ledger's own beat (the one-write-point rule — beats ride the handles the
+// lanes already registered). `.unref()` so a CLI import of server.js can exit.
+setInterval(() => {
+  try {
+    ctx.fleetTurnLedger?.heartbeat?.();
+  } catch (e) {
+    console.warn(`[turn-claims] heartbeat tick failed: ${e?.message || e}`);
+  }
+}, Math.max(5_000, Math.floor(Number(process.env.TURN_CLAIM_HEARTBEAT_MS) || 30_000) / 2)).unref();
 
 // Turn result events (add-fleet-turn-events D1/D2): the cron-runner seam calls
 // this after every member turn; recordTurnEvent resolves attribution
