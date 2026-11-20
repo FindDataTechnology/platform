@@ -280,7 +280,7 @@ export function AssistantPicker({ send, variant }: Props) {
           aria-label={t("overlay.adjust")}
           title={t("overlay.adjust")}
           data-testid={`strip-agent-adjust-${a.id}`}
-          className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
         </button>

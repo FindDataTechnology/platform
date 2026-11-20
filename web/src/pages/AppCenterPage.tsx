@@ -158,7 +158,7 @@ function AppCard({ entry, states }: { entry: AppGridEntry; states: Record<string
               data-testid={`app-card-${entry.id}-nango-connect`}
               disabled={nangoBusy}
               onClick={() => void nangoConnect()}
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline disabled:opacity-50"
+              className="inline-action inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline disabled:opacity-50"
             >
               {nangoBusy ? t("appCenter.nangoConnecting") : t("appCenter.nangoConnect")}
               <Plug className="h-3.5 w-3.5" aria-hidden="true" />
@@ -181,7 +181,7 @@ function AppCard({ entry, states }: { entry: AppGridEntry; states: Record<string
             type="button"
             data-testid={`app-card-${entry.id}-open`}
             onClick={() => navigate(`/external/${entry.id}`)}
-            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            className="inline-action inline-flex items-center gap-1 text-sm text-primary hover:underline"
           >
             {t("appCenter.open")}
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -195,7 +195,7 @@ function AppCard({ entry, states }: { entry: AppGridEntry; states: Record<string
                   type="button"
                   data-testid={`app-card-${entry.id}-board`}
                   onClick={() => navigate(boardPath)}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                  className="inline-action inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
                 >
                   {t("appCenter.board")}
                 </button>
@@ -204,7 +204,7 @@ function AppCard({ entry, states }: { entry: AppGridEntry; states: Record<string
                   target="_blank"
                   rel="noreferrer"
                   data-testid={`app-card-${entry.id}-open`}
-                  className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+                  className="inline-action inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
                 >
                   {t("appCenter.openOrigin")}
                   <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -216,7 +216,7 @@ function AppCard({ entry, states }: { entry: AppGridEntry; states: Record<string
                 target="_blank"
                 rel="noreferrer"
                 data-testid={`app-card-${entry.id}-open`}
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                className="inline-action inline-flex items-center gap-1 text-sm text-primary hover:underline"
               >
                 {t("appCenter.open")}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -229,7 +229,7 @@ function AppCard({ entry, states }: { entry: AppGridEntry; states: Record<string
             type="button"
             data-testid={`app-card-${entry.id}-connect`}
             onClick={() => navigate(connectPathFor(target))}
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
+            className="inline-action inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
           >
             <Plug className="h-3.5 w-3.5" aria-hidden="true" />
             {t("appCenter.connection.connect")}

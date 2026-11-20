@@ -155,7 +155,7 @@ export function InboxPage() {
               type="button"
               onClick={() => setSegment(s)}
               data-testid={`inbox-segment-${s}`}
-              className={`rounded-md border px-2.5 py-1 text-xs ${
+              className={`inline-flex h-7 items-center rounded-md border px-2.5 text-xs ${
                 segment === s ? "border-primary bg-primary/10 font-medium text-primary" : "border-border text-muted-foreground hover:bg-muted"
               }`}
             >

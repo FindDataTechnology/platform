@@ -113,7 +113,7 @@ export function TeamBuildingDoor({ onPrefill, send }: Props) {
             onClick={cancel}
             data-testid="chat-welcome-door-cancel"
             aria-label={t("chat.welcome.door.cancel")}
-            className="ml-auto shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="ml-auto shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>

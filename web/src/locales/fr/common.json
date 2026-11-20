@@ -2043,7 +2043,7 @@
   },
   "facetIntro": {
     "title": "Mille facettes — la Place des Matériaux d'Agents",
-    "subtitle": "Un agent réunit compétences, références MCP et personas — les modèles d'équipe peuvent aussi déclarer la mémoire, un panneau et un organigramme ; parcourir, s'abonner, publier, et installer dans Claude Code / Cursor en une ligne",
+    "subtitle": "Les agents empaquettent des compétences, des références MCP et des personas. Certains packs sont toute une équipe : postes, cadence et reporting sont déclarés, donc l'installer dans une plateforme le met en marche selon son calendrier. Parcourir, s'abonner, publier, et installer dans l'éditeur d'IA que vous utilisez déjà en une ligne.",
     "factRow": "Navigation anonyme ; connectez-vous pour publier et vous abonner (même identité que Platform)",
     "ctaPacks": "Parcourir les agents",
     "ctaMcp": "Voir les services MCP",
@@ -2077,6 +2077,43 @@
       "edgeSubscribeNote": "Les identifiants MCP sont déjà câblés dans Platform",
       "edgeCli": "installation par CLI",
       "edgeCliNote": "instantané de la compétence sur disque ; références MCP imprimées"
+    },
+    "targetsLabel": "S'installe dans :",
+    "teamTemplates": {
+      "title": "Certains agents sont toute une équipe",
+      "body": "Un modèle d'équipe empaquette plus que des personas : il déclare les postes, quand chacun s'exécute, quels chiffres il rapporte, qui transmet quoi à qui, et ce qui compte comme terminé. Installez-le dans une plateforme et vous obtenez une équipe construite à partir de lui, qui se déclenche selon sa cadence déclarée.",
+      "facet": {
+        "roles": {
+          "title": "Postes",
+          "body": "Chaque poste est une persona plus une surface d'outils restreinte : ce qu'il peut utiliser est déclaré, et rien de plus n'est accordé."
+        },
+        "cadence": {
+          "title": "Cadence",
+          "body": "Un cron et un fuseau horaire par poste, décalés à dessein. La page du marché l'affiche ; elle ne l'exécute pas."
+        },
+        "slots": {
+          "title": "Emplacements de rapport",
+          "body": "Quelles clés remplir au bouclage et comment chacune est comptée sont déclarés, laissés non pas à l'improvisation du modèle."
+        },
+        "edges": {
+          "title": "Arêtes d'orchestration",
+          "body": "Qui transmet les résultats à qui est déclaré en arêtes — une transmission rompue se voit, elle n'est pas probabiliste."
+        },
+        "acceptance": {
+          "title": "Assertions d'acceptation",
+          "body": "Des assertions structurées définissent ce que « ce tour est terminé » veut dire, au lieu d'un paragraphe de prose."
+        }
+      }
+    },
+    "creationPath": {
+      "title": "D'une phrase à une équipe en marche",
+      "body": "Le studio transforme une description en pack publiable, puis le pack en équipe. Les quatre étapes se font au même endroit.",
+      "stage1": "Décrivez l'équipe",
+      "stage2": "Un humain adopte le brouillon",
+      "stage3": "Forgez et publiez",
+      "stage4": "Construisez l'équipe depuis le modèle",
+      "gate": "Le modèle rédige ; adopter est un acte humain — rien de ce qu'il a écrit n'entre dans un pack avant qu'une personne ne l'adopte.",
+      "cta": "Ouvrir le studio"
     }
   },
   "facetFooter": {

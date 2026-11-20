@@ -176,7 +176,7 @@ export function ChatHeader({ send }: Props) {
               }}
               data-testid="chat-header-title-confirm"
               aria-label={t("chat.header.rename")}
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <Check className="h-3.5 w-3.5" />
             </button>
@@ -190,7 +190,7 @@ export function ChatHeader({ send }: Props) {
               }}
               data-testid="chat-header-title-cancel"
               aria-label={t("common.cancel")}
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>

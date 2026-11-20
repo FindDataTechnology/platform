@@ -9,6 +9,7 @@
 // server returns which keys are configured, never their values, and a blank
 // field on edit means "keep the stored one".
 
+import { PageShell } from "@/components/ui/page-shell";
 import { useCallback, useEffect, useState } from "react";
 import { SkeletonList } from "@/components/ui/states-kit";
 import { useTranslation } from "react-i18next";
@@ -113,19 +114,17 @@ export function BotsPage() {
   };
 
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto" data-testid="bots-page">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">{t("botsPage.title")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("botsPage.subtitle")}</p>
-          </div>
-          <Button onClick={() => setForm({ mode: "add" })} data-testid="bots-add">
-            <Plus className="mr-1 h-4 w-4" />
-            {t("botsPage.addBot")}
-          </Button>
-        </header>
-
+    <PageShell
+      title={t("botsPage.title")}
+      titleTestId="bots-title"
+      subtitle={t("botsPage.subtitle")}
+      actions={
+        <Button onClick={() => setForm({ mode: "add" })} data-testid="bots-add">
+          <Plus className="mr-1 h-4 w-4" />
+          {t("botsPage.addBot")}
+        </Button>
+      }
+    >
         <section className="flex flex-col gap-2" data-testid="bot-platform-grid">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {types.map((x) => (
@@ -216,7 +215,6 @@ export function BotsPage() {
             </div>
           )}
         </section>
-      </div>
 
       {form.mode !== "closed" && (
         <BotForm
@@ -247,7 +245,7 @@ export function BotsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </PageShell>
   );
 }
 

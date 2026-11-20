@@ -6,6 +6,7 @@
 // 晋升箱第一区块、分层浏览语义；聚合口径全在前端纯函数（test/memory-dashboard
 // .test.mjs 直测），后端零新增面。
 
+import { PageShell } from "@/components/ui/page-shell";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -232,66 +233,68 @@ export function MemoryPage() {
   );
 
   return (
-    <div className="flex h-full flex-col bg-background" data-testid="memory-page">
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-lg font-semibold">{t("memory.title")}</h1>
-          <span className="text-xs text-muted-foreground">{t("memory.subtitle")}</span>
-          <div className="ml-auto flex items-center gap-2">
-            <VoiceCaptureEntry />
-            <input
-              className="w-40 rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-              placeholder={t("memory.scopePlaceholder")}
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-              data-testid="memory-scope"
-            />
+    <PageShell
+      title={t("memory.title")}
+      titleTestId="memory-page-title"
+      subtitle={t("memory.subtitle")}
+      actions={
+        <div className="flex items-center gap-2">
+              <VoiceCaptureEntry />
+              <input
+                className="w-40 rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                placeholder={t("memory.scopePlaceholder")}
+                value={scope}
+                onChange={(e) => setScope(e.target.value)}
+                data-testid="memory-scope"
+              />
+        </div>
+      }
+      filters={
+        <>
+          {/* Who said what, for a finished recording (openspec:
+              add-speaker-attribution 7.1). Sits beside the capture entry because
+              the transcript and its attribution are one artifact seen two ways. */}
+          <div className="mt-3 rounded-md border border-border p-3">
+            <AttributionSection />
           </div>
-        </div>
-        {/* Who said what, for a finished recording (openspec:
-            add-speaker-attribution 7.1). Sits beside the capture entry because
-            the transcript and its attribution are one artifact seen two ways. */}
-        <div className="mt-3 rounded-md border border-border p-3">
-          <AttributionSection />
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="memory-filters">
-          <span className="text-xs text-muted-foreground">{t("memory.layerLabel")}</span>
-          {([null, ...LAYERS] as const).map((l) => (
-            <button
-              key={`layer-${l ?? "all"}`}
-              className={`rounded-md px-2.5 py-1 text-xs ${layer === l ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-              onClick={() => setLayer(l)}
-              data-testid={`memory-layer-${l ?? "all"}`}
-            >
-              {l === null ? t("memory.all") : `${l}·${LAYER_LABEL[l]}`}
-            </button>
-          ))}
-          <span className="ml-2 text-xs text-muted-foreground">{t("memory.tierLabel")}</span>
-          {([null, ...TIERS] as const).map((tr) => (
-            <button
-              key={`tier-${tr ?? "all"}`}
-              className={`rounded-md px-2.5 py-1 text-xs ${tier === tr ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-              onClick={() => setTier(tr)}
-              data-testid={`memory-tier-${tr ?? "all"}`}
-            >
-              {tr === null ? t("memory.all") : t(`resources.memory.tier.${tr}`)}
-            </button>
-          ))}
-          {/* 本周窗激活提示（节奏条点入的落点可视回执），点击解除时间窗。 */}
-          {since ? (
-            <button
-              type="button"
-              className="ml-2 rounded-full bg-primary/15 px-2.5 py-1 text-xs text-primary hover:opacity-80"
-              onClick={() => setSince(null)}
-              data-testid="memory-filter-week"
-            >
-              {t("memoryWeekly.week")} ×
-            </button>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="memory-filters">
+            <span className="text-xs text-muted-foreground">{t("memory.layerLabel")}</span>
+            {([null, ...LAYERS] as const).map((l) => (
+              <button
+                key={`layer-${l ?? "all"}`}
+                className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs ${layer === l ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                onClick={() => setLayer(l)}
+                data-testid={`memory-layer-${l ?? "all"}`}
+              >
+                {l === null ? t("memory.all") : `${l}·${LAYER_LABEL[l]}`}
+              </button>
+            ))}
+            <span className="ml-2 text-xs text-muted-foreground">{t("memory.tierLabel")}</span>
+            {([null, ...TIERS] as const).map((tr) => (
+              <button
+                key={`tier-${tr ?? "all"}`}
+                className={`inline-flex h-7 items-center rounded-md px-2.5 text-xs ${tier === tr ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                onClick={() => setTier(tr)}
+                data-testid={`memory-tier-${tr ?? "all"}`}
+              >
+                {tr === null ? t("memory.all") : t(`resources.memory.tier.${tr}`)}
+              </button>
+            ))}
+            {/* 本周窗激活提示（节奏条点入的落点可视回执），点击解除时间窗。 */}
+            {since ? (
+              <button
+                type="button"
+                className="ml-2 inline-flex h-7 items-center rounded-full bg-primary/15 px-2.5 text-xs text-primary hover:opacity-80"
+                onClick={() => setSince(null)}
+                data-testid="memory-filter-week"
+              >
+                {t("memoryWeekly.week")} ×
+              </button>
+            ) : null}
+          </div>
+        </>
+      }
+    >
         {/* Distillation funnel (add-knowledge-memory-surface 4.2) — the primary
             view: L0→L1→L2 counts + shares over the current filter result.
             Clicking a segment applies that layer filter. Degraded state shows
@@ -535,8 +538,7 @@ export function MemoryPage() {
         <p className="mt-4 text-xs text-muted-foreground" data-testid="memory-standalone-portal-hint">
           {t("memory.standalonePortalHint")}
         </p>
-      </div>
-    </div>
+    </PageShell>
   );
 }
 

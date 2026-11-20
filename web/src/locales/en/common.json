@@ -2043,7 +2043,7 @@
   },
   "facetIntro": {
     "title": "A thousand facets — the Agent Materials Plaza",
-    "subtitle": "An Agent bundles skills, MCP references, and personas — team templates may also declare memory, a console, and a roster; browse, subscribe, publish, and install into Claude Code / Cursor in one line",
+    "subtitle": "Agents bundle skills, MCP references, and personas. Some packs are a whole team — roles, cadence and reporting are declared, so installing one into a platform puts it on a schedule. Browse, subscribe, publish, and install into the AI editor you already use in one line.",
     "factRow": "Anonymous browsing; sign in to publish and subscribe (same identity as Platform)",
     "ctaPacks": "Browse agents",
     "ctaMcp": "View MCP services",
@@ -2077,6 +2077,43 @@
       "edgeSubscribeNote": "MCP credentials already wired in Platform",
       "edgeCli": "CLI install",
       "edgeCliNote": "skill snapshot on disk; MCP references printed"
+    },
+    "targetsLabel": "Installs into:",
+    "teamTemplates": {
+      "title": "Some agents are a whole team",
+      "body": "A team template packs more than personas — it declares the roles, when each one runs, which numbers each reports, who hands what to whom, and what counts as done. Install one into a platform and you get a team built from it, firing on its declared cadence.",
+      "facet": {
+        "roles": {
+          "title": "Roles",
+          "body": "Each role is a persona plus a narrowed tool face — what it may use is stated, and nothing extra is granted."
+        },
+        "cadence": {
+          "title": "Cadence",
+          "body": "A cron and time zone per role, staggered on purpose. The market page shows it; it does not run it."
+        },
+        "slots": {
+          "title": "Report slots",
+          "body": "Which keys to fill at wrap-up and how each is counted are declared, not left for the model to improvise."
+        },
+        "edges": {
+          "title": "Orchestration edges",
+          "body": "Who hands results to whom is declared as edges — a broken hand-off is visible, not probabilistic."
+        },
+        "acceptance": {
+          "title": "Acceptance assertions",
+          "body": "Structured assertions define what \"this round is done\" means, instead of a paragraph of prose."
+        }
+      }
+    },
+    "creationPath": {
+      "title": "From a sentence to a running team",
+      "body": "The studio turns a description into a publishable pack, then turns the pack into a team. All four steps happen in one place.",
+      "stage1": "Describe the team",
+      "stage2": "A human adopts the draft",
+      "stage3": "Cast and publish",
+      "stage4": "Build the team from the template",
+      "gate": "The model drafts; adopting is a person's act — nothing the model wrote enters a pack until someone adopts it.",
+      "cta": "Open the studio"
     }
   },
   "facetFooter": {

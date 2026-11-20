@@ -11,6 +11,7 @@
 // UI shape: hero card with collection summary, then two cards (ingest, list),
 // then a card per collection. Each section is a Card primitive so the page
 // reads as a stack of distinct actions rather than a flat form.
+import { PageShell } from "@/components/ui/page-shell";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { showToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -111,37 +112,35 @@ export function DocumentsPage({ send }: { send: (m: ClientMessage) => void }) {
   };
 
   return (
-    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-6" data-testid="documents-page">
-      {/* Hero — sets context: how many docs, what state they're in. */}
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <Icon name="file-text" size={22} className="text-primary" />
-            {t("documents.title")}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("documents.list.count", { count: stats.total })}
-          </p>
-        </div>
+    <PageShell
+      title={
+        <span className="flex items-center gap-2">
+          <Icon name="file-text" size={22} className="text-primary" />
+          {t("documents.title")}
+        </span>
+      }
+      titleTestId="documents-title"
+      subtitle={t("documents.list.count", { count: stats.total })}
+      actions={
         <div className="flex flex-wrap items-center gap-2">
-          {stats.ready > 0 && (
-            <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success" data-testid="stats-ready">
-              {t("documents.status.ready")} {stats.ready}
-            </span>
-          )}
-          {stats.indexing > 0 && (
-            <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-medium text-warning" data-testid="stats-indexing">
-              {t("documents.status.indexing")} {stats.indexing}
-            </span>
-          )}
-          {stats.error > 0 && (
-            <span className="rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-medium text-destructive" data-testid="stats-error">
-              {t("documents.status.error")} {stats.error}
-            </span>
-          )}
+            {stats.ready > 0 && (
+              <span className="rounded-full bg-success/15 px-2.5 py-0.5 text-xs font-medium text-success" data-testid="stats-ready">
+                {t("documents.status.ready")} {stats.ready}
+              </span>
+            )}
+            {stats.indexing > 0 && (
+              <span className="rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-medium text-warning" data-testid="stats-indexing">
+                {t("documents.status.indexing")} {stats.indexing}
+              </span>
+            )}
+            {stats.error > 0 && (
+              <span className="rounded-full bg-destructive/15 px-2.5 py-0.5 text-xs font-medium text-destructive" data-testid="stats-error">
+                {t("documents.status.error")} {stats.error}
+              </span>
+            )}
         </div>
-      </header>
-
+      }
+    >
       <div className="mt-6">
         <IngestSection onAdded={() => refreshDocs()} />
       </div>
@@ -156,7 +155,7 @@ export function DocumentsPage({ send }: { send: (m: ClientMessage) => void }) {
               {t("documents.list.count", { count: documents.length })}
             </h2>
             <div className="flex items-center gap-2">
-              <button onClick={() => refreshDocs()} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted" data-testid="docs-refresh">
+              <button onClick={() => refreshDocs()} className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted" data-testid="docs-refresh">
                 {t("documents.list.refresh")}
               </button>
             </div>
@@ -216,7 +215,7 @@ export function DocumentsPage({ send }: { send: (m: ClientMessage) => void }) {
       <RetrievalSection />
 
       <CollectionsSection onConverse={startConversation} />
-    </main>
+    </PageShell>
   );
 }
 
@@ -319,7 +318,7 @@ function RetrievalSection() {
         <div className="rounded-lg border border-border bg-card p-4">
           <h2 className="text-sm font-semibold">{t("documents.retrieval.title")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">{t("documents.retrieval.loadFailed")}</p>
-          <button onClick={load} className="mt-3 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">
+          <button onClick={load} className="mt-3 inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted">
             {t("documents.retrieval.retry")}
           </button>
         </div>
@@ -570,7 +569,7 @@ function DocRow({ doc, selected, onSelect, onDelete, onConverse }: {
       "flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
       selected ? "border-primary bg-primary/5" : "border-border",
     )} data-testid="doc-row" data-doc-id={doc.id}>
-      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+      <button onClick={onSelect} className="flex min-h-7 min-w-0 flex-1 items-center gap-2 text-left">
         <Icon name="file-text" size={14} className="shrink-0 text-muted-foreground" />
         <span className="truncate font-medium">{doc.name}</span>
         <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium", STATUS_COLORS[doc.status] ?? "bg-muted text-muted-foreground")} data-testid="doc-status">
@@ -584,10 +583,10 @@ function DocRow({ doc, selected, onSelect, onDelete, onConverse }: {
         {doc.error && <span className="truncate text-xs text-destructive" title={doc.error}>{doc.error}</span>}
       </button>
       <button onClick={onConverse} disabled={doc.status !== "ready"} title={t("documents.startConversation")}
-        className="shrink-0 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40" data-testid="doc-converse">
+        className="inline-flex h-7 shrink-0 items-center rounded-md border border-border px-2 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40" data-testid="doc-converse">
         {t("documents.startConversation")}
       </button>
-      <button onClick={onDelete} aria-label={t("documents.remove")} className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" data-testid="doc-delete" title={t("documents.remove")}>
+      <button onClick={onDelete} aria-label={t("documents.remove")} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive" data-testid="doc-delete" title={t("documents.remove")}>
         <Icon name="trash-2" size={14} />
       </button>
     </li>
@@ -689,7 +688,7 @@ function CollectionsSection({ onConverse }: { onConverse: (token: string) => voi
                   <button onClick={() => open(c)} className="flex-1 text-left font-medium" data-testid="col-row">{c.name}</button>
                   <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">{t("documents.collection.docsCount", { count: c.documentCount ?? 0 })}</span>
                   <button onClick={() => onConverse(`@collection:${c.id}`)} title={t("documents.startConversation")}
-                    className="shrink-0 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted" data-testid="col-converse">
+                    className="inline-flex h-7 shrink-0 items-center rounded-md border border-border px-2 text-xs hover:bg-muted" data-testid="col-converse">
                     {t("documents.startConversation")}
                   </button>
                   {/* Seed a blueprint draft pinning this collection (spec:
@@ -703,7 +702,7 @@ function CollectionsSection({ onConverse }: { onConverse: (token: string) => voi
                   >
                     {t("documents.collection.makeAgent")}
                   </button>
-                  <button onClick={() => setDeleteOpenId(c.id)} className="rounded-md p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" data-testid="col-delete" title={t("documents.collection.delete")}>
+                  <button onClick={() => setDeleteOpenId(c.id)} className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive" data-testid="col-delete" title={t("documents.collection.delete")}>
                     <Icon name="trash-2" size={14} />
                   </button>
                 </div>
@@ -726,7 +725,7 @@ function CollectionsSection({ onConverse }: { onConverse: (token: string) => voi
                             <option value="">{t("documents.collection.addDocPlaceholder")}</option>
                             {documents.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
                           </select>
-                          <button onClick={addDoc} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted" data-testid="col-add-btn">{t("documents.collection.add")}</button>
+                          <button onClick={addDoc} className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted" data-testid="col-add-btn">{t("documents.collection.add")}</button>
                         </div>
                       </>
                     )}

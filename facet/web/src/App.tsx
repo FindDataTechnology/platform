@@ -32,7 +32,16 @@ import { SiteMark } from "./SiteMark";
 // to the intro landing, same gate as #/mine).
 type View = "intro" | "packs" | "mcp" | "docs" | "mine" | "curate" | "studio";
 
-type WhoamiUser = { email: string; groups: string[]; creator?: boolean; admin?: boolean } | null;
+/** Identity probe result, in THREE states, and the difference matters:
+ *    undefined — the probe has not answered yet (paint nothing identity-gated)
+ *    null      — answered, nobody is signed in
+ *    object    — answered, signed in
+ *  A two-state `null | user` cannot tell "still loading" from "anonymous", so
+ *  the shell used to flash a signed-in affordance for everyone and then remove
+ *  it. `loginEnabled` rides along because the header decides whether to offer a
+ *  login entry before it knows who you are (a deployment without Logto would
+ *  otherwise link to a /auth/login that 404s). */
+type WhoamiUser = { email: string; groups: string[]; creator?: boolean; admin?: boolean; loginEnabled?: boolean } | null | undefined;
 
 const VIEW_HASH: Record<View, string> = {
   intro: "#/",
@@ -62,12 +71,15 @@ function viewFromHash(hash: string, user: WhoamiUser): View {
   return "intro";
 }
 
-function Whoami({ onUser }: { onUser: (u: WhoamiUser) => void }) {
+function Whoami({ onUser }: { onUser: (u: WhoamiUser, loginEnabled: boolean) => void }) {
   useEffect(() => {
     fetch("/api/whoami")
       .then((r) => r.json())
-      .then((d) => onUser(d?.email ? d : null))
-      .catch(() => onUser(null));
+      .then((d) => onUser(d?.email ? d : null, d?.loginEnabled === true))
+      // A failed probe means "we do not know who you are" — the anonymous face
+      // is the honest answer, and the login entry stays hidden (we also do not
+      // know whether this deployment can log anyone in).
+      .catch(() => onUser(null, false));
   }, [onUser]);
   return null;
 }
@@ -243,7 +255,15 @@ function AccountMenu({
 
 export function App() {
   const { t } = useTranslation();
-  const [user, setUser] = useState<WhoamiUser>(null);
+  // undefined = probe has not answered yet (see WhoamiUser). Never `null`: that
+  // would claim "anonymous" during loading and paint affordances that then flip.
+  const [user, setUser] = useState<WhoamiUser>(undefined);
+  // Whether this deployment can start a login at all (whoami reports it). Kept
+  // separate from `user` because the header needs it while anonymous — it is
+  // the difference between "sign in" and a link to a 404.
+  const [loginEnabled, setLoginEnabled] = useState(false);
+  // `viewFromHash` takes the SETTLED identity; during the probe it must not
+  // grant gated views, so it reads `null` until the answer is in.
   const [view, setView] = useState<View>(() => viewFromHash(window.location.hash, null));
   // The scrolling element (`<main>`); view changes reset it to the top.
   const scrollerRef = useRef<HTMLElement | null>(null);
@@ -317,6 +337,21 @@ export function App() {
     window.location.href = `/auth/login?rd=${encodeURIComponent(window.location.href)}`;
   }, []);
 
+  /** A login the viewer asked for, as opposed to one an action forced.
+   *
+   *  The return path is the signed-in work surface, not "/". Landing an
+   *  explicit sign-in back on the intro hands the viewer the page they were
+   *  already looking at, which makes the one thing they chose to do feel like
+   *  it did nothing (facet-shell-entry-and-narrative). An action-driven login
+   *  keeps `goLogin` above: it must return to the action, never to the studio.
+   *
+   *  `safeReturnPath` (server) validates this: a hash fragment rides through
+   *  because the value is a same-origin path, and the server reduces absolute
+   *  URLs from other hosts to "/". */
+  const goLoginToWork = useCallback(() => {
+    window.location.href = `/auth/login?rd=${encodeURIComponent("/#/studio")}`;
+  }, []);
+
   const tabs: View[] = [
     // Public entries: the browsing surfaces every visitor gets.
     "intro",
@@ -339,7 +374,7 @@ export function App() {
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-background text-foreground">
-      <Whoami onUser={setUser} />
+      <Whoami onUser={(u, enabled) => { setUser(u); setLoginEnabled(enabled); }} />
       <header className="border-b border-border px-6 py-3 flex flex-wrap items-center justify-between gap-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <SiteMark chars="谦" size="md" />
@@ -377,11 +412,13 @@ export function App() {
               onSelect={go}
               logoutLabel={t("auth.logout")}
             />
-          ) : (
-            <Button size="sm" onClick={() => (window.location.href = "/auth/login")}>
+          ) : loginEnabled ? (
+            // Only offer a login the deployment can honour: without Logto the
+            // link would 404, and the old code rendered it regardless.
+            <Button size="sm" onClick={goLoginToWork}>
               {t("auth.login")}
             </Button>
-          )}
+          ) : null}
         </div>
       </header>
       {authError && (
@@ -394,7 +431,7 @@ export function App() {
           <span className="flex-1 text-sm text-warning">
             {t(`facetShell.loginBanner.${authError === "state" || authError === "token" ? authError : "generic"}`)}
           </span>
-          <Button size="sm" onClick={() => (window.location.href = "/auth/login")}>
+          <Button size="sm" onClick={goLoginToWork}>
             {t("facetShell.loginBanner.retry")}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => setAuthError(null)}>
@@ -415,7 +452,7 @@ export function App() {
             <TeamConsoleView />
           ) : (
             <>
-          {view === "intro" && <IntroView />}
+          {view === "intro" && <IntroView signedIn={Boolean(user)} />}
           {view === "packs" && (
             <Container className="space-y-4">
               {/* One page-level h1 per view (the module's task name), the way

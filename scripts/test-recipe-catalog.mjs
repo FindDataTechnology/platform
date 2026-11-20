@@ -44,7 +44,12 @@ function marketListings() {
     .filter((p) => p.name);
 }
 
-const market = marketListings();
+// Lazily, and only when the snapshot exists. This used to run at MODULE level,
+// so a tree without site-plaza/ threw on import — the file died before any
+// `{ skip }` could take effect, and node reported the whole FILE as failed
+// rather than naming a case. A per-test skip cannot protect a module-level
+// read; the read has to move behind the same guard.
+const market = NO_SNAPSHOT ? [] : marketListings();
 
 function marketStub() {
   return {

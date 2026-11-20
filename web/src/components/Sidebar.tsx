@@ -853,7 +853,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                 aria-label={t("sidebar.closeSearch")}
                 title={t("sidebar.closeSearch")}
                 data-testid="workspace-search-close"
-                className="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="shrink-0 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
@@ -880,7 +880,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                     aria-haspopup="menu"
                     aria-expanded={projectMenuOpen}
                     onClick={() => setProjectMenuOpen((v) => !v)}
-                    className="micro-label flex min-w-0 flex-1 items-center gap-1 font-semibold text-foreground hover:text-foreground/80"
+                    className="micro-label flex min-h-7 min-w-0 flex-1 items-center gap-1 font-semibold text-foreground hover:text-foreground/80"
                   >
                     <span className="truncate" data-testid="project-switcher-label">
                       {currentProjectName}
@@ -933,7 +933,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                   aria-label={t("sidebar.searchChats")}
                   title={t("sidebar.searchChats")}
                   data-testid="workspace-search-toggle"
-                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <Search className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
@@ -945,7 +945,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                   aria-haspopup="menu"
                   aria-expanded={wsPopoverOpen}
                   data-testid="workspace-new"
-                  className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <FolderPlus className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
@@ -957,7 +957,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                     onNavigate?.();
                   }}
                   data-testid="new-chat-btn"
-                  className="rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   {t("sidebar.new")}
                 </button>
@@ -1118,7 +1118,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                   data-testid="workspace-group-toggle"
                   aria-expanded={expanded}
                   title={groupTitle(g.key)}
-                  className="flex w-full items-center gap-1 rounded-md px-1 py-1 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="flex min-h-7 w-full items-center gap-1 rounded-md px-1 py-1 text-left text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   {expanded ? (
                     <ChevronDown className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -1174,7 +1174,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                         type="button"
                         onClick={() => toggleShowAll(g.key)}
                         data-testid="workspace-show-more"
-                        className="rounded-md px-2 py-1 text-left text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="rounded-md px-2 py-1 min-h-7 text-left text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         {t("sidebar.showMore", { count: hiddenCount })}
                       </button>
@@ -1184,7 +1184,7 @@ export function Sidebar({ send, onNavigate, onCollapse }: Props) {
                         type="button"
                         onClick={() => toggleShowAll(g.key)}
                         data-testid="workspace-show-less"
-                        className="rounded-md px-2 py-1 text-left text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="rounded-md px-2 py-1 min-h-7 text-left text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
                       >
                         {t("sidebar.showLess")}
                       </button>

@@ -865,7 +865,7 @@ export function FleetsPage() {
                     if (selectedId) navigate(entry.view ? `/fleets?view=${entry.view}` : "/fleets");
                     else setHubView(entry.view);
                   }}
-                  className={`rounded-md px-2 py-1 text-xs ${
+                  className={`inline-flex h-7 items-center rounded-md px-2 text-xs ${
                     isActive ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground hover:bg-muted"
                   }`}
                 >
@@ -1531,7 +1531,7 @@ export function FleetsPage() {
                           {member.latestReport.slots.map((slot) => (
                             <span
                               key={slot.key}
-                              className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs"
+                              className="inline-flex h-7 items-center gap-1 rounded-md bg-muted px-2 text-xs"
                               data-testid={`kpi-slot-${member.id}-${slot.key}`}
                               title={slot.note ? `${t("fleets.report.note")}: ${slot.note}` : undefined}
                             >
@@ -1892,7 +1892,7 @@ function DecisionsDrawer({
             type="button"
             data-testid="decisions-view-owner"
             onClick={() => setView("owner")}
-            className={`rounded-md border px-2 py-1 text-xs ${view === "owner" ? "border-primary bg-primary/10 font-medium" : "border-border"}`}
+            className={`inline-flex h-7 items-center rounded-md border px-2 text-xs ${view === "owner" ? "border-primary bg-primary/10 font-medium" : "border-border"}`}
           >
             {t("fleets.decisions.viewOwner")} · {counts.owner}
           </button>
@@ -1900,7 +1900,7 @@ function DecisionsDrawer({
             type="button"
             data-testid="decisions-view-deputy"
             onClick={() => setView("deputy")}
-            className={`rounded-md border px-2 py-1 text-xs ${view === "deputy" ? "border-primary bg-primary/10 font-medium" : "border-border"}`}
+            className={`inline-flex h-7 items-center rounded-md border px-2 text-xs ${view === "deputy" ? "border-primary bg-primary/10 font-medium" : "border-border"}`}
           >
             {t("fleets.decisions.viewDeputy")} · {counts.deputy}
           </button>

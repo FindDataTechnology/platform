@@ -6,6 +6,8 @@
 // expressions client-side; the server re-validates and answers cron_error on
 // a bad expression.
 
+import { Button } from "@/components/ui/button";
+import { PageShell } from "@/components/ui/page-shell";
 import { useEffect, useMemo, useState } from "react";
 import { showToast } from "@/components/ui/toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -173,44 +175,54 @@ function TaskCard({
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {job.sessionId ? (
-            <button
-              className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+            <Button
+              size="xs"
+              variant="outline"
+              className="h-7"
               onClick={() => onOpenSession(job.sessionId!)}
               data-testid="cron-job-open-session"
             >
               {t("tasks.actions.output")}
-            </button>
+            </Button>
           ) : null}
-          <button
-            className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+          <Button
+            size="xs"
+            variant="outline"
+            className="h-7"
             onClick={() => send({ type: "cron_run", jobId: job.id })}
             data-testid={rerunnable ? "cron-job-rerun" : "cron-job-run"}
           >
             {rerunnable ? t("tasks.actions.rerun") : t("tasks.actions.runNow")}
-          </button>
-          <button
-            className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            className="h-7"
             onClick={() => onEdit(job)}
             data-testid="cron-job-edit"
           >
             {t("tasks.actions.edit")}
-          </button>
-          <button
-            className="rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            className="h-7"
             onClick={() =>
               send(job.paused ? { type: "cron_resume", jobId: job.id } : { type: "cron_pause", jobId: job.id })
             }
             data-testid="cron-job-toggle"
           >
             {job.paused ? t("tasks.actions.resume") : t("tasks.actions.pause")}
-          </button>
-          <button
-            className="rounded-md border border-destructive/40 px-2.5 py-1 text-xs text-destructive hover:bg-destructive/10"
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            className="h-7 border-destructive/40 text-destructive hover:bg-destructive/10"
             onClick={() => setDeleteOpen(true)}
             data-testid="cron-job-delete"
           >
             {t("tasks.actions.delete")}
-          </button>
+          </Button>
           <ConfirmDialog
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
@@ -235,7 +247,7 @@ function TaskCard({
           <button
             type="button"
             onClick={() => setHistoryOpen((v) => !v)}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            className="inline-action text-xs text-muted-foreground hover:text-foreground"
             data-testid="cron-job-history-toggle"
           >
             {historyOpen ? "▾ " : "▸ "}
@@ -515,50 +527,42 @@ export function TasksPage({ send }: TasksPageProps) {
     if (projectFilter === "default") return jobs.filter((j) => !j.projectId);
     return jobs.filter((j) => j.projectId === projectFilter);
   }, [jobs, projectFilter]);
-
   return (
-    <div className="flex h-full flex-col bg-background" data-testid="cron-page">
-      <div className="border-b border-border px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-semibold">{t("tasks.title")}</h1>
-          <div className="flex items-center gap-2">
-            {/* Project filter (add-web-project-container 3.3): "all" is the
-                default and filters nothing — the list reads exactly as before
-                this change. Display-only; every action still addresses jobs by
-                id. Desktop has no project concept, so the control is web-only. */}
-            {!IS_DESKTOP ? (
-              <select
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
-                className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
-                data-testid="cron-project-filter"
-                aria-label={t("tasks.projectFilter")}
+    <PageShell
+      title={t("tasks.title")}
+      titleTestId="cron-page-title"
+      actions={
+        <div className="flex items-center gap-2">
+              {!IS_DESKTOP ? (
+                <select
+                  value={projectFilter}
+                  onChange={(e) => setProjectFilter(e.target.value)}
+                  className="inline-flex h-7 items-center rounded-md border border-input bg-background px-2 text-xs"
+                  data-testid="cron-project-filter"
+                  aria-label={t("tasks.projectFilter")}
+                >
+                  <option value="all">{t("tasks.projectAll")}</option>
+                  <option value="default">{t("sidebar.defaultProject")}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+              <Button
+                onClick={() => {
+                  if (formOpen) setEditingId(null);
+                  setFormOpen((v) => !v);
+                }}
+                data-testid="cron-new-toggle"
               >
-                <option value="all">{t("tasks.projectAll")}</option>
-                <option value="default">{t("sidebar.defaultProject")}</option>
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <button
-              className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              onClick={() => {
-                // Opening the form fresh cancels any in-flight edit.
-                if (formOpen) setEditingId(null);
-                setFormOpen((v) => !v);
-              }}
-              data-testid="cron-new-toggle"
-            >
-              {formOpen ? t("tasks.form.close") : t("tasks.form.title")}
-            </button>
-          </div>
+                {formOpen ? t("tasks.form.close") : t("tasks.form.title")}
+              </Button>
         </div>
-      </div>
-
-      <div className="flex-1 space-y-4 overflow-auto p-6">
+      }
+    >
+      <div className="space-y-4">
         {formOpen && (
           <div className="rounded-md border border-border bg-card p-4" data-testid="cron-form">
             {/* Templates: one-click prefills (spec: scheduled-tasks-ui). */}
@@ -570,7 +574,7 @@ export function TasksPage({ send }: TasksPageProps) {
                   type="button"
                   onClick={() => applyTemplate(tpl)}
                   data-testid={`cron-template-${tpl.key}`}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  className="inline-flex h-7 items-center rounded-full border border-border px-2.5 text-xs text-muted-foreground hover:border-primary/40 hover:text-foreground"
                 >
                   {t(`tasks.templates.${tpl.key}.name`)}
                 </button>
@@ -612,7 +616,7 @@ export function TasksPage({ send }: TasksPageProps) {
               {(["recurring", "once"] as Mode[]).map((m) => (
                 <button
                   key={m}
-                  className={`rounded-md px-3 py-1 text-sm ${mode === m ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  className={`inline-flex h-7 items-center rounded-md px-3 text-sm ${mode === m ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
                   onClick={() => setMode(m)}
                   data-testid={`cron-mode-${m}`}
                 >
@@ -627,7 +631,7 @@ export function TasksPage({ send }: TasksPageProps) {
                   {(["daily", "weekly", "custom", "interval"] as Freq[]).map((f) => (
                     <button
                       key={f}
-                      className={`rounded-md px-3 py-1 text-sm ${freq === f ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                      className={`inline-flex h-7 items-center rounded-md px-3 text-sm ${freq === f ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted"}`}
                       onClick={() => setFreq(f)}
                       data-testid={`cron-freq-${f}`}
                     >
@@ -799,22 +803,13 @@ export function TasksPage({ send }: TasksPageProps) {
                 {errorText}
               </div>
             )}
-            <button
-              className="mt-3 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-              onClick={submit}
-              data-testid="cron-submit"
-            >
+            <Button className="mt-3" onClick={submit} data-testid="cron-submit">
               {editingId ? t("tasks.actions.edit") : t("tasks.form.submit")}
-            </button>
+            </Button>
             {editingId ? (
-              <button
-                type="button"
-                className="mt-3 ml-2 rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted"
-                onClick={cancelEdit}
-                data-testid="cron-edit-cancel"
-              >
+              <Button variant="outline" className="mt-3 ml-2" onClick={cancelEdit} data-testid="cron-edit-cancel">
                 {t("tasks.form.close")}
-              </button>
+              </Button>
             ) : null}
           </div>
         )}
@@ -833,7 +828,7 @@ export function TasksPage({ send }: TasksPageProps) {
                     setFormOpen(true);
                   }}
                   data-testid={`cron-empty-template-${tpl.key}`}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs hover:border-primary/40 hover:text-foreground"
+                  className="inline-flex h-7 items-center rounded-full border border-border px-2.5 text-xs hover:border-primary/40 hover:text-foreground"
                 >
                   {t(`tasks.templates.${tpl.key}.name`)}
                 </button>
@@ -846,6 +841,6 @@ export function TasksPage({ send }: TasksPageProps) {
           ))
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

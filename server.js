@@ -25,7 +25,7 @@ import * as catalog from "./catalog.js";
 import { initRegistryBridge, stopRegistryBridge } from "./registry-bridge.js";
 import { resolveBundleSafe } from "./bundle-manifest.js";
 import { createAppContext } from "./server/context.js";
-import { registerAuth, normalizeAuthPath } from "./server/auth.js";
+import { registerAuth, normalizeAuthPath, FLEET_BRIDGE_PATHS } from "./server/auth.js";
 import { createLogtoAuth } from "./server/logto-auth.js";
 import { resolveSessionSecret } from "./server/session.js";
 import { createMpAuth } from "./gateway/mp-auth.js";
@@ -75,6 +75,22 @@ import { registerBotRelayRoutes, RELAY_PREFIX } from "./server/routes/bot-relay.
 import { registerBotEventRoutes, EVENTS_PREFIX } from "./server/routes/bot-events.js";
 import { createClusterRoutes, startAutoTerminationJob } from "./server/routes/clusters.js";
 import { createFleetRoutes, resolveFleetTarget } from "./server/routes/fleets.js";
+import {
+  registerInputRequestRoutes,
+  startInputRequestExpiryJob,
+} from "./server/routes/input-requests.js";
+import { mountInputRequestMcp } from "./server/input-request-http.js";
+import { registerTeamCardRoutes } from "./server/routes/team-cards.js";
+import { registerCredentialDegradationRoutes } from "./server/routes/credential-degradation.js";
+import { registerFleetCredentialPackRoutes } from "./server/routes/fleet-credential-pack.js";
+import { createKfRoutes } from "./server/archive/kf/routes.js";
+import { maybeStartKfSyncJob } from "./server/archive/kf/scheduler.js";
+import { getKfDatabase } from "./server/archive/kf/db.js";
+import {
+  isTransientRuntimeInitError,
+  resolveBootRetryPolicy,
+  scheduleRuntimeBootRetries,
+} from "./server/runtime-boot.js";
 import { registerPackAuthorRoutes } from "./server/pack-author.js";
 import { createSkillEvolutionRoutes } from "./server/skill-evolution-routes.js";
 import { createTuningVerdictRoutes } from "./server/tuning-verdict-routes.js";
@@ -101,6 +117,7 @@ import { runDueDigests } from "./server/fleet-digest.js";
 import { memoryRefClientFor } from "./server/memory-refs.js";
 import { rosterPresetId, auditorFacesByPreset, targetPaths, catalogPresetDefinitions } from "./dsh-profile.js";
 import { fingerprintForCell } from "./lib/cell-fingerprint.js";
+import { registerRevisionRoutes } from "./server/routes/revisions.js";
 import { auditorMcpFace } from "./lib/auditor-tool-face.js";
 import * as lineTokenRenewal from "./server/line-token-renewal.js";
 import * as lineCredentialsLib from "./line-credentials.js";
@@ -128,17 +145,6 @@ import { startActionExpiryJob } from "./lib/action-expiry.js";
 import { recordRejection, prune, summarizeRejections } from "./lib/report-rejection-log.js";
 import { pickMemberIdentity, describeCandidates } from "./lib/member-identity.js";
 import { registerBoardRoutes } from "./server/routes/boards.js";
-import { maybeStartKfSyncJob } from "./server/archive/kf/scheduler.js";
-import { getKfDatabase } from "./server/archive/kf/db.js";
-import {
-  registerInputRequestRoutes,
-  startInputRequestExpiryJob,
-} from "./server/routes/input-requests.js";
-import { mountInputRequestMcp } from "./server/input-request-http.js";
-import { FLEET_BRIDGE_PATHS } from "./server/auth.js";
-import { registerTeamCardRoutes } from "./server/routes/team-cards.js";
-import { registerFleetCredentialPackRoutes } from "./server/routes/fleet-credential-pack.js";
-import { registerCredentialDegradationRoutes } from "./server/routes/credential-degradation.js";
 import { registerFlowRoutes } from "./server/routes/flows.js";
 // ERP 纵向 REST 服务面同源代理（add-erp-supply-chain-gateway-proxy）：
 // 客户端 X-ERP-* 一律剥离、服务端按会话注入、无会话 401（fail-closed）。
@@ -442,6 +448,10 @@ const runnerFleetVerbs = (req, res, next) => {
   return next();
 };
 createFleetRoutes(app, ctx, { mount: "/api/runner-fleet/fleets", guard: runnerFleetVerbs });
+// 微信客服通道（add-wecom-kf-ingest）：只读查询面 —— 会话、消息、检索、待回复队列、
+// 附件完成率。**只有 GET**：拉取会打外部接口、回复会真发给客户，两者都必须显式
+// （CLI 的 sync / reply --confirm），不能挂在这条读路径上。库是独立的 data/kf.db。
+createKfRoutes(app, ctx);
 // Blueprint studio routes RETIRED (add-supply-studio-migration 4.6, W2): the
 // creation surface moved to the facet host (facet/studio.js mounts the same
 // modules there). 壹座 keeps only the promotion channel (fleets /promote) and
@@ -523,6 +533,33 @@ registerCellPackRoutes(ctx);
 // here over the shared internal credential (x-facet-token); the report returns
 // in one body and the doc of record stays on the facet side (D1).
 createTrialExecRoutes(app);
+// Revision governance (harden-agent-runtime-spine, runtime-revision 5.3–5.5):
+// promote/rollback a deployment's running CONFIGURATION. The owner gate is the
+// same one the fleet surface uses; the fingerprint is never minted here — the
+// compose seam owns that, and this layer refuses when it cannot prove one.
+// `fingerprintForCell` IS that prover: it re-materializes and hashes, so a
+// rollback target that no longer reproduces is refused rather than trusted.
+registerRevisionRoutes({
+  app,
+  getDb: () => getFleetDatabase(),
+  requireOwner: () => (ctx.runtimeOwnerEmail ? { email: ctx.runtimeOwnerEmail } : { email: null, id: "local-owner" }),
+  fingerprintOf: async (deployment) => {
+    try {
+      const paths = targetPaths();
+      const fp = fingerprintForCell({
+        mcpPatchPath: paths.mcpPatch,
+        skillsPatchPath: path.join(path.dirname(paths.presetsPatch), "skills.patch.yml"),
+        presetDefs: catalogPresetDefinitions(),
+        presetId: null,
+        model: ctx.session?.model?.id ?? null,
+        matrixVersion: String(process.env.DSH_MATRIX_VERSION ?? "") || null,
+      });
+      return fp?.bundle ?? null;
+    } catch {
+      return null;
+    }
+  },
+});
 // Focus overlay (add-focus-overlay): the 资源微调 panel's GET/PUT — same
 // placement rule as the pack routes.
 registerOverlayRoutes(ctx);
@@ -1075,13 +1112,7 @@ async function initDshAgent() {
     saveLibraryPatchPath,
     env: dshChildEnv,
   };
-  await ctx.dshBridge.start();
-  // Warm the preset roster cache so the ready sync can answer list_presets
-  // without a second bridge round-trip (best-effort: empty roster on failure).
-  await ctx.getAgentPresets();
-  // Same for the permission roster — the connect-time current_permission push
-  // needs nothing, but the first list_permissions answer is then immediate.
-  ctx.getPermissionPresets().catch(() => {});
+  await startDshRuntime();
   // MCP live-reload (design D1): the REST routes mutate the DB then call this to
   // rewrite mcp.patch.yml in place — cordis-plugin-include/hmr watches that file
   // (confirmed by source inspection; see design Open Question 1) and hot-swaps
@@ -1296,6 +1327,71 @@ chatHistory.setActivityProbe((id) => ({
   console.log(`[dsh] runtime ready (provider=${provider} model=${model})`);
 }
 
+async function startDshRuntime() {
+  await ctx.dshBridge.start();
+  // Warm the preset roster cache so the ready sync can answer list_presets
+  // without a second bridge round-trip (best-effort: empty roster on failure).
+  await ctx.getAgentPresets();
+  // Same for the permission roster — the connect-time current_permission push
+  // needs nothing, but the first list_permissions answer is then immediate.
+  ctx.getPermissionPresets().catch(() => {});
+}
+
+// Boot failed — decide whether this shape is worth another try. A cold-start
+// handshake that timed out under boot contention is "not now"; a route-
+// exclusivity assertion or a missing `dsh` binary is "not ever" (see
+// server/runtime-boot.js for the split and why unknown counts as permanent).
+// The ladder is bounded and `DSH_BOOT_RETRY_MAX=0` disables it entirely, which
+// restores the pre-change behavior (fail once, stay degraded) and serves as the
+// rollback switch. `ctx.dshInitError` stays populated until a retry succeeds —
+// /api/ready keeps answering 503 with the last error while degraded.
+function scheduleDshRuntimeRetry(err) {
+  const policy = resolveBootRetryPolicy();
+  if (policy.max === 0 || !isTransientRuntimeInitError(err)) return;
+  // Fixed three steps (design D4): flip, clear, sync. Guarded so the ladder and
+  // the pre-check below can both call it without double-syncing clients.
+  const flipReady = () => {
+    if (ctx.ready.dsh === true) return;
+    ctx.ready.dsh = true;
+    ctx.dshInitError = null;
+    ctx.onDshReady?.();
+  };
+  // Success is the child's own readiness OR the flipped bit (after a fallback
+  // full init the child is up before anything had a chance to flip the bit), and
+  // observing readiness converges the bit — otherwise the ladder's early check
+  // could finish on a healthy child while /api/ready still answered 503.
+  const runtimeIsReady = () => {
+    const ready = ctx.ready.dsh === true || ctx.dshBridge?.isReady?.() === true;
+    if (ready) flipReady();
+    return ready;
+  };
+  // A racing path can leave the child healthy before this call (a REST restart,
+  // a fallback full init). Flip there and schedule nothing.
+  if (runtimeIsReady()) return;
+  ctx.dshBootRetry = scheduleRuntimeBootRetries({
+    policy,
+    // A failed boot may have died before the bridge existed at all (the dynamic
+    // import or the patch writes happen above the tail), so fall back to a full
+    // init when there is no bridge to re-start.
+    attemptRuntime: async () => {
+      if (!ctx.dshBridge) {
+        await initDshAgent();
+        return;
+      }
+      await startDshRuntime();
+    },
+    isReady: runtimeIsReady,
+    // `onDshReady` only walks the connected clients calling syncReadyClient, so
+    // it is safe at any time, including late boot.
+    onReady: flipReady,
+    // The ladder is spent — the handle no longer describes an attempt in flight.
+    onGiveUp: () => {
+      ctx.dshBootRetry = null;
+    },
+    log: (line) => console.log(line),
+  });
+}
+
 
 
 // ── dsh install-matrix boot gate (add-dsh-matrix-lock, ADR-0007) ─────────────
@@ -1375,6 +1471,12 @@ const dshInit = initDshAgent()
     // fault whose fix lives at the throwing frame) — the message alone left a
     // CI-only failure unfixable from logs (nonweb acceptance, 2026-10-28).
     console.error(`[dsh] agent init failed — server continues without the agent runtime: ${ctx.dshInitError}\n${err?.stack || "(no stack)"}`);
+    // A transient boot failure is not a terminal state (2026-11-15: a 33.8s cold
+    // handshake against a 30s budget left the cell degraded for 30 minutes with
+    // nothing retrying). Schedule the bounded ladder; it flips the readiness bit
+    // itself on success, so `dshReadyOk` stays false here and the flip below is
+    // skipped. Permanent shapes and `DSH_BOOT_RETRY_MAX=0` schedule nothing.
+    scheduleDshRuntimeRetry(err);
   });
 await Promise.all([documentsInit, dshInit]);
 await trace.initTrace();
@@ -1401,6 +1503,17 @@ bots.initBots(ctx);
   ctx.zhiyuImBridge = createZhiyuImBridge({ db: ctx.db });
   ctx.zhiyuImBridge.startOutbounds();
   registerZhiyuImBridgeRoutes(ctx);
+}
+
+// fd-bot transport heartbeat (adopt-fd-bot-transport 8.1). Only starts when the
+// deployment actually points at a service, so a deployment that has never used
+// fd-bot never logs about it. Three consecutive failed probes produce ONE
+// stable-tagged alert per outage — the point is that "transport down" stops
+// looking like "nobody is messaging the bot".
+if (process.env.FD_BOT_URL) {
+  const { createFdBotHeartbeat } = await import("./server/fd-bot-heartbeat.js");
+  ctx.fdBotHeartbeat = createFdBotHeartbeat();
+  ctx.fdBotHeartbeat.start();
 }
 
 // Cron turn executor: mounted before cron.initCron loads jobs, so a restored
@@ -1801,9 +1914,23 @@ ctx.recordFleetTurnEvent = (job, outcome, meta) => {
     // member id to stash under (see takeReportRejection), and without this the
     // 2026-11-10 bet-post refusals stayed invisible.
     const reportRejection = ctx.takeReportRejection?.(memberId, job?.preset ?? null) ?? null;
+    // 回合的上下文占用（rotate-cron-session-on-context-pressure 1.1；这块在
+    // 44d551270「feat(first-run)」里被误删，2026-11-20 从 80e660335 恢复）。
+    // 每请求 prompt 高水位对窗口的占比（高水位缺席才退回 usage 之和，`basis`
+    // 写明用的是哪个），与 task history 行的 contextUsage 由**同一个函数**
+    // （`engine.sessionPressure`）算出，两处读数因此永远对得上。什么都没报的
+    // 回合不写（诚实缺席，不补 0）。
+    // 分母与 task history 行**同一个来源**（运行时上报的窗口，缺了才退回常量）：
+    // 两处各解一次就会出现「读面按 1M 报、历史行按 128k 报」这种无人能判的分歧。
+    const reportedWindow = engine.reportedContextWindow?.(outcome) ?? null;
+    const contextUsage = engine.sessionPressure?.(outcome?.usage, {
+      promptTokens: engine.promptHighWater?.(outcome) ?? null,
+      ...(reportedWindow != null ? { window: reportedWindow } : {}),
+    }) ?? null;
     const detailFacts = {
       ...(attributionFact ? { attribution: attributionFact } : {}),
       ...(reportRejection ? { reportRejected: reportRejection } : {}),
+      ...(contextUsage ? { contextUsage } : {}),
     };
     const shapedOutcome = Object.keys(detailFacts).length
       ? {

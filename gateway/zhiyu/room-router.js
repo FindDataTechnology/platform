@@ -810,8 +810,15 @@ export function createRoomRouter({
         basis: decision?.basis ?? "manual",
       },
     });
+    // The seat must answer the QUESTION, not the note about reassignment
+    // (voice-route-room: an agent that receives the reason replies to a
+    // sentence about routing and never addresses what was asked). The original
+    // utterance is what the trigger row carried; `reason` is operator
+    // bookkeeping and stays in the event row above.
+    const trigger = store.messageAt(room.id, triggerSeq);
+    const utterance = trigger?.content ?? "";
     for (const target of seats) {
-      await runTurn({ room: fresh, target, sender: { ref: by ?? "router" }, message: { content: reason }, mode: "direct" });
+      await runTurn({ room: fresh, target, sender: { ref: by ?? "router" }, message: { content: utterance }, mode: "direct" });
     }
     return { ok: true, count: seats.length };
   }

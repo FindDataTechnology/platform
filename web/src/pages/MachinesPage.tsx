@@ -15,6 +15,7 @@
 // /api/machines/:id/history (metadata events), /api/mp/bindcode (pairing, same
 // pool as Settings), DELETE /api/machines/:id (unbind).
 
+import { PageShell } from "@/components/ui/page-shell";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { QrCode } from "@/components/settings/QrCode";
@@ -509,9 +510,10 @@ export function MachinesPage() {
   const openMachine = machines?.find((m) => m.deviceId === openId) ?? null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-6" data-testid="machines-page">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{t("machines.title")}</h1>
+    <PageShell
+      title={t("machines.title")}
+      titleTestId="machines-page-title"
+      actions={
         <div className="flex items-center gap-2">
           {isAdminView && <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">{t("machines.adminView")}</span>}
           <button
@@ -523,7 +525,8 @@ export function MachinesPage() {
             {t("machines.pair.add")}
           </button>
         </div>
-      </div>
+      }
+    >
 
       {rosterCode ? (
         <div className="rounded border border-border p-6 text-sm text-muted-foreground" data-testid="machines-error">
@@ -762,6 +765,6 @@ export function MachinesPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -2043,7 +2043,7 @@
   },
   "facetIntro": {
     "title": "Mil facetas — la Plaza de Materiales para Agentes",
-    "subtitle": "Un agente reúne habilidades, referencias MCP y personas — las plantillas de equipo también pueden declarar memoria, un panel y una plantilla de puestos; explora, suscríbete, publica e instala en Claude Code / Cursor con una sola línea",
+    "subtitle": "Los agentes empaquetan habilidades, referencias MCP y personas. Algunos paquetes son todo un equipo: puestos, cadencia y reporte se declaran, así que instalarlo en una plataforma lo pone en marcha según su calendario. Explora, suscríbete, publica e instala en el editor de IA que ya usas con una sola línea.",
     "factRow": "Navegación anónima; inicia sesión para publicar y suscribirte (la misma identidad que Platform)",
     "ctaPacks": "Explorar agentes",
     "ctaMcp": "Ver servicios MCP",
@@ -2077,6 +2077,43 @@
       "edgeSubscribeNote": "Las credenciales MCP ya están conectadas en Platform",
       "edgeCli": "instalación por CLI",
       "edgeCliNote": "instantánea de la habilidad en disco; referencias MCP impresas"
+    },
+    "targetsLabel": "Se instala en:",
+    "teamTemplates": {
+      "title": "Algunos agentes son todo un equipo",
+      "body": "Una plantilla de equipo empaqueta más que personas: declara los puestos, cuándo se ejecuta cada uno, qué cifras reporta, quién entrega qué a quién y qué cuenta como terminado. Instálala en una plataforma y obtienes un equipo creado a partir de ella, ejecutándose según su cadencia declarada.",
+      "facet": {
+        "roles": {
+          "title": "Puestos",
+          "body": "Cada puesto es una persona más una cara de herramientas acotada: lo que puede usar se declara y no se concede nada de más."
+        },
+        "cadence": {
+          "title": "Cadencia",
+          "body": "Un cron y una zona horaria por puesto, escalonados a propósito. La página del mercado lo muestra; no lo ejecuta."
+        },
+        "slots": {
+          "title": "Ranuras de reporte",
+          "body": "Qué claves rellenar al cierre y cómo se cuenta cada una están declarados, no a improvisación del modelo."
+        },
+        "edges": {
+          "title": "Aristas de orquestación",
+          "body": "Quién entrega resultados a quién se declara como aristas: un traspaso roto se ve, no es probabilístico."
+        },
+        "acceptance": {
+          "title": "Aserciones de aceptación",
+          "body": "Aserciones estructuradas definen qué significa «esta ronda está hecha», en lugar de un párrafo de prosa."
+        }
+      }
+    },
+    "creationPath": {
+      "title": "De una frase a un equipo en marcha",
+      "body": "El estudio convierte una descripción en un paquete publicable y luego el paquete en un equipo. Los cuatro pasos ocurren en un solo lugar.",
+      "stage1": "Describe el equipo",
+      "stage2": "Una persona adopta el borrador",
+      "stage3": "Forja y publica",
+      "stage4": "Crea el equipo desde la plantilla",
+      "gate": "El modelo redacta; adoptar es un acto humano: nada de lo que escribió el modelo entra en un paquete hasta que alguien lo adopta.",
+      "cta": "Abrir el estudio"
     }
   },
   "facetFooter": {

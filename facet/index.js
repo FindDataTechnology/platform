@@ -112,9 +112,15 @@ app.get("/api/health", (_req, res) => res.json({ ok: true, service: "facet" }));
 // `accessMode` (add-opening-gates) exposes the effective publish/deploy
 // posture (closed = creator group required; open = any authenticated user).
 const accessMode = String(process.env.PACK_ACCESS_MODE || "").toLowerCase() === "open" ? "open" : "closed";
+// Whether THIS deployment can actually start a login. `logtoAuth` is null when
+// the Logto config is missing (see the createLogtoAuth catch above), and the
+// shell must not offer a login entry it cannot honour — the link would 404.
+// Reported in every branch, signed in or not: the shell decides before it knows
+// who you are.
+const loginEnabled = Boolean(logtoAuth);
 app.get("/api/whoami", (req, res) => {
   const user = resolveUser(req);
-  if (!user) return res.json({ email: null, groups: [], creator: false, admin: false, accessMode, vendors: [] });
+  if (!user) return res.json({ email: null, groups: [], creator: false, admin: false, accessMode, loginEnabled, vendors: [] });
   const groups = user.groups ?? [];
   res.json({
     email: user.email,
@@ -122,6 +128,7 @@ app.get("/api/whoami", (req, res) => {
     creator: creatorGroups.some((g) => groups.includes(g)),
     admin: adminGroups.some((g) => groups.includes(g)),
     accessMode,
+    loginEnabled,
     // Vendor supply-open: active bindings for the SPA's publish attribution
     // picker and the onboarding console. Capability stays server判定 — this
     // is a display projection only (design D1).
