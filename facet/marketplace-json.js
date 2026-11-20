@@ -37,8 +37,15 @@ export function curatedPackIds(env = process.env) {
 // curation filter outright rather than intersecting it.
 export function loadListedPacks(registry, { viewer = null, env = process.env } = {}) {
   const whitelist = curatedPackIds(env);
-  const listed = (p) =>
-    whitelist.length > 0 ? whitelist.includes(p.id) : Boolean(p.category || p.featured);
+// Admission is VISIBILITY, not curation — the ONE rule, mirrored verbatim by
+// paas/scripts/plaza-export.mjs admissionPredicate. Curation (`category`,
+// `featured`) is presentation-level only (pack-marketplace spec) and MUST NOT
+// decide whether a material reaches a catalog. Before 2026-11-20 both sides used
+// `category || featured` and therefore agreed on the wrong answer.
+const listed = (p) =>
+  whitelist.length > 0
+    ? whitelist.includes(p.id)
+    : !p?.unlisted && (p?.visibility ?? "public") === "public";
   const out = [];
   for (let page = 1; page <= 50; page += 1) {
     const { packs = [], total = 0 } = registry.list({ page, pageSize: 100, viewer });

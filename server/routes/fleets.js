@@ -1972,6 +1972,18 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
         // weighs edges by it. Pre-v2 rows carry no chain and simply do not
         // appear (honest absence, not a zero).
         edgeTraffic: db.edgeTraffic(owned.fleet.id),
+        // Version read face (harden-agent-runtime-spine 3.5): attempts grouped
+        // by the configuration that produced them. Each row carries its own
+        // denominator and sample sizes; `unnamed` holds the attempts with no
+        // fingerprint rather than folding them into a version. Null when the
+        // fleet has no attempt rows at all (distinct from "no versions").
+        versions: (() => {
+          try {
+            return db.fingerprintGroups?.({ fleetId: owned.fleet.id, sinceMs: Date.now() - 30 * 24 * 3600_000 }) ?? [];
+          } catch {
+            return null;
+          }
+        })(),
         health: {
           onDuty: statusCounts.on_duty ?? 0,
           paused: statusCounts.paused ?? 0,

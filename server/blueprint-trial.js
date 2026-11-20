@@ -178,6 +178,15 @@ export async function runTrial({ blueprint, deps, timeoutMs = 10 * 60_000, pollM
     assertions: [],
     green: false,
     errors: [],
+    // runtime-revision (harden-agent-runtime-spine 5.2): the trial is evidence
+    // ABOUT A CONFIGURATION, so it carries that configuration's fingerprint.
+    // A report without one cannot gate a promotion — "we tested it" is only
+    // meaningful about the exact content that gets promoted. `deps` supplies
+    // it (the caller composes + hashes); absent = no promotion may cite this
+    // report (decidePromotion treats a null `trial.fingerprint` as untied, so
+    // the read face must not assume one).
+    fingerprint: null,
+    revisionId: null,
   };
   const view = { ownerEmail: blueprint.ownerEmail, content: blueprint.content ?? {} };
 
@@ -204,6 +213,16 @@ export async function runTrial({ blueprint, deps, timeoutMs = 10 * 60_000, pollM
     }
     report.fleetId = provisioned.fleetId;
     report.deduped = Boolean(provisioned.deduped);
+    // The fingerprint of what was ACTUALLY provisioned. `deps.fingerprintFor`
+    // composes + hashes the deployment's real artifacts; a deployment that
+    // cannot report one leaves the report untied, and promotion will refuse to
+    // cite it rather than assume.
+    try {
+      report.fingerprint = (await deps.fingerprintFor?.({ fleetId: provisioned.fleetId, packId: blueprint.castPackId })) ?? null;
+      report.revisionId = report.fingerprint;
+    } catch (e) {
+      report.errors.push(`fingerprint unavailable for the trial: ${e?.message || e}`);
+    }
 
     // 起点火：同一写面语义（state active + cadence 启用 + reconcile）。
     await deps.startFleet(provisioned.fleetId);

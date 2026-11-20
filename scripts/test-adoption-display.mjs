@@ -35,7 +35,7 @@ function fakeRegistry(rows) {
 const OFFICIAL = "publisher@finddatatech.cloud";
 const COMMUNITY = "someone@example.com";
 
-function row(id, { official = false, adopted = false, category = "data", featured = false } = {}) {
+function row(id, { official = false, adopted = false, category = "data", featured = false, unlisted = false, visibility = "public" } = {}) {
   return {
     id,
     version: 1,
@@ -43,6 +43,8 @@ function row(id, { official = false, adopted = false, category = "data", feature
     description: `${id} desc`,
     category,
     featured,
+    unlisted,
+    visibility,
     authorEmail: official ? OFFICIAL : COMMUNITY,
     // adopted 是 registry 的 SQL 投影（is_adopted）；official 故意不放在行上，
     // 谁把它放上来谁就绕过了 roster——本文件正是钉这条。
@@ -92,14 +94,17 @@ test("display: legacy rows are byte-identical (no provenance key at all)", async
   );
 });
 
-test("display: admission and ordering are untouched by provenance", async () => {
-  // 未 curated（无 category、非 featured）的条目，即使 official+adopted 也不进清单
+test("display: admission is visibility, untouched by curation or provenance", async () => {
+  // 入列由可见性决定，策展字段不参与（pack-marketplace spec：策展只影响呈现）。
+  // unlisted 与被显式设为 private 的条目缺席；未策展但公开的条目在列。
   const plugins = await fetchPlugins([
     row("listed", { category: "data" }),
-    row("unlisted", { category: "", featured: false, official: true, adopted: true }),
+    row("uncurated", { category: "", featured: false, official: true, adopted: true }),
+    row("unlisted", { category: "data", unlisted: true }),
+    row("private", { category: "data", visibility: "private" }),
   ]);
   const ids = plugins.map((p) => p.name);
-  assert.deepEqual(ids, ["listed"], "curation admission must not be widened by provenance");
+  assert.deepEqual(ids, ["listed", "uncurated"], "visibility decides admission; curation and provenance do not");
 });
 
 test("display: provenance does not reorder the curated list", async () => {

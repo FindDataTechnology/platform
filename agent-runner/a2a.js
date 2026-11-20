@@ -17,7 +17,9 @@
 
 import express from "express";
 import { sessionKeyFor } from "./child.js";
+import { agentKeyFor } from "./compose.js";
 import { agentPortFor } from "../lib/agent-serving.js";
+import { createTaskRegistry } from "./tasks.js";
 
 function jsonRpcError(id, code, message) {
   return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
@@ -69,6 +71,18 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
   // comment frames ride only while an ask is pending.
   const liveAsks = new Map();
   const keepaliveMs = Number(config.askKeepaliveMs ?? process.env.SERVING_ASK_KEEPALIVE_MS) || 15_000;
+  // Live task registry (a2a-task-handle). In-memory by design — see
+  // agent-runner/tasks.js for why the durable record lives on the platform
+  // side and this is only the "what is happening right now" view.
+  const tasks = config.taskRegistry ?? createTaskRegistry();
+  // The segment a minted task id carries so two agents on one runner never
+  // collide. Derived from the agent's own key, not a counter.
+  const taskPrefix = (() => {
+    const raw = String(agentKeyFor(entry) || "agent").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return raw.slice(0, 24) || "agent";
+  })();
+  let taskSeq = 0;
+  const mintTaskId = () => `${taskPrefix}-${Date.now().toString(36)}-${(taskSeq++).toString(36)}`;
 
   let warnedOpen = false;
   app.use((req, res, next) => {
@@ -106,8 +120,57 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
     if (req.body?.jsonrpc !== "2.0" || typeof method !== "string") {
       return res.status(200).json(jsonRpcError(id, -32600, "Invalid Request"));
     }
-    if (method !== "message/send" && method !== "message/stream") {
+    if (method !== "message/send" && method !== "message/stream" && method !== "tasks/get" && method !== "tasks/cancel" && method !== "tasks/resubscribe") {
       return res.status(200).json(jsonRpcError(id, -32601, "Method not found"));
+    }
+    // ── tasks/* (a2a-task-handle) ─────────────────────────────────────────────
+    // answer from the LIVE registry. `unknown` is its own state: this process
+    // having no record is not "not found" and not "failed".
+    if (method === "tasks/get" || method === "tasks/cancel" || method === "tasks/resubscribe") {
+      const taskId = params?.task_id ?? params?.taskId ?? params?.id ?? null;
+      if (!taskId) return res.status(200).json(jsonRpcError(id, -32602, "task_id required"));
+      if (method === "tasks/get") {
+        // Enrich the live view with the claim's terminal word when the live
+        // row already settled — one vocabulary on the wire.
+        return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+      }
+      if (method === "tasks/cancel") {
+        const message = params?.message ?? params;
+        const contextId = message?.context_id ?? message?.contextId ?? tasks.get(taskId)?.context_id ?? null;
+        const sessionId = sessionKeyFor(contextId ?? `${entry.path}`);
+        // Refuse to cancel what is already over, and say what it is — an
+        // overwritten terminal state would erase why it ended.
+        const before = tasks.get(taskId);
+        if (before && before.state !== "running") {
+          return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+        }
+        const out = await manager.cancelTurn(entry, sessionId);
+        if (out.stopped === "unsupported") {
+          return res.status(200).json(jsonRpcError(id, -32013, "this harness has no cancel lane; the turn was not stopped"));
+        }
+        if (out.stopped === "not-running") {
+          // Nothing to stop: the honest answer is whatever the registry says
+          // (usually the task already settled), never a fake "cancelled".
+          return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+        }
+        tasks.cancel(taskId, { by: `caller:${params?.cancelled_by ?? "unknown"}` });
+        return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+      }
+      // tasks/resubscribe: no per-task event buffer is kept (see tasks.js), so
+      // the honest answer is the CURRENT state with an explicit note on why no
+      // delta replay exists, plus the settled result when there is one.
+      const described = tasks.describe(taskId);
+      return res.status(200).json({
+        jsonrpc: "2.0",
+        id: id ?? null,
+        result: {
+          ...described,
+          replay: "terminal-only",
+          ...(described.state === "unknown"
+            ? { note: "this runner keeps no history for tasks from before its last restart" }
+            : { note: "incremental replay is not provided; the settled result is delivered in full" }),
+        },
+      });
     }
     const message = params?.message ?? params;
     const text = textOf(message);
@@ -127,12 +190,36 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
     if (depth >= (config.delegationDepthMax ?? 3)) {
       return res.status(200).json(jsonRpcError(id, -32011, `delegation depth bound (${config.delegationDepthMax ?? 3}) reached`));
     }
+    // ── task handle (a2a-task-handle 4.1) ─────────────────────────────────
+    // A task id is minted at ACCEPT, before execution, and returned on BOTH
+    // send shapes. A caller that supplied one (`params.task_id`) keeps it —
+    // that is what makes a retried call address the same task; otherwise we
+    // mint. Hoisted out of the try so the catch can settle the same task.
+    // The facade forwards the address it minted (a2a-task-handle 4.7) so both
+    // sides name one task; a direct caller may supply it in params instead.
+    const forwardedTaskId = typeof req.headers["x-task-id"] === "string" && req.headers["x-task-id"] ? req.headers["x-task-id"] : null;
+    const suppliedTaskId = forwardedTaskId ?? (typeof params?.task_id === "string" && params.task_id ? params.task_id : null);
+    const taskId = suppliedTaskId ?? mintTaskId();
+    tasks.open({ taskId, agentKey: agentKeyFor(entry), sessionId, contextId: contextId ?? null, text });
+
     try {
       if (method === "message/send") {
         // No answerer on a synchronous turn: the harness declines any ask at
         // once (caller-cannot-answer), so the reply arrives on its usual path.
-        const out = await manager.turn(entry, sessionId, text, { kind: "message", delegationDepth: depth, visitorScope: visitorScopeOf(message) });
-        return res.json({ jsonrpc: "2.0", id, result: assistantMessage(contextId ?? sessionId, out.text) });
+        try {
+          const out = await manager.turn(entry, sessionId, text, { kind: "message", delegationDepth: depth, visitorScope: visitorScopeOf(message) });
+          const reply = assistantMessage(contextId ?? sessionId, out.text);
+          tasks.settle(taskId, { state: "done", result: reply });
+          return res.json({ jsonrpc: "2.0", id, result: { ...reply, task_id: taskId } });
+        } catch (e) {
+          // The task settles by the same terminal vocabulary the claim uses:
+          // a stopped-from-outside turn is `cancelled`, never `error`.
+          const cancelled = tasks.get(taskId)?.state === "cancelled" || e?.code === -32013;
+          tasks.settle(taskId, cancelled
+            ? { state: "cancelled", cancelledBy: "caller" }
+            : { state: "error", error: { code: e?.code ?? -32003, message: e?.message || "agent failure" } });
+          throw e;
+        }
       }
       // 流式与披露闸在语义上不兼容 (add-principal-disclosure-gate 1.7)：delta 是
       // 边生成边发的，出口闸拿到全文时前半句已经到了对端。要么破坏流式（缓冲全
@@ -212,9 +299,17 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
         settleAsk();
       }
       send("message", assistantMessage(contextId ?? sessionId, out.text));
-      res.write("event: done\ndata: {}\n\n");
+      tasks.settle(taskId, { state: "done", result: assistantMessage(contextId ?? sessionId, out.text) });
+      res.write(`event: done\ndata: ${JSON.stringify({ task_id: taskId })}\n\n`);
       return res.end();
     } catch (e) {
+      // Same closed vocabulary as the send path: a caller-initiated stop is a
+      // cancellation, anything else is an error. `taskId` is hoisted, so both
+      // shapes settle the same address.
+      const cancelled = tasks.get(taskId)?.state === "cancelled" || e?.code === -32013;
+      tasks.settle(taskId, cancelled
+        ? { state: "cancelled", cancelledBy: "caller" }
+        : { state: "error", error: { code: e?.code ?? -32003, message: e?.message || "agent failure" } });
       if (res.headersSent) {
         res.write(`event: error\ndata: ${JSON.stringify({ code: e.code ?? -32003, message: e.message })}\n\n`);
         return res.end();

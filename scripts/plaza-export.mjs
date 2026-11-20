@@ -49,9 +49,17 @@ const CATEGORY_ENUM = ["pack", "skill", "mcp", "facade", "official-data"];
 const SKILLS_PAGE_SIZE = 500;
 
 // ── admission predicate — mirror of facet/marketplace-json.js loadListedPacks ──
+// Admission is VISIBILITY, not curation (pack-marketplace spec: "Curation state
+// SHALL be presentation-level only"). Until 2026-11-20 this was
+// `category || featured`, which silently dropped 16 public, installable packs —
+// 13 of them facade packs — from every machine surface while the G1 gate stayed
+// green (both sides used the same wrong predicate, so comparing them proved
+// nothing). The anonymous browse face already answers public-only, so the
+// predicate only has to exclude explicitly unlisted rows.
 export function admissionPredicate(pack, whitelist = []) {
   if (whitelist.length > 0) return whitelist.includes(pack.id);
-  return Boolean(pack.category || pack.featured);
+  if (pack?.unlisted) return false;
+  return (pack?.visibility ?? "public") === "public";
 }
 
 // ── fetch with bounded retry (design risk: anonymous facet read may 429) ──

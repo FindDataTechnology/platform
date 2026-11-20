@@ -1403,6 +1403,46 @@ export class ChildManager {
     return this.turn(entry, sessionId, prompt, { kind: "self" });
   }
 
+  /**
+   * Stop one session's turn (harden-agent-runtime-spine, a2a-task-handle).
+   *
+   * This is the RUNNER half of `tasks/cancel`; the facade owns the task ledger
+   * and calls in over HTTP. "Cancel" means the execution actually stops, not a
+   * flag at the door: the session's turn is aborted through the adapter's
+   * native `session/cancel` when it reports that capability, and the caller
+   * is told which of the four outcomes happened.
+   *
+   * Returns `{ ok, stopped }` where `stopped` distinguishes:
+   *   "not-running" — nothing on this session right now (no-op, honest)
+   *   "cancelled"   — the abort reached the runtime
+   *   "unsupported" — the harness has no cancel lane; NOT reported as stopped
+   *
+   * The refusal is deliberate in the last case: a harness that cannot abort
+   * must not be presented as one that did.
+   */
+  async cancelTurn(entry, sessionId) {
+    const key = agentKeyFor(entry);
+    const route = this.groups.get(key) ?? { childKey: key, pod: false };
+    const child = this.children.get(route.childKey);
+    if (!child) return { ok: true, stopped: "not-running" };
+    // The adapter's own active-session map is the only honest "is something
+    // running here" answer (the same probe the external-context reap uses).
+    if (typeof child.isActive === "function" && child.isActive(sessionId) === false) {
+      return { ok: true, stopped: "not-running" };
+    }
+    const caps = (() => {
+      try { return child.adapter?.capabilities?.() ?? {}; } catch { return {}; }
+    })();
+    if (caps.cancel !== true) return { ok: true, stopped: "unsupported" };
+    const wireId = route.pod ? DshHarnessAdapter.wireSessionId(key, sessionId) : sessionId;
+    try {
+      await child.request("session/cancel", { sessionId: wireId });
+      return { ok: true, stopped: "cancelled" };
+    } catch (e) {
+      return { ok: false, stopped: "error", message: e?.message || String(e) };
+    }
+  }
+
   #meterLine(key, kind, info) {
     try {
       mkdirSync(path.dirname(this.config.meterFile), { recursive: true });

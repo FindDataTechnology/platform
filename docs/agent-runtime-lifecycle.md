@@ -94,3 +94,95 @@ that turned a 90-second mystery into a one-line answer.
   machine's headless Chromium has no advancing audio clock (`duration=0.40`, `play()` resolves,
   `currentTime` stays 0.00), so the assertion observes the host. It is documented at the line and
   left intact — on a lane with a real sink it is meaningful.
+
+## Turn claims — "this attempt exists", and beating
+
+The claim lane answers a question the ledger could not: **did this attempt happen at all?**
+`member_turn_events` is written at the END of a turn, so a pod roll mid-turn used to leave
+nothing on disk — the run header stayed open with 0 turns, and the orphan sweep later
+guessed `failed` for something that was really "stopped from outside, re-runnable".
+
+`lib/turn-claim.js` (rules, pure) + `lib/turn-claim-store.js` (the `turn_claims` table).
+
+- **One write point.** `server/fleet-runs.js::begin()` writes the claim. All three execution
+  paths (cron serial, worker pool, delegation ruling) reach `begin`, so no lane can forget.
+  The claim is written **before** the run broadcasts and before any lane can prompt.
+- **A claim that cannot be written fails the turn** (`TURN_CLAIM_FAILED`), and the in-memory
+  handle is unregistered so nothing else picks it up. Executing without a claim is
+  indistinguishable, afterwards, from never having run.
+- **Liveness is a heartbeat, not an inference.** `heartbeat_at` is renewed by the ledger (one
+  tick in `server.js`, coalesced to one persist per half-heartbeat). A lapsed lease is closed
+  by the sweeper as **`lease_expired`** — a sweep is the only place expiry becomes a fact.
+- **The terminal set is closed**: `ok | failed | interrupted | cancelled | lease_expired`.
+  `interrupted` / `lease_expired` / `cancelled` are **not failures** — they must never sit in a
+  failure-rate denominator. `end()` derives the reason from the ROW's status (`skipped` closes
+  nothing), so the claim and the ledger can never disagree.
+- **Claim and measurement are separate tables, by force.** The export contract is an
+  AUTOINCREMENT-id increment (`export_platform.mjs --after-id`): an UPDATE to an exported row is
+  never re-sent, and re-sending the row is refused as a rewrite. So mutable fields live on the
+  claim; `member_turn_events` stays append-only.
+
+Read-face states (`deriveClaimState`): `running`, `stalled`, `lease_passed`, `closed_ok`,
+`closed_failed`, `closed_cancelled`, `dead`, `never_dispatched`, `undetermined`,
+`pre_contract`, `indeterminate`. Every board/console/task-query reads this ONE derivation —
+`stalled`/`lease_passed` are open AND unhealthy at once, and an absent claim with no evidence is
+`undetermined`, never the comfortable `never_dispatched`.
+
+### Knobs
+
+| Env | Default | Meaning |
+|---|---|---|
+| `TURN_CLAIM_HEARTBEAT_MS` | `30000` | Beat interval; persists at most once per half-interval |
+| `TURN_CLAIM_LEASE_MS` | `3 × heartbeat` | Past it with no beat ⇒ the sweeper closes `lease_expired` |
+| `TURN_CLAIM_STALL_MS` | `2 × heartbeat` | Board says "stalled" before the sweeper acts |
+| `TURN_CLAIM_CONTRACT_EPOCH` | unset | Start of the contract; attempts before it derive `pre_contract` |
+
+### Triage
+
+| Symptom | Conclude |
+|---|---|
+| Board says `lease_passed`, sweeper has not closed it | sweep tick has not run (hourly); the claim is telling the truth |
+| A run is `interrupted` with 0 turns | the turn died before writing a row — the claim (if any) names who held it and when the last beat was |
+| `undetermined` on an attempt the engine says started | a claim writer fault — check `TURN_CLAIM_FAILED` in the log |
+| `pre_contract` spread over recent days | `TURN_CLAIM_CONTRACT_EPOCH` was never set after deploy |
+
+## Runtime revisions — versions whose identity is their content
+
+A revision is a version of a deployment's running **configuration**. Its id IS its
+fingerprint (`lib/runtime-fingerprint.js`), so "roll back to v3" is a lookup, not a guess:
+either the content reproduces or the rollback is refused.
+
+Rules (`lib/runtime-revision.js`, pure; storage in `lib/revision-store.js`):
+
+- **Identity is content.** Two paths to the same fingerprint are ONE revision
+  (trial-then-promote vs straight deploy do not create two "versions").
+- **A trial is evidence about a fingerprint.** `runTrial` stamps the fingerprint of what it
+  actually provisioned; a report about a different build is refused at attach time, not
+  stored as if it were about this one.
+- **Promotion needs a green trial under the same fingerprint** — or an audited human
+  override that carries **who** and **why**. A reason without a name is not an audit trail.
+- **Rollback is a pointer move that must reproduce.** The route re-materializes the target
+  and hashes it; a mismatch is `diverged` and a refusal to re-derive is `cannot-reproduce`.
+  An approximation of the old version is worse than an honest refusal, because it looks fixed.
+- **One active revision per deployment**, set inside the same transaction that writes the
+  audit row. "v3" of two different packs are unrelated — the deployment key is part of it.
+
+Routes (`server/routes/revisions.js`), owner-gated like the rest of the fleet surface:
+
+| Route | Verb | Refusals you should expect |
+|---|---|---|
+| `/api/revisions/:deployment` | GET | — (a never-promoted deployment answers `active: null`) |
+| `/api/revisions/:deployment` | POST | `FINGERPRINT_REQUIRED`, `trial-fingerprint-mismatch` |
+| `/api/revisions/:deployment/promote` | POST | `no-trial`, `trial-not-green`, `override-needs-reason`, `already-active` (no-op) |
+| `/api/revisions/:deployment/rollback` | POST | `diverged`, `cannot-reproduce` |
+
+Triage: a rollback refused as `diverged` means a dependency moved under the label — fix the
+label (new revision) rather than forcing the pointer. A promotion refused as `no-trial` is
+the gate doing its job; if you must go around it, the override is recorded and visible.
+
+Worked example (version chain):
+
+```
+  edit one skill → new bundle_fp → revise candidate → trial (green, same fp)
+      → promote (pointer moves, audit row) → rollback (reproduces → allowed)
+```

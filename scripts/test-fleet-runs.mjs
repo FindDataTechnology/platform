@@ -678,7 +678,10 @@ test("orphan sweep: a header whose turn never wrote a row is closed past grace; 
   assert.equal(fleetDb.getRun(stale.runId).status, "open");
   assert.equal(fleetDb.reclaimOrphanRuns(), 1, "only the stale zero-turn header is reclaimed");
   const gone = fleetDb.getRun(stale.runId);
-  assert.equal(gone.status, "failed");
+  // `interrupted`, not `failed`: nothing was concluded here — a pod roll killed
+  // a turn that never wrote a row, and that is the re-runnable shape. Counting
+  // it as a failure pollutes the failure rate it is measured in.
+  assert.equal(gone.status, "interrupted");
   assert.equal(gone.turns, 0);
   assert.equal(gone.endedAt, stale.startedAt, "closed at its own start — nothing ever happened");
   assert.equal(fleetDb.getRun(live.runId).status, "open", "in-flight stays open");
@@ -734,13 +737,15 @@ test("leaked header: a run whose turn finished but never settled is closed by th
   assert.equal(fleetDb.getRun(fresh.runId).status, "open");
 
   // A zero-row header stays open here — the DB-level orphan sweep owns that
-  // verdict (it closes it as failed); the ledger must not second-guess it.
+  // verdict; the ledger must not second-guess it.
   const zeroRow = before.begin(rootJob("f_run", "m_up", "j_zero"), { startedAt: Date.now() - 3 * 3600_000 });
   assert.equal(after.sweepOpenRuns(), 0, "a zero-row header is left to the orphan sweep");
   assert.equal(fleetDb.getRun(zeroRow.runId).status, "open");
-  // …and the orphan sweep does close it, at its own start, as failed.
+  // …and the orphan sweep closes it, at its own start, as `interrupted`: the
+  // turn was stopped from outside before it could write anything, which is the
+  // re-runnable shape, not a failure.
   assert.equal(fleetDb.reclaimOrphanRuns(), 1);
-  assert.equal(fleetDb.getRun(zeroRow.runId).status, "failed");
+  assert.equal(fleetDb.getRun(zeroRow.runId).status, "interrupted");
 });
 
 // ── interrupted-beat catch-up (add-rollout-gap-durability) ──────────────────

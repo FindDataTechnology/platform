@@ -102,6 +102,26 @@ export function LoginPage() {
           {loginFooterText}
         </p>
       )}
+      {/* 备案号（门面家具 spec）：应用壳无站点页脚，落未登录访客必经的登录页。
+          号码是法律标识，逐字不翻译。 */}
+      <p className="mt-3 flex flex-wrap items-center justify-center gap-x-3 text-xs text-muted-foreground">
+        <a
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-foreground"
+        >
+          粤ICP备2026118740号-1
+        </a>
+        <a
+          href="https://beian.mps.gov.cn/#/query/webSearch?code=44030002016558"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-foreground"
+        >
+          粤公网安备44030002016558号
+        </a>
+      </p>
       {links && (
         <nav data-testid="login-hero-links" className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           {links.map((link) => (

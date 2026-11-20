@@ -317,6 +317,11 @@ export function recordTurnEvent(db, job, outcome, { startedAt, endedAt, model = 
     parentTurnId: ledgerTurn?.parentTurnId ?? request.chain?.parentTurnId ?? null,
     edgeKind: ledgerTurn?.edgeKind ?? request.chain?.edgeKind ?? null,
     traceTurnId: ledgerTurn?.traceTurnId ?? null,
+    // runtime-fingerprint 3.3: the attempt's configuration identity, read off
+    // its claim (the claim is where it was fixed at START). Null when the
+    // attempt carries none — the read face says "no fingerprint" rather than
+    // inferring one from today's tree.
+    runtimeFingerprint: ledgerTurn?.runtimeFingerprint ?? null,
     metering: meteringOf(request, job, outcome),
     pricing: pricingOf(shaped),
   });

@@ -1078,7 +1078,7 @@ export function FleetsPage() {
                   {...(isCrossOrigin(studioDocHref(detail.blueprintId))
                     ? { target: "_blank", rel: "noopener" }
                     : {})}
-                  className="mt-2 inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="mt-2 inline-flex items-center gap-1 rounded-full border border-border inline-flex h-7 items-center px-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                   data-testid="fleet-source-blueprint"
                 >
                   <Blocks className="h-3.5 w-3.5" />

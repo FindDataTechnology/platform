@@ -528,6 +528,14 @@ export function createFleetDatabase({ file } = {}) {
     "cost_output_usd REAL",
     "cost_cache_write_usd REAL",
     "cost_cache_read_usd REAL",
+    // Runtime fingerprint (harden-agent-runtime-spine, runtime-fingerprint 3.3):
+    // the configuration identity of the attempt, stamped at INSERT time. It is
+    // NOT mutable — an attempt runs under one configuration — so it is safe on
+    // an append-only row, and having it here means the version comparison reads
+    // the same table it already aggregates cost and latency from (no join to
+    // the claim for the common read). NULL = "no fingerprint was computed",
+    // never a guessed one.
+    "runtime_fingerprint TEXT",
   ]) {
     try {
       db.exec(`ALTER TABLE member_turn_events ADD COLUMN ${col}`);
@@ -1668,8 +1676,8 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
                                           turn_id, run_id, parent_turn_id, edge_kind, usage_input, usage_output, trace_turn_id, detail,
                                           preset_id, preset_source, provider, effort, carrier, carrier_instance, lane_id, depth, wave,
                                           usage_cached_input, usage_input_max, usage_cache_write, usage_reasoning, queue_wait_ms, spin_up_ms, ttft_ms, pricing_at,
-                                          cost_input_usd, cost_output_usd, cost_cache_write_usd, cost_cache_read_usd)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                          cost_input_usd, cost_output_usd, cost_cache_write_usd, cost_cache_read_usd, runtime_fingerprint)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(turn_id) DO NOTHING
         `)
         .run(
@@ -1681,6 +1689,9 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
           Number.isFinite(pricing?.outputUsd) ? pricing.outputUsd : null,
           Number.isFinite(pricing?.cacheWriteUsd) ? pricing.cacheWriteUsd : null,
           Number.isFinite(pricing?.cacheReadUsd) ? pricing.cacheReadUsd : null,
+          // runtime-fingerprint 3.3: the attempt's configuration identity, or
+          // NULL when none was computed. Never fabricated.
+          typeof event.runtimeFingerprint === "string" && event.runtimeFingerprint ? event.runtimeFingerprint : null,
         );
     } catch (e) {
       // 别再猜原因。这句以前写死成「metering columns unavailable」，于是锁竞争、
@@ -2288,6 +2299,75 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       }));
   }
 
+  // ── runtime-fingerprint read face (harden-agent-runtime-spine 3.5) ─────────
+  //
+  // Group attempts by the configuration that produced them. The rules the
+  // query must obey (spec runtime-fingerprint):
+  //   • the success-rate DENOMINATOR is attempts whose status is a verdict
+  //     (ok / failed) — `interrupted`, `cancelled`, `lease_expired` and
+  //     `skipped` are outcomes that say nothing about quality, so they are
+  //     counted separately and excluded;
+  //   • unmetered attempts (no usage) are counted and visible, never in a rate;
+  //   • attempts with NO fingerprint form their own row (fingerprint null),
+  //     never folded into a real version and never dropped.
+  //
+  // Money and latency are sums over the rows that HAD the number, with the
+  // sample size (`pricedTurns` / `timedTurns`) beside them so a "$0.00 over 1
+  // turn" cannot be read as a fleet-wide average.
+  function fingerprintGroups({ fleetId = null, sinceMs = null, memberId = null } = {}) {
+    const where = [];
+    const args = [];
+    if (fleetId) { where.push("fleet_id = ?"); args.push(fleetId); }
+    if (memberId) { where.push("member_id = ?"); args.push(memberId); }
+    if (sinceMs != null) { where.push("started_at >= ?"); args.push(sinceMs); }
+    const rows = db
+      .prepare(`
+        SELECT runtime_fingerprint AS fp,
+               COUNT(*) AS attempts,
+               SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,
+               SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+               SUM(CASE WHEN status IN ('interrupted','cancelled','lease_expired','skipped') THEN 1 ELSE 0 END) AS not_a_verdict,
+               SUM(CASE WHEN usage_input IS NULL AND usage_output IS NULL THEN 1 ELSE 0 END) AS unmetered,
+               SUM(CASE WHEN cost_input_usd IS NOT NULL THEN 1 ELSE 0 END) AS priced_turns,
+               SUM(COALESCE(cost_input_usd,0) + COALESCE(cost_output_usd,0)
+                   + COALESCE(cost_cache_write_usd,0) + COALESCE(cost_cache_read_usd,0)) AS cost_usd,
+               SUM(CASE WHEN ended_at IS NOT NULL AND started_at IS NOT NULL THEN 1 ELSE 0 END) AS timed_turns,
+               SUM(CASE WHEN ended_at IS NOT NULL AND started_at IS NOT NULL THEN ended_at - started_at ELSE 0 END) AS duration_ms
+        FROM member_turn_events
+        ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+        GROUP BY runtime_fingerprint
+        ORDER BY attempts DESC
+      `)
+      .all(...args);
+    return rows.map((r) => {
+      const verdicts = r.ok_count + r.failed_count;
+      return {
+        fingerprint: r.fp ?? null,
+        // Explicit: a row with no fingerprint is "not measured", not a version.
+        unnamed: r.fp == null,
+        attempts: r.attempts,
+        verdicts,
+        ok: r.ok_count,
+        failed: r.failed_count,
+        notAVerdict: r.not_a_verdict,
+        unmetered: r.unmetered,
+        // Null (not 1, not 0) when there is no verdict to divide by: an
+        // undefined rate must not read as "0 % success".
+        successRate: verdicts > 0 ? r.ok_count / verdicts : null,
+        unmeteredShare: r.attempts > 0 ? r.unmetered / r.attempts : null,
+        cost: {
+          usd: r.priced_turns > 0 ? r.cost_usd : null,
+          pricedTurns: r.priced_turns,
+          perAttemptUsd: r.priced_turns > 0 ? r.cost_usd / r.priced_turns : null,
+        },
+        duration: {
+          meanMs: r.timed_turns > 0 ? Math.round(r.duration_ms / r.timed_turns) : null,
+          timedTurns: r.timed_turns,
+        },
+      };
+    });
+  }
+
   // Hourly sweep (D10): closed headers past the window go; open ones never.
   // Turn rows are pruned on their own dual condition at append time and here
   // (a quiet cell with no new turns still ages out). Returns counts.
@@ -2314,8 +2394,15 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
   // close — the settle backstop fires on engine-terminal tasks, and a lost
   // turn produces none. Left alone these squat the list forever (prod
   // 2026-10-26: run_d92b41 sat open 7 hours with zero turns, from a pod roll
-  // mid-turn). A header with no turn rows, still open past the grace window,
-  // is closed as `failed` — honest: something started and never finished.
+  // mid-turn).
+  //
+  // The verdict used to be `failed`, and that was wrong in exactly the case
+  // this sweep mostly sees: a pod roll kills a turn that was running fine.
+  // "Ran and concluded badly" and "was stopped from outside and can be re-run"
+  // are different facts with different remedies (fix the code vs re-fire), and
+  // counting the second as the first pollutes the failure rate it is measured
+  // in. `interrupted` is the honest word, and the run has no row to contradict
+  // it — the orphan case is DEFINED by the absence of a turn row.
   function reclaimOrphanRuns({ now = Date.now(), graceMs = 30 * 60_000 } = {}) {
     const cutoff = now - graceMs;
     const rows = db
@@ -2326,7 +2413,7 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       `)
       .all(cutoff);
     for (const r of rows) {
-      db.prepare("UPDATE fleet_runs SET status = 'failed', ended_at = ?, turns = 0 WHERE run_id = ?").run(r.started_at, r.run_id);
+      db.prepare("UPDATE fleet_runs SET status = 'interrupted', ended_at = ?, turns = 0 WHERE run_id = ?").run(r.started_at, r.run_id);
     }
     return rows.length;
   }
@@ -2553,6 +2640,7 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     listRuns,
     listRunTurns,
     edgeTraffic,
+    fingerprintGroups,
     spendProjection,
     getFleetByConsoleSlug,
     pruneRuns,
@@ -2962,6 +3050,9 @@ function deserializeTurnEvent(row) {
     usage: usageOf(row),
     traceTurnId: row.trace_turn_id ?? null,
     detail: parseDetail(row.detail),
+    // runtime-fingerprint 3.3: the attempt's configuration identity, or null
+    // when none was computed. The version-comparison read face groups on this.
+    runtimeFingerprint: row.runtime_fingerprint ?? null,
     // Turn metering (add-turn-metering): read-face for the API/cockpit —
     // honest absence stays null.
     presetId: row.preset_id ?? null,

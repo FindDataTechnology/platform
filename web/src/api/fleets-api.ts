@@ -12,7 +12,11 @@ export interface RunListEntry {
   startedAt: number;
   endedAt: number | null;
   durationMs: number | null;
-  status: "open" | "ok" | "failed" | "partial";
+  // `interrupted` (harden-agent-runtime-spine): the run was stopped from the
+  // outside before it concluded — a pod roll mid-turn, never a code defect.
+  // It is NOT a failure: the failure rate and the re-run face both key off
+  // `failed`, and a re-runnable attempt must not read as one.
+  status: "open" | "ok" | "failed" | "partial" | "interrupted";
   turns: number;
   okCount: number;
   failedCount: number;

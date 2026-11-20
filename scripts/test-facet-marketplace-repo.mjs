@@ -92,11 +92,12 @@ test("插件树：技能 SKILL.md 带 frontmatter、辅助文件原样落、agen
   } finally { await cleanup(); }
 });
 
-test("收录与端点同源：策展在列、未策展缺席、unlisted 缺席", async () => {
+test("收录与端点同源：公开在列（无论策展）、unlisted 缺席", async () => {
   const { registry, cleanup } = await boot();
   try {
     const listed = registry.publish({ email: AUTHORS.email, manifest: manifest("A") });
     registry.setCuration({ id: listed.id, actor: ACTOR, category: "data", featured: false });
+    // 未策展但公开——策展是呈现层，不能决定它进不进清单（pack-marketplace spec）。
     const uncurated = registry.publish({ email: AUTHORS.email, manifest: manifest("B") });
     const gone = registry.publish({ email: AUTHORS.email, manifest: manifest("C") });
     registry.setCuration({ id: gone.id, actor: ACTOR, category: "data", featured: false });
@@ -104,11 +105,12 @@ test("收录与端点同源：策展在列、未策展缺席、unlisted 缺席",
 
     const built = repoMod.buildMarketplaceRepo(registry, { env: {} });
     const ids = built.manifest.plugins.map((p) => p.name);
-    assert.deepEqual(ids, [listed.id]);
-    assert.equal(built.plugins.has(uncurated.id), false);
+    // 准入按集合断言：registry.list 的排序（最新在前）不属于本判据。
+    assert.deepEqual([...ids].sort(), [listed.id, uncurated.id].sort());
+    assert.equal(built.plugins.has(uncurated.id), true);
     assert.equal(built.plugins.has(gone.id), false);
 
-    // Same source the endpoint reads — assert the two sets directly.
+    // Same source the endpoint reads — the two sets, and their order, must agree.
     const direct = jsonMod.loadListedPacks(registry, { env: {} }).map((p) => p.id);
     assert.deepEqual(direct, ids);
   } finally { await cleanup(); }
@@ -123,8 +125,8 @@ test("白名单覆写：FACET_MARKETPLACE_PACK_IDS 决定清单，且两面一�
     assert.deepEqual(built.manifest.plugins.map((p) => p.name), [a.id]);
     const direct = jsonMod.loadListedPacks(registry, { env }).map((p) => p.id);
     assert.deepEqual(direct, [a.id]);
-    // 无白名单时同一包缺席（策展门生效）
-    assert.deepEqual(repoMod.buildMarketplaceRepo(registry, { env: {} }).manifest.plugins, []);
+    // 无白名单时同一包仍在列：公开即可入列，策展不参与（本 change 前它缺席）
+    assert.deepEqual(repoMod.buildMarketplaceRepo(registry, { env: {} }).manifest.plugins.map((p) => p.name), [a.id]);
   } finally { await cleanup(); }
 });
 

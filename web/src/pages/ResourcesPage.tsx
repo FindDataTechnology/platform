@@ -336,10 +336,10 @@ function ResourceCard({
               className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 py-0.5 text-xs"
               data-testid="resource-tag-input"
             />
-            <button type="button" className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted" onClick={() => void onSaveTags()} data-testid="resource-tag-save">
+            <button type="button" className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted" onClick={() => void onSaveTags()} data-testid="resource-tag-save">
               {t("common.save")}
             </button>
-            <button type="button" className="rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted" onClick={() => setEditingTags(false)} data-testid="resource-tag-cancel">
+            <button type="button" className="inline-flex h-7 items-center rounded-md px-2 text-xs text-muted-foreground hover:bg-muted" onClick={() => setEditingTags(false)} data-testid="resource-tag-cancel">
               {t("common.cancel")}
             </button>
           </div>
@@ -357,7 +357,7 @@ function ResourceCard({
               type="button"
               disabled={memoryOff}
               title={memoryOff ? t("memory.degraded.unavailable") : undefined}
-              className="ml-auto rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="ml-auto inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void onRemember()}
               data-testid="resource-remember"
             >
@@ -367,7 +367,7 @@ function ResourceCard({
               type="button"
               disabled={memoryOff}
               title={memoryOff ? t("memory.degraded.unavailable") : undefined}
-              className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => void onToggleCanon()}
               data-testid="resource-tier-toggle"
             >
@@ -377,7 +377,7 @@ function ResourceCard({
               type="button"
               disabled={memoryOff}
               title={memoryOff ? t("memory.degraded.unavailable") : undefined}
-              className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-7 items-center rounded-md border border-border px-2 text-xs hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               onClick={openTagEditor}
               data-testid="resource-tag-edit"
             >
@@ -420,7 +420,7 @@ function ResourceCard({
                   </span>
                   <button
                     type="button"
-                    className="ml-auto rounded-md border border-primary/40 px-2 py-0.5"
+                    className="ml-auto inline-flex h-7 items-center rounded-md border border-primary/40 px-2"
                     onClick={() => void viewAsOf(null)}
                     data-testid="asof-return"
                   >
@@ -484,7 +484,7 @@ function ResourceCard({
         </span>
         {resource.sessionId && sessionExists ? (
           <button
-            className="rounded-md border border-border px-2 py-0.5 hover:bg-muted"
+            className="inline-flex h-7 items-center rounded-md border border-border px-2 hover:bg-muted"
             onClick={jumpToSource}
             data-testid="resource-jump"
           >
@@ -493,7 +493,7 @@ function ResourceCard({
         ) : null}
         {resource.type === "file" && fileUrl ? (
           <a
-            className="rounded-md border border-border px-2 py-0.5 hover:bg-muted"
+            className="inline-flex h-7 items-center rounded-md border border-border px-2 hover:bg-muted"
             href={fileUrl}
             download={resource.title}
             data-testid="resource-download"
@@ -503,7 +503,7 @@ function ResourceCard({
         ) : null}
         {!editing ? (
           <button
-            className="rounded-md border border-border px-2 py-0.5 hover:bg-muted"
+            className="inline-flex h-7 items-center rounded-md border border-border px-2 hover:bg-muted"
             onClick={() => setEditing(true)}
             data-testid="resource-rename"
           >
@@ -511,7 +511,7 @@ function ResourceCard({
           </button>
         ) : null}
         <button
-          className="rounded-md border border-destructive/40 px-2 py-0.5 text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          className="inline-flex h-7 items-center rounded-md border border-destructive/40 px-2 text-destructive hover:bg-destructive/10 disabled:opacity-50"
           onClick={() => setDeleteOpen(true)}
           disabled={busy}
           data-testid="resource-delete"
@@ -687,7 +687,7 @@ export function ResourcesPage({ send }: ResourcesPageProps) {
                 {unionTags.map((tag) => (
                   <button
                     key={`tag-${tag}`}
-                    className={`shrink-0 rounded-md px-2 py-0.5 text-xs border ${
+                    className={`inline-flex h-7 shrink-0 items-center rounded-md px-2 text-xs border ${
                       tagFilterState.includes(tag) ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted"
                     }`}
                     onClick={() => toggleTagFilter(tag)}

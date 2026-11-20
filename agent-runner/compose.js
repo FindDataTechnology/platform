@@ -48,6 +48,7 @@ import {
 // descriptor arrives from the registry, so the runner never assumes it was
 // validated).
 import { SECRET_NAME_RE, maskSecretRef } from "../lib/agent-serving.js";
+import { computeRuntimeFingerprint } from "../lib/runtime-fingerprint.js";
 
 // ── Home ownership guard (fix-agent-serving-stability 3.1) ───────────────────
 // The home tree must be owned by the identity the child runtime runs as: a
@@ -328,7 +329,27 @@ export async function materializeAgentHome({ homeRoot, agentKey, entry, skillCon
     if (Number.isInteger(quotaMb) && quotaMb > 0) dataQuotaMb = quotaMb;
   }
 
-  return { home, presetId, patchPaths, skillsRoot, dataDir, dataQuotaMb };
+  // Runtime fingerprint (runtime-fingerprint): computed from what was ACTUALLY
+  // materialized above — the preset text this home now carries, the skill
+  // bodies on disk, the MCP set that survived the public-face narrowing, and
+  // the allowlist the filter received. Not from the registry entry: an entry
+  // can drift from the home that exists (a failed upgrade, a stale cache), and
+  // the home is what the child boots on.
+  //
+  // Model/provider/effort/matrix are NOT reachable here (they are deployment
+  // config the runner reads at spawn); they ride in on `spec` when the caller
+  // has them, and their absence is recorded as absent rather than guessed.
+  const runtimeFingerprint = computeRuntimeFingerprint({
+    persona: extraPresets[0]?.persona ?? descriptor.persona ?? null,
+    skills: (descriptor.skills ?? []).map((p) => ({ name: String(p).split("/").pop(), body: skillContents?.[p] ?? "" })),
+    mcpServers: (servedMcp ?? []).map((s) => ({
+      name: s?.config?.serverName ?? s?.id ?? "",
+      url: s?.config?.url ?? "",
+    })),
+    toolAllowlist: mcpTools ?? descriptor.mcpTools ?? null,
+  });
+
+  return { home, presetId, patchPaths, skillsRoot, dataDir, dataQuotaMb, runtimeFingerprint };
 }
 
 // The child-visible workspace env (facet-mcp-foundation-v1 3.1): AGENT_DATA_DIR
@@ -768,5 +789,21 @@ export async function materializePackHome({ homeRoot, packId: _packId, memberSpe
     if (quotas.length) dataQuotaMb = Math.max(...quotas);
   }
 
-  return { home, presetIds, patchPaths, skillsRoot, dataDir, dataQuotaMb };
+  // Fingerprint from the materialized shape (see materializeAgentHome's note):
+  // the union of skill bodies the pod carries, the MCP set that survived the
+  // public-face narrowing, and the union allowlist the tool filter received.
+  // Persona text is the concatenation of every member preset — for a co-hosted
+  // pod the CONFIG is the set of members, so two pods differing in one member's
+  // persona are two versions.
+  const runtimeFingerprint = computeRuntimeFingerprint({
+    persona: extraPresets.map((p) => `${p.id}:${p.persona}`).sort().join("\n---\n"),
+    skills: [...skillBodies].map(([name, body]) => ({ name, body })),
+    mcpServers: (servedMcp ?? []).map((s) => ({
+      name: s?.config?.serverName ?? s?.id ?? "",
+      url: s?.config?.url ?? "",
+    })),
+    toolAllowlist: Object.keys(union).length || Object.keys(byPreset).length ? { mcpTools: union, byPreset } : null,
+  });
+
+  return { home, presetIds, patchPaths, skillsRoot, dataDir, dataQuotaMb, runtimeFingerprint };
 }

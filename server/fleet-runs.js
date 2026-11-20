@@ -30,6 +30,7 @@ import { randomUUID } from "node:crypto";
 import { buildTurnRequest, assertTurnRequest } from "./turn-request.js";
 import { constraintsOf } from "./fleet-orchestration.js";
 import { resolveTurnPost, recordTurnEvent } from "./fleet-events.js";
+import { cellSourceFor, turnRefFor } from "../lib/turn-claim.js";
 
 export function mintId(prefix) {
   return `${prefix}_${randomUUID().replace(/-/g, "").slice(0, 20)}`;
@@ -64,6 +65,8 @@ function turnWire(handle, extra = {}) {
 
 export function createFleetTurnLedger({
   db,
+  claims = null,
+  fingerprintFor = null,
   broadcast = () => {},
   engineRecords = () => [],
   trace = null,
@@ -79,6 +82,111 @@ export function createFleetTurnLedger({
   // 生成、随该轮身份行只送到该轮运行时，强度与 header 同级，且与 carrier 无关。
   const byToken = new Map();
   const byMember = new Map(); // memberId → turnId[] (oldest first)
+
+  // ── claim lane (harden-agent-runtime-spine, agent-turn-claim) ─────────────
+  //
+  // The claim is written HERE and nowhere else: all three execution paths
+  // (cron serial, worker pool, delegation ruling) reach the ledger through
+  // `begin`, so this is the one write point. A claim failure fails the turn
+  // (spec: 认领未落库 ⇒ 明确失败) instead of letting an unrecorded attempt run —
+  // an execution with no claim is indistinguishable, afterwards, from one that
+  // never happened.
+  //
+  // The carrier source reuses the SAME 16-hex derivation the gateway uses for
+  // /data/cells/<hex>, so a claim and the cell export name the same cell.
+  const carrierSource = (() => {
+    const single = String(process.env.SINGLE_TENANT || "") === "1";
+    const email = process.env.CELL_USER_EMAIL || "";
+    try {
+      return cellSourceFor({ email, single });
+    } catch {
+      return cellSourceFor({ email: null, single: true });
+    }
+  })();
+
+  function claimRefFor(handle) {
+    return turnRefFor({ driver: "platform", source: carrierSource, runId: handle.runId, turnId: handle.turnId });
+  }
+
+  function openClaim(handle, { startedAt, fingerprint = null, fingerprintParts = null } = {}) {
+    if (!claims) return { ok: true, skipped: "no-claim-store" };
+    const turnRef = claimRefFor(handle);
+    if (!turnRef) return { ok: false, reason: "address-build-failed" };
+    const out = claims.claim({
+      turnRef,
+      driver: "platform",
+      source: carrierSource,
+      runId: handle.runId,
+      turnId: handle.turnId,
+      fleetId: handle.fleetId,
+      memberId: handle.memberId,
+      sessionId: handle.sessionId,
+      startedAt,
+      runtimeFingerprint: fingerprint,
+      runtimeFingerprintParts: fingerprintParts,
+    });
+    if (out?.ok) handle.claimRef = turnRef;
+    return out;
+  }
+
+  function closeClaim(handle, { reason, at = now(), cancelledBy = null } = {}) {
+    if (!claims || !handle?.claimRef) return null;
+    try {
+      return claims.close(handle.claimRef, { reason, at, cancelledBy });
+    } catch (e) {
+      console.warn(`[fleet-runs] claim close failed for ${handle.turnId}: ${e?.message || e}`);
+      return null;
+    }
+  }
+
+  /**
+   * The cell's own configuration identity, computed lazily ONCE per process
+   * (the composed patches and skills roots do not change mid-run; a roster
+   * refresh rewrites them and restarts the child). Injected by `server.js` as
+   * `fingerprintFor` so this module keeps no filesystem knowledge of its own.
+   *
+   * Absent injector ⇒ `null`, and the claim records "no fingerprint" — which is
+   * a stated value, not a guess.
+   */
+  let cachedFingerprint;
+  function cellFingerprintFor(presetId) {
+    if (typeof fingerprintFor !== "function") return null;
+    if (cachedFingerprint !== undefined && cachedFingerprint?.presetId === presetId) return cachedFingerprint;
+    try {
+      const fp = fingerprintFor({ presetId }) ?? null;
+      cachedFingerprint = fp ? { ...fp, presetId } : null;
+      return fp;
+    } catch (e) {
+      console.warn(`[fleet-runs] fingerprint unavailable for ${presetId ?? "(no preset)"}: ${e?.message || e}`);
+      return null;
+    }
+  }
+
+  function claimFingerprintMissing(handle) {
+    if (!claims || !handle?.claimRef) return false;
+    try {
+      return !claims.get(handle.claimRef)?.runtime_fingerprint;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * The outcome → terminal reason map. ONE function, so the closed vocabulary
+   * (spec: 终态是封闭词表) holds for every path: a `skipped` round produced no
+   * attempt and closes nothing; a hollow `ok` is already `interrupted` by
+   * `shapeTurnOutcome`, so we read the row's verdict instead of re-deriving it.
+   */
+  function reasonFor(event, outcome) {
+    if (event) {
+      if (event.status === "ok") return "ok";
+      if (event.status === "interrupted") return "interrupted";
+      if (event.status === "skipped") return null; // no attempt ⇒ nothing to close
+      return "failed";
+    }
+    if (outcome?.interrupted === true) return "interrupted";
+    return outcome?.ok === true ? "ok" : "failed";
+  }
 
   function emit(type, payload) {
     try {
@@ -109,7 +217,7 @@ export function createFleetTurnLedger({
 
   // `sessionIds`: every id this turn's runtime events may arrive under — the
   // stable mirror session and, for fleet rounds, the rotated child id.
-  function begin(job, { startedAt = now(), sessionIds = [] } = {}) {
+  function begin(job, { startedAt = now(), sessionIds = [], fingerprint = null, fingerprintParts = null } = {}) {
     const request = buildTurnRequest(job);
     const post = resolveTurnPost(db, request, rosterPresetId);
     if (!post?.fleetId || !post?.memberId) return null;
@@ -161,6 +269,40 @@ export function createFleetTurnLedger({
         trace.bindTurn?.(turnId);
       } catch { /* best-effort */ }
     }
+    // claim BEFORE the broadcast and before the caller can prompt: from here on
+    // the attempt exists on disk, whatever happens to this process.
+    // `fingerprint`/`fingerprintParts` ride in on meta when the caller computed
+    // one (the compose seam); absent = the attempt carries no fingerprint, and
+    // the read face says so instead of guessing.
+    const claimed = openClaim(handle, {
+      startedAt: handle.startedAt,
+      fingerprint,
+      fingerprintParts,
+    });
+    // No fingerprint from the caller (the runner-side compose path supplies
+    // one; the cell-side lanes do not): compute the CELL's own from its
+    // composed patches. Deferred to here rather than computed per-request so a
+    // busy cell reads the tree once, and a failure records "no fingerprint"
+    // instead of taking the turn down.
+    if (claimFingerprintMissing(handle)) {
+      const fp = cellFingerprintFor(job?.preset ?? null);
+      if (fp?.bundle) claims?.setFingerprint(handle.claimRef, fp.bundle, fp.parts);
+    }
+    if (claimed && claimed.ok === false) {
+      // A claim that cannot be written fails the attempt loudly (spec). Undo
+      // the in-memory registration so no lane can pick this handle up, and tell
+      // the caller — never execute an attempt with no claim.
+      unregister(handle);
+      throw Object.assign(new Error(`claim not recorded: ${claimed.reason || claimed.error || "unknown"}`), {
+        code: "TURN_CLAIM_FAILED",
+        claimFailure: claimed,
+      });
+    }
+    // The handle carries the fingerprint so the RESULT row (written at end)
+    // records the same identity the claim did — one value, two rows, per
+    // spec 3.3. Read back from the claim so a caller-supplied fingerprint and
+    // a computed one land identically.
+    handle.runtimeFingerprint = claims?.get?.(handle.claimRef)?.runtime_fingerprint ?? null;
     emit("fleet_run_updated", { run: db.getRun(runId) });
     emit("fleet_turn_started", turnWire(handle));
     return handle;
@@ -194,6 +336,12 @@ export function createFleetTurnLedger({
     } finally {
       unregister(handle);
     }
+    // Close the claim with the row's own verdict. `skipped` closes nothing (no
+    // attempt existed). The write is one-way, so a sweeper that already closed
+    // this attempt as lease_expired wins — and the row still records what the
+    // execution believed.
+    const reason = reasonFor(event, outcome);
+    if (reason) closeClaim(handle, { reason, at: event?.endedAt ?? meta?.endedAt ?? now() });
     emit(
       "fleet_turn_ended",
       turnWire(handle, {
@@ -290,8 +438,73 @@ export function createFleetTurnLedger({
     return closed;
   }
 
-  function hasTurnRows(runId) {
+  /**
+   * Beat every open claim this process knows about. Called on the same cadence
+   * as the trace flush / maintenance tick; a no-op without a claim store.
+   *
+   * Beating from the LEDGER (not from each execution lane) is the same
+   * one-write-point rule as `begin`: the lanes already register here, so a
+   * lane that forgot to beat cannot exist.
+   */
+  function heartbeat({ nowMs = now() } = {}) {
+    if (!claims) return 0;
+    let beaten = 0;
+    for (const h of open.values()) {
+      if (!h.claimRef) continue;
+      try {
+        const out = claims.heartbeat(h.claimRef, { nowMs });
+        if (out?.ok) beaten += 1;
+      } catch { /* a beat failure must never fail a live turn */ }
+    }
+    return beaten;
+  }
+
+  /**
+   * Close lapsed claims as `lease_expired` and, for each, tell the run header
+   * honestly: a run whose every attempt lapsed with nothing left to do settles
+   * from the rows as usual (they now exist), and the header no longer reads as
+   * "still running" purely because nobody closed it.
+   *
+   * Returns the claims it closed — the caller (server.js) logs and may relay.
+   */
+  function sweepClaims({ nowMs = now() } = {}) {
+    if (!claims) return [];
+    let closed = [];
     try {
+      closed = claims.sweep({ nowMs }) ?? [];
+    } catch (e) {
+      console.warn(`[fleet-runs] claim sweep failed: ${e?.message || e}`);
+      return [];
+    }
+    for (const c of closed) {
+      try {
+        // A lapsed attempt is evidence the run may now be quiescent; settle is
+        // already idempotent and refuses while anything is in flight.
+        settle(c.run_id, {});
+      } catch { /* settle degrades open by design */ }
+    }
+    return closed;
+  }
+
+  /**
+   * The one derivation used by every read face (board, console, task query).
+   * `everDispatched`/`startedAt` come from the caller that knows them; absent
+   * means "no evidence", which derives to `undetermined` rather than a guess.
+   */
+  function claimState(turnRef, { nowMs = now(), contractEpochMs = null, everDispatched = null, startedAt = null } = {}) {
+    if (!claims) return "indeterminate";
+    // A caller holding only a handle can pass its ref; a caller with a run+turn
+    // can build one against this cell's carrier.
+    const ref = turnRef ?? null;
+    if (!ref) return "indeterminate";
+    try {
+      return claims.stateOf(ref, { nowMs, contractEpochMs, everDispatched, startedAt });
+    } catch {
+      return "indeterminate";
+    }
+  }
+
+  function hasTurnRows(runId) {    try {
       return db.db?.prepare?.("SELECT COUNT(*) AS n FROM member_turn_events WHERE run_id = ?").get(runId)?.n > 0;
     } catch {
       return false;
@@ -407,5 +620,5 @@ export function createFleetTurnLedger({
     return { run, abortedTurns: aborted };
   }
 
-  return { begin, end, settle, sweepOpenRuns, chainFor, admission, lookupBySession, lookupByToken, lookupByMember, observedModelFor, tap, openTurns, stopRun, tapEnabled: traceTapEnabled };
+  return { begin, end, settle, sweepOpenRuns, sweepClaims, heartbeat, chainFor, admission, lookupBySession, lookupByToken, lookupByMember, observedModelFor, tap, openTurns, stopRun, tapEnabled: traceTapEnabled, claimState };
 }
