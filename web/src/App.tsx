@@ -520,9 +520,14 @@ export default function App() {
         <ToastV2Host closeLabel={t("common.close")} />
       </div>
 
-      {/* 万星跨线副驾的宿主已上移到任何早返回之前（见 loginRequired 分支上方的
-          `copilotHost`）——它必须在 /login、/share、/zhiyu 访客车道也能渲染，
-          否则「未登录早返回」会让退场闸整条不跑。 */}
+      {/* 万星跨线副驾的退场闸。它必须同时挂在「早返回」分支与这里的主布局：
+          早返回分支（/login、/share、/zhiyu 访客车道）拿的是同一份 copilotHost，
+          而**登录后的所有正常页面走的是这个 return**——2026-11-20 生产实测，
+          这里漏挂的直接后果是 /chat 上萬星 loader 注入的 420×80 iframe 一直
+          压在发送按钮上（elementFromPoint 命中 IFRAME，鼠标点不动发送；
+          键盘回车仍可发，所以问题很隐蔽）。守卫 dispatch 的结论由
+          shouldMountWanxingCopilot 给出：/chat 本就该退场。 */}
+      {copilotHost}
 
       {/* Copilot dock (add-line-boards-and-action-gate): iframe dock.
           Its entry is now page-held (scope-copilot-dock-to-line-surfaces) —

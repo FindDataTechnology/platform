@@ -89,12 +89,24 @@ test("App.tsx 的每个早返回分支都带上了 WanxingCopilotHost", () => {
   assert.match(src, loginBlock, "loginRequired 分支必须渲染 copilotHost + LoginPage");
 });
 
-test("宿主不再滞留在主布局里（防重复挂载 + 防回退）", () => {
+test("宿主只定义一次，且主布局里确实渲染它", () => {
   const src = readFileSync(new URL("../web/src/App.tsx", import.meta.url), "utf8");
+
+  // 只允许一处 `<WanxingCopilotHost />` —— 提取成常量，各分支复用同一份。
   const mounts = [...src.matchAll(/<WanxingCopilotHost \/>/g)];
-  assert.equal(
-    mounts.length,
-    1,
-    `宿主应只出现 1 次（提取成常量），实际 ${mounts.length} 次`,
+  assert.equal(mounts.length, 1, `宿主应只出现 1 次（提取成常量），实际 ${mounts.length} 次`);
+
+  // 2026-11-20 生产事故：这条断言原先写反了——它要求「宿主不再滞留在主布局里」，
+  // 于是把闸从正常页面里摘了出去。后果：/chat 上萬星 loader 注入的 420x80 iframe
+  // 无人隐藏，正好压在发送按钮上（elementFromPoint 命中 IFRAME），鼠标点发送无反应，
+  // 键盘回车还能发，所以很隐蔽。早返回分支要挂，主布局同样要挂——两者是互补的，
+  // 不是二选一。
+  // 主布局 = `const backgroundPath` 之后的那段 return。必须恰好有一次渲染，
+  // 且不能靠早返回分支里的那几个凑数（它们只覆盖 /login、/share、访客车道）。
+  const mainReturn = src.split("const backgroundPath")[1] ?? "";
+  assert.match(
+    mainReturn,
+    /^\s{6}\{copilotHost\}$/m,
+    "登录后的主布局必须渲染 copilotHost（否则 /chat 等页的退场闸不跑）",
   );
 });

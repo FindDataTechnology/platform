@@ -63,34 +63,18 @@ function record(id, status, detail) {
 // ── 1. 我正要发的那个 sha，在不在 main 的祖先线上 ────────────────────────────
 // 「从当前分支出片」是常规做法。若这个分支落后 main 上千笔，或者它从旧点分出
 // 而 baseCommit 不是 main 的祖先，出出去的片子就是旧的——而它照样 CI 全绿。
-//
-// The upstream ref is `gitee/main` locally (gitee is the development truth) but
-// `origin/main` in CI, where only the origin remote exists. Resolving only the
-// first made the CI run answer `unknown` → exit 2 → the image job fails on a
-// perfectly good tree. Look for the first ref that resolves, and say which one
-// was used so the log is not ambiguous about whose `main` was meant.
 {
   git("fetch", "--quiet", "gitee", "main");
-  const UPSTREAM_CANDIDATES = ["gitee/main", "origin/main"];
-  let upstream = null;
-  for (const ref of UPSTREAM_CANDIDATES) {
-    const r = git("rev-parse", "--verify", ref);
-    if (r.ok) {
-      upstream = { ref, sha: r.out };
-      break;
-    }
-  }
   const head = git("rev-parse", "HEAD");
-  const main = upstream ? { ok: true, out: upstream.sha } : { ok: false, err: `none of ${UPSTREAM_CANDIDATES.join(", ")} resolves` };
-  const label = upstream?.ref ?? "main";
+  const main = git("rev-parse", "gitee/main");
   if (!head.ok || !main.ok) {
-    record("base-on-main", "unknown", `无法解析 HEAD 或上游 main：${head.err ?? main.err}`);
+    record("base-on-main", "unknown", `无法解析 HEAD 或 gitee/main：${head.err ?? main.err}`);
   } else if (head.out === main.out) {
-    record("base-on-main", "ok", `HEAD == ${label} (${head.out.slice(0, 9)})`);
+    record("base-on-main", "ok", `HEAD == gitee/main (${head.out.slice(0, 9)})`);
   } else {
     const isAncestor = git("merge-base", "--is-ancestor", head.out, main.out);
     if (isAncestor.ok) {
-      record("base-on-main", "ok", `HEAD ${head.out.slice(0, 9)} 是 ${label} 的祖先（侧分支出片，合法）`);
+      record("base-on-main", "ok", `HEAD ${head.out.slice(0, 9)} 是 gitee/main 的祖先（侧分支出片，合法）`);
     } else {
       const behind = git("rev-list", "--count", `${head.out}..${main.out}`);
       const ahead = git("rev-list", "--count", `${main.out}..${head.out}`);
