@@ -73,7 +73,33 @@ export async function measureDirBytes(dir) {
 }
 
 /**
- * Cached meter. `read(root)` returns `{ workspaceBytes, sessionsBytes, totalBytes,
+ * Size of the SQLite session index and its WAL companions in one cell's data
+ * dir (`data/data/app.db*`). Walks only this directory's top level — the index
+ * lives at a fixed path, so a recursive walk would just re-count the same
+ * small set of files. A missing dir is 0 for the same reason as measureDirBytes.
+ */
+export async function measureIndexBytes(dir) {
+  let total = 0;
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.startsWith("app.db")) continue;
+    try {
+      const info = await lstat(path.join(dir, entry.name));
+      if (!info.isSymbolicLink()) total += Number(info.size) || 0;
+    } catch {
+      /* vanished mid-walk — count what we saw */
+    }
+  }
+  return total;
+}
+
+/**
+ * Cached meter. `read(root)` returns `{ workspaceBytes, sessionsBytes, indexBytes,
  * measuredAt, state }`; repeated reads inside the TTL reuse the last measurement
  * so a status poll cannot turn into 48 directory walks.
  */
@@ -90,11 +116,17 @@ export function createDiskMeter({ ttlMs = 5 * 60_000, budgets = null, now = Date
       if (hit && at - hit.at < ttlMs) return hit.value;
       const workspaceBytes = await measureDirBytes(path.join(root, "workspace"));
       const sessionsBytes = await measureDirBytes(path.join(root, "dsh", "sessions"));
-      const totalBytes = workspaceBytes + sessionsBytes;
+      // retain-chat-history 5.4: the session index (`app.db`) was the one growth
+      // store this meter could not see — on the heaviest cell it was 1.7 GiB,
+      // larger than the transcripts beside it. Bound it by retention (that is
+      // the fix); count it here so the budget stops under-reporting.
+      const indexBytes = await measureIndexBytes(path.join(root, "data", "data"));
+      const totalBytes = workspaceBytes + sessionsBytes + indexBytes;
       const b = effective();
       const value = {
         workspaceBytes,
         sessionsBytes,
+        indexBytes,
         totalBytes,
         measuredAt: new Date(at).toISOString(),
         state: classifyDisk(totalBytes, b),

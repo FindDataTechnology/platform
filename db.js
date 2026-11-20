@@ -1413,6 +1413,26 @@ const MIGRATIONS = [
       db.exec("CREATE INDEX IF NOT EXISTS idx_bots_fd_bot_binding ON bots(fd_bot_binding_id)");
     },
   },
+  {
+    version: 126,
+    // retain-chat-history (D3): report whether this file's freed pages can
+    // still be handed back to the filesystem. It is NOT an error that they
+    // cannot yet — a pre-existing database keeps auto_vacuum=0 (set above in
+    // initDb) until one VACUUM runs, which is a deliberate operator step on a
+    // 1.7 GiB file. Say which shape this file is in rather than pretending the
+    // switch took effect. `pack_usage_events`'s 180-day prune has the same
+    // shape; this is the reading that makes the gap visible.
+    apply: (db) => {
+      const mode = db.pragma("auto_vacuum", { simple: true });
+      if (mode === 2) {
+        console.log("[db] v126: auto_vacuum=INCREMENTAL — pruned pages reclaim to the filesystem");
+      } else {
+        console.warn(
+          "[db] v126: auto_vacuum is OFF on this file — pruning bounds the row count but the file keeps its size until one VACUUM runs (see retain-chat-history 5.1)"
+        );
+      }
+    },
+  },
 ];
 
 function nowIso() {
@@ -1540,6 +1560,14 @@ export async function initDb() {
       db = new Database(dbPath);
       openedDbPath = dbPath;
     }
+    // auto_vacuum MUST be set before the journal mode / first table on a FRESH
+    // file, or SQLite silently keeps 0 (measured 2026-11-21: vac→wal ⇒ 2,
+    // wal→vac ⇒ 0). Doing it in a migration cannot work — a migration runs
+    // inside a transaction, and the pragma is a no-op there. chat-retention
+    // (D3) needs INCREMENTAL so a prune can hand pages back to the filesystem;
+    // on an EXISTING file this only takes effect after one VACUUM, which is a
+    // deliberate operator step (migration 126 reports whether it is still due).
+    db.pragma("auto_vacuum = INCREMENTAL");
     db.pragma("journal_mode = WAL");
     db.pragma("journal_mode = WAL");
     db.pragma("foreign_keys = ON");

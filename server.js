@@ -15,6 +15,7 @@ import * as db from "./db.js";
 import * as trace from "./server/trace.js";
 import { resolvePersistedEffort } from "./server/effort-gate.js";
 import { startUsagePruneTimer } from "./server/usage-telemetry.js";
+import { startChatRetentionTimer } from "./server/chat-retention.js";
 import { matchPackListing } from "./server/pack-manifest-source.js";
 import * as bots from "./server/bots.js";
 import { attachCronRunner } from "./server/cron-runner.js";
@@ -1485,6 +1486,9 @@ const dshInit = initDshAgent()
 await Promise.all([documentsInit, dshInit]);
 await trace.initTrace();
 startUsagePruneTimer();
+// retain-chat-history 3.6: the session index is the one table that used to grow
+// without bound; its sweep runs on the same daily rhythm as usage telemetry.
+startChatRetentionTimer();
 
 // Agent is live: flip readiness and sync any client that connected mid-boot.
 // Only flipped when initDshAgent resolved — a degraded agent stays 503 and

@@ -78,8 +78,20 @@ test("a symlink is counted as a link, never followed out of the cell", async () 
   assert.ok(bytes < 4096, `symlink must not contribute the target's bytes (got ${bytes})`);
 });
 
-test("the meter caches per cell and refreshes after the TTL", async () => {
-  writeFileAt("cell-c/workspace/a.bin", 100);
+test("the session index (app.db*) counts toward the budget", async () => {
+  // retain-chat-history 5.4: the index was invisible to this meter even when it
+  // was the largest thing in the cell (1.7 GiB measured 2026-11-19).
+  writeFileAt("cell-index/data/data/app.db", 5000);
+  writeFileAt("cell-index/data/data/app.db-wal", 700);
+  writeFileAt("cell-index/data/data/documents.db", 999); // a sibling db is NOT the index
+
+  const meter = disk.createDiskMeter({ ttlMs: 5_000, budgets: { softBytes: 10_000, hardBytes: 20_000 } });
+  const indexed = await meter.read(path.join(TMP, "cell-index"));
+  assert.equal(indexed.indexBytes, 5700, "app.db + its WAL, not the sibling db");
+  assert.equal(indexed.totalBytes, 5700);
+});
+
+test("the meter caches per cell and refreshes after the TTL", async () => {  writeFileAt("cell-c/workspace/a.bin", 100);
   const root = path.join(TMP, "cell-c");
   let clock = 1_000_000;
   const meter = disk.createDiskMeter({

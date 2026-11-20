@@ -44,8 +44,29 @@ platform 自己那份就只剩账目与配置类表在慢慢变。
 `--execute` 必须带 `--backup`；有进程持有就拒删）。**只清 `trace_events` 一张表，
 不删文件、不改名**——另外 49 张表是活的。
 
-## 4. **不要用它判断凭据状态**
+## 3.5 会话索引的保留期：剪的是索引，不是对话（retain-chat-history）
 
+`chat_messages` 曾是这个库里**唯一没有保留策略**的增长表。现在它跟着会话一起被按
+`CHAT_RETENTION_DAYS`（默认 **90** 天）剪掉，判据是 `chat_sessions.updated_at`：
+
+- **剪索引 ≠ 删对话**：dsh transcripts（`dsh/sessions/*.jsonl.zstd`）是 store of record，
+  本策略一行都不碰。被剪的会话可以用 `scripts/rebuild-chat-index.mjs` 从 transcripts
+  原样重建回来（索引在 spec 里就是"可重建投影"）。
+- **逃生用法**：`CHAT_RETENTION_DAYS=0` 立即停止剪除（不执行任何 SQL）。
+- **窗口按会话算，不按单条消息**：翻出一年前的会话继续聊会刷新它的 `updated_at`，
+  它就该留下。按消息时间删会把"老会话的新回复"剪掉，比不剪更糟。
+- **文件不会自己变小，除非做过一次 VACUUM**：`auto_vacuum=INCREMENTAL` 只在**新建库**
+  上自动生效；存量库要手动 VACUUM 一次（迁移 v126 会在日志里如实报"仍待 VACUUM"）。
+  没做之前，剪除是有界的（行数降）但文件高水位不降。
+- **读数**：`GET /api/config` 的 `chatRetention` 给出窗口、索引里会话/消息数、
+  上次剪了多少、下次何时跑。
+
+采集时刻 2026-11-19：生产最重的那个 cell `data/data/app.db` **1.7 GiB**，其中
+`chat_messages` **1.31 GiB / 61,089 行**（assistant 行的 `blocks` 占 1.30 GiB，单条最大
+0.5 MiB）；同 cell `dsh/sessions` 951 MiB / 7,149 个 `.jsonl.zstd`。**索引比它索引的
+原始数据还大**——这就是本策略要修的东西。
+
+## 4. **不要用它判断凭据状态**
 这是 E13 那次错结论的来源：`user_registry_credentials` 在这份库里只有 2 行，
 `expires_at` 停在 `2026-09-29T12:10:20Z`，而**续期后的凭据落在 cell 自己的库**。
 拿这份库去读"凭据过期了吗"，会得到一个**看着很确定、实际指向一个月前**的答案。

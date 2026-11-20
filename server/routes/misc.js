@@ -28,6 +28,7 @@ import * as federatedRef from "../../federated-ref.js";
 import { doorOf, groupDoors } from "../lib/credential-doors.js";
 import { groupLinesByDoor, loadManifests } from "../lib/line-tracks.js";
 import { resolveVoiceConfig } from "./voice.js";
+import { chatRetentionStatus } from "../chat-retention.js";
 import { copilotEnabled, lineBoardsEnabled } from "../../lib/board-adapters.js";
 import { parseCopilotCardsEnv, resolveCopilotCard, COPILOT_SURFACES } from "../../packages/core/src/lib/copilot-card.ts";
 import { BUSINESS_ROLES, parseStoredAssignments, resolveAssignment } from "../roles.js";
@@ -604,6 +605,11 @@ export function registerMiscRoutes(ctx) {
         for (const surface of COPILOT_SURFACES) out[surface] = resolveCopilotCard(surface, { deployment });
         return out;
       })(),
+      // Session-index retention (retain-chat-history 4.1). Deliberately on this
+      // READ-ONLY config route rather than a second status endpoint: the
+      // operator needs "what is the window, when does it next run, what did the
+      // last sweep do" — this is the route those facts already belong to.
+      chatRetention: chatRetentionStatus(),
     });
   });
 
