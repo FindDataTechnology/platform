@@ -2286,7 +2286,16 @@
       "filesWithScripts": "{{count}} auxiliary files (scripts: {{scripts}})",
       "nextHintCluster": "Installed. Jump into the chat with the whole group — the lead role is already selected for you.",
       "openChatCluster": "Open chat & load group",
-      "bot": "Bot"
+      "bot": "Bot",
+      "connector": {
+        "title": "Connectors",
+        "pending": "{{count}} to connect",
+        "ready": "Required connectors are connected",
+        "readyOptional": "No required connectors",
+        "needsGrant": "Needs authorization",
+        "unknown": "Could not determine connection status",
+        "hint": "Connectors are managed in Settings → Connections; the related operations stay unavailable until they are connected."
+      }
     },
     "mine": {
       "empty": "No agents subscribed yet. Browse the market.",

@@ -2286,7 +2286,16 @@
       "filesWithScripts": "補助ファイル {{count}} 件（スクリプト：{{scripts}}）",
       "nextHintCluster": "インストール完了。グループ全体でチャットへ——リード役が自動選択済みです。",
       "openChatCluster": "チャットを開いてグループを読み込む",
-      "bot": "ボット"
+      "bot": "ボット",
+      "connector": {
+        "title": "コネクタ",
+        "pending": "{{count}} 件の接続が必要",
+        "ready": "必須コネクタは接続済み",
+        "readyOptional": "必須コネクタはありません",
+        "needsGrant": "承認が必要",
+        "unknown": "接続状態を確認できません",
+        "hint": "コネクタは「設定 → 接続」で管理します。接続するまで関連する操作は利用できません。"
+      }
     },
     "mine": {
       "empty": "まだ購読していません。市場をのぞいてみましょう。",

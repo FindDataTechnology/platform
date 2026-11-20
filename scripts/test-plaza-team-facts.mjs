@@ -6,7 +6,7 @@
 //   ② 机器面里**不出现** persona 正文与 promptTemplate 原文（散文不透出）
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -17,8 +17,14 @@ const { deriveTeam } = await import(pathToFileURL(path.join(root, "..", "lib", "
 // 该脚本对 `anchor.manifest` 调 teamFactsOf，等价于「manifest → 契约事实」。
 // 这里直接读脚本源码确认它没有另写一套收窄规则，再用 deriveTeam 对拍数据。
 const MANIFEST = path.join(root, "..", "..", "fleet-packs", "lex", "statute-update-fleet", "manifest.json");
+// `fleet-packs` is a SIBLING repo, reachable locally by accident and absent from
+// the CI runner and the public snapshot. Missing fixture = cannot judge, said
+// out loud; NOT a pass. (Same wording as test-blueprint-member-closure.mjs ⑦.)
+const NO_CROSS_REPO = existsSync(MANIFEST)
+  ? false
+  : "../fleet-packs 不在本树（跨仓夹具：CI runner 与公开快照都没有）——判不出，不是通过";
 
-test("槽位键同源：deriveTeam 与 plaza 契约事实逐字一致", async () => {
+test("槽位键同源：deriveTeam 与 plaza 契约事实逐字一致", { skip: NO_CROSS_REPO }, async () => {
   const m = JSON.parse(readFileSync(MANIFEST, "utf8"));
   const team = deriveTeam(m);
   assert.equal(team.state, "present");
@@ -38,7 +44,7 @@ test("槽位键同源：deriveTeam 与 plaza 契约事实逐字一致", async ()
   }
 });
 
-test("机器面不带散文：persona 与 promptTemplate 不进契约事实", async () => {
+test("机器面不带散文：persona 与 promptTemplate 不进契约事实", { skip: NO_CROSS_REPO }, async () => {
   const m = JSON.parse(readFileSync(MANIFEST, "utf8"));
   const personas = (m.agents ?? []).map((a) => a.persona).filter((p) => typeof p === "string" && p.length > 40);
   const prompts = (m.fleet.members ?? []).map((x) => x.cadence?.promptTemplate).filter((p) => typeof p === "string" && p.length > 40);

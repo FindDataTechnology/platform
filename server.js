@@ -128,6 +128,17 @@ import { startActionExpiryJob } from "./lib/action-expiry.js";
 import { recordRejection, prune, summarizeRejections } from "./lib/report-rejection-log.js";
 import { pickMemberIdentity, describeCandidates } from "./lib/member-identity.js";
 import { registerBoardRoutes } from "./server/routes/boards.js";
+import { maybeStartKfSyncJob } from "./server/archive/kf/scheduler.js";
+import { getKfDatabase } from "./server/archive/kf/db.js";
+import {
+  registerInputRequestRoutes,
+  startInputRequestExpiryJob,
+} from "./server/routes/input-requests.js";
+import { mountInputRequestMcp } from "./server/input-request-http.js";
+import { FLEET_BRIDGE_PATHS } from "./server/auth.js";
+import { registerTeamCardRoutes } from "./server/routes/team-cards.js";
+import { registerFleetCredentialPackRoutes } from "./server/routes/fleet-credential-pack.js";
+import { registerCredentialDegradationRoutes } from "./server/routes/credential-degradation.js";
 import { registerFlowRoutes } from "./server/routes/flows.js";
 // ERP 纵向 REST 服务面同源代理（add-erp-supply-chain-gateway-proxy）：
 // 客户端 X-ERP-* 一律剥离、服务端按会话注入、无会话 401（fail-closed）。

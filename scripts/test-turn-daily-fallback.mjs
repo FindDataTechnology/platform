@@ -60,6 +60,13 @@ test("降级写事件行时日汇总依然累加", () => {
       trace_turn_id TEXT, detail TEXT
     )
   `);
+  // The REAL migrate() creates this unique index on every boot (fleets-db.js:
+  // `CREATE UNIQUE INDEX ... ON member_turn_events(turn_id)`), and it is what
+  // the extended INSERT's `ON CONFLICT(turn_id)` targets. Dropping the table to
+  // simulate a legacy SHAPE without re-creating the index simulated a table the
+  // product can never have, and the upsert failed at PREPARE time — before the
+  // degradation path under test was ever reached. Fixture gap, not a defect.
+  db.db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_turn_events_turn_id ON member_turn_events(turn_id)");
 
   const out = recordTurnEvent(
     db,
@@ -115,6 +122,13 @@ test("正常路径与降级路径对同一天累加同一行", () => {
       trace_turn_id TEXT, detail TEXT
     )
   `);
+  // The REAL migrate() creates this unique index on every boot (fleets-db.js:
+  // `CREATE UNIQUE INDEX ... ON member_turn_events(turn_id)`), and it is what
+  // the extended INSERT's `ON CONFLICT(turn_id)` targets. Dropping the table to
+  // simulate a legacy SHAPE without re-creating the index simulated a table the
+  // product can never have, and the upsert failed at PREPARE time — before the
+  // degradation path under test was ever reached. Fixture gap, not a defect.
+  db.db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_turn_events_turn_id ON member_turn_events(turn_id)");
   recordTurnEvent(db, job("m_mix"), outcome, when);   // 降级路径
 
   const rows = db.db.prepare(

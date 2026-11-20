@@ -2286,7 +2286,16 @@
       "filesWithScripts": "{{count}} 个辅助文件（含脚本：{{scripts}}）",
       "nextHintCluster": "装好了。去对话整组开工——已为你自动切换到带头角色。",
       "openChatCluster": "去对话并载入整组",
-      "bot": "机器人"
+      "bot": "机器人",
+      "connector": {
+        "title": "连接器",
+        "pending": "{{count}} 项待接通",
+        "ready": "必需项已接通",
+        "readyOptional": "无必需连接器",
+        "needsGrant": "待授权",
+        "unknown": "无法确认连接状态",
+        "hint": "连接器由设置 → 连接管理；未接通时相关操作不可用。"
+      }
     },
     "mine": {
       "empty": "还没有订阅任何智能体。去市场看看。",
