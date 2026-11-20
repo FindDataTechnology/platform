@@ -253,6 +253,58 @@ export function recordMessage(sessionId, role, content, blocks, ownerUser = null
 // = everything (admin). The in-memory current-session merge respects the
 // scope: a shared runtime's current session belongs to whoever prompted last,
 // and must not leak into another user's list.
+// The in-memory live session's list row, for a session the SQL list does not
+// contain (a brand-new pre-mirror chat, or — with `excludeAutomated` — the
+// automation session this connection is viewing). Returns null when nothing
+// is known about that id.
+function liveSessionRow(sessionId) {
+  if (!sessionId || !db.isDbReady()) return null;
+  const meta = db.getSessionMeta(sessionId);
+  if (meta) {
+    return {
+      id: sessionId,
+      title: meta.title || "Untitled",
+      createdAt: meta.createdAt ?? null,
+      updatedAt: meta.updatedAt ?? null,
+      messageCount: meta.messageCount ?? 0,
+      path: meta.path || null,
+      agentPreset: meta.agentPreset || null,
+      workspace: meta.workspace || null,
+      projectId: meta.projectId ?? null,
+    };
+  }
+  // No SQLite row yet: only the LIVE session can be described from memory.
+  if (sessionId !== (sm?.getSessionId?.() ?? null)) return null;
+  const ctx = sm?.buildSessionContext?.() ?? { messages: [] };
+  return {
+    id: sessionId,
+    title: titleFromFirstUser(ctx.messages),
+    createdAt: null,
+    updatedAt: null,
+    messageCount: ctx.messages.length,
+    path: sm?.getSessionFile?.() ?? null,
+    agentPreset: presetSource?.() || null,
+    workspace: workspaceSource?.() || null,
+    projectId: db.getProjectByPath?.(workspaceSource?.() || null)?.id ?? null,
+  };
+}
+
+// Ensure a session the caller is viewing has a list row
+// (slim-session-list-feed). The user-facing list excludes automation sessions,
+// but the chat header resolves its title from the list — viewing a scheduled
+// run from the tasks page must still name it. Returns the same array identity
+// when the row is already present, so callers can use it unconditionally.
+// Scope-entitled only: never surfaces a row the requester may not see.
+export function ensureSessionInList(sessions, sessionId, scope) {
+  if (!sessionId || sessions.some((s) => s.id === sessionId)) return sessions;
+  const meta = db.isDbReady() ? db.getSessionMeta(sessionId) : null;
+  const entitled = !scope?.owner || scope.includeAll || !meta || meta?.owner === scope.owner;
+  if (!entitled) return sessions;
+  const row = liveSessionRow(sessionId);
+  if (!row) return sessions;
+  return [{ ...row, current: true }, ...sessions];
+}
+
 export async function listSessions(scope) {
   const currentId = sm?.getSessionId?.() ?? null;
 
@@ -291,20 +343,8 @@ export async function listSessions(scope) {
       !currentMeta ||
       currentMeta?.owner === scope.owner);
   if (currentId && currentVisible && !sessions.some((s) => s.id === currentId)) {
-    const ctx = sm?.buildSessionContext?.() ?? { messages: [] };
-    sessions.push({
-      id: currentId,
-      title: titleFromFirstUser(ctx.messages),
-      createdAt: null,
-      updatedAt: null,
-      messageCount: ctx.messages.length,
-      path: sm?.getSessionFile?.() ?? null,
-      agentPreset: presetSource?.() || null,
-      workspace: workspaceSource?.() || null,
-      // A brand-new pre-mirror session is attributed the same way a mirrored
-      // one will be (backing-path backtrace of the live workspace).
-      projectId: db.isDbReady() ? (db.getProjectByPath?.(workspaceSource?.() || null)?.id ?? null) : null,
-    });
+    const row = liveSessionRow(currentId);
+    if (row) sessions.push(row);
   }
 
   for (const s of sessions) s.current = s.id === currentId;
