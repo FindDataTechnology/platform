@@ -25,7 +25,7 @@
 // dock remembers the agent the main chat was on and restores it on close —
 // unless the user picked something else meanwhile, which then stands.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { Bot, Maximize2, Minimize2, X } from "lucide-react";
@@ -297,27 +297,39 @@ export function CopilotDock({ send, navCollapsed = false }: Props) {
   useEffect(() => {
     if (!open) return;
     window.dispatchEvent(new Event(BOARD_VIEW_REQUEST));
-  }, [open, boardLine]);
+  }, [open]);
 
+  // Sent on every change while the dock is open. The FIRST delivery is the
+  // iframe's onLoad (below), not this effect: `document.querySelector` can find
+  // the element before React has committed its src, and a message posted into a
+  // document that is still blank is dropped without an error (2026-11-20 prod:
+  // the model got `产品线/看板` only — page and view were lost this way, while
+  // board survived because it also rides the iframe URL).
+  // The payload lives in a ref so the callback is stable across renders: the
+  // iframe's onLoad fires ONCE, and a callback rebuilt afterwards would be a
+  // different function than the one React attached — the loaded frame would
+  // keep calling the closure it captured, i.e. the values from the render that
+  // created it (board only, no page/view) — exactly the 2026-11-20 symptom.
+  const contextPayloadRef = useRef({ boardLine, page: location.pathname, viewSummary: boardViewSummary });
+  contextPayloadRef.current = { boardLine, page: location.pathname, viewSummary: boardViewSummary };
+  const sendContext = useCallback(() => {
+    const frame = document.querySelector<HTMLIFrameElement>("[data-testid=copilot-frame]");
+    const { boardLine: line, page, viewSummary } = contextPayloadRef.current;
+    frame?.contentWindow?.postMessage(
+      { type: "copilot_context", board: line, page, viewSummary },
+      window.location.origin,
+    );
+  }, []);
+  // Re-send whenever the payload changes. Keyed on a derived string rather than
+  // the individual values: `sendContext` reads a ref, so the linter is right
+  // that those values are not dependencies OF THE CALLBACK — but a change in
+  // them must still produce a message, which this key expresses.
+  const contextKey = `${boardLine ?? ""}|${location.pathname}|${boardViewSummary ?? ""}`;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: contextKey is the point — the callback reads a ref, so a change in the payload is not visible to the linter but MUST re-send.
   useEffect(() => {
     if (!open) return;
-    const frame = document.querySelector<HTMLIFrameElement>("[data-testid=copilot-frame]");
-    if (!frame) return;
-    const send = () => {
-      frame.contentWindow?.postMessage(
-        {
-          type: "copilot_context",
-          board: boardLine,
-          page: location.pathname,
-          viewSummary: boardViewSummary,
-        },
-        window.location.origin,
-      );
-    };
-    send();
-    frame.addEventListener("load", send);
-    return () => frame.removeEventListener("load", send);
-  }, [boardLine, open, location.pathname, boardViewSummary]);
+    sendContext();
+  }, [open, sendContext, contextKey]);
 
   // The market tab's inspected pack (add-facet-copilot D2): subscribe while
   // the dock is open on the facet line and forward it into the embed. The
@@ -498,6 +510,7 @@ export function CopilotDock({ send, navCollapsed = false }: Props) {
           data-testid="copilot-frame"
           title={t("copilot.title", { defaultValue: "副驾" })}
           src={src}
+          onLoad={sendContext}
           className="min-h-0 flex-1 border-0"
         />
       ) : (
