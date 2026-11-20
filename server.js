@@ -700,6 +700,10 @@ if (ctx.DEMO_SANDBOX) {
   const wipe = () =>
     wipeSandboxSessions({
       isStreaming: () => ctx.isStreaming,
+      // Deliberately UNFILTERED (slim-session-list-feed): the demo sandbox must
+      // wipe every prior session, automation ones included — a filtered view
+      // here would leave them behind forever, which is the pile-up this wipe
+      // exists to prevent.
       listSessions: () => chatHistory.listSessions(),
       deleteSession: (id) => chatHistory.deleteSession(id),
       startNewSession: () => ctx.startNewSession(),

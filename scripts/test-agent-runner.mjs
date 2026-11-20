@@ -407,9 +407,11 @@ test("4.3 message/send runs a turn and returns text parts; unknown method is -32
     assert.equal(h.spawned.length, 1);
     assert.equal(h.spawned[0].client.calls.prompt.length, 2);
     assert.equal(h.spawned[0].client.calls.prompt[1].sessionId, h.spawned[0].client.calls.prompt[0].sessionId);
+    // `tasks/get` was this test's example of an unknown method until
+    // harden-agent-runtime-spine made it real; use a name that stays unknown.
     const unknown = await h.callAgent(ENTRY, "POST", "/", {
       headers: auth,
-      body: { jsonrpc: "2.0", id: 3, method: "tasks/get", params: {} },
+      body: { jsonrpc: "2.0", id: 3, method: "tasks/list", params: {} },
     });
     assert.equal(JSON.parse(unknown.text).error.code, -32601);
   } finally {

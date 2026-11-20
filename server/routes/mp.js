@@ -62,6 +62,9 @@ export function registerMpRoutes(ctx) {
       }
       let sessions = [];
       try {
+        // Deliberately NOT filtered by `excludeAutomated` (slim-session-list-feed
+        // filters only the USER-FACING list): this call resolves titles for
+        // pending asks, and an ask inside a scheduled session still needs one.
         sessions = await ctx.chatHistory.listSessions();
       } catch { /* degraded join, not a failed summary */ }
       const titles = new Map(sessions.map((s) => [s.id, s.title ?? null]));

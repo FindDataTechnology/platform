@@ -353,8 +353,13 @@ const syncReadyClient = async (ws) => {
     }
   }
 
-  const sessionRows = await chatHistory.listSessions(ctx.sessionScopeFor(ws));
-  const sessions = ctx.withTurnStatus?.(sessionRows) ?? sessionRows;
+  // User-facing list feed: automation sessions are excluded, the connection's
+  // own viewed session is put back (slim-session-list-feed) so opening a
+  // scheduled run still names it in the header.
+  const scope = ctx.sessionScopeFor(ws);
+  const sessionRows = await chatHistory.listSessions({ ...scope, excludeAutomated: true });
+  const listed = chatHistory.ensureSessionInList(sessionRows, ws.viewedSession, scope);
+  const sessions = ctx.withTurnStatus?.(listed) ?? listed;
   if (version !== ctx.sessionVersion) return;
   sendIfOpen(ws, {
     type: "sessions",
@@ -430,13 +435,17 @@ ctx.wss.on("connection", (ws, req) => {
   // connection's viewed session (add-session-ownership).
   if (ctx.session) {
     const version = ctx.sessionVersion;
+    const scope = ctx.sessionScopeFor(ws);
     chatHistory
-      .listSessions(ctx.sessionScopeFor(ws))
-      .then((sessions) => {
+      // User-facing feed: automation sessions excluded, this connection's
+      // viewed session put back (slim-session-list-feed).
+      .listSessions({ ...scope, excludeAutomated: true })
+      .then((rows) => {
         if (version !== ctx.sessionVersion) return;
+        const listed = chatHistory.ensureSessionInList(rows, ws.viewedSession, scope);
         sendIfOpen(ws, {
           type: "sessions",
-          sessions: ctx.withTurnStatus?.(sessions) ?? sessions,
+          sessions: ctx.withTurnStatus?.(listed) ?? listed,
           current: ws.viewedSession ?? (ctx.authEnabled ? null : chatHistory.currentSessionId()),
         });
       })
@@ -1118,8 +1127,10 @@ ctx.wss.on("connection", (ws, req) => {
 
       case "list_sessions": {
         const version = ctx.sessionVersion;
-        const sessionRows = await chatHistory.listSessions(ctx.sessionScopeFor(ws));
-  const sessions = ctx.withTurnStatus?.(sessionRows) ?? sessionRows;
+        const scope = ctx.sessionScopeFor(ws);
+        const sessionRows = await chatHistory.listSessions({ ...scope, excludeAutomated: true });
+        const listed = chatHistory.ensureSessionInList(sessionRows, ws.viewedSession, scope);
+        const sessions = ctx.withTurnStatus?.(listed) ?? listed;
         if (version === ctx.sessionVersion) {
           ws.send(
             JSON.stringify({
