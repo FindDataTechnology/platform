@@ -2329,7 +2329,7 @@
         "pending": "{{count}} à connecter",
         "ready": "Les connecteurs requis sont connectés",
         "readyOptional": "Aucun connecteur requis",
-        "needsGrant": "Autoriser en un clic",
+        "needsGrant": "Autorisation requise",
         "unknown": "Impossible de déterminer l'état de connexion",
         "hint": "Les connecteurs se gèrent dans Réglages → Connexions ; les opérations associées restent indisponibles tant qu'ils ne sont pas connectés."
       }

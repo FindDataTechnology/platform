@@ -2329,7 +2329,7 @@
         "pending": "{{count}} 项待接通",
         "ready": "必需项已接通",
         "readyOptional": "无必需连接器",
-        "needsGrant": "可一键授权",
+        "needsGrant": "待授权",
         "unknown": "无法确认连接状态",
         "hint": "连接器由设置 → 连接管理；未接通时相关操作不可用。"
       }

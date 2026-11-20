@@ -2329,7 +2329,7 @@
         "pending": "{{count}} to connect",
         "ready": "Required connectors are connected",
         "readyOptional": "No required connectors",
-        "needsGrant": "One-click authorize",
+        "needsGrant": "Needs authorization",
         "unknown": "Could not determine connection status",
         "hint": "Connectors are managed in Settings → Connections; the related operations stay unavailable until they are connected."
       }

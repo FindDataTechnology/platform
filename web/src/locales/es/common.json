@@ -2329,7 +2329,7 @@
         "pending": "{{count}} por conectar",
         "ready": "Los conectores obligatorios están conectados",
         "readyOptional": "No hay conectores obligatorios",
-        "needsGrant": "Autorizar con un clic",
+        "needsGrant": "Requiere autorización",
         "unknown": "No se pudo determinar el estado de conexión",
         "hint": "Los conectores se gestionan en Ajustes → Conexiones; las operaciones relacionadas no están disponibles hasta conectarlos."
       }

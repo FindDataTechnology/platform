@@ -17,6 +17,10 @@
 //                      "AI UI" side-tab tell; 1px hairline allowed
 //   native-confirm     window.confirm( and bare confirm( — batch ③ migrates
 //                      these to the themed ConfirmDialog
+//   tiny-control       a button/hit target authored below the 28px floor: `py-0.5`+text-xs,
+//                      `px-2 py-0.5`, `text-[10px]` inside a button, or an explicit
+//                      `h-5`/`h-6`. The floor exists because a 22px mouse target is a
+//                      miss (unify-workbench-ui: 379/452 buttons on one page meas）
 //
 // Ratchet semantics (scripts/design-lint-baseline.json):
 //   baseline maps "<file>" -> { "<rule>": allowedCount }.
@@ -55,6 +59,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const BASELINE_PATH = path.join(here, "design-lint-baseline.json");
 
+const TINY_CONTROL = /\b(?:h-5|h-6)\b|\bpy-0\.5\b|text-\[10px\]/g;
+
 export const RULES = [
   "hex-color",
   "raw-rgba",
@@ -62,6 +68,7 @@ export const RULES = [
   "named-color",
   "side-tab-border",
   "native-confirm",
+  "tiny-control",
   // openspec: web-design-system — micro-labels are script-aware. A label that
   // hardcodes its own tiny size (or re-adds uppercase/tracking on the label
   // roles) defeats the one semantic class and reads broken in Chinese: 10-11px
@@ -107,6 +114,7 @@ export function scanText(text) {
   bump("raw-rgba", (stripped.match(/\brgba?\(/g) || []).length);
   bump("named-color", (stripped.match(NAMED_COLOR) || []).length);
   bump("side-tab-border", (stripped.match(/\bborder-[lr]-(?:[2-9]\b|\[([2-9]\d*)px\])/g) || []).length);
+  bump("tiny-control", (stripped.match(TINY_CONTROL) || []).length);
   bump(
     "native-confirm",
     (stripped.match(/window\.confirm\(|(?<![A-Za-z0-9_$.])confirm\(/g) || []).length

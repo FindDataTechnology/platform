@@ -1,19 +1,110 @@
 {
+  "web/src/pages/AgentMarketPage.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/pages/AgentStudioPage.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/pages/AppCenterPage.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/pages/BoardsPage.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/pages/BotsPage.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/pages/ChatPage.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/pages/CustomPresetsPage.tsx": {
+    "tiny-control": 8
+  },
+  "web/src/pages/DocumentsPage.tsx": {
+    "tiny-control": 8
+  },
+  "web/src/pages/FleetPage.tsx": {
+    "tiny-control": 6
+  },
+  "web/src/pages/FleetsPage.tsx": {
+    "tiny-control": 36
+  },
+  "web/src/pages/InboxPage.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/pages/MachinesPage.tsx": {
+    "tiny-control": 7
+  },
+  "web/src/pages/MemoryPage.tsx": {
+    "tiny-control": 9
+  },
+  "web/src/pages/ResourcesPage.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/pages/TasksPage.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/pages/TeamDirectoryPage.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/pages/TracePage.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/pages/ZhiyuRoomPage.tsx": {
+    "tiny-control": 4
+  },
   "web/src/components/ActionCard.tsx": {
-    "side-tab-border": 1
+    "side-tab-border": 1,
+    "tiny-control": 1
+  },
+  "web/src/components/AssistantPicker.tsx": {
+    "tiny-control": 8
+  },
+  "web/src/components/AssistantTurn.tsx": {
+    "tiny-control": 7
+  },
+  "web/src/components/Chat.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/ChatHeader.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/ChatSessionMenu.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/ChatWelcome.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/Composer.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/ConnectCta.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/ControlStrip.tsx": {
+    "tiny-control": 9
   },
   "web/src/components/CronToolCard.tsx": {
-    "side-tab-border": 1
+    "side-tab-border": 1,
+    "tiny-control": 3
   },
   "web/src/components/EChart.tsx": {
     "hex-color": 11
   },
   "web/src/components/FleetGraph.tsx": {
-    "hex-color": 23
+    "hex-color": 23,
+    "tiny-control": 1
+  },
+  "web/src/components/HelpDialog.tsx": {
+    "tiny-control": 6
   },
   "web/src/components/Markdown.tsx": {
     "tw-arbitrary-color": 1,
-    "side-tab-border": 1
+    "side-tab-border": 1,
+    "tiny-control": 3
+  },
+  "web/src/components/OverlayPanel.tsx": {
+    "tiny-control": 3
   },
   "web/src/components/PlanPanel.tsx": {
     "side-tab-border": 1
@@ -21,25 +112,196 @@
   "web/src/components/QuestionCard.tsx": {
     "side-tab-border": 2
   },
+  "web/src/components/ShellErrorBoundary.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/Sidebar.tsx": {
+    "tiny-control": 9
+  },
+  "web/src/components/SkillBlock.tsx": {
+    "tiny-control": 1
+  },
   "web/src/components/TaskCard.tsx": {
-    "side-tab-border": 1
+    "side-tab-border": 1,
+    "tiny-control": 3
+  },
+  "web/src/components/TeamBuildingDoor.tsx": {
+    "tiny-control": 1
   },
   "web/src/components/ToolBlock.tsx": {
-    "side-tab-border": 1
+    "side-tab-border": 1,
+    "tiny-control": 2
+  },
+  "web/src/components/TurnArtifactStrip.tsx": {
+    "tiny-control": 3
   },
   "web/src/components/UserTurn.tsx": {
-    "side-tab-border": 1
+    "side-tab-border": 1,
+    "tiny-control": 1
+  },
+  "web/src/components/WorkbenchPanel.tsx": {
+    "tiny-control": 1
   },
   "web/src/components/bots/BotPlatformIcons.tsx": {
     "hex-color": 23
   },
+  "web/src/components/clusters/ClusterComposerModal.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/console/ConsoleBody.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/extensions/CiyuanAccountConnectPanel.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/extensions/ConnectorConnectPanel.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/extensions/ExternalInstallDialog.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/extensions/ExternalSourceTab.tsx": {
+    "tiny-control": 5
+  },
+  "web/src/components/extensions/ExternalUpdateDialog.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/extensions/McpMarketCard.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/extensions/McpServerCard.tsx": {
+    "tiny-control": 6
+  },
+  "web/src/components/extensions/RegistryConnectPanel.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/extensions/SkillCard.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/components/extensions/SkillMarketCard.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/extensions/SkillPackageDialog.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/fleet/FleetCanvas.tsx": {
+    "tiny-control": 5
+  },
   "web/src/components/fleet/FleetConfigBar.tsx": {
-    "hex-color": 6
+    "hex-color": 6,
+    "tiny-control": 12
+  },
+  "web/src/components/fleet/FleetCredentialPack.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/fleet/InspectorDrawer.tsx": {
+    "tiny-control": 6
+  },
+  "web/src/components/fleet/MemoryDrawer.tsx": {
+    "tiny-control": 9
+  },
+  "web/src/components/fleet/MiniSpan.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/components/fleet/OwnerBoardStrip.tsx": {
+    "tiny-control": 18
   },
   "web/src/components/fleet/RunTimeline.tsx": {
-    "hex-color": 2
+    "hex-color": 2,
+    "tiny-control": 4
+  },
+  "web/src/components/fleet/TeamsManagementView.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/components/fleet/TeamsOverviewBoard.tsx": {
+    "tiny-control": 10
+  },
+  "web/src/components/llm/ModelList.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/llm/ModelListEditor.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/llm/ProviderCard.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/login/OfficialShowcaseStrip.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/packs/AgentSpecSheet.tsx": {
+    "tiny-control": 9
+  },
+  "web/src/components/packs/Badge.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/packs/FleetTemplateWizard.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/packs/MyPacksView.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/packs/PackDetailDialog.tsx": {
+    "tiny-control": 12
+  },
+  "web/src/components/packs/PackDraftsView.tsx": {
+    "tiny-control": 7
+  },
+  "web/src/components/packs/PackMarketView.tsx": {
+    "tiny-control": 8
+  },
+  "web/src/components/packs/PackPillarsEditor.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/packs/PackVersionList.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/packs/VendorEarningsPanel.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/persona/PersonaAmendmentsView.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/plugins/PluginCatalogView.tsx": {
+    "tiny-control": 2
   },
   "web/src/components/preview/PreviewDrawer.tsx": {
-    "hex-color": 3
+    "hex-color": 3,
+    "tiny-control": 1
+  },
+  "web/src/components/resources/ChartBinding.tsx": {
+    "tiny-control": 12
+  },
+  "web/src/components/settings/ConnectorBindingsView.tsx": {
+    "tiny-control": 5
+  },
+  "web/src/components/settings/DevicesSection.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/settings/LayoutSection.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/components/settings/RolesSection.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/settings/SearchServiceCard.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/skills/SkillCandidatesView.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/studio/AgentBucketsEditor.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/studio/AiDraftOverlay.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/studio/DocumentLibrary.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/components/studio/LifecycleRibbon.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/tuning/VerdictScorecard.tsx": {
+    "tiny-control": 1
   }
 }

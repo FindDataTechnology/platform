@@ -137,3 +137,18 @@ test("repo scan has no violations over the shipped baseline", () => {
     `shipped baseline drifted:\n${newViolations.map((v) => `  ${v.file} ${v.rule} ${v.found}>${v.allowed}`).join("\n")}`
   );
 });
+
+// ── tiny-control: the 28px hit-target floor (unify-workbench-ui) ─────────────
+test("tiny-control flags authored sub-28px controls", () => {
+  // The shapes that produced 379/452 undersized buttons on one page: a py-0.5
+  // pill, an explicit h-5/h-6, and a 10px label inside an interactive row.
+  assert.equal(scanText('<button className="py-0.5 text-xs">x</button>')["tiny-control"], 1);
+  assert.equal(scanText('<button className="h-6 w-6">x</button>')["tiny-control"], 1);
+  assert.equal(scanText('<span className="text-[10px]">t</span>')["tiny-control"], 1);
+});
+
+test("tiny-control leaves the compliant floor alone", () => {
+  // h-7 is 28px — the shared floor for `Button size=xs` and `.inline-action`.
+  assert.equal(scanText('<button className="h-7 items-center">x</button>')["tiny-control"] ?? 0, 0);
+  assert.equal(scanText('<div className="py-2">ok</div>')["tiny-control"] ?? 0, 0);
+});
