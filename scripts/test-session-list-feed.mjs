@@ -120,12 +120,18 @@ test("5.5 repeated refreshes do not grow with the number of automation rows", ()
   // Pin the regime the change exists to fix: adding automation rounds must not
   // change what the user-facing feed carries.
   const before = db.listChatSessions({ excludeAutomated: true }).length;
+  const allBefore = db.listChatSessions().length;
+  // Distinct from every seeded id — createSession is idempotent, so a collision
+  // would silently create fewer rows than the loop claims (CI caught this).
   for (let i = 0; i < 50; i++) {
-    const id = `cron-task_1794000000000_abc123--r${1795173240122 + i}`;
+    const id = `cron-task_1796000000000_round${i}`;
     chatHistory.createSession(id);
     chatHistory.recordMessage(id, "user", `round ${i}`);
   }
-  const after = db.listChatSessions({ excludeAutomated: true }).length;
-  assert.equal(after, before, "50 more rounds, zero more feed rows");
-  assert.equal(db.listChatSessions().length, before + 50, "...while they all exist");
+  assert.equal(
+    db.listChatSessions({ excludeAutomated: true }).length,
+    before,
+    "50 more rounds, zero more feed rows",
+  );
+  assert.equal(db.listChatSessions().length, allBefore + 50, "...while they all exist");
 });

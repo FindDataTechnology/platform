@@ -2,7 +2,9 @@
 
 ## Purpose
 Per-session management from the sidebar list: a right-click (or Shift+F10) context menu offering Clear and Delete, with Delete behind a confirmation dialog that calls `DELETE /api/chat-history/sessions/:id` and is disabled for the active, running or queued session, and a per-row turn-status indicator (running / queued) driven by the `sessions` broadcast.
+
 ## Requirements
+
 ### Requirement: Right-click context menu on each session row
 Each session row in the sidebar SHALL expose a right-click context menu containing at minimum the actions **Clear** and **Delete** (Delete with confirmation). The menu SHALL open on `contextmenu` (right-click) and on `Shift+F10`. The menu SHALL be dismissable by clicking outside, pressing Escape, or selecting an item. The menu SHALL appear positioned to the row's pointer location and SHALL NOT overflow the viewport.
 
@@ -53,6 +55,7 @@ If the right-clicked session is the current/active session, OR its `turnStatus` 
 #### Scenario: delete disabled on a queued session
 - **WHEN** the user opens the context menu on a session whose `turnStatus` is `queued`
 - **THEN** the Delete entry SHALL be disabled with the "queued message" tooltip
+
 ### Requirement: Clear action in the session context menu
 Selecting **Clear** from the session context menu SHALL clear the displayed turns for that session in the client view. The action SHALL be available from both the right-click menu on a session row and the chat header overflow menu.
 
@@ -85,3 +88,31 @@ Each session row SHALL render an indicator derived from the `sessions` payload's
 - **WHEN** session B's prompt is queued behind A
 - **THEN** B's row SHALL show the queued indicator and A's the running indicator
 - **AND** when A closes and B dispatches, the next `sessions` broadcast SHALL flip B to running and clear A
+
+### Requirement: 侧栏只呈现人工对话
+
+侧栏的会话行来源是 `sessions` 广播。该广播按 `chat-history` 能力已收窄为
+人工对话之后，侧栏 SHALL NOT 为自动化会话（排期轮次、任务会话、集群成员）
+渲染行；用户从任务页等入口进入某个自动化会话时，该会话以「当前会话」的身份
+出现在侧栏，且这一行 SHALL 与实际正在查看的会话一致。
+
+侧栏的搜索 SHALL 作用于同一收窄后的集合——搜索不得把已排除的自动化会话
+重新带回来。
+
+#### Scenario: 排期轮次不在侧栏出现
+
+- **WHEN** 排期引擎连续产生多轮，每轮结束广播一次会话列表
+- **THEN** 侧栏 SHALL NOT 新增任何自动化会话行
+- **AND** 侧栏的人工会话行 SHALL 保持不变
+
+#### Scenario: 从任务页进入自动化会话
+
+- **WHEN** 用户从任务页打开某次排期执行的会话
+- **THEN** 侧栏 SHALL 呈现这一行，并标识为当前会话
+- **AND** 该行的标题 SHALL 与该次执行一致
+
+#### Scenario: 搜索不复活被排除的会话
+
+- **WHEN** 用户在侧栏搜索框输入任意关键词
+- **THEN** 结果集 SHALL 只来自人工对话
+- **AND** 自动化会话 SHALL NOT 因标题匹配而出现

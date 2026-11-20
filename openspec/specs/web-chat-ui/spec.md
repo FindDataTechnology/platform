@@ -542,3 +542,50 @@ MUST NOT 在页面加载后自动展开面板；展开 SHALL 由用户点击启�
 
 - **WHEN** 用户问「你在这个页面上能干什么」
 - **THEN** 副驾如实报出本面可读的数据与可提议的动作范围
+
+### Requirement: 会话切换落定之前，会话列表广播不得改写视图
+
+在客户端已发出 `switch_session` 或 `new_session`、且该切换尚未落定的窗口内（即
+`pendingSession` 或 `pendingNewSession` 处于置位状态），服务端发来的 `sessions`
+列表事件 SHALL NOT 改变视图的当前会话标识。
+
+列表事件携带的 `current` 表示**服务端的 live session**，与「本客户端正在看的会话」
+在切换窗口内可以合法地不相等；它 SHALL NOT 被当作视图切换指令。
+
+切换的落定 SHALL 只由该切换自身的终局事件决定：
+- `session_loaded` —— 切换成功，替换视图；
+- `error` —— 切换被拒绝，回滚到切换前的视图；
+- 连接断开 —— 回滚到切换前的视图。
+
+#### Scenario: 切换窗口内的列表广播不打断切换
+
+- **WHEN** 客户端发出 `switch_session` 指向会话 Y，尚未收到 `session_loaded`
+- **AND** 在此期间收到一条 `sessions` 事件，其 `current` 为会话 X（X ≠ Y）
+- **THEN** 视图的当前会话标识 SHALL 仍为 Y
+- **AND** 随后到达的 `session_loaded`（Y）SHALL 正常替换视图
+- **AND** 骨架屏占位 SHALL 消失
+
+#### Scenario: 排期轮次广播不会卡死冷开
+
+- **WHEN** 用户在排期（cron）运行期间冷开 `/chat/<sessionId>` 深链
+- **THEN** 该会话的转写 SHALL 在 `session_loaded` 到达后呈现
+- **AND** 视图 MUST NOT 停留在骨架屏占位
+
+#### Scenario: 非切换状态下列表事件仍更新当前会话
+
+- **WHEN** 客户端没有正在落定的切换（`pendingSession` 与 `pendingNewSession` 均未置位）
+- **AND** 收到 `sessions` 事件
+- **THEN** 视图的当前会话标识 SHALL 按该事件的 `current` 更新（既有行为不变）
+
+### Requirement: 加载应答的归属判定以切换目标为准
+
+一条 `session_loaded` 是否应替换视图，SHALL 以**发起该次切换的目标会话标识**为准，
+而不是以一个可能被无关事件改写过的当前视图标识为准。一旦切换已落定（成功或回滚），
+后续到达的、指向其它会话的加载应答 SHALL 被当作外来加载，只进入会话缓存而不替换视图。
+
+#### Scenario: 被其它会话的加载应答超越时仍按目标落定
+
+- **WHEN** 客户端切换目标为 Y 且该次切换仍在落定中
+- **AND** 一条指向会话 Z（Z ≠ Y）的 `session_loaded` 先到达
+- **THEN** 它 SHALL 只写入会话缓存，MUST NOT 替换视图
+- **AND** 随后到达的 `session_loaded`（Y）SHALL 替换视图

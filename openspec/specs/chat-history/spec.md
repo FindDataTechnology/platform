@@ -117,6 +117,7 @@ The server SHALL accept a `switch_session` WebSocket message and point the live 
 #### Scenario: switch to a session the requester does not own
 - **WHEN** a client sends `switch_session` for a session owned by a different, non-admin user
 - **THEN** the server SHALL send an access error and the active session SHALL remain unchanged
+
 ### Requirement: Session list refreshes after every turn end
 The server SHALL broadcast a refreshed session list whenever an agent turn ends, whether the turn succeeded or failed, so that a newly created session appears in the sidebar even when its first turn errors. The list SHALL also be broadcast when a client connects and when a session is created or switched.
 
@@ -158,6 +159,7 @@ The server SHALL expose `DELETE /api/chat-history/sessions/:id` to remove a sess
 #### Scenario: delete broadcasts refreshed list
 - **WHEN** a delete completes
 - **THEN** every connected WebSocket client SHALL receive a `sessions` event whose `sessions[]` array does not include the deleted id and matches that client's user visibility
+
 ### Requirement: Sessions carry a title that the user can rename
 Each session SHALL have a `title` field that defaults to the first user message (truncated) but MAY be set by the user via a rename action. The server SHALL expose `PATCH /api/chat-history/sessions/:id` accepting `{ title }` (validated to a non-empty string ≤ 200 characters). On success, the server SHALL update the title in the project-database mirror and the on-disk store, and SHALL deliver a `session_renamed` WebSocket event `{ id, title }` to the connections viewing that session. The WS protocol SHALL also accept a `rename_session` client message with `{ id, title }` as an alternative to the REST route — both produce the same server-side effect and the same ownership gate: a rename from a requester who neither owns the session nor is admin SHALL be rejected with an access error (REST 403) and change nothing. The existing title-derivation logic (truncate the first user message) is the default; the user can override it at any time.
 
@@ -260,3 +262,59 @@ The SQLite session index (`chat_sessions` / `chat_messages`) SHALL be treated as
 
 - **WHEN** the tool runs with `--apply` against an index that already holds rows
 - **THEN** it first writes a backup copy of the index, then upserts, and a second run produces the same result
+
+### Requirement: 面向用户的会话列表只列人工对话
+
+会话列表（`sessions` WebSocket 事件，以及供界面列表使用的 REST 列表）SHALL
+只包含由人发起的对话会话。由排期引擎、集群扇出、a2a 委托自动铸造的会话
+（其 id 以 `cron-` 或 `task-` 开头的）SHALL NOT 出现在该列表里。
+
+例外：发起本次请求的连接**正在查看**的那一个会话 SHALL 始终包含在列表里，
+不论它是否属于自动化会话——界面依赖列表行取该会话的标题与元数据。
+
+该过滤 SHALL NOT 影响会话本身的存储、读取、转写、权限或删除：
+`GET /api/chat-history/sessions/:id`、`switch_session`、删除、导出
+SHALL 对这些会话照常工作。用于按 id 反查标题等内部用途的列表调用
+SHALL 保持全量。
+
+#### Scenario: 排期轮次不出现在侧栏
+
+- **WHEN** 数据库中存在由排期引擎铸造的会话 `cron-<taskId>--r<ts>`
+- **AND** 一个连接请求会话列表
+- **THEN** 该列表 SHALL NOT 包含这个会话
+
+#### Scenario: 任务会话与委托会话同样被排除
+
+- **WHEN** 数据库中存在 `task-<id>`（a2a 委托）或 `cron-<id>--<agentKey>`
+  （集群成员）形态的会话
+- **THEN** 会话列表 SHALL NOT 包含它们
+
+#### Scenario: 正在查看的自动化会话仍在列表里
+
+- **WHEN** 某连接正查看一个 `cron-` 前缀的会话（例如从任务页点进这次执行）
+- **AND** 该连接请求会话列表
+- **THEN** 该会话 SHALL 出现在列表中
+- **AND** 界面 SHALL 能取到它的标题
+
+#### Scenario: 按 id 读取自动化会话照常工作
+
+- **WHEN** 客户端请求 `GET /api/chat-history/sessions/<cron- 前缀 id>`
+- **THEN** 服务端 SHALL 返回该会话的完整消息
+- **AND** `switch_session` 进入它 SHALL 正常加载转写
+
+#### Scenario: 人工会话不受影响
+
+- **WHEN** 数据库中存在由人发起的会话（id 为 UUID 或其它非自动化前缀）
+- **THEN** 会话列表 SHALL 照常包含它
+
+### Requirement: 列表刷新不再随时间线性变重
+
+触发会话列表刷新的频率（每轮结束、会话同步等）SHALL NOT 使单次刷新负载
+随自动化会话的累计数量增长。自动化轮次持续产生时，一次列表刷新的负载
+SHALL 只与人工会话的数量及其元数据规模相关。
+
+#### Scenario: 排期连跑不会推高刷新负载
+
+- **WHEN** 排期引擎连续完成 100 轮，每轮结束后各触发一次列表刷新
+- **THEN** 每次刷新的负载 SHALL 与轮次开始前处于同一量级
+- **AND** 该负载 SHALL NOT 随数据库里 `cron-` 会话行数增长
