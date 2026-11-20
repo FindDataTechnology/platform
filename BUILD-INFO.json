@@ -1,6 +1,6 @@
 {
-  "baseRef": "HEAD",
+  "baseRef": "gitee/main",
   "baseCommit": "c88961fdd538447f6c49ea213a934c8b4e711033",
   "snapshotCommit": "filled in by the publish repo's own commit",
-  "builtAt": "2026-11-20T15:47:45.014Z"
+  "builtAt": "2026-11-20T16:20:13.511Z"
 }
