@@ -340,6 +340,17 @@ export function assembleManifest(content, { name } = {}) {
   // 函数），铸造/发射产物不再静默丢技能桶（批 1 的假绿缺口就此闭合）。
   if (Array.isArray(content?.skills)) manifest.skills = content.skills;
   if (kind === "team" && content?.fleet !== undefined) manifest.fleet = content.fleet;
+  // cast-manifest-carries-i18n: the blueprint's declared locale overlays MUST
+  // reach the cast manifest. Without this, an official author's translated
+  // blueprint produced a manifest with no `i18n` block, so the official en gate
+  // (lib/pack-locale-coverage.js reads `manifest.i18n.en`) rejected every cast
+  // with `official_en_coverage_incomplete` — the author could never cast a team
+  // template from the workbench. Pass the object through verbatim; ignore a
+  // non-object (array/string) the way the sibling guards ignore bad tags/skills,
+  // and add no key when undeclared so legacy casts stay byte-identical.
+  if (content?.i18n && typeof content.i18n === "object" && !Array.isArray(content.i18n)) {
+    manifest.i18n = content.i18n;
+  }
   return manifest;
 }
 

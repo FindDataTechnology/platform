@@ -261,6 +261,11 @@ export function annotateFacade(f, generatedAt, source) {
     marketCategory: null,
     tags: Array.isArray(f.tags) ? f.tags.slice(0, 8) : [],
     status: f.status ?? "unknown",
+    // unify-supply-spine-lineage 5.4: the two fields that tell "what can I do
+    // with this" from "is anything running it". Reported as-is from the catalog
+    // (never defaulted here — a missing value means the source omitted it, and
+    // inventing one would hide exactly the drift this species exists to show).
+    runnable: f.runnable ?? null,
     deployment: f.deployment ?? null,
     canonical: { brief: (f.annotation?.canonical?.brief ?? summary).slice(0, 300) },
     human: Object.fromEntries(LOCALES.map((l) => [l, slot(l)])),
@@ -712,7 +717,7 @@ export async function fetchPackContents(base, packs, { fetchImpl = fetchJson } =
 }
 
 // ── main ──
-export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PLAZA_SITE_BASE || "https://agent.finddatatech.cloud", outDir = "site-plaza/generated", fixture = null, allowStale = false, whitelist = [], now = new Date() } = {}) {
+export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PLAZA_SITE_BASE || "https://agent.finddatatech.cloud", outDir = "site-plaza/generated", fixture = null, allowStale = false, whitelist = [], previousCatalog = null, now = new Date() } = {}) {
   // `now` 只为可测：周期刷新的验收要求「两次 generatedAt 相差一个周期」，而这值是日期、
   // 同一天重跑不变——没有注入点就只能等一天。默认 `new Date()`，生产行为一字未改；
   // 测试传两个相差一天的 now 即可确定性验证「隔天必然前进」。
@@ -726,10 +731,13 @@ export async function runExport({ base = DEFAULT_BASE, siteBase = process.env.PL
     if (!allowStale || err.gateViolations) throw err;
     // --allow-stale: the registries are unreachable; continue from the last
     // snapshot. Provenance keeps the OLD generatedAt (honest face); gates
-    // G2/G3 still run against the replayed catalog.
+    // G2/G3 still run against the replayed catalog. `previousCatalog` lets a
+    // caller that exports into a fresh staging dir name the live snapshot
+    // explicitly — without it, the replay source would be the empty outDir.
     const prevPath = path.join(outDir, "catalog.json");
-    if (!fs.existsSync(prevPath)) throw new Error(`--allow-stale: no previous snapshot at ${prevPath} and the registries are unreachable (${err.message})`);
-    const prev = JSON.parse(fs.readFileSync(prevPath, "utf8"));
+    const replaySource = previousCatalog && fs.existsSync(previousCatalog) ? previousCatalog : prevPath;
+    if (!fs.existsSync(replaySource)) throw new Error(`--allow-stale: no previous snapshot at ${replaySource} and the registries are unreachable (${err.message})`);
+    const prev = JSON.parse(fs.readFileSync(replaySource, "utf8"));
     const materials = prev.materials ?? [];
     const gateViolations = [];
     gateViolations.push(...lintAnnotationShape(materials).map((v) => `G2 ${v}`));
@@ -1001,7 +1009,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     console.log(USAGE);
     process.exit(0);
   }
-  const withValue = new Set(["--base", "--out", "--fixture"]);
+  const withValue = new Set(["--base", "--out", "--fixture", "--site-base", "--previous"]);
   const bare = new Set(["--allow-stale"]);
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -1021,8 +1029,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const allowStale = args.includes("--allow-stale");
   const outDir = opt("--out") ?? "site-plaza/generated";
   const base = opt("--base") ?? DEFAULT_BASE;
+  const siteBase = opt("--site-base") ?? undefined;
+  const previousCatalog = opt("--previous");
   try {
-    const r = await runExport({ base, outDir, fixture, allowStale });
+    const r = await runExport({ base, siteBase, outDir, fixture, allowStale, previousCatalog });
     const c = r.counts ?? {};
     console.log(`plaza-export OK: ${r.materials} materials (packs ${c.packs} / skills ${c.skills} / mcp ${c.mcpServers} / tools ${c.tools}), stale=${Boolean(r.stale)}, as of ${r.generatedAt}`);
   } catch (err) {

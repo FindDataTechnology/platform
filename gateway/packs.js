@@ -1345,6 +1345,11 @@ export function registerPackRoutes(app, {
   // roster is the only source. Empty/absent → every row reads official:false
   // and the showcase answers empty segments (honest empty, not an error).
   officialAuthors = null,
+  // Publish-event hook (unify-supply-spine-lineage D2): called after a
+  // successful publish with { id, version }. The facet host wires it to a
+  // debounced plaza export so the machine surfaces follow the market without a
+  // human deploy. Absent ⇒ no behavior change (legacy mounts/tests).
+  onPublished = null,
 }) {
   // Agent-serving wiring (3.2): injected config wins (tests), env falls back
   // to the dedicated AGENT_SERVING_* names, then the market-bridge vars —
@@ -1553,6 +1558,16 @@ export function registerPackRoutes(app, {
       : registry.publish({ email: user.email, manifest, vendor: vendorSlug, pricing });
     if (result?.error === "not_found") return res.status(404).json({ error: "Pack not found" });
     if (result?.error === "forbidden") return res.status(403).json({ error: "Only the pack author may publish new versions" });
+    // Publish event (unify-supply-spine-lineage D2): fire-and-forget, after the
+    // write has committed and before the response — a hook that throws must not
+    // turn a successful publish into an error.
+    if (typeof onPublished === "function") {
+      try {
+        onPublished({ id: result?.id ?? packId, version: result?.version ?? null });
+      } catch {
+        // the export is a follow-up, never part of the publish's success
+      }
+    }
     res.json(result);
   });
 

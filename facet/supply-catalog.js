@@ -73,8 +73,10 @@ export function slugFor(agentPath) {
 // Pure on purpose: the counts are the observable half of the check, and they
 // must be assertable without standing up a route.
 export const FACADE_STATUS_UNKNOWN = "unknown";
+/** Deployment state for an agent nothing is serving. */
+export const UNDEPLOYED = "undeployed";
 
-export function projectFacadeEntries(agents, { bySlug = new Map(), asOf = null, attach = null } = {}) {
+export function projectFacadeEntries(agents, { bySlug = new Map(), asOf = null, attach = null, registrations = [] } = {}) {
   const out = { facades: [], dropped: 0, coerced: 0 };
   if (!Array.isArray(agents)) return out;
 
@@ -90,6 +92,30 @@ export function projectFacadeEntries(agents, { bySlug = new Map(), asOf = null, 
     if (typeof a.name !== "string" || a.name.trim() === "") out.coerced += 1;
     if (typeof a.description !== "string") out.coerced += 1;
 
+    const joined = bySlug.get(slug) ?? null; // deployment provenance join; null = no bookkeeping
+    // unify-supply-spine-lineage D5: an agent that exists only as a registry
+    // AgentCard (registered, never deployed) is still a material a consumer
+    // must be able to find — so it appears here rather than being dropped for
+    // having no serving record. Two fields say the difference, and neither
+    // invents a status: `runnable` names HOW it is consumed, `deployment.state`
+    // says whether anything is actually serving it.
+    // State precedence: our own deployment bookkeeping > what the serving
+    // plane reported > "undeployed". The serving plane DOES report a status for
+    // an agent on its public face (idle/serving), and it is the authority on
+    // whether anything is running — reading only the bookkeeping join made a
+    // deployed agent render as undeployed whenever bookkeeping had no row.
+    const state =
+      joined?.state ??
+      (a.deploymentState ?? null) ??
+      (reported && a.status ? a.status : UNDEPLOYED);
+    const deployment =
+      joined ?? {
+        state,
+        provenance: "registry-agentcard",
+        // no live status is reported by the registry face — the unknown is
+        // explicit, never defaulted to "serving"
+        asOf,
+      };
     const row = {
       id: slug,
       name: typeof a.name === "string" && a.name.trim() !== "" ? a.name : slug,
@@ -98,7 +124,10 @@ export function projectFacadeEntries(agents, { bySlug = new Map(), asOf = null, 
       tags: Array.isArray(a.tags) ? a.tags : [],
       status: reported ? a.status : FACADE_STATUS_UNKNOWN,
       chatable: a.chatable === true,
-      deployment: bySlug.get(slug) ?? null, // provenance join; null = no bookkeeping
+      // `installable` = obtained as a pack and run locally; `reachable` = a
+      // service called at an endpoint. A facade is always the latter.
+      runnable: a.runnable === "installable" ? "installable" : "reachable",
+      deployment: joined ? { ...joined, state } : deployment,
     };
     row.annotation = a.annotation ?? zhFallbackAnnotation({
       name: row.name,
@@ -114,6 +143,43 @@ export function projectFacadeEntries(agents, { bySlug = new Map(), asOf = null, 
     // 单独断言 dropped/coerced。2026-11-13 并 C3 时发现：C3 侧的分支点早于
     // attachEvidenceSummary 落地，若整段取 theirs 会把该能力连同两个调用点一起删掉。
     if (typeof attach === "function") attach(row, a, { species: "facade", today: asOf });
+    out.facades.push(row);
+  }
+
+  // unify-supply-spine-lineage 5.2: registry AgentCards are a SECOND source for
+  // the same species. Deployed facades (the serving plane's face) win; a card
+  // adds an entry only when nothing is serving that slug. One agent, one row —
+  // a duplicate here would make the catalog's facade count disagree with every
+  // reconciliation gate that compares it to the serving plane.
+  const seen = new Set(out.facades.map((r) => r.id));
+  for (const card of Array.isArray(registrations) ? registrations : []) {
+    if (!card || typeof card !== "object") continue;
+    const slug = typeof card.slug === "string" ? card.slug.trim() : "";
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    const row = {
+      id: slug,
+      name: typeof card.name === "string" && card.name.trim() !== "" ? card.name : slug,
+      description: typeof card.description === "string" ? card.description : "",
+      version: null,
+      tags: Array.isArray(card.tags) ? card.tags : [],
+      status: FACADE_STATUS_UNKNOWN,
+      chatable: false,
+      runnable: "reachable",
+      deployment: {
+        state: UNDEPLOYED,
+        provenance: "registry-agentcard",
+        asOf,
+      },
+    };
+    row.annotation = card.annotation ?? zhFallbackAnnotation({
+      name: row.name,
+      summary: row.description,
+      whenToUse: null,
+      source: "registry-agentcard",
+      updatedAt: asOf,
+    });
+    if (typeof attach === "function") attach(row, card, { species: "facade", today: asOf });
     out.facades.push(row);
   }
   return out;
@@ -286,6 +352,9 @@ export function registerSupplyCatalogRoutes(app, {
   facadeSource, // createSource over the 万星 public catalog
   anchorSource, // createSource over the DAAS export
   refreshFn = null, // optional forced refresh before serving (tests inject noop)
+  // Registry AgentCards (unify-supply-spine-lineage 5.2): a second source for
+  // the facade species. `() => []` when the registry leg is not wired.
+  registrationsFn = () => [],
 }) {
   const _requestLocale = (req) =>
     resolveLocale({ locale: req.query.locale, acceptLanguage: req.headers["accept-language"] });
@@ -324,6 +393,7 @@ export function registerSupplyCatalogRoutes(app, {
       bySlug,
       asOf,
       attach: (row, raw, opts) => attachEvidenceSummary(row, raw, opts),
+      registrations: registrationsFn(),
     });
     if (dropped || coerced) {
       // Visible degradation: the counts ride the response so a silent upstream
@@ -379,5 +449,9 @@ export function initSupplyCatalog(app, { resolveUser, registry }) {
     deploymentsFn: () => registry?.allDeployments?.() ?? [],
     facadeSource,
     anchorSource,
+    // The registry's agent leg lives in the bridge (getAgentEntries), not on
+    // the pack registry object. Mapped here to the card shape the projector
+    // reads (slug/name/description); everything else it needs it derives.
+    registrationsFn: () => registry?.agentEntries?.() ?? [],
   });
 }

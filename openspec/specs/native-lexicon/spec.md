@@ -28,8 +28,10 @@ denotes any item a human or an AI can understand, obtain, and run from the plaza
   onboarding and publish mentions).
 - Product brand: 「壹座·Packs」 → **「壹座·智能体素材广场」/ "Yizuo Agent Materials Plaza"** wherever the
   brand string renders from this repository. v4's interim ruling 「壹座·智能体基础设施」 never rendered
-  (zero render points at v5 time), so no legacy string migration is owed. The registry landing page's brand
-  string lives in the registry repo and stays a recorded follow-up under the same v5 wording.
+  (zero render points at v5 time), so no legacy string migration is owed. The registry's customer-reachable surfaces
+  (login page, console shell, page header, tab title, page description) are specified by
+  `registry-product-home`'s brand requirement and must carry this same v5 wording; the upstream
+  default string `AI Gateway & Registry` must not appear on any customer-reachable surface.
 
 Skill zip upload artifacts keep their separate「技能包」label — they are file artifacts, not market units.
 The dsh plugin bundle copy (「插件包」/ "plugin bundle") is a different unit and is NOT renamed.

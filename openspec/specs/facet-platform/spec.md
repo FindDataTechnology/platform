@@ -7,12 +7,19 @@
 
 ### Requirement: The facet service deploys independently
 
-The facet service SHALL be a standalone deployable — own process, own data store, own public domain — whose availability does not depend on any 壹座 process: with 壹座 entirely down, the facet surface serves browsing, detail, skill downloads of public packs, and direct OIDC login. 壹座 SHALL mount its marketplace surface as a same-origin reverse proxy onto the facet service: requests arriving through the proxy carry a server-verified forwarded identity, which the facet service SHALL accept as authoritative only when the request also carries the configured internal proxy credential. Both 壹座 deployment topologies (single-process and multi-cell gateway) SHALL implement the proxy; the production single-process topology is the acceptance-tested one.
+The facet service SHALL be a standalone deployable — own process, own data store, own public domain — whose availability does not depend on any 壹座 process: with 壹座 entirely down, the facet surface serves browsing, detail, skill downloads of public packs, direct OIDC login, **and the fleet organization plane (fleet list, organization detail, roster/cadence/KPI-slot reads, decisions)**. 壹座 SHALL mount its marketplace surface as a same-origin reverse proxy onto the facet service: requests arriving through the proxy carry a server-verified forwarded identity, which the facet service SHALL accept as authoritative only when the request also carries the configured internal proxy credential. Both 壹座 deployment topologies (single-process and multi-cell gateway) SHALL implement the proxy; the production single-process topology is the acceptance-tested one.
+
+The fleet organization plane is **not** an execution plane: its independence requirement covers organization data only. Whether a fleet actually runs, and on which harness, is decided and reported by an external executor; the facet MUST NOT require one to be online in order to serve its organization surfaces, and MUST NOT claim a fleet is running when no executor is attached.
 
 #### Scenario: Marketplace survives 壹座 being down
 
 - **WHEN** every 壹座 process is stopped and a visitor opens the facet domain
 - **THEN** browsing, detail, and skill download of public packs work, and direct OIDC login works
+
+#### Scenario: Fleet organization survives 壹座 being down
+
+- **WHEN** every 壹座 process is stopped and a signed-in user opens the facet's fleet list and one fleet's organization detail
+- **THEN** both render from the facet's own store, with no upstream-unreachable state
 
 #### Scenario: 壹座 embedded marketplace is same-origin and unchanged
 

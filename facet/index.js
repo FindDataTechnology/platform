@@ -41,6 +41,8 @@ import { registerSameNamePublishGate } from "./publish-gate.js";
 import { registerStudioRoutes } from "./studio.js";
 import { registerFleetRoutes } from "./fleets-routes.js";
 import { machineSurfaceGuard } from "./machine-paths.js";
+import { startExportSchedule, plazaExportState } from "./plaza-export-schedule.js";
+import { getAgentEntries as getBridgeAgentEntries } from "../registry-bridge.js";
 
 const PORT = Number(process.env.PORT || 8080);
 const DATA_ROOT = process.env.FACET_DATA_ROOT || process.env.DATA_ROOT || path.resolve("data");
@@ -181,6 +183,18 @@ registerStudioRoutes(app, { resolveUser, registry, dataRoot: DATA_ROOT });
 // turn or starts an executor. Mounted BEFORE registerPackRoutes so the more
 // specific `/api/fleets/*` paths match first.
 registerFleetRoutes(app, { resolveUser, dataRoot: DATA_ROOT, adminGroups });
+// In-service plaza export (unify-supply-spine-lineage D2): one run shortly
+// after boot, a bounded periodic run, and a debounced publish trigger. The
+// exporter is the same scripts/plaza-export.mjs the retired cron used; this
+// only schedules it and swaps the generated family atomically.
+const SITE_ROOT = (process.env.FACET_SITE_ROOT || "").trim();
+const plazaExport = startExportSchedule({
+  siteRoot: SITE_ROOT,
+  base: (process.env.FACET_SELF_BASE_URL || `http://127.0.0.1:${PORT}`).replace(/\/+$/, ""),
+  siteBase: process.env.PLAZA_SITE_BASE || "https://facet.finddatatech.cloud",
+  exportScript: path.resolve(process.cwd(), "scripts", "plaza-export.mjs"),
+  intervalSecs: Number(process.env.PLAZA_EXPORT_INTERVAL_SECS || 86400),
+});
 
 registerPackRoutes(app, {
   registry,
@@ -191,6 +205,10 @@ registerPackRoutes(app, {
   anonymousRead: true,
   vendors: registry.vendors,
   market: registry.market,
+  // Publish → machine surfaces (D2): a publish makes the plaza's inventory
+  // stale, so it triggers a debounced export rather than waiting for the
+  // periodic run.
+  onPublished: () => plazaExport.trigger(),
   // Official showcase (add-official-pack-showcase): the facet market is
   // anonymous-first, so the badge rides its rows too — same roster env as the
   // gateway mount, one deployment one truth.
@@ -312,7 +330,29 @@ await initFacetMcpCatalog(app, {
 // data-anchor species' own source faces, projected with the production
 // annotation shape. Absent config degrades to an honest empty face — the two
 // TTL sources never block boot and never fabricate rows.
-initSupplyCatalog(app, { resolveUser, registry });
+initSupplyCatalog(app, {
+  resolveUser,
+  registry: {
+    ...registry,
+    // Registry AgentCards ride the bridge's agents leg (unify-supply-spine-
+    // lineage 5.2). Mapped to the card shape the projector reads: bridge gives
+    // {id, name, url, type, mode, deploymentState?}; the catalog wants
+    // {slug, name, description, tags}.
+    agentEntries: () => {
+      try {
+        return getBridgeAgentEntries().map((a) => ({
+          slug: String(a.id ?? "").replace(/^registry-/, ""),
+          name: a.name,
+          description: "",
+          tags: Array.isArray(a.tags) ? a.tags : [],
+          deploymentState: a.deploymentState ?? null,
+        }));
+      } catch {
+        return [];
+      }
+    },
+  },
+});
 
 // MCP Registry projection (add-marketplace-projection-fanout): the same public
 // server set, projected to the official server.json format for mcp-publisher.
@@ -325,11 +365,40 @@ initSupplyCatalog(app, { resolveUser, registry });
   });
 }
 
-// Machine surfaces belong to the plaza host (fix-supply-machine-faces D1):
-// this shell owns none of them, and a soft 200 carrying index.html is
-// indistinguishable from a real machine face to a crawler. Mounted before the
-// static handler and the catch-all so nothing below can mask it.
-app.use(machineSurfaceGuard());
+// Machine surfaces and the front hall belong to this host (unify-supply-spine-
+// lineage D2/D3, 2026-11-21). FACET_SITE_ROOT (defined above, next to the
+// export schedule) is where the front hall's static assets and the generated
+// machine surfaces live; unset means the deployment has not wired them yet,
+// and the guard answers 503 rather than letting the SPA catch-all return a
+// soft 200 carrying index.html — a soft success is indistinguishable from a
+// real machine face to a crawler.
+
+// The guard is mounted before the static handlers and the catch-all so nothing
+// below can mask a machine path. When SITE_ROOT is set, it serves the four
+// machine surfaces itself; the front hall's human pages fall through to the
+// static handler below.
+app.use(machineSurfaceGuard({ siteRoot: SITE_ROOT }));
+if (SITE_ROOT) {
+  // Front hall assets (index.html/style.css/script.js/locales/…) and the
+  // generated material pages, served read-only from the site root.
+  app.use(express.static(SITE_ROOT, { index: "index.html" }));
+}
+
+// Export owner (unify-supply-spine-lineage D2): the retired host chain asks
+// this to decide whether to stand down. It answers what the process is actually
+// doing, not what it is configured to do — an unset FACET_SITE_ROOT means the
+// process is NOT producing surfaces, and the host chain must keep going.
+//
+// This is a liveness fact, not a secret: it names no paths, no credentials, and
+// no inventory.
+app.get("/api/supply-export-owner", (_req, res) => {
+  res.json({
+    owner: SITE_ROOT ? "facet" : "unconfigured",
+    siteRoot: SITE_ROOT ? "configured" : "absent",
+    lastRun: plazaExportState.lastResult ?? null,
+    intervalSecs: Number(process.env.PLAZA_EXPORT_INTERVAL_SECS || 86400),
+  });
+});
 
 // Static thin SPA + fallback (non-API, non-auth GETs land in the app shell).
 app.use(express.static(WEB_DIST, { index: "index.html" }));
@@ -339,5 +408,12 @@ await pairing.bindings.load();
 
 app.listen(PORT, () => {
   console.log(`[facet] listening on http://127.0.0.1:${PORT} (public base ${PUBLIC_BASE})`);
-  console.log(`[facet] registry at ${path.join(DATA_ROOT, "packs.db")}; login ${logtoAuth ? "enabled" : "DISABLED"}; proxy channel ${process.env.FACET_INTERNAL_TOKEN ? "armed" : "closed"}; pairing ${pairing.appAuth.configured ? "armed" : "closed"}`);
+  console.log(
+    `[facet] registry at ${path.join(DATA_ROOT, "packs.db")}; login ${logtoAuth ? "enabled" : "DISABLED"}; ` +
+      `proxy channel ${process.env.FACET_INTERNAL_TOKEN ? "armed" : "closed"}; pairing ${pairing.appAuth.configured ? "armed" : "closed"}; ` +
+      `site root ${SITE_ROOT || "UNSET (machine surfaces 503)"}`,
+  );
 });
+
+process.on("SIGTERM", () => plazaExport.stop());
+process.on("SIGINT", () => plazaExport.stop());

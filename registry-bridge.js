@@ -443,9 +443,13 @@ function mapAgent(a) {
         : undefined,
     roles: groupsFor("agents", name),
   };
+  // unify-supply-spine-lineage 5.2: an agent with no url is REGISTERED but not
+  // deployed. Dropping it made "what exists" and "what runs" the same set,
+  // which is exactly the distinction the supply catalog exists to show. Keep
+  // it, and let the facade projection render it as deployment.state=undeployed.
   if (!entry.url) {
-    console.warn(`[registry-bridge] agent '${a.path}' has no url — dropped`);
-    return null;
+    entry.deploymentState = "undeployed";
+    console.info(`[registry-bridge] agent '${a.path}' has no url — registered only (undeployed)`);
   }
   return entry;
 }

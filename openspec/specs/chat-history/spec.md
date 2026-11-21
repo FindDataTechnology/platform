@@ -318,3 +318,79 @@ SHALL 只与人工会话的数量及其元数据规模相关。
 - **WHEN** 排期引擎连续完成 100 轮，每轮结束后各触发一次列表刷新
 - **THEN** 每次刷新的负载 SHALL 与轮次开始前处于同一量级
 - **AND** 该负载 SHALL NOT 随数据库里 `cron-` 会话行数增长
+
+### Requirement: The session index is bounded by a retention window
+
+The SQLite session index (`chat_sessions` / `chat_messages`) SHALL be bounded by a
+configurable retention window, swept on a **recurring** schedule rather than once at
+boot, so a long-resident cell's index does not grow without bound.
+
+The window SHALL default to a finite value and SHALL be disableable, in which case the
+index is never pruned.
+
+#### Scenario: sessions older than the window leave the index
+
+- **WHEN** the retention sweep runs and a session's last activity predates the window
+- **THEN** that session and all of its `chat_messages` rows are removed from the index
+
+#### Scenario: sessions inside the window are kept intact
+
+- **WHEN** the retention sweep runs and a session's last activity is inside the window
+- **THEN** neither the session row nor any of its messages are removed
+- **AND** its message order, content, and tool blocks are unchanged
+
+#### Scenario: the window can be disabled
+
+- **WHEN** the retention window is configured as disabled
+- **THEN** no session or message is ever pruned, and the sweep reports that it is off
+
+### Requirement: Pruning the index is not deleting the conversation
+
+Pruning SHALL be limited to the two index tables. dsh transcripts, the session
+workspace, documents, usage telemetry, and any other table SHALL NOT be touched.
+
+Because the transcripts are the store of record and the index is a rebuildable
+projection (see "The session index is a rebuildable projection of the dsh transcripts"),
+a pruned session SHALL remain recoverable by rebuilding the index from transcripts.
+
+#### Scenario: pruning is recoverable, not destructive
+
+- **WHEN** a session has been pruned from the index
+- **THEN** its dsh transcript remains on disk, untouched
+- **AND** rebuilding the index from that cell's transcripts restores a session row and
+  message rows for it, matching the live mirror's role/content/blocks semantics
+
+### Requirement: A retention sweep never blocks the chat path
+
+Pruning SHALL be failure-isolated: a failure logs and is reported, and SHALL NOT block a
+chat turn, a restart, or any read path.
+
+The outcome of a sweep SHALL be observable to an operator — rows removed, the next
+scheduled run, or the failure — so index growth is a visible rule rather than a silent one.
+
+#### Scenario: a pruned row count is observable
+
+- **WHEN** a sweep removes rows, or is skipped, or fails
+- **THEN** the outcome is observable to an operator
+
+#### Scenario: pruning never blocks the chat path
+
+- **WHEN** the retention sweep fails for any reason
+- **THEN** chat turns, session creation, and history reads continue to work
+- **AND** the failure is logged without escalating to the user
+
+### Requirement: Pruned volume returns to the filesystem
+
+Deleting index rows SHALL return freed space to the filesystem rather than only shrinking
+the row count while the database file keeps its high-water mark. A cell whose index is
+pruned SHALL observably use less disk after pruning than before it.
+
+#### Scenario: the file shrinks after a sweep that removed rows
+
+- **WHEN** a retention sweep removes index rows and the freed space is reclaimed
+- **THEN** the on-disk size of the project database decreases relative to before the sweep
+
+#### Scenario: no reclamation when nothing was removed
+
+- **WHEN** a sweep removes no rows
+- **THEN** no reclamation work is performed and the database file is left as-is
