@@ -235,7 +235,15 @@ export function projectAnchorEntries(anchors, { asOf = null, attach = null } = {
 // Synthesize the production annotation shape from raw text (zh in all five
 // slots, honest provenance) — the honest-fallback posture the spec names for
 // species not yet covered by an annotation pass.
-export function zhFallbackAnnotation({ name, summary, whenToUse = null, source, updatedAt }) {
+export function zhFallbackAnnotation({ name, summary, whenToUse: rawWhenToUse = null, source, updatedAt }) {
+  // 兜底函数**不能**产出空的 whenToUse：plaza 的 G2 门要求每个物种每条都有它，
+  // 而这里正是「还没有注释覆盖时的诚实兜底」——返回 null 会让整轮导出被判红
+  // （2026-11-21 实撞：facade 27 条全 miss，导出失败，机器面停在上一代）。
+  // 兜底值用 summary 的第一句（它的类型措辞本来就是给人读的）；summary 也空时
+  // 退到 name —— 仍然是可读的、不编造新事实。
+  const whenToUse = rawWhenToUse && String(rawWhenToUse).trim()
+    ? String(rawWhenToUse).trim()
+    : (summary && String(summary).trim() ? String(summary).trim().split(/[。.!?\n]/)[0] : name);
   const track = { name, summary, whenToUse };
   const human = {};
   for (const locale of FIVE_LOCALES) human[locale] = track;

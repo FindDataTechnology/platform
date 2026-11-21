@@ -14,7 +14,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { projectFacadeEntries, UNDEPLOYED } from "../facet/supply-catalog.js";
+import { projectFacadeEntries, UNDEPLOYED, zhFallbackAnnotation } from "../facet/supply-catalog.js";
 
 const served = [
   { slug: "live-one", name: "Live One", description: "serving", status: "idle" },
@@ -68,4 +68,15 @@ test("the species enumeration is untouched", async () => {
   const mod = await import("../facet/supply-catalog.js");
   assert.deepEqual(mod.SUPPLY_SPECIES, ["pack", "skill", "mcp", "facade", "data-anchor", "plugin"]);
   assert.equal(mod.SUPPLY_SPECIES_VERSION, 2);
+});
+
+test("the fallback annotation never yields an empty whenToUse", () => {
+  // The plaza export's G2 gate requires every material to carry one. Returning
+  // null here fails the whole export (2026-11-21: 27 facades, surfaces frozen).
+  const a = zhFallbackAnnotation({ name: "N", summary: "第一句。第二句。", source: "s", updatedAt: "d" });
+  assert.equal(a.whenToUse, "第一句");
+  const b = zhFallbackAnnotation({ name: "OnlyName", summary: "", source: "s", updatedAt: "d" });
+  assert.equal(b.whenToUse, "OnlyName");
+  const c = zhFallbackAnnotation({ name: "N", summary: "s", whenToUse: "  ", source: "s", updatedAt: "d" });
+  assert.ok(c.whenToUse.trim().length > 0, "whitespace-only is not a value");
 });
