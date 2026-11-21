@@ -456,7 +456,7 @@ export function buildCatalog(materials) {
       officialData: materials.filter((m) => m.category === "official-data").length,
       tools: materials.reduce((n, m) => n + (m.toolCount ?? 0), 0),
     },
-    materials: materials.map(({ id, slug, category, marketCategory, tags, contents, canonical, human, whenToUse, badges, tools, toolCount, license, provider, endpoint, repositoryUrl, provenance, evidence }) => {
+    materials: materials.map(({ id, slug, category, marketCategory, tags, contents, canonical, human, whenToUse, badges, tools, toolCount, license, provider, endpoint, repositoryUrl, provenance, evidence, runnable, deployment }) => {
       const entry = { id, slug, category, marketCategory, tags, canonical, human, whenToUse, badges, provenance };
       // Curation evidence survives the catalog projection (curation-evidence):
       // a material the market lists must be able to say what was reviewed and
@@ -466,6 +466,14 @@ export function buildCatalog(materials) {
       if (contents) entry.contents = contents;
       if (category === "mcp") Object.assign(entry, { tools, toolCount, license, provider, endpoint });
       if (category === "skill" && repositoryUrl) entry.repositoryUrl = repositoryUrl;
+      // unify-supply-spine-lineage 5.4：facade 的两个字段必须过这一层。
+      // 这里是一份**解构白名单**——不在列表里的键会被静默丢掉，而 annotateFacade
+      // 明明产出了它们（2026-11-21 实撞：API 有、catalog.json 没有，排查了三轮才
+      // 定位到这一行）。按物种条件挂，与 mcp/skill 的既有写法同形。
+      if (category === "facade") {
+        entry.runnable = runnable;
+        entry.deployment = deployment;
+      }
       return entry;
     }),
   };

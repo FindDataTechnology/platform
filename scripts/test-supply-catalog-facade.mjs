@@ -80,3 +80,22 @@ test("the fallback annotation never yields an empty whenToUse", () => {
   const c = zhFallbackAnnotation({ name: "N", summary: "s", whenToUse: "  ", source: "s", updatedAt: "d" });
   assert.ok(c.whenToUse.trim().length > 0, "whitespace-only is not a value");
 });
+
+test("buildCatalog keeps the facade's two fields (whitelist regression)", async () => {
+  // buildCatalog rebuilds every entry from a destructuring whitelist; a key not
+  // in it is dropped SILENTLY. 2026-11-21: annotateFacade produced runnable and
+  // deployment, the API served them, and catalog.json had neither — three
+  // rounds of debugging to find this one line.
+  const { buildCatalog } = await import("../scripts/plaza-export.mjs");
+  const cat = buildCatalog([
+    {
+      id: "f1", slug: "facade-f1", category: "facade", tags: [],
+      canonical: { brief: "b" }, human: { zh: { name: "n", summary: "s" } },
+      whenToUse: "w", badges: {}, provenance: { source: "s", updatedAt: "d" },
+      runnable: "reachable", deployment: { state: "serving" },
+    },
+  ]);
+  const e = cat.materials[0];
+  assert.equal(e.runnable, "reachable");
+  assert.equal(e.deployment.state, "serving");
+});
