@@ -52,6 +52,12 @@ interface Props {
   // billing probes — requests that can never carry data on that host. The
   // market read itself (locale-aware detail) still loads.
   installSurface?: boolean;
+  // Read-only host (2026-11-22, catalog-owns-browse-market-owns-trade): the
+  // catalog shows a pack's detail in place but must not trade. `installSurface`
+  // only gated the deployment/billing PROBES — the clone / subscribe / fleet
+  // buttons still rendered, so a "browse" host looked like a "buy" host.
+  // readOnly hides those actions; the read face is unchanged.
+  readOnly?: boolean;
   // Example prompts are actionable (overhaul-market-catalog-presentation P2
   // 3.5). 壹座 wires the parked-draft channel (setComposerDraft + navigate to
   // /chat — the DocumentsPage "start conversation" precedent); the facet shell
@@ -116,6 +122,7 @@ export function PackDetailDialog({
   onRequireLogin,
   studioOrigin,
   installSurface = true,
+  readOnly = false,
   onUsePrompt,
 }: Props) {
   const { t, i18n } = useTranslation();
@@ -1170,7 +1177,7 @@ export function PackDetailDialog({
             </div>
           )}
           <div className="flex items-center gap-2">
-            {pack && (
+            {pack && !readOnly && (
               <Button
                 variant="outline"
                 onClick={() => window.open(`${studioOrigin ?? ""}/studio?fork=${encodeURIComponent(pack.id)}`, "_self")}
@@ -1180,6 +1187,7 @@ export function PackDetailDialog({
                 {t("packs.detail.fork")}
               </Button>
             )}
+            {!readOnly && (
             <Button onClick={() => void subscribe()} disabled={subscribing} data-testid="pack-subscribe">
               {subscribing
                 ? t("common.loading")
@@ -1187,9 +1195,10 @@ export function PackDetailDialog({
                   ? t("packs.detail.buyPack", { price: pack.pricing.priceUsd.toFixed(2) })
                   : t("packs.detail.subscribe")}
             </Button>
+            )}
             {/* 装作路径（add-fleet-owner-surface）：模板 pack 一键装作 — 付费
                 闸仍在向导内复验; 只在壹座宿主开放(facet 匿名壳无安装面)。 */}
-            {pack?.manifest?.fleet && !onRequireLogin && !showFleetWizard && (
+            {!readOnly && pack?.manifest?.fleet && !onRequireLogin && !showFleetWizard && (
               <Button variant="outline" onClick={() => setShowFleetWizard(true)} data-testid="pack-fleet-wizard-open">
                 {t("packs.detail.fleetWizardBtn")}
               </Button>

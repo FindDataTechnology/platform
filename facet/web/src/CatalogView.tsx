@@ -232,6 +232,8 @@ export function CatalogView({
       <PackDetailDialog
         packId={detailId}
         installSurface={false}
+        readOnly
+
         onOpenChange={(open) => !open && setDetailId(null)}
         onSubscribed={() => {}}
       />
