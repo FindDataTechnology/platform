@@ -222,10 +222,30 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
         } catch (e) {
           // The task settles by the same terminal vocabulary the claim uses:
           // a stopped-from-outside turn is `cancelled`, never `error`.
-          const cancelled = tasks.get(taskId)?.state === "cancelled" || e?.code === -32013;
-          tasks.settle(taskId, cancelled
-            ? { state: "cancelled", cancelledBy: "caller" }
-            : { state: "error", error: { code: e?.code ?? -32003, message: e?.message || "agent failure" } });
+          //
+          // Which one it is CANNOT be read from the error code. A cancel that
+          // lands mid-turn makes the runtime go idle with no assistant text,
+          // and the harness reports that shape as its own failure (-32005
+          // "model unavailable or refused") — measured live 2026-11-21 across
+          // the registry hop: `tasks/cancel` answered `state: cancelled` while
+          // the same call's `message/send` answered -32005. The FIRST settle
+          // wins (tasks.settle is one-way), so the cancel that landed earlier
+          // is the answer; only a task that was never cancelled falls through
+          // to the error branch.
+          const cancelled = tasks.get(taskId)?.state === "cancelled";
+          if (cancelled) {
+            // Answer the turn the way it ended: the caller asked for a stop
+            // and got one. Returning the harness's empty-turn failure here is
+            // exactly the "两侧各报一种状态" the spec forbids — and it would
+            // bill the caller for a turn they stopped.
+            const settled = tasks.describe(taskId);
+            return res.json({
+              jsonrpc: "2.0",
+              id,
+              result: { ...assistantMessage(contextId ?? sessionId, ""), state: "cancelled", cancelled_by: settled.cancelled_by, task_id: taskId },
+            });
+          }
+          tasks.settle(taskId, { state: "error", error: { code: e?.code ?? -32003, message: e?.message || "agent failure" } });
           throw e;
         }
       }
