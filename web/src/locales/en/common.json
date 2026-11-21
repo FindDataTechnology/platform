@@ -1903,7 +1903,8 @@
       "mcp": "MCP & skills",
       "docs": "Guide",
       "studio": "Creator studio",
-      "fleets": "My teams"
+      "fleets": "My teams",
+      "catalog": "Catalog"
     },
     "account": {
       "menuLabel": "Account",
@@ -5228,6 +5229,11 @@
       "title": "Every material an agent needs, laid out in one plaza.",
       "lead": "Packs, ecosystem skills, MCP servers, AI facades, official data anchors — every one of them something a human or an AI agent can understand, obtain, and run. This site shows what exists, how it is supplied, and what is here right now.",
       "actions": "Human: read on, or jump to the inventory"
+    },
+    "catalogEntry": {
+      "title": "Material catalog",
+      "lead": "Packs, skills, MCP services, facades and official data anchors — all in the catalog page, one species at a time.",
+      "cta": "Open the catalog"
     }
   },
   "entryGallery": {
@@ -5254,5 +5260,33 @@
       "facade": "AI facade",
       "official-data": "Official data anchor"
     }
+  },
+  "catalog": {
+    "title": "Material catalog",
+    "lead": "Six species on one page. Pick a tab to see just that kind — nothing loads the whole inventory at once.",
+    "tabs": {
+      "all": "All"
+    },
+    "species": {
+      "pack": "Agents",
+      "skill": "Skills",
+      "mcp": "MCP services",
+      "facade": "Facades",
+      "data-anchor": "Official data",
+      "plugin": "Plugins"
+    },
+    "searchPlaceholder": "Search materials…",
+    "loading": "Loading…",
+    "error": "Cannot read {{species}}: {{message}} (not \"there are none\" — this fetch failed)",
+    "empty": "Nothing in this species yet",
+    "loadMore": "Show more ({{shown}} / {{total}})",
+    "open": "Open",
+    "openDepth": "Tools & details",
+    "back": "Back to catalog",
+    "depth": {
+      "skillHint": "See this skill’s details under the Skills tab."
+    },
+    "allHint": "Open this species",
+    "sourceAbsent": "This species has no configured data source in this deployment (which is not the same as \"nothing here\")."
   }
 }

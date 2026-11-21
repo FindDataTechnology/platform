@@ -1903,7 +1903,8 @@
       "mcp": "MCP 与技能",
       "docs": "使用指南",
       "studio": "创作台",
-      "fleets": "我的团队"
+      "fleets": "我的团队",
+      "catalog": "素材目录"
     },
     "account": {
       "menuLabel": "账号",
@@ -5228,6 +5229,11 @@
       "title": "智能体要用的每一种素材， 都摆在这个广场上。",
       "lead": "功能集、生态技能、MCP 服务、AI 分身、官方数据锚——每一件都可被人与 AI 理解、获取、运行。这里呈现素材有什么、怎么供给、此刻有什么在场。",
       "actions": "人：往下看，或直接去目录"
+    },
+    "catalogEntry": {
+      "title": "素材目录",
+      "lead": "功能集、生态技能、MCP 服务、AI 分身、官方数据锚——全部在目录页里，按物种分开看。",
+      "cta": "打开素材目录"
     }
   },
   "entryGallery": {
@@ -5254,5 +5260,33 @@
       "facade": "AI 分身",
       "official-data": "官方数据锚"
     }
+  },
+  "catalog": {
+    "title": "素材目录",
+    "lead": "六个物种，一页看全。选一个页签只看那一类，不会一次加载全部。",
+    "tabs": {
+      "all": "全部"
+    },
+    "species": {
+      "pack": "智能体",
+      "skill": "生态技能",
+      "mcp": "MCP 服务",
+      "facade": "AI 分身",
+      "data-anchor": "官方数据锚",
+      "plugin": "插件"
+    },
+    "searchPlaceholder": "搜索素材…",
+    "loading": "读取中…",
+    "error": "读不到{{species}}：{{message}}（这不是「没有」，是这一轮没取到）",
+    "empty": "这一类暂时没有条目",
+    "loadMore": "再看 {{shown}} / {{total}} 条",
+    "open": "查看",
+    "openDepth": "工具面与详情",
+    "back": "返回目录",
+    "depth": {
+      "skillHint": "技能的详细内容请在「生态技能」页签查看。"
+    },
+    "allHint": "点开看这一类",
+    "sourceAbsent": "这一类的数据源还没有接入本部署（不是「没有内容」）。"
   }
 }

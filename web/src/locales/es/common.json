@@ -1903,7 +1903,8 @@
       "mcp": "MCP y habilidades",
       "docs": "Guía",
       "studio": "Estudio de creación",
-      "fleets": "Mis equipos"
+      "fleets": "Mis equipos",
+      "catalog": "Catálogo"
     },
     "account": {
       "menuLabel": "Cuenta",
@@ -5228,6 +5229,11 @@
       "title": "Cada material que un agente necesita, está en esta plaza.",
       "lead": "Packs, habilidades del ecosistema, servidores MCP, fachadas de IA y anclas de datos oficiales: cada uno es algo que una persona o un agente de IA puede entender, obtener y ejecutar. Aquí se muestra qué existe, cómo se suministra y qué hay ahora mismo.",
       "actions": "Persona: sigue leyendo o ve al catálogo"
+    },
+    "catalogEntry": {
+      "title": "Catálogo de materiales",
+      "lead": "Packs, habilidades, servicios MCP, fachadas y anclas de datos oficiales: todo en el catálogo, una especie a la vez.",
+      "cta": "Abrir el catálogo"
     }
   },
   "entryGallery": {
@@ -5254,5 +5260,33 @@
       "facade": "Fachada de IA",
       "official-data": "Ancla de datos oficial"
     }
+  },
+  "catalog": {
+    "title": "Catálogo de materiales",
+    "lead": "Seis especies en una página. Elige una pestaña para ver solo esa clase: nada carga el inventario completo de golpe.",
+    "tabs": {
+      "all": "Todo"
+    },
+    "species": {
+      "pack": "Agentes",
+      "skill": "Habilidades",
+      "mcp": "Servicios MCP",
+      "facade": "Fachadas",
+      "data-anchor": "Datos oficiales",
+      "plugin": "Complementos"
+    },
+    "searchPlaceholder": "Buscar materiales…",
+    "loading": "Cargando…",
+    "error": "No se puede leer {{species}}: {{message}} (no significa «no hay»: esta consulta falló)",
+    "empty": "Todavía no hay elementos en esta especie",
+    "loadMore": "Ver más ({{shown}} / {{total}})",
+    "open": "Abrir",
+    "openDepth": "Herramientas y detalles",
+    "back": "Volver al catálogo",
+    "depth": {
+      "skillHint": "Consulta el detalle de esta habilidad en la pestaña Habilidades."
+    },
+    "allHint": "Abrir esta especie",
+    "sourceAbsent": "Esta especie no tiene fuente de datos configurada en este despliegue (no es lo mismo que «no hay nada»)."
   }
 }

@@ -153,7 +153,9 @@ function CardsSkeleton() {
   );
 }
 
-function ServerDepth({ name, onBack }: { name: string; onBack: () => void }) {
+/** 导出给目录页复用（unify-material-catalog-page 1.3）：深度视图不重写，
+ *  否则两处会漂移成两种工具面呈现。 */
+export function ServerDepth({ name, onBack }: { name: string; onBack: () => void }) {
   const { t } = useTranslation();
   const { locale } = useLanguage();
   const [doc, setDoc] = useState<McpDepth | null>(null);

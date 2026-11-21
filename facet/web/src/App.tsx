@@ -18,7 +18,7 @@ import { CurateView } from "./CurateView";
 import { DocsView } from "./DocsView";
 import { FleetsView } from "./FleetsView";
 import { EntryView } from "./EntryView";
-import { McpCatalog } from "./McpCatalog";
+import { CatalogView } from "./CatalogView";
 import { MineView } from "./MineView";
 import { StudioView } from "./StudioView";
 import { TeamConsoleView, slugFromPath } from "./TeamConsoleView";
@@ -31,7 +31,7 @@ import { SiteMark } from "./SiteMark";
 // studio (add-supply-studio-migration 1.6): the supply-domain creation face —
 // signed-in only (documents are owner-scoped; anonymous deep links fall back
 // to the intro landing, same gate as #/mine).
-type View = "intro" | "packs" | "mcp" | "docs" | "mine" | "curate" | "studio" | "fleets";
+type View = "intro" | "packs" | "catalog" | "docs" | "mine" | "curate" | "studio" | "fleets";
 
 /** Identity probe result, in THREE states, and the difference matters:
  *    undefined — the probe has not answered yet (paint nothing identity-gated)
@@ -47,7 +47,7 @@ type WhoamiUser = { email: string; groups: string[]; creator?: boolean; admin?: 
 const VIEW_HASH: Record<View, string> = {
   intro: "#/",
   packs: "#/packs",
-  mcp: "#/mcp",
+  catalog: "#/catalog",
   docs: "#/docs",
   mine: "#/mine",
   curate: "#/curate",
@@ -62,10 +62,21 @@ const VIEW_HASH: Record<View, string> = {
  *  part only. Comparing the whole hash dropped every deep link to intro: the
  *  fleet 来源蓝图 chip opened the market page instead of the document (live
  *  2026-11-08). */
+/** 目录页的物种预选：`#/catalog?species=mcp` 或旧地址 `#/mcp`。 */
+function hashSpecies(hash: string): string {
+  const path = hash.split("?")[0];
+  if (path === "#/mcp") return "mcp";
+  const q = hash.split("?")[1];
+  if (!q) return "all";
+  return new URLSearchParams(q).get("species") ?? "all";
+}
+
 function viewFromHash(hash: string, user: WhoamiUser): View {
   const path = hash.split("?")[0];
   if (path === "#/packs") return "packs";
-  if (path === "#/mcp") return "mcp";
+  // #/mcp 退役（unify-material-catalog-page 2.2）：旧地址不断，落到目录页的 MCP 页签。
+  if (path === "#/mcp") return "catalog";
+  if (path === "#/catalog") return "catalog";
   if (path === "#/docs") return "docs";
   if (path === "#/mine") return user ? "mine" : "intro";
   if (path === "#/studio") return user ? "studio" : "intro";
@@ -268,6 +279,9 @@ export function App() {
   // `viewFromHash` takes the SETTLED identity; during the probe it must not
   // grant gated views, so it reads `null` until the answer is in.
   const [view, setView] = useState<View>(() => viewFromHash(window.location.hash, null));
+  // 目录页的物种预选来自 hash 的 query（`#/catalog?species=mcp`；旧 `#/mcp`
+  // 也靠这条走 MCP 页签）。跟着 hashchange 一起更新，否则从导航切进来会丢预选。
+  const [catalogSpecies, setCatalogSpecies] = useState<string>(() => hashSpecies(window.location.hash));
   // The scrolling element (`<main>`); view changes reset it to the top.
   const scrollerRef = useRef<HTMLElement | null>(null);
   // A failed OIDC return lands on /?auth_error=state|token. Without this the
@@ -292,7 +306,10 @@ export function App() {
   }, [user]);
 
   useEffect(() => {
-    const onHash = () => setView(viewFromHash(window.location.hash, user));
+    const onHash = () => {
+      setView(viewFromHash(window.location.hash, user));
+      setCatalogSpecies(hashSpecies(window.location.hash));
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, [user]);
@@ -359,7 +376,7 @@ export function App() {
     // Public entries: the browsing surfaces every visitor gets.
     "intro",
     "packs",
-    "mcp",
+    "catalog",
     "docs",
     // The creation face is the one signed-in entry that earns a tab: it is
     // where a creator spends their session (add-supply-studio-migration 1.6).
@@ -504,10 +521,11 @@ export function App() {
               container's own 1600 cap — while every sibling stopped at 1600.
               MCP's prose was the visible symptom; the author and admin faces
               had the same shape, unnoticed because they sit behind sign-in. */}
-          {view === "mcp" && (
+          {view === "catalog" && (
             <Container className="space-y-4">
-              <h1 className="text-2xl font-semibold tracking-tight">{t("facetShell.entries.mcp")}</h1>
-              <McpCatalog />
+              {/* 六物种一页（unify-material-catalog-page 1.x）；页签由 hash 的
+                  ?species= 预选，#/mcp 重定向同样落在这里。 */}
+              <CatalogView key={catalogSpecies} initialSpecies={catalogSpecies} />
             </Container>
           )}
           {view === "docs" && <DocsView />}

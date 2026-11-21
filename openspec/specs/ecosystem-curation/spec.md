@@ -3,7 +3,7 @@
 ## Purpose
 开源素材（MCP server 与技能）进入谦面货架的治理面：只有过审的素材进场、托管姿态统一、来源与许可证对外可见——让「精选」本身成为店的品质承诺。
 
-**实现权威在外部仓。** 过审流程、许可证裁决、每台 server 的出网白名单、容器托管与货架注册，都在注册表服务与其评审流程里落地，不在本仓：gitee `FindDataTechnology/mcp-gateway-registry`（OSS `agentic-community/mcp-gateway-registry` 的 fork），以 docker compose 栈运行在 `mcp.finddatatech.cloud` 之后（部署见 `docs/registry-maintenance.md`；在册台账 `MCP-REGISTRY.md` 须先行）。本 spec 是跨仓契约真源；paas 仓只持消费侧——市场如何列出、安装，以及引用了未过审素材的 pack 清单如何被拒。这里的过审场景按注册表与评审记录验收，paas 单仓测试证明不了它。
+**实现权威在外部仓。** 过审流程、许可证裁决、每台 server 的出网白名单、容器托管与货架注册，都在注册表服务与其评审流程里落地，不在本仓：`FindDataTechnology/fd-mcp-registry`（本方独立谱系，源自上游 `agentic-community/mcp-gateway-registry`；2026-11-22 起唯一实现仓，旧仓 `mcp-gateway-registry` 已删除），以 k8s 部署运行在 `mcp.finddatatech.cloud` 之后（部署见 `docs/registry-maintenance.md`；在册台账 `MCP-REGISTRY.md` 须先行）。本 spec 是跨仓契约真源；paas 仓只持消费侧——市场如何列出、安装，以及引用了未过审素材的 pack 清单如何被拒。这里的过审场景按注册表与评审记录验收，paas 单仓测试证明不了它。
 
 
 ## Requirements

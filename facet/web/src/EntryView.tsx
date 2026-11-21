@@ -13,7 +13,6 @@
 // 「叙事静态、画廊是唯一的动态区」，因为画廊的降级语义比那条约束更成熟。
 import { useTranslation } from "react-i18next";
 import { Container } from "./Container";
-import { MaterialGallery } from "./MaterialGallery";
 import { ProductIntroSection } from "./EntrySections";
 
 const SPECIES = ["pack", "skill", "mcp", "facade", "official-data"] as const;
@@ -53,8 +52,33 @@ export function EntryView({ signedIn = false }: { signedIn?: boolean } = {}) {
           </dl>
         </section>
 
-        {/* 2. 素材目录（唯一的动态区） */}
-        <MaterialGallery />
+        {/* 2. 素材目录入口 —— **不嵌列表**（unify-material-catalog-page 3.1）。
+               2026-11-22 实测：入口页曾嵌 822 张卡、单块 30,352px，页面 32,600px
+               （40 个视口），「怎么供给」「给谁用」落在 31,000px 外，没人滚得到。
+               这里只报计数 + 入口，列表在 #/catalog。 */}
+        <section className="rounded-lg border border-border p-6" data-testid="entry-catalog-entry">
+          <h2 className="text-lg font-semibold">{t("entryPlaza.catalogEntry.title")}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            {t("entryPlaza.catalogEntry.lead")}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {(["pack", "skill", "mcp", "facade", "official-data"] as const).map((s) => (
+              <span
+                key={s}
+                className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
+              >
+                {t(`entryPlaza.materials.species.${s === "official-data" ? "official-data" : s}.title`, s)}
+              </span>
+            ))}
+          </div>
+          <a
+            href="#/catalog"
+            className="mt-5 inline-block rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
+            data-testid="entry-catalog-link"
+          >
+            {t("entryPlaza.catalogEntry.cta")} →
+          </a>
+        </section>
 
         {/* 3. 怎么供给 */}
         <section className="rounded-lg border border-border p-6" data-testid="entry-mechanism">

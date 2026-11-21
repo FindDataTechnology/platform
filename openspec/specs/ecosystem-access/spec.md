@@ -3,7 +3,7 @@
 ## Purpose
 外部开发者进入谦面的身份面：自助注册即得 community 身份与调用键，默认可见面是只读公开数据 server，付费档 server 以组边界区分——身份、免费额度与付费墙在这里收口。
 
-**实现权威在外部仓。** 本能力管辖的面——开放注册、调用键签发/吊销（`wgk-`）、组到 scope 的映射、community/付费档的 server 划分、网关的 MCP 代理——实现与部署都在注册表服务，不在本仓：gitee `FindDataTechnology/mcp-gateway-registry`（OSS `agentic-community/mcp-gateway-registry` 的 fork），以 docker compose 栈运行在网关 `mcp.finddatatech.cloud` 之后（部署与版本钉见 `docs/registry-maintenance.md`）。本 spec 是跨仓契约真源；paas 仓只有消费端缝（registry 客户端 env、facet 桥、市场侧的 registry 读）。这里的场景按**已部署的注册表**验收，paas 单仓测试证明不了它。
+**实现权威在外部仓。** 本能力管辖的面——开放注册、调用键签发/吊销（`wgk-`）、组到 scope 的映射、community/付费档的 server 划分、网关的 MCP 代理——实现与部署都在注册表服务，不在本仓：`FindDataTechnology/fd-mcp-registry`（本方独立谱系，源自上游 `agentic-community/mcp-gateway-registry`；2026-11-22 起唯一实现仓，旧仓 `mcp-gateway-registry` 已删除），以 k8s 部署运行在网关 `mcp.finddatatech.cloud` 之后（部署与版本钉见 `docs/registry-maintenance.md`）。本 spec 是跨仓契约真源；paas 仓只有消费端缝（registry 客户端 env、facet 桥、市场侧的 registry 读）。这里的场景按**已部署的注册表**验收，paas 单仓测试证明不了它。
 
 
 ## Requirements

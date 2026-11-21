@@ -3,7 +3,7 @@
 ## Purpose
 registry 虚拟 MCP 服务器（聚合多后端工具、对外单一入口）的访问控制与聚合路由行为契约：入口 scope 门与授权模型的 either-or 语义保持一致，工具级 scope 保持合取，拒绝可观测。
 
-> 实现归属：registry fork 仓（mcp-gateway-registry）——本 spec 为跨仓行为契约，审计时按文件间一致性核对。
+> 实现归属：registry 实现仓（`fd-mcp-registry`；旧名 mcp-gateway-registry，2026-11-22 已删）——本 spec 为跨仓行为契约，审计时按文件间一致性核对。
 
 ## Requirements
 

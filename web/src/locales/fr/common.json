@@ -1903,7 +1903,8 @@
       "mcp": "MCP et compétences",
       "docs": "Guide",
       "studio": "Atelier de création",
-      "fleets": "Mes équipes"
+      "fleets": "Mes équipes",
+      "catalog": "Catalogue"
     },
     "account": {
       "menuLabel": "Compte",
@@ -5228,6 +5229,11 @@
       "title": "Chaque matériau dont un agent a besoin, est posé sur cette place.",
       "lead": "Packs, compétences de l'écosystème, serveurs MCP, façades IA et ancres de données officielles — chacun est quelque chose qu'un humain ou un agent IA peut comprendre, obtenir et exécuter. Ce site montre ce qui existe, comment c'est fourni, et ce qui est présent maintenant.",
       "actions": "Humain : continuez la lecture, ou allez au catalogue"
+    },
+    "catalogEntry": {
+      "title": "Catalogue des matériaux",
+      "lead": "Packs, compétences, services MCP, façades et ancres de données officielles : tout dans le catalogue, espèce par espèce.",
+      "cta": "Ouvrir le catalogue"
     }
   },
   "entryGallery": {
@@ -5254,5 +5260,33 @@
       "facade": "Façade IA",
       "official-data": "Ancre de données officielle"
     }
+  },
+  "catalog": {
+    "title": "Catalogue des matériaux",
+    "lead": "Six espèces sur une page. Choisissez un onglet pour n’afficher que cette catégorie — rien ne charge tout l’inventaire d’un coup.",
+    "tabs": {
+      "all": "Tout"
+    },
+    "species": {
+      "pack": "Agents",
+      "skill": "Compétences",
+      "mcp": "Services MCP",
+      "facade": "Façades",
+      "data-anchor": "Données officielles",
+      "plugin": "Extensions"
+    },
+    "searchPlaceholder": "Rechercher des matériaux…",
+    "loading": "Chargement…",
+    "error": "Impossible de lire {{species}} : {{message}} (ce n’est pas « il n’y en a pas », la requête a échoué)",
+    "empty": "Aucun élément dans cette espèce pour l’instant",
+    "loadMore": "Voir plus ({{shown}} / {{total}})",
+    "open": "Ouvrir",
+    "openDepth": "Outils et détails",
+    "back": "Retour au catalogue",
+    "depth": {
+      "skillHint": "Voir le détail de cette compétence dans l’onglet Compétences."
+    },
+    "allHint": "Ouvrir cette espèce",
+    "sourceAbsent": "Cette espèce n’a pas de source de données configurée dans ce déploiement (ce n’est pas « il n’y a rien »)."
   }
 }
