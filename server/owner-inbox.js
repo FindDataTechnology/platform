@@ -55,6 +55,29 @@ function clip(text, n = 160) {
   return s.length > n ? `${s.slice(0, n)}…` : s;
 }
 
+/**
+ * A grade a reader can act on, in three words (agent-decided-learning-loop D4).
+ * The stored value is five-way; a person scanning a list needs to know only
+ * whether it was theirs, an independently-checked agent's, or self-certified.
+ * Never invents a fourth bucket — an unknown grade reads `unknown`, not `self`.
+ */
+export function gradeKind(grade) {
+  switch (grade) {
+    case "owner-authored":
+    case "owner-approved":
+      return "owner";
+    case "agent-independent":
+      return "agent-verified";
+    case "agent-independent-unverified":
+      return "agent-unverified";
+    case "agent-self":
+    case "deputy-ruled":
+      return "agent-self";
+    default:
+      return "unknown";
+  }
+}
+
 export function consequenceFor({ itemType, detail, memberTitle, memberTargetKind, memberDeleted, options, resolution }) {
   switch (itemType) {
     case "config-change": {
@@ -188,6 +211,13 @@ function fleetItem({ fleet, item, member, bucket, memberDeleted }) {
     submittedAt: item.submittedAt ?? null,
     consequence: consequence.approvedEffect,
     evidence: item.detail ? { detail: item.detail } : null,
+    // 签名链 (agent-decided-learning-loop 4.4)。已决条目上可读成一段：谁提的、
+    // 谁判的、用什么模型、谁验的、独立性结论。这不是「待批」信息，是**事后
+    // 审计**信息——人退到观察位之后，这是他唯一还能回答「当时凭什么成立」的材料。
+    // 只读投影：字段原样来自 detail.chain，不做任何再加工。
+    chain: item.detail?.chain ?? null,
+    precedentGrade: item.precedentGrade ?? null,
+    precedentGradeKind: gradeKind(item.precedentGradeNormalized ?? item.precedentGrade ?? null),
     options: item.options ?? [],
     recommendation: item.recommendation ?? null,
     actions,

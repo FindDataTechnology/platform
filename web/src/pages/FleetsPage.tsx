@@ -191,6 +191,12 @@ const MemberInspector = lazy(() => import("@/components/fleet/InspectorDrawer").
 const EdgeInspector = lazy(() => import("@/components/fleet/InspectorDrawer").then((m) => ({ default: m.EdgeInspector })));
 const FleetMemoryDrawer = lazy(() => import("@/components/fleet/MemoryDrawer").then((m) => ({ default: m.MemoryDrawer })));
 
+// 「这条是代理裁决的吗」。裁决者从 `"deputy"` 变成了成员坐标
+// （`agent:<fleet>/<member>`，agent-decided-learning-loop 4.1），历史行仍是老字面量
+// ——只比对旧值会让坐标形态在界面上静默消失。
+const isAgentRuling = (resolvedBy: string | null | undefined): boolean =>
+  resolvedBy === "deputy" || (typeof resolvedBy === "string" && resolvedBy.startsWith("agent:"));
+
 interface DecisionItem {
   id: string;
   fleetId: string;
@@ -212,11 +218,18 @@ interface DecisionItem {
   // 委托扩展 (add-deputy-decision-delegate)
   route?: "owner" | "deputy";
   category?: string | null;
-  resolvedBy?: "owner" | "deputy" | null;
+  // 裁决者是坐标（`agent:<fleet>/<member>`）或 `owner`，不再是 "deputy" 字面量
+  // (agent-decided-learning-loop 4.1) — 判断「是不是代理裁决」走 isAgentRuling。
+  resolvedBy?: string | null;
   resolvedByModel?: string | null;
   rulingEvidence?: string | null;
+  precedentGrade?: string | null;
   escalations?: number;
   executedAt?: number | null;
+  // 撤销窗 (agent-decided-learning-loop 5.4)：revocableUntil 非空且未过期时，
+  // 代理裁决可被撤销；revokedAt 非空表示已被撤销（原记录不改写）。
+  revocableUntil?: number | null;
+  revokedAt?: number | null;
   // 迭代回路 / 自迭代扩展 (openspec: owner-inbox 3.1)：这两列服务端一直在存、
   // 一直在返回（fleets-db 的 deserializeDecision），但类型里没有 ⇒ 任何界面都
   // 读不到 ⇒ 配置改动与承载变更等于盲批。补上即消掉那个盲区。
@@ -1947,7 +1960,7 @@ function DecisionsDrawer({
                       </button>
                     ) : null}
                   </div>
-                  {item.route === "deputy" || item.resolvedBy === "deputy" || (item.escalations ?? 0) > 0 ? (
+                  {item.route === "deputy" || isAgentRuling(item.resolvedBy) || (item.escalations ?? 0) > 0 || item.revocableUntil || item.revokedAt ? (
                     <div className="mt-1 flex flex-wrap items-center gap-2" data-testid={`decision-meta-${item.id}`}>
                       {item.route === "deputy" ? (
                         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
@@ -1959,11 +1972,27 @@ function DecisionsDrawer({
                           {t("fleets.decisions.escalatedTimes", { count: item.escalations })}
                         </span>
                       ) : null}
-                      {item.resolvedBy === "deputy" ? (
+                      {/* 裁决者是坐标或 owner（4.1）——按「是不是代理裁决」判，
+                          而不是比对 "deputy" 字面量（那会让坐标形态静默不显示）。 */}
+                      {isAgentRuling(item.resolvedBy) ? (
                         <span className="rounded-full bg-muted px-2 py-0.5 text-xs">
                           {t("fleets.decisions.ruledByDeputy")}
                           {item.resolvedByModel ? ` · ${item.resolvedByModel}` : ""}
                         </span>
+                      ) : null}
+                      {item.revokedAt ? (
+                        <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs text-destructive" data-testid={`decision-revoked-${item.id}`}>
+                          {t("fleets.decisions.revoked")}
+                        </span>
+                      ) : item.revocableUntil && item.revocableUntil > Date.now() ? (
+                        <button
+                          type="button"
+                          className="rounded-full border border-destructive/40 px-2 py-0.5 text-xs text-destructive"
+                          data-testid={`decision-revoke-${item.id}`}
+                          onClick={() => void act(item, "revoke", { reason: "" })}
+                        >
+                          {t("fleets.decisions.revoke")}
+                        </button>
                       ) : null}
                     </div>
                   ) : null}

@@ -86,17 +86,25 @@ if (pythonProbe) {
   }
 
   // `executed` is the change's central claim: a sub-key that resolves but has no
-  // consumer must say so. Compare only the PROCESS axis: the root module also
-  // lists store/read/write, which are consumed by the injection ladder and the
-  // host reconciliation, neither of which this repo can see. Comparing the full
-  // sets would report a difference in scope as a difference in truth.
-  const pythonProcessExecuted = pythonProbe.executed.filter((s) => s.startsWith("process."));
-  const paasExecuted = ["process.distill"];
+  // consumer must say so. Compare only the axes the MEMORY SERVICE executes:
+  // `process` and (since add-memory-schema-axis) `schema`. The other three axes
+  // are consumed by this repo's own injection ladder and host reconciliation,
+  // which the root module cannot see — comparing them would report a difference
+  // in scope as a difference in truth.
+  //
+  // The filter MUST include `schema.` explicitly. It used to be
+  // `startsWith("process.")` alone, which silently excluded schema keys: python
+  // could declare one executed, paas omit it, and this check would still pass —
+  // a green that means nothing.
+  const FD_MEMORY_AXES = ["process.", "schema."];
+  const pythonProcessExecuted = pythonProbe.executed.filter((s) =>
+    FD_MEMORY_AXES.some((a) => s.startsWith(a)));
+  const paasExecuted = ["process.distill", "schema.key_by"];
   if (JSON.stringify(pythonProcessExecuted) === JSON.stringify(paasExecuted)) {
-    ok("executed sub-keys (process axis)", pythonProcessExecuted.join(", "));
+    ok("executed sub-keys (memory-service axes)", pythonProcessExecuted.join(", "));
   } else {
     bad(
-      "executed sub-keys (process axis)",
+      "executed sub-keys (memory-service axes)",
       `python=${JSON.stringify(pythonProcessExecuted)} paas=${JSON.stringify(paasExecuted)}`,
     );
   }

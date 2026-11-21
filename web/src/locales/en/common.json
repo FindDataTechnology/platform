@@ -1459,7 +1459,7 @@
       "footnote": "A 401 marks the key as needing re-connect; re-binding mints a fresh key. A bound account takes precedence over a pasted key."
     },
     "delegation": {
-      "hint": "Delegate part of the decision queue to the team's deputy; the rest stays with you. High-risk categories (config changes, staffing, spend) are always yours to decide.",
+      "hint": "Delegate some decisions to the team's deputy. High-impact categories (config change / HR / spend) stay with you by default — you can unlock each one, and rulings it makes carry a revoke window.",
       "enabled": "Enable delegation",
       "routes": "Category routing",
       "category": {
@@ -1483,7 +1483,10 @@
       "digestOff": "Off",
       "model": "Ruling model",
       "modelInherit": "Blank = inherit",
-      "modelHint": "Blank follows the team/cell default model; a value is applied to the deputy post and takes effect from its next patrol."
+      "modelHint": "Blank follows the team/cell default model; a value is applied to the deputy post and takes effect from its next patrol.",
+      "unlock": "Unlock",
+      "revokeWindow": "Revoke window (minutes)",
+      "revokeWindowHint": "After a ruling on an unlocked category takes effect, you can revoke it within this window."
     },
     "searchPlaceholder": "Search settings…",
     "searchEmpty": "No matching setting",
@@ -3520,7 +3523,9 @@
       "evidence": "Basis",
       "recall": "Recall (decide myself)",
       "executed": "Executed",
-      "notExecuted": "Ruled but not executed"
+      "notExecuted": "Ruled but not executed",
+      "revoke": "Revoke",
+      "revoked": "Revoked"
     },
     "tpl": {
       "awaitStart": "Agent team assembled from the template (all paused) — review, then start",
@@ -5218,6 +5223,11 @@
         "body": "Start at /generated/llms.txt: the site index, every section self-contained. Structured data at /generated/catalog.json: canonical brief + five-locale summaries + whenToUse + provenance. One self-contained Markdown page per material (materials/<slug>.md), addresses stable across content updates. To turn a material into a live service: the A2A endpoint — see the Serve row in infrastructure.md.",
         "cta": "Start at /llms.txt →"
       }
+    },
+    "hero": {
+      "title": "Every material an agent needs, laid out in one plaza.",
+      "lead": "Packs, ecosystem skills, MCP servers, AI facades, official data anchors — every one of them something a human or an AI agent can understand, obtain, and run. This site shows what exists, how it is supplied, and what is here right now.",
+      "actions": "Human: read on, or jump to the inventory"
     }
   },
   "entryGallery": {

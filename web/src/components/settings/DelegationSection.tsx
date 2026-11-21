@@ -13,9 +13,18 @@ type Policy = {
   dailyBudget: number;
   digest: "daily" | "weekly" | "off";
   model: string | null;
+  // 使用者显式解锁的高影响类别（空 = 全部锁定），以及解锁后生效的撤销窗。
+  unlocked?: string[];
+  revokeWindowMinutes?: number | null;
 };
 
 const CATEGORIES = ["routine-ops", "infra-ticket", "config-change", "hr", "spend"];
+// 默认锁死、可由使用者解锁的类别。默认值与锁定语义来自服务端
+// （LOCKED_BY_DEFAULT_CATEGORIES）；这里只负责让使用者能选。
+const LOCKED_CATEGORIES = ["config-change", "hr", "spend"];
+const DEFAULT_REVOKE_WINDOW = 60;
+const MIN_REVOKE_WINDOW = 1;
+const MAX_REVOKE_WINDOW = 7 * 24 * 60;
 
 export function DelegationSection() {
   const { t } = useTranslation();
@@ -86,30 +95,84 @@ export function DelegationSection() {
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{t("settings.delegation.routes")}</span>
         {CATEGORIES.map((cat) => {
-          // 归一化即硬闸：这三类服务端永远归一为 owner——UI 直接置灰说明。
-          const hardLocked = cat === "config-change" || cat === "hr" || cat === "spend";
-          const value = hardLocked ? "owner" : (policy.routes[cat] ?? policy.routes.default ?? "owner");
+          // High-impact categories default to locked. They are NOT permanently
+          // unusable: the person using the software decides what an agent may
+          // decide for them (agent-decided-learning-loop 5.4). Unlocking takes
+          // two deliberate facts — the unlock set AND a delegate route — so a
+          // stray save cannot silently widen anything.
+          const lockedByDefault = LOCKED_CATEGORIES.includes(cat);
+          const unlocked = (policy.unlocked ?? []).includes(cat);
+          const selectable = !lockedByDefault || unlocked;
+          const value = selectable ? (policy.routes[cat] ?? policy.routes.default ?? "owner") : "owner";
           return (
             <label key={cat} className="flex items-center justify-between gap-2 text-sm">
-              <span className={hardLocked ? "text-muted-foreground" : ""}>
+              <span className={selectable ? "" : "text-muted-foreground"}>
                 {t(`settings.delegation.category.${cat}`)}
-                {hardLocked ? ` · ${t("settings.delegation.ownerOnly")}` : ""}
+                {lockedByDefault && !unlocked ? ` · ${t("settings.delegation.ownerOnly")}` : ""}
               </span>
-              <select
-                disabled={hardLocked || busy}
-                data-testid={`delegation-route-${cat}`}
-                className="rounded-md border border-border bg-background px-2 py-1 text-sm"
-                value={value}
-                onChange={(e) => patch({ routes: { ...policy.routes, [cat]: e.target.value } })}
-              >
-                <option value="owner">{t("settings.delegation.routeOwner")}</option>
-                {!hardLocked ? <option value="deputy">{t("settings.delegation.routeDeputy")}</option> : null}
-                {cat === "infra-ticket" ? <option value="deputy-triage">{t("settings.delegation.routeTriage")}</option> : null}
-              </select>
+              <span className="flex items-center gap-2">
+                {lockedByDefault ? (
+                  <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      checked={unlocked}
+                      disabled={busy}
+                      data-testid={`delegation-unlock-${cat}`}
+                      onChange={(e) => {
+                        const next = new Set(policy.unlocked ?? []);
+                        if (e.target.checked) next.add(cat);
+                        else next.delete(cat);
+                        patch({
+                          unlocked: [...next],
+                          // An unlock with no window is refused by the server;
+                          // seed a sane default so the person does not have to
+                          // know the rule to use the control.
+                          revokeWindowMinutes:
+                            next.size > 0 ? policy.revokeWindowMinutes ?? DEFAULT_REVOKE_WINDOW : policy.revokeWindowMinutes ?? null,
+                        });
+                      }}
+                    />
+                    {t("settings.delegation.unlock")}
+                  </label>
+                ) : null}
+                <select
+                  disabled={!selectable || busy}
+                  data-testid={`delegation-route-${cat}`}
+                  className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+                  value={value}
+                  onChange={(e) => patch({ routes: { ...policy.routes, [cat]: e.target.value } })}
+                >
+                  <option value="owner">{t("settings.delegation.routeOwner")}</option>
+                  {selectable ? <option value="deputy">{t("settings.delegation.routeDeputy")}</option> : null}
+                  {cat === "infra-ticket" ? <option value="deputy-triage">{t("settings.delegation.routeTriage")}</option> : null}
+                </select>
+              </span>
             </label>
           );
         })}
       </div>
+
+      {(policy.unlocked ?? []).length > 0 ? (
+        <label className="flex items-center justify-between gap-2 text-sm" data-testid="delegation-revoke-window">
+          <span>
+            {t("settings.delegation.revokeWindow")}
+            <span className="ml-1 text-xs text-muted-foreground">{t("settings.delegation.revokeWindowHint")}</span>
+          </span>
+          <input
+            type="number"
+            min={MIN_REVOKE_WINDOW}
+            max={MAX_REVOKE_WINDOW}
+            className="w-24 rounded-md border border-border bg-background px-2 py-1 text-sm"
+            value={policy.revokeWindowMinutes ?? DEFAULT_REVOKE_WINDOW}
+            disabled={busy}
+            onChange={(e) =>
+              patch({
+                revokeWindowMinutes: Math.min(MAX_REVOKE_WINDOW, Math.max(MIN_REVOKE_WINDOW, Number(e.target.value) || DEFAULT_REVOKE_WINDOW)),
+              })
+            }
+          />
+        </label>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3">
         <label className="flex flex-col gap-1 text-sm">

@@ -1446,7 +1446,7 @@
       "footnote": "Un 401 marca la clave como pendiente de reconexión; volver a vincular emite una clave nueva. La cuenta vinculada tiene prioridad sobre una clave pegada."
     },
     "delegation": {
-      "hint": "Delegue parte de la cola al adjunto del equipo de agentes; el resto sigue con usted. Las categorías de alto riesgo (cambios de configuración, personal, gasto) siempre las decide usted.",
+      "hint": "Delegue algunas decisiones al diputado del equipo. Las categorías de alto impacto (cambios de configuración / RR. HH. / gasto) siguen siendo suyas por defecto: puede desbloquear cada una, y sus dictámenes tendrán una ventana de revocación.",
       "enabled": "Activar delegación",
       "routes": "Enrutado por categoría",
       "category": {
@@ -1470,7 +1470,10 @@
       "digestOff": "Desactivado",
       "model": "Modelo para decidir",
       "modelInherit": "Vacío = heredar",
-      "modelHint": "Vacío sigue el modelo por defecto del equipo/celda; un valor se aplica al puesto de adjunto desde su próxima ronda."
+      "modelHint": "Vacío sigue el modelo por defecto del equipo/celda; un valor se aplica al puesto de adjunto desde su próxima ronda.",
+      "unlock": "Desbloquear",
+      "revokeWindow": "Ventana de revocación (minutos)",
+      "revokeWindowHint": "Tras aplicarse un dictamen sobre una categoría desbloqueada, puede revocarlo dentro de esta ventana."
     },
     "searchPlaceholder": "Buscar ajustes…",
     "searchEmpty": "Ningún ajuste coincide",
@@ -3520,7 +3523,9 @@
       "evidence": "Fundamento",
       "recall": "Reclamar (decido yo)",
       "executed": "Ejecutado",
-      "notExecuted": "Resuelto pero no ejecutado"
+      "notExecuted": "Resuelto pero no ejecutado",
+      "revoke": "Revocar",
+      "revoked": "Revocado"
     },
     "tpl": {
       "awaitStart": "Equipo de agentes montado desde la plantilla (todo en pausa) — revisa y arranca",
@@ -5218,6 +5223,11 @@
         "body": "Empieza en /generated/llms.txt: el índice del sitio, cada sección autosuficiente. Datos estructurados en /generated/catalog.json: resumen canónico + resúmenes en cinco idiomas + whenToUse + procedencia. Una página Markdown autosuficiente por material (materials/<slug>.md), con direcciones estables ante actualizaciones. Para convertir un material en servicio en vivo: el punto final A2A; véase la fila Servir en infrastructure.md.",
         "cta": "Empezar en /llms.txt →"
       }
+    },
+    "hero": {
+      "title": "Cada material que un agente necesita, está en esta plaza.",
+      "lead": "Packs, habilidades del ecosistema, servidores MCP, fachadas de IA y anclas de datos oficiales: cada uno es algo que una persona o un agente de IA puede entender, obtener y ejecutar. Aquí se muestra qué existe, cómo se suministra y qué hay ahora mismo.",
+      "actions": "Persona: sigue leyendo o ve al catálogo"
     }
   },
   "entryGallery": {

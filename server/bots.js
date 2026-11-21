@@ -26,12 +26,12 @@ import { gateOutboundMessage, noteBypassAttempt } from "../lib/outbound-message.
 // ledger shape per outbound message (content原文 never stored — only its digest).
 // A write failure is logged and never blocks an already-sent message, but it is
 // NOT silent: the spec requires the absence be visible (see the warn sites).
-function recordOutboundLedger(entry) {
+function recordOutboundLedger(entry, channel = "bot") {
   const db = state.ctx?.db;
   // null/absent db = degraded cell; returning quietly here is correct because
   // there is nothing to write to — but insertOutboundLedger itself THROWS on a
   // bad entry, which the callers surface as a warning.
-  db?.insertOutboundLedger?.({ channel: "bot", ...entry });
+  db?.insertOutboundLedger?.({ channel, ...entry });
 }
 
 // Trust-boundary guards (design D3). These bound an untrusted external caller's
@@ -1329,5 +1329,16 @@ export async function relaySend(channel, rawText) {
     return { ok: false, reason: "send-failed", error };
   }
   audit("sent", bot.id, null);
+  // Outbound accountability (C4.2): the relay lane writes its own ledger row with
+  // channel "relay" so a machine caller's message is traceable on the same face
+  // as a bot reply. Digest only (from the identical text); never原文.
+  try {
+    recordOutboundLedger(
+      { audience: `${bot.type}:${binding.chatKey}`, contentDigest: crypto.createHash("sha256").update(String(text)).digest("hex") },
+      "relay",
+    );
+  } catch (e) {
+    console.warn(`[bots] relay outbound ledger write failed: ${e.message}`);
+  }
   return { ok: true };
 }

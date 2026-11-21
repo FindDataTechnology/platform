@@ -13,6 +13,7 @@ import { skillEvolutionStore } from "./skill-evolution.js";
 import { runSkillEval } from "./skill-eval.js";
 import { resolveJudgeLane } from "./blueprint-judge.js";
 import { createEvalQueue } from "./eval-queue.js";
+import { authorizeActor } from "../lib/precedent-grade.js";
 
 export function createSkillEvolutionRoutes(app, ctx = null) {
   const store = skillEvolutionStore();
@@ -121,15 +122,54 @@ export function createSkillEvolutionRoutes(app, ctx = null) {
     }
   });
 
-  // Promotion: human-only, requires a green evaluation (the double key —
-  // AI evidence, human signature).
+  // Promotion: requires a green evaluation. The signature is structural, not
+  // human-by-default (agent-decided-learning-loop D6): an actor may sign when
+  // the independence graph holds (§ authorizeActor) OR it is a human.
+  //
+  // Seats, all server-held:
+  //   proposer — `candidate.proposed_by`, written from the caller identity the
+  //              auth layer resolved (never the request body). The MCP child
+  //              proposes under its own internal stamp, so its proposals and a
+  //              human's are distinguishable seats.
+  //   decider  — the acting caller (an internal bridge email, or a real user)
+  //   grader   — the A/B judge lane; its model RIDES the stored eval report
+  //              (`report.lane.model`) and its input is blind by construction
+  //              (arm names anonymised — pinned by the anonymity test).
+  //
+  // A real human keeps promoting exactly as before. A non-human decider must
+  // clear the graph, and inherits the recorded grade from it.
   router.post("/candidates/:id/promote", async (req, res) => {
     const user = requireUser(req, res);
     if (!user) return;
+    const cand = store.getCandidate(req.params.id);
+    if (!cand) return res.status(404).json({ error: "Candidate not found" });
+    const isHuman = !String(user.email ?? "").endsWith("@internal");
+    const judgeModel = cand.evalReport?.lane?.model ?? null;
+    const auth = isHuman
+      ? { ok: true, via: "human", grade: null }
+      : authorizeActor({
+          resolvedBy: null,
+          seats: {
+            proposer: cand.proposedBy ?? null,
+            decider: user.email,
+            grader: judgeModel ? "eval-lane" : null,
+            // The judge and the decider are different systems even when the
+            // model string matches, but the graph only trusts a comparison it
+            // can show — so an absent decider model lands the promotion at
+            // `-unverified` instead of claiming a second opinion.
+            deciderModel: cand.evalReport?.deciderModel ?? null,
+            graderModel: judgeModel,
+            blind: Boolean(judgeModel),
+          },
+        });
+    if (!auth.ok) return res.status(403).json({ error: auth.reason, code: "INDEPENDENCE_NOT_ESTABLISHED" });
     const out = store.promote(req.params.id, { by: user.email });
     if (out.error) return res.status(409).json({ error: out.error });
+    // Front-end refresh ONLY. The skill is already on disk — store.promote()
+    // materializes synchronously and rolls back on failure, so nothing
+    // downstream may treat this broadcast as the thing that makes it live.
     ctx?.broadcast?.({ type: "skills_changed" });
-    res.json({ ok: true, promoted: out.promoted });
+    res.json({ ok: true, promoted: out.promoted, authorizedVia: auth.via, grade: auth.grade });
   });
 
   router.post("/candidates/:id/reject", (req, res) => {

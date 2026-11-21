@@ -134,16 +134,70 @@ Published packs, versions, and subscription records SHALL migrate from the 壹�
 
 ### Requirement: The facet web shell carries a product intro view
 
-The facet web shell SHALL serve a static product intro view at the hash root `#/` as the default landing, replacing the retired intro band. The view SHALL state what the product **enables**, not only how a pack is packaged: (a) a hero carrying the value line 千人千面 — AI 编辑器的功能集与工具分发市场, a subtitle stating that packs bundle skills, MCP references, and agent personas, and that a team pack may additionally declare memory, a console, and a roster, for browsing, subscribing, and publishing with a one-line install into the AI editors the CLI supports, a fact row (anonymous browsing; publish and subscribe after login, on the same identity as 壹座), and CTAs into the packs market and the MCP catalog; (b) a **team-templates** section stating that a pack may be a fleet template whose roles declare a cadence, KPI slots, orchestration edges and acceptance assertions, so installing one into a platform yields a team of posts that fire on schedule — this section SHALL NOT be omitted on the grounds that not every pack is a team; (c) a **creation-path** section presenting the studio as the route from a described team to a running one, naming its four stages (AI draft → human adopt → cast/publish → instantiate a team), and stating that the model drafts while the human's adoption is the single gate — the studio entry SHALL be reachable from this section; (d) three cards — what a pack contains (skill sources, MCP references, agent personas; a team pack may also declare the memory axes, console blocks, and roster, each rendered as its own section when declared and stated explicitly as undeclared when not — plus version, tags, and author; the detail view exposes every skill's full body and the version history), subscribe and install are two different acts, and version snapshots; (e) a text path figure — creator --publish--> the market --subscribe--> 壹座 (one-click install into the conversation runtime, MCP credentials already wired) and the market --CLI install--> the supported editors' skill directories (skill snapshot on disk, MCP references printed); (f) a quick start carrying the published CLI form `npx @finddatatechonology/facet install <pack id or URL containing the id>` with `--target` naming the supported editors; and (g) a backlink to the official site's facet line page.
+The facet web shell SHALL serve an entry view at the hash root `#/` as the default landing. The view
+SHALL state what the product **enables** and what it **offers**, in this order: (a) the material
+narrative — what a material is, and the five species each as one card with a concrete example;
+(b) the **live material inventory gallery** (species tabs, official/facade badges, category
+filtering, search, per-species counts and the as-of date); (c) a **team-templates** section stating
+that a pack may be a fleet template whose roles declare a cadence, KPI slots, orchestration edges and
+acceptance assertions, so installing one into a platform yields a team of posts that fire on schedule
+— this section SHALL NOT be omitted on the grounds that not every pack is a team; (d) a
+**creation-path** section presenting the studio as the route from a described team to a running one,
+naming its four stages (AI draft → human adopt → cast/publish → instantiate a team), and stating that
+the model drafts while the human's adoption is the single gate — the studio entry SHALL be reachable
+from this section; (e) three cards — what a pack contains (skill sources, MCP references, agent
+personas; a team pack may also declare the memory axes, console blocks, and roster, each rendered as
+its own section when declared and stated explicitly as undeclared when not — plus version, tags, and
+author; the detail view exposes every skill's full body and the version history), subscribe and
+install are two different acts, and version snapshots; (f) a text path figure — creator --publish-->
+the market --subscribe--> 壹座 (one-click install into the conversation runtime, MCP credentials
+already wired) and the market --CLI install--> the supported editors' skill directories (skill
+snapshot on disk, MCP references printed); (g) a quick start carrying the published CLI form
+`npx @finddatatechnology/facet install <pack id or URL containing the id>` with `--target` naming the
+supported editors; and (h) a backlink to the official site's facet line page.
 
-The line-page backlink SHALL follow the active locale (`/zh/products/facet` under zh, `/products/facet` otherwise). Facts SHALL be limited to what is verifiable at build time — **no counts** (no pack totals, no percentages, no "N editors" claims). Naming which editors the CLI supports IS permitted and is not a count: it is the CLI's contract, and the CLI is its source. The install command SHALL stay single-sourced (the packs footnote carries only the `facet help` pointer, no duplicated install line). Copy SHALL come from i18n keys authored in all five locales (en is the source of truth; `scripts/check-locales.js` enforces key-set parity, so "fallback" is a safety net, not the authoring mode). The view SHALL be fully static — no market or catalog live data, no loading or empty states; the studio entry renders as a link whose visibility follows the confirmed login state, never a data fetch.
+The narrative sections — everything except the gallery — SHALL be static: no market or catalog live
+data, no loading or empty states, identical rendering when the catalog API is unreachable. The
+**gallery is the view's one dynamic region**: it SHALL refresh from the catalog on load, fall back to
+the generated snapshot when that fails, label which one it is showing with an as-of date, and never
+render an empty inventory while a valid snapshot exists. A reader SHALL be able to read the whole
+narrative and navigate the shell with the catalog API entirely down.
 
-The intro view's description of what a pack contains SHALL agree with the pack detail view's section set: any content class the detail view renders as its own section (memory, console, roster) SHALL be named on the intro as an optional declaration of a team pack, and MUST NOT be presented as content every pack carries.
+The line-page backlink SHALL follow the active locale (`/zh/products/facet` under zh,
+`/products/facet` otherwise). Editorial facts in the narrative SHALL be limited to what is verifiable
+at build time — **no static counts in prose** (no pack totals, no percentages, no "N editors" claims).
+Counts appear only in the gallery, where they are data read at render time and carry their as-of
+date. Naming which editors the CLI supports IS permitted and is not a count: it is the CLI's
+contract, and the CLI is its source. The install command SHALL stay single-sourced (the packs
+footnote carries only the `facet help` pointer, no duplicated install line). Copy SHALL come from i18n
+keys authored in all five locales (en is the source of truth; `scripts/check-locales.js` enforces
+key-set parity, so "fallback" is a safety net, not the authoring mode). The studio entry renders as a
+link whose visibility follows the confirmed login state, never a data fetch.
+
+The intro view's description of what a pack contains SHALL agree with the pack detail view's section
+set: any content class the detail view renders as its own section (memory, console, roster) SHALL be
+named on the intro as an optional declaration of a team pack, and MUST NOT be presented as content
+every pack carries.
 
 #### Scenario: first visit lands on the intro
 
 - **WHEN** a visitor opens the facet domain without a hash
-- **THEN** the intro renders as the landing with CTAs into the packs market, the MCP catalog, and (when signed in) the studio, and no credential is required to read it
+- **THEN** the entry view renders as the landing with the material narrative, the gallery, CTAs into the packs market and the MCP catalog, and (when signed in) the studio entry, and no credential is required to read it
+
+#### Scenario: the narrative is static, the gallery is not
+
+- **WHEN** the packs market API or the MCP catalog API is unreachable or slow
+- **THEN** the narrative sections render identically with no loading state, and only the gallery degrades to its snapshot labeled with an as-of date
+
+#### Scenario: intro stays static
+
+- **WHEN** the packs market API or the MCP catalog API is unreachable or slow
+- **THEN** every narrative section renders identically with no loading state, and only the gallery degrades to its snapshot with an as-of date
+
+#### Scenario: the gallery never renders empty
+
+- **WHEN** the live refresh fails and a valid snapshot exists
+- **THEN** the gallery renders the snapshot's materials with its as-of date, never an empty inventory
 
 #### Scenario: intro states what the product enables
 
@@ -167,8 +221,8 @@ The intro view's description of what a pack contains SHALL agree with the pack d
 
 #### Scenario: no counts are claimed
 
-- **WHEN** the intro copy is reviewed against the catalogue
-- **THEN** it carries no pack total, percentage, or other figure that a newer catalogue would falsify; naming the editors the CLI supports is allowed because the CLI is its source
+- **WHEN** the intro's narrative copy is reviewed against the catalogue
+- **THEN** no prose carries a pack total, percentage, or other figure a newer catalogue would falsify; figures appear only in the gallery, labeled with their as-of date
 
 #### Scenario: CLI fact stays verifiable and single-sourced
 
@@ -179,11 +233,6 @@ The intro view's description of what a pack contains SHALL agree with the pack d
 
 - **WHEN** the active locale is zh-CN and the visitor follows the intro view's official-site link
 - **THEN** it targets `/zh/products/facet`; under en (or fallback locales) it targets `/products/facet`
-
-#### Scenario: intro stays static
-
-- **WHEN** the packs market API or the MCP catalog API is unreachable or slow
-- **THEN** the intro view renders identically, with no loading state and no dependency on any live API
 
 #### Scenario: intro and detail view agree on the section set
 
@@ -245,13 +294,34 @@ The view SHALL be fully static — no market or catalog live data, no loading or
 
 ### Requirement: Shell views are addressable hash routes
 
-The facet web shell SHALL address its views by hash: `#/` (intro) as the default landing, `#/packs` (packs market), `#/mcp` (MCP service catalog, carrying the per-server depth views and the skills catalog), `#/docs` (the documentation view), `#/studio` (the creation face, visible to signed-in users), and the identity-conditional author surfaces — `#/mine` (creator console, visible to signed-in users) and `#/curate` (curation board, visible to admins). The tab control and the hash SHALL stay in sync in both directions: switching a tab updates the hash, and loading or navigating to a hash renders the matching view with that entry active. An unknown or empty hash SHALL fall back to `#/`.
+The facet web shell SHALL address every view through a stable hash route, and **every one of them
+SHALL be reachable**. The root path `/` SHALL be owned by the shell's single-page application: no
+static page, no separate site, and no other handler SHALL answer `/` in a way that shadows the shell.
 
-Shell entries SHALL be split by weight: the public tabs are the four browsing views, a signed-in viewer additionally gets the creation face as a tab, and the author-only and admin-only surfaces SHALL be reachable from the account control rather than occupying the primary tab row. Demoting an entry SHALL NOT remove its hash: `#/mine` and `#/curate` SHALL keep resolving for a viewer whose identity grants them, so existing deep links and bookmarks continue to work, and navigating to a conditional hash without the grant SHALL fall back to the intro landing (the data plane rejects the calls anyway).
+The routes SHALL be: `#/` the entry view, `#/packs` the storefront, `#/mcp` the MCP catalogue,
+`#/docs` the documentation view, `#/mine` the creator console, `#/curate` the curation board,
+`#/studio` the creation studio, and `#/fleets` the fleet view. Reading routes SHALL be reachable
+anonymously; authoring and curation routes SHALL require the identity their own requirements state,
+and a denied route SHALL render the entry view rather than a blank shell.
 
-A view the shell borrows from the 壹座 web app SHALL render completely on the facet shell. The shell itself SHALL add no router dependency for its own views; where a borrowed view requires routing context, the shell SHALL supply a local route table scoped to that view, and every navigation affordance inside a borrowed view SHALL either resolve within that local table or be replaced by a real external link to 壹座 — a control whose destination does not exist on the host SHALL NOT be rendered as an active affordance. Depth views SHALL remain reachable within `#/mcp` without adding new top-level hashes.
+A route SHALL NOT be reachable only by memory: the shell's navigation SHALL expose every view the
+signed-in visitor is entitled to, so a restored deployment cannot leave a view addressable but
+unfindable.
 
-The server side of the shell SHALL keep three path classes apart: API paths (`/api/**`, `/auth/**`) are never answered with the shell document; machine-surface paths (`/llms.txt`, `/llms-full.txt`, `/catalog.json`, `/robots.txt`) SHALL be answered with 404, because this host owns no machine surface and a soft HTML success is indistinguishable from a real one to a crawler; every remaining path MAY serve the shell document so hash routes resolve on direct entry.
+#### Scenario: the root belongs to the shell
+
+- **WHEN** any client requests the bare root path of the canonical domain
+- **THEN** the shell's document is served and the entry view renders — never a separate static page
+
+#### Scenario: every view is reachable
+
+- **WHEN** a signed-in visitor navigates the shell
+- **THEN** the storefront, MCP catalogue, docs, creator console, curation board, studio, and fleet view are each reachable both by navigation and by their hash address
+
+#### Scenario: a denied view does not blank the shell
+
+- **WHEN** an anonymous visitor opens a route that requires identity
+- **THEN** the entry view renders instead of an empty shell, and the route remains reflectable in the address
 
 #### Scenario: deep link and refresh
 
@@ -266,7 +336,7 @@ The server side of the shell SHALL keep three path classes apart: API paths (`/a
 #### Scenario: unknown hash falls back
 
 - **WHEN** the location hash is unknown or empty
-- **THEN** the intro view renders as the landing
+- **THEN** the entry view renders as the landing
 
 #### Scenario: borrowed view needs no routing context
 
@@ -277,7 +347,7 @@ The server side of the shell SHALL keep three path classes apart: API paths (`/a
 #### Scenario: conditional tabs follow identity
 
 - **WHEN** an anonymous visitor, a signed-in creator, and an admin each load the shell
-- **THEN** the anonymous visitor sees only the four public entries; the creator sees the same four plus the creation face, and reaches the creator console (`#/mine`) from the account control; the admin additionally reaches the curation board (`#/curate`) from the account control
+- **THEN** the anonymous visitor sees only the public entries; the creator sees the same ones plus the creation face, and reaches the creator console (`#/mine`) from the account control; the admin additionally reaches the curation board (`#/curate`) from the account control
 - **AND** typing `#/mine` or `#/curate` directly still resolves for a viewer whose identity grants it
 
 #### Scenario: the creation face navigates honestly
@@ -294,7 +364,7 @@ The server side of the shell SHALL keep three path classes apart: API paths (`/a
 #### Scenario: machine paths are not masked by the shell
 
 - **WHEN** an agent requests `/llms.txt`, `/llms-full.txt`, `/catalog.json` or `/robots.txt` on the facet host
-- **THEN** the status is 404 and the body is not the shell HTML
+- **THEN** the owner of those surfaces answers with their own bytes (or an explicit error status when it cannot) — never the shell HTML, and never a soft 200
 
 #### Scenario: human deep entry still resolves after the machine-path rule
 

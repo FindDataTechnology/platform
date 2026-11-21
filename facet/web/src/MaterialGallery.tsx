@@ -107,37 +107,47 @@ export function MaterialGallery({
   }, [materials]);
 
   return (
-    <section className="chapter wide" id="inventory" data-testid="material-gallery">
-      <h2 className="sec-title">{t("entryGallery.title")}</h2>
-      <p className="sec-lead">{t("entryGallery.lead")}</p>
+    <section className="rounded-lg border border-border p-6" id="inventory" data-testid="material-gallery">
+      <h2 className="text-lg font-semibold">{t("entryGallery.title")}</h2>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        {t("entryGallery.lead")}
+      </p>
 
-      <p className="inv-status mono" data-testid="gallery-status" aria-live="polite">
+      <p className="mt-3 text-xs text-muted-foreground" data-testid="gallery-status" aria-live="polite">
         {status}
       </p>
 
-      <div className="inv-tabs mono" role="tablist">
+      <div className="mt-4 flex flex-wrap gap-2" role="tablist">
         {TABS.map((id) => (
           <button
             key={id}
             role="tab"
             aria-selected={tab === id}
-            className={`inv-tab ${tab === id ? "active" : ""}`}
             onClick={() => setTab(id)}
+            className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+              tab === id
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:text-foreground"
+            }`}
           >
             {t(`entryGallery.tabs.${id}`)}
           </button>
         ))}
       </div>
 
-      <div className="inv-controls">
+      <div className="mt-4 flex flex-wrap gap-3">
         <input
           type="search"
-          className="inv-search"
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm min-w-[14rem]"
           placeholder={t("entryGallery.searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <select className="inv-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+        <select
+          className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
           <option value="">{t("entryGallery.allCategories")}</option>
           {categories.map(([c, n]) => (
             <option key={c} value={c}>
@@ -148,28 +158,45 @@ export function MaterialGallery({
       </div>
 
       {shown.length === 0 ? (
-        <p className="sec-ink" data-testid="gallery-empty">
+        <p className="mt-6 text-sm text-muted-foreground" data-testid="gallery-empty">
           {t("entryGallery.empty")}
         </p>
       ) : (
-        <div className="inv-grid" data-testid="gallery-grid">
+        <div
+          className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+          data-testid="gallery-grid"
+        >
           {shown.map((m) => {
             const name = m.human?.[locale]?.name ?? m.human?.en?.name ?? m.id;
             const desc = m.human?.[locale]?.summary ?? m.canonical?.brief ?? "";
             return (
-              <article className="inv-card" key={m.id}>
-                <h4>{name}</h4>
-                <div className="badges">
-                  {m.badges?.official && <span className="badge official">{t("entryGallery.official")}</span>}
-                  {m.badges?.facade && <span className="badge facade">{t("entryGallery.facade")}</span>}
-                  <span className="badge">{t(`entryGallery.categoryNames.${m.category}`, m.category)}</span>
+              <article
+                key={m.id}
+                className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4"
+              >
+                <h4 className="text-sm font-medium leading-snug">{name}</h4>
+                <div className="flex flex-wrap gap-1.5">
+                  {m.badges?.official && (
+                    <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                      {t("entryGallery.official")}
+                    </span>
+                  )}
+                  {m.badges?.facade && (
+                    <span className="rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium">
+                      {t("entryGallery.facade")}
+                    </span>
+                  )}
+                  <span className="rounded border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                    {t(`entryGallery.categoryNames.${m.category}`, m.category)}
+                  </span>
                 </div>
-                <p className="desc">{desc}</p>
-                <div className="links">
-                  <a href={`${base}/generated/materials/${encodeURIComponent(m.slug)}.md`}>
-                    {t("entryGallery.page")} →
-                  </a>
-                </div>
+                <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">{desc}</p>
+                <a
+                  className="mt-auto text-xs text-primary underline-offset-2 hover:underline"
+                  href={`${base}/generated/materials/${encodeURIComponent(m.slug)}.md`}
+                >
+                  {t("entryGallery.page")} →
+                </a>
               </article>
             );
           })}

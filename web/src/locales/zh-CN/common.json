@@ -1446,7 +1446,7 @@
       "footnote": "调用键 401 时标记为需重连，重新绑定即铸新键；绑定的账号优先于手动粘贴的键。"
     },
     "delegation": {
-      "hint": "把部分拍板项委托给智能体团队的常务岗裁决；其余仍由你处理。高风险类别（配置改动/人事/花费）永远由你裁决。",
+      "hint": "把部分拍板项委托给智能体团队的常务岗裁决；其余仍由你处理。高风险类别（配置改动/人事/花费）默认仍由你裁决——你可以逐个解锁，解锁后代理的裁决会有一段可撤销的窗口。",
       "enabled": "启用委托",
       "routes": "类别路由",
       "category": {
@@ -1470,7 +1470,10 @@
       "digestOff": "关闭",
       "model": "裁决所用模型",
       "modelInherit": "留空则继承",
-      "modelHint": "留空即跟随智能体团队/cell 默认模型；填了会对常务岗岗位生效（下一轮巡逻起）。"
+      "modelHint": "留空即跟随智能体团队/cell 默认模型；填了会对常务岗岗位生效（下一轮巡逻起）。",
+      "unlock": "解锁",
+      "revokeWindow": "撤销窗口（分钟）",
+      "revokeWindowHint": "解锁类别上裁决生效后，你可在该窗口内撤销。"
     },
     "searchPlaceholder": "搜索设置…",
     "searchEmpty": "没有匹配的设置",
@@ -3520,7 +3523,9 @@
       "evidence": "依据",
       "recall": "收回（自己裁）",
       "executed": "已执行",
-      "notExecuted": "批了未执行"
+      "notExecuted": "批了未执行",
+      "revoke": "撤销",
+      "revoked": "已撤销"
     },
     "tpl": {
       "awaitStart": "智能体团队已按模板组建（全队暂停）——确认组织与节奏后启动",
@@ -5218,6 +5223,11 @@
         "body": "从 /generated/llms.txt 开始：站点索引，每节自足。 结构化数据读 /generated/catalog.json：canonical 简报 + 五语摘要 + whenToUse + provenance。 每一件素材一页自足 Markdown（materials/<slug>.md），地址稳定不随内容更新变化。 要把素材变成在线服务：A2A 端点，见 infrastructure.md 的服务化行。",
         "cta": "从 /llms.txt 开始 →"
       }
+    },
+    "hero": {
+      "title": "智能体要用的每一种素材， 都摆在这个广场上。",
+      "lead": "功能集、生态技能、MCP 服务、AI 分身、官方数据锚——每一件都可被人与 AI 理解、获取、运行。这里呈现素材有什么、怎么供给、此刻有什么在场。",
+      "actions": "人：往下看，或直接去目录"
     }
   },
   "entryGallery": {

@@ -575,3 +575,63 @@ test("routes: daily cap and open-queue cap flood control", async () => {
     server.close();
   }
 });
+
+// ── precedent citation by grade, not by actor ───────────────────────────────
+// (agent-decided-learning-loop 3.3) The query used to hard-code
+// `resolved_by = 'owner'`, which is the implementation of "an agent can never
+// teach the next judgement" — an independent agent ruling was citable in
+// principle and unreachable in practice.
+
+test("precedent citation: grade decides, actor identity does not", () => {
+  const fleet = fixtureFleet(fleetDb);
+  const member = fixtureMember(fleetDb, fleet.id);
+  const delivered = (over) => {
+    const item = fixtureDecision(fleetDb, fleet.id, member.id, over);
+    fleetDb.transitionDecision(item.id, "open", {
+      state: "approved",
+      resolution: resolve(item, "fri"),
+      resolvedAt: Date.now(),
+      resolvedBy: over.resolvedBy ?? "owner",
+      precedentGrade: over.grade,
+    });
+    fleetDb.transitionDecision(item.id, "approved", { state: "delivered", deliveredAt: Date.now() });
+    return item.id;
+  };
+
+  const selfId = delivered({ grade: "agent-self", resolvedBy: "agent:f1/m-decider" });
+  const indepId = delivered({ grade: "agent-independent", resolvedBy: "agent:f1/m-decider" });
+  const unverifiedId = delivered({ grade: "agent-independent-unverified", resolvedBy: "agent:f1/m-decider" });
+  const legacyId = delivered({ grade: "deputy-ruled", resolvedBy: "deputy" });
+  const ownerId = delivered({ grade: "owner-authored", resolvedBy: "owner" });
+
+  const ids = fleetDb.listCitablePrecedents({ fleetId: fleet.id, limit: 10 }).map((d) => d.id);
+  assert.equal(ids.includes(selfId), false, "agent-self is not a precedent");
+  assert.equal(ids.includes(legacyId), false, "historical deputy-ruled is not a precedent");
+  assert.equal(ids.includes(indepId), true, "an independent agent ruling IS citable");
+  assert.equal(ids.includes(unverifiedId), true, "unverified-independent is citable, and labelled as such");
+  assert.equal(ids.includes(ownerId), true, "owner-authored stays citable");
+
+  const byId = new Map(fleetDb.listCitablePrecedents({ fleetId: fleet.id, limit: 10 }).map((d) => [d.id, d]));
+  assert.equal(byId.get(indepId).precedentGradeNormalized, "agent-independent");
+  assert.equal(byId.get(unverifiedId).precedentGradeNormalized, "agent-independent-unverified");
+  assert.equal(byId.get(legacyId), undefined, "the legacy row never surfaces through this read at all");
+});
+
+test("overruled precedents (auditor counter-examples) are selected by disagreement, not by actor", () => {
+  const fleet = fixtureFleet(fleetDb);
+  const member = fixtureMember(fleetDb, fleet.id);
+  const seed = (over) => {
+    const item = fixtureDecision(fleetDb, fleet.id, member.id, over);
+    fleetDb.transitionDecision(item.id, "open", {
+      state: over.state ?? "approved",
+      resolution: over.resolution ?? resolve(item, "now"),
+      resolvedAt: Date.now(),
+      resolvedBy: over.resolvedBy,
+    });
+    return item.id;
+  };
+  // An AGENT disagreed with the recommendation — it belongs in the negative set.
+  const agentOverruled = seed({ recommendation: "fri", resolvedBy: "agent:f1/m-decider" });
+  const out = fleetDb.listOverruledDecisions({ fleetId: fleet.id, limit: 5 }).map((d) => d.id);
+  assert.equal(out.includes(agentOverruled), true, "an agent's overrule is a counter-example too");
+});

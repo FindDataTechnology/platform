@@ -29,7 +29,7 @@ fs.mkdirSync(process.env.DSH_HOME, { recursive: true });
 
 const { initDb } = await import("../db.js");
 const { createFleetDatabase, setFleetDatabase } = await import("../server/routes/fleets-db.js");
-const { buildInbox, LANE_IDS, consequenceFor } = await import("../server/owner-inbox.js");
+const { buildInbox, LANE_IDS, consequenceFor, gradeKind } = await import("../server/owner-inbox.js");
 
 await initDb();
 
@@ -241,4 +241,53 @@ test("team-approval lane degrades to an EMPTY lane, not an error, on a fresh cel
   const lane = out.lanes.find((l) => l.id === "team-approval");
   assert.equal(lane.status, "ok", `expected ok, got: ${lane.error ?? ""}`);
   assert.equal(lane.items.length, 0);
+});
+
+// ── the audit chain (agent-decided-learning-loop 4.4) ───────────────────────
+// The inbox is the owner's only remaining answer to "why did that hold?" once
+// nothing waits on a human signature. The chain must ride the item verbatim,
+// and a grade must collapse into something a person can scan — without ever
+// inventing a bucket for a value it does not recognise.
+
+test("signature chain and grade kind ride the fleet-decision projection", () => {
+  const fleet = fleetDb.createFleet({ id: "fleet_chain", name: "链队", ownerEmail: "owner@test" });
+  const member = fleetDb.createMember({
+    id: "m_chain", fleetId: fleet.id, title: "内容部", targetKind: "persona", targetId: "persona-x",
+    kpiSlots: [], cadence: { cron: "0 3 1 1 *", tz: null, promptTemplate: "巡视", enabled: true },
+  });
+  const chain = {
+    proposer: "agent:fleet_chain/m_chain",
+    decider: "agent:fleet_chain/m_deputy",
+    grader: "agent:fleet_chain/m_auditor",
+    deciderModel: "model-a",
+    graderModel: "model-b",
+    independence: { ok: true, verified: true, acyclic: true, blind: true, cycleAt: null },
+  };
+  const item = fleetDb.appendDecision({
+    id: "d_chain", fleetId: fleet.id, memberId: member.id,
+    question: "带签名链的裁决", options: [{ value: "y", label: "是" }, { value: "n", label: "否" }],
+    severity: "normal", route: "owner", category: "routine-ops", detail: { chain },
+  });
+  fleetDb.transitionDecision(item.id, "open", {
+    state: "approved", resolution: { kind: "approve", choice: "y" },
+    resolvedAt: Date.now(), resolvedBy: chain.decider, precedentGrade: "agent-independent",
+  });
+
+  const view = buildInbox({ email: "owner@test" });
+  const row = view.lanes.flatMap((l) => l.items ?? []).find((i) => i.itemRef === "d_chain");
+  assert.ok(row, "the decided item is in the inbox");
+  assert.deepEqual(row.chain, chain, "the chain rides verbatim — no re-derivation at the read face");
+  assert.equal(row.precedentGrade, "agent-independent");
+  assert.equal(row.precedentGradeKind, "agent-verified");
+});
+
+test("gradeKind collapses to three readable kinds and never guesses", () => {
+  assert.equal(gradeKind("owner-authored"), "owner");
+  assert.equal(gradeKind("owner-approved"), "owner");
+  assert.equal(gradeKind("agent-independent"), "agent-verified");
+  assert.equal(gradeKind("agent-independent-unverified"), "agent-unverified");
+  assert.equal(gradeKind("agent-self"), "agent-self");
+  assert.equal(gradeKind("deputy-ruled"), "agent-self", "the historical literal reads as self-ruled");
+  assert.equal(gradeKind(null), "unknown");
+  assert.equal(gradeKind("something-new"), "unknown", "an unrecognised grade is NOT silently called self");
 });

@@ -21,6 +21,7 @@ fs.mkdirSync(process.env.DSH_HOME, { recursive: true });
 
 const { initDb } = await import("../db.js");
 const { createFleetRoutes } = await import("../server/routes/fleets.js");
+const { isAgentRuling } = await import("../lib/precedent-grade.js");
 const {
   createFleetDatabase,
   setFleetDatabase,
@@ -298,7 +299,10 @@ test("deputy:预算内的裁决生效并记录身份与依据", async () => {
     assert.equal(r.status, 200);
     const after = fleetDb.getDecision(item.id);
     assert.equal(after.state, "approved");
-    assert.equal(after.resolvedBy, "deputy");
+    // agent-decided-learning-loop 4.1: the actor is a COORDINATE now, not the
+    // role word — two fleets' deputies were indistinguishable in the record,
+    // and the independence graph compares coordinates.
+    assert.match(after.resolvedBy, /^agent:.+\/m_deputy$/, "裁决者是成员坐标，不是角色词");
     assert.match(after.rulingEvidence, /判例/);
     assert.equal(after.resolution.choice, "yes");
     // 裁决模型只由服务端从本回合子进程的 request/header 取——这个 ctx 没有
@@ -851,7 +855,7 @@ test("deputy: 两轮在飞 + 自报身份时裁决能落库", async () => {
       selfIdentity: { fleetId: FLEET, memberId: DEPUTY, persona: "preset-deputy" },
     });
     assert.equal(r.status, 200, `自报身份后应裁决成功，实际 ${r.status} ${JSON.stringify(r.body)}`);
-    assert.equal(r.body?.decision?.resolvedBy, "deputy");
+    assert.match(r.body?.decision?.resolvedBy ?? "", /^agent:.+\/m_/, "裁决者是成员坐标");
     const got = fleetDb.getDecision?.("d_concurrent_resolve");
     assert.equal(got?.state, "approved", "裁决必须真的落库，不是只回了个 200");
   } finally {
@@ -944,7 +948,22 @@ test("判例: 代理自裁仍不可引用（不能借这条通道洗白）", asy
       itemId: "d_grade_dep", kind: "approve", choice: "y", evidence: "例行",
     });
     assert.equal(r.status, 200, JSON.stringify(r.body));
-    assert.equal(fleetDb.getDecision("d_grade_dep").precedentGrade, "deputy-ruled");
+    // agent-decided-learning-loop: the grade is computed from the independence
+    // graph now. Here the proposer (WORKER) and the decider (DEPUTY) differ, so
+    // the ruling is independent — but nobody verified it (no auditor verdict, so
+    // no grader), which is exactly the `-unverified` tier. It IS citable.
+    //
+    // What must stay impossible is the OTHER case: an agent ruling its OWN
+    // item. That is covered by the graph unit tests (proposer === decider →
+    // agent-self) and by the citation query test (agent-self never surfaces).
+    assert.equal(fleetDb.getDecision("d_grade_dep").precedentGrade, "agent-independent-unverified");
+    // Citation reads delivered rulings only (a ruling that never reached its
+    // post is not yet a settled fact). Delivery is what the round hook does.
+    fleetDb.transitionDecision("d_grade_dep", "approved", { state: "delivered", deliveredAt: Date.now() });
+    const cited = fleetDb
+      .listCitablePrecedents({ fleetId: FLEET, memberId: WORKER, limit: 10 })
+      .map((d) => d.id);
+    assert.equal(cited.includes("d_grade_dep"), true, "独立但未验证的 agent 裁决是可引用的，并带未验证标注");
   } finally {
     ctx.currentPreset = null;
     fleetDb.setCellSetting("delegationPolicy", { enabled: true, routes: { "routine-ops": "deputy" }, maxSeverity: "high" });
@@ -1051,7 +1070,9 @@ test("triage: 分诊项不消耗当日裁决预算", async () => {
     const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
     const used = fleetDb
       .listDecisions({ fleetId: FLEET })
-      .filter((d) => d.resolvedBy === "deputy" && (d.resolvedAt ?? 0) > dayStart.getTime() && d.route !== "deputy-triage")
+      // Read the SAME predicate the route uses: after the coordinate change,
+      // `=== "deputy"` counts zero and the budget silently reads as unused.
+      .filter((d) => isAgentRuling(d.resolvedBy) && (d.resolvedAt ?? 0) > dayStart.getTime() && d.route !== "deputy-triage")
       .length;
     fleetDb.setFleetDelegationPolicy(FLEET, {
       enabled: true, deputyMemberId: DEPUTY, routes: { "routine-ops": "deputy", "infra-ticket": "deputy-triage" },
@@ -1106,6 +1127,222 @@ test("triage: 分诊项可以上报主人（它没有裁决权，上报是它唯
     assert.ok(got.detail?.deputyAnalysis?.analysis, "分析必须随条目保存");
   } finally {
     ctx.currentPreset = null;
+    server.close();
+  }
+});
+
+// ── user-controlled unlock of high-impact categories (5.4) ───────────────────
+// The rule being replaced said an UPDATE must never widen a destructive/publish
+// action. That guarded against accidental widening — and also locked the USER
+// out of their own trust decision. The new shape keeps the default shut and
+// makes opening it two deliberate, separately-written facts.
+
+test("policy:高影响类别默认锁死，写 route 但不写 unlocked 不生效", () => {
+  const p = normalizeDelegationPolicy(
+    { enabled: true, routes: { "config-change": "deputy", hr: "deputy", spend: "deputy" } },
+    null,
+  );
+  assert.equal(p.routes["config-change"], "owner", "写 route 而没写 unlocked，仍是 owner");
+  assert.equal(p.routes.hr, "owner");
+  assert.equal(p.routes.spend, "owner");
+  assert.deepEqual(p.unlocked, []);
+});
+
+test("policy:显式解锁后该类可委托到常务岗", () => {
+  const p = normalizeDelegationPolicy(
+    { enabled: true, routes: { "config-change": "deputy" }, unlocked: ["config-change"], revokeWindowMinutes: 60 },
+    null,
+  );
+  assert.deepEqual(p.unlocked, ["config-change"]);
+  assert.equal(p.routes["config-change"], "deputy", "解锁 + route 才生效");
+  assert.equal(p.routes.hr, "owner", "未解锁的其它高影响类别不受影响");
+  assert.equal(routeForItem({ category: "config-change", severity: "normal" }, p), "deputy");
+});
+
+test("policy:解锁未知类别不生效（闭集）", () => {
+  const p = normalizeDelegationPolicy(
+    { enabled: true, routes: { "routine-ops": "deputy" }, unlocked: ["spend", "not-a-category"], revokeWindowMinutes: 30 },
+    null,
+  );
+  assert.deepEqual(p.unlocked, ["spend"], "只保留闭集里的名字");
+});
+
+test("policy:舰队覆写不会悄悄放宽锁死集", () => {
+  const cell = normalizeDelegationPolicy({ enabled: true, routes: { "routine-ops": "deputy" } }, null);
+  // A fleet writes a delegate route for a locked category WITHOUT unlocking it.
+  const merged = normalizeDelegationPolicy(cell, { routes: { "config-change": "deputy" } });
+  assert.equal(merged.routes["config-change"], "owner", "未解锁的舰队覆写仍被归一为 owner");
+});
+
+// ── 5.4 revoke window on user-unlocked categories ───────────────────────────
+// The whole point of making the boundary USER-configurable: when they open a
+// high-impact category to an agent, the ruling it lands must be undoable for a
+// while — otherwise "the user decides" would mean "the user decides once and
+// then watches it happen".
+
+test("撤销窗:解锁类别由代理裁决后落窗，期内可撤销且原记录不改写", async () => {
+  const { server, call } = await startServer();
+  try {
+    const F = "fleet_revoke";
+    fleetDb.createFleet({ id: F, name: "撤销舰队", ownerEmail: OWNER });
+    fleetDb.createMember({
+      id: "m_rv_dep", fleetId: F, title: "常务", targetKind: "persona", targetId: "preset-rv-deputy",
+      cadence: { cron: "0 * * * *", tz: null, enabled: true },
+    });
+    fleetDb.createMember({
+      id: "m_rv_worker", fleetId: F, title: "投稿", targetKind: "persona", targetId: "preset-rv-worker",
+      cadence: { cron: "0 9 * * *", tz: null, enabled: true },
+    });
+    fleetDb.setFleetDelegationPolicy(F, {
+      enabled: true, deputyMemberId: "m_rv_dep",
+      routes: { "config-change": "deputy", default: "owner" },
+      unlocked: ["config-change"], revokeWindowMinutes: 60,
+      maxSeverity: "high", dailyBudget: 20,
+    });
+    // Prove the unlock reached the effective policy.
+    assert.equal(routeForItem({ category: "config-change", severity: "low" }, fleetDb.getFleetDelegationPolicy(F)), "deputy");
+
+    fleetDb.appendDecision({
+      id: "d_revoke", fleetId: F, memberId: "m_rv_worker",
+      question: "解锁类别的裁决", options: [{ value: "y", label: "批准" }, { value: "n", label: "驳回" }],
+      severity: "low", itemType: "config-change", category: "config-change", route: "deputy",
+    });
+    ctx.currentPreset = "preset-rv-deputy";
+    const r = await call("POST", "/api/fleets/deputy/resolve", { itemId: "d_revoke", kind: "approve", choice: "y", evidence: "已审" });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const landed = fleetDb.getDecision("d_revoke");
+    assert.ok(landed.revocableUntil > Date.now(), "解锁类别的代理裁决落了一个未到期的撤销窗");
+    assert.ok(landed.detail?.counterfactual, "高影响档同时落反事实");
+
+    // Past the window → honest refusal, not silent success.
+    fleetDb.transitionDecision("d_revoke", "approved", { revocableUntil: Date.now() - 1000 });
+    ctx.currentPreset = null;
+    const late = await call("POST", `/api/fleets/${F}/decisions/d_revoke/revoke`, { reason: "太迟" });
+    assert.equal(late.status, 409);
+    assert.equal(late.body.code, "WINDOW_CLOSED");
+
+    // Re-open the window and revoke: the ruling stays as fact, revocation is
+    // a separate stamp.
+    fleetDb.transitionDecision("d_revoke", "approved", { revocableUntil: Date.now() + 60_000 });
+    const ok = await call("POST", `/api/fleets/${F}/decisions/d_revoke/revoke`, { reason: "口径不对" });
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const after = fleetDb.getDecision("d_revoke");
+    assert.ok(after.revokedAt, "revoked_at 落了");
+    assert.equal(after.state, "approved", "原终局不被改写——撤销是另一条事实");
+    assert.equal(after.detail?.revocation?.reason, "口径不对");
+  } finally {
+    ctx.currentPreset = null;
+    server.close();
+  }
+});
+
+test("撤销窗:未解锁类别的裁决没有窗口，撤销被如实拒绝", async () => {
+  const { server, call } = await startServer();
+  try {
+    const F = "fleet_nowindow";
+    fleetDb.createFleet({ id: F, name: "无窗舰队", ownerEmail: OWNER });
+    fleetDb.createMember({
+      id: "m_nw_dep", fleetId: F, title: "常务", targetKind: "persona", targetId: "preset-nw-deputy",
+      cadence: { cron: "0 * * * *", tz: null, enabled: true },
+    });
+    fleetDb.createMember({
+      id: "m_nw_worker", fleetId: F, title: "投稿", targetKind: "persona", targetId: "preset-nw-worker",
+      cadence: { cron: "0 9 * * *", tz: null, enabled: true },
+    });
+    fleetDb.setFleetDelegationPolicy(F, {
+      enabled: true, deputyMemberId: "m_nw_dep",
+      routes: { "routine-ops": "deputy" }, maxSeverity: "high", dailyBudget: 20,
+    });
+    fleetDb.appendDecision({
+      id: "d_nowin", fleetId: F, memberId: "m_nw_worker",
+      question: "普通类别裁决", options: [{ value: "y", label: "批准" }],
+      severity: "low", itemType: "routine-ops", category: "routine-ops", route: "deputy",
+    });
+    ctx.currentPreset = "preset-nw-deputy";
+    const r = await call("POST", "/api/fleets/deputy/resolve", { itemId: "d_nowin", kind: "approve", choice: "y", evidence: "例行" });
+    assert.equal(r.status, 200);
+    assert.equal(fleetDb.getDecision("d_nowin").revocableUntil ?? null, null, "普通类别不落撤销窗");
+    ctx.currentPreset = null;
+    const no = await call("POST", `/api/fleets/${F}/decisions/d_nowin/revoke`, {});
+    assert.equal(no.status, 409);
+    assert.equal(no.body.code, "NOT_REVOCABLE");
+  } finally {
+    ctx.currentPreset = null;
+    server.close();
+  }
+});
+
+// ── 5.4 write-face guards ───────────────────────────────────────────────────
+// Both are spec-level SHALLs, so they must be enforced where the write lands,
+// not merely normalized away downstream.
+
+test("写入口:解锁高影响类别但未给撤销窗被拒", async () => {
+  const { server, call } = await startServer();
+  try {
+    const r = await call("PUT", "/api/fleets/delegation-policy", {
+      scope: "cell",
+      policy: { enabled: true, unlocked: ["spend"], routes: { spend: "deputy" } },
+    });
+    assert.equal(r.status, 400);
+    assert.equal(r.body.code, "UNLOCK_REQUIRES_REVOKE_WINDOW");
+    // Nothing was written.
+    const after = await call("GET", "/api/fleets/delegation-policy");
+    assert.deepEqual(after.body.effective?.unlocked ?? [], []);
+  } finally {
+    server.close();
+  }
+});
+
+test("写入口:代理（内部桥接身份）不得修改自己的授权边界", async () => {
+  const app = express();
+  app.use(express.json());
+  // Stamp the internal flag the way the auth gate does for a bridge child.
+  app.use((req, _res, next) => { req.user = { email: "fleet-bridge@internal", internal: true }; next(); });
+  createFleetRoutes(app, { ...ctx, authEnabled: true });
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise((r) => server.once("listening", r));
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/api/fleets/delegation-policy`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "cell", policy: { enabled: true, unlocked: ["hr"], routes: { hr: "deputy" }, revokeWindowMinutes: 60 } }),
+    });
+    const body = await res.json().catch(() => ({}));
+    assert.equal(res.status, 403);
+    assert.equal(body.code, "SELF_GRANT_FORBIDDEN");
+  } finally {
+    server.close();
+  }
+});
+
+// ── owner decision path still grades (regression: the two-tier rewrite
+// removed classifyProvenance from the import while a call site remained) ────
+test("主人裁决路径仍能判级（declaredSource 分支不留悬空引用）", async () => {
+  const { server, call } = await startServer();
+  try {
+    const F = "fleet_owner_grade";
+    fleetDb.createFleet({ id: F, name: "主人判级队", ownerEmail: OWNER });
+    fleetDb.createMember({
+      id: "m_og", fleetId: F, title: "岗", targetKind: "persona", targetId: "preset-og",
+      cadence: { cron: "0 * * * *", tz: null, enabled: true },
+    });
+    fleetDb.appendDecision({
+      id: "d_og", fleetId: F, memberId: "m_og", question: "主人亲判",
+      options: [{ value: "y", label: "批" }], severity: "low", route: "owner", category: "routine-ops",
+    });
+    // Declared source path → classifyProvenance; undeclared path → deriveOwnerGrade.
+    const withDecl = await call("POST", `/api/fleets/${F}/decisions/d_og/approve`, { choice: "y", sourceKind: "owner-direct" });
+    assert.equal(withDecl.status, 200, JSON.stringify(withDecl.body));
+    assert.equal(fleetDb.getDecision("d_og").precedentGrade, "owner-authored");
+
+    fleetDb.appendDecision({
+      id: "d_og2", fleetId: F, memberId: "m_og", question: "主人亲判2",
+      options: [{ value: "y", label: "批" }], severity: "low", route: "owner", category: "routine-ops",
+    });
+    const noDecl = await call("POST", `/api/fleets/${F}/decisions/d_og2/approve`, { choice: "y" });
+    assert.equal(noDecl.status, 200, JSON.stringify(noDecl.body));
+    assert.equal(fleetDb.getDecision("d_og2").precedentGrade, "owner-authored");
+  } finally {
     server.close();
   }
 });

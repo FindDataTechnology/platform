@@ -1446,7 +1446,7 @@
       "footnote": "Un 401 marque la clé comme à reconnecter ; relier émet une nouvelle clé. Le compte lié prime sur une clé collée."
     },
     "delegation": {
-      "hint": "Déléguez une partie de la file à l'adjoint de l'équipe d'agents ; le reste reste pour vous. Les catégories à haut risque (config, personnel, dépenses) restent toujours votre décision.",
+      "hint": "Déléguez certaines décisions au délégué de l'équipe. Les catégories à fort impact (changement de config / RH / dépense) restent les vôtres par défaut — vous pouvez déverrouiller chacune, et ses décisions portent une fenêtre de révocation.",
       "enabled": "Activer la délégation",
       "routes": "Routage par catégorie",
       "category": {
@@ -1470,7 +1470,10 @@
       "digestOff": "Désactivé",
       "model": "Modèle de décision",
       "modelInherit": "Vide = hériter",
-      "modelHint": "Vide suit le modèle par défaut de l'équipe/cellule ; une valeur s'applique au poste d'adjoint dès sa prochaine ronde."
+      "modelHint": "Vide suit le modèle par défaut de l'équipe/cellule ; une valeur s'applique au poste d'adjoint dès sa prochaine ronde.",
+      "unlock": "Déverrouiller",
+      "revokeWindow": "Fenêtre de révocation (minutes)",
+      "revokeWindowHint": "Après qu'une décision sur une catégorie déverrouillée prend effet, vous pouvez la révoquer dans cette fenêtre."
     },
     "searchPlaceholder": "Rechercher un réglage…",
     "searchEmpty": "Aucun réglage correspondant",
@@ -3520,7 +3523,9 @@
       "evidence": "Fondement",
       "recall": "Reprendre (je tranche)",
       "executed": "Exécuté",
-      "notExecuted": "Décidé mais non exécuté"
+      "notExecuted": "Décidé mais non exécuté",
+      "revoke": "Révoquer",
+      "revoked": "Révoqué"
     },
     "tpl": {
       "awaitStart": "Équipe d'agents montée depuis le gabarit (tout en pause) — vérifiez puis démarrez",
@@ -5218,6 +5223,11 @@
         "body": "Commencez à /generated/llms.txt : l'index du site, chaque section autosuffisante. Données structurées à /generated/catalog.json : brief canonique + résumés en cinq langues + whenToUse + provenance. Une page Markdown autosuffisante par matériau (materials/<slug>.md), adresses stables malgré les mises à jour. Pour transformer un matériau en service en ligne : le point d'accès A2A — voir la ligne Servir dans infrastructure.md.",
         "cta": "Commencer à /llms.txt →"
       }
+    },
+    "hero": {
+      "title": "Chaque matériau dont un agent a besoin, est posé sur cette place.",
+      "lead": "Packs, compétences de l'écosystème, serveurs MCP, façades IA et ancres de données officielles — chacun est quelque chose qu'un humain ou un agent IA peut comprendre, obtenir et exécuter. Ce site montre ce qui existe, comment c'est fourni, et ce qui est présent maintenant.",
+      "actions": "Humain : continuez la lecture, ou allez au catalogue"
     }
   },
   "entryGallery": {

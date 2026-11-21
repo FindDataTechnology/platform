@@ -24,9 +24,20 @@ export function EntryView({ signedIn = false }: { signedIn?: boolean } = {}) {
   return (
     <Container>
       <div className="space-y-6">
+        {/* 0. Hero —— 旧 agent. 静态站的主标语。2026-11-21 用户指出「找不到以前的
+            agent 介绍页」：迁移时漏了 hero 这一组键，四段都在而主标语没了。
+            标题里的 <br> 已去掉，由容器宽度决定折行。 */}
+        <section data-testid="entry-hero">
+          <h1 className="text-2xl font-semibold tracking-tight">{t("entryPlaza.hero.title")}</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+            {t("entryPlaza.hero.lead")}
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("entryPlaza.hero.actions")}</p>
+        </section>
+
         {/* 1. 素材有什么 */}
         <section className="rounded-lg border border-border p-6" data-testid="entry-materials">
-          <h1 className="text-2xl font-semibold tracking-tight">{t("entryPlaza.materials.title")}</h1>
+          <h2 className="text-lg font-semibold">{t("entryPlaza.materials.title")}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             {t("entryPlaza.materials.lead")}
           </p>

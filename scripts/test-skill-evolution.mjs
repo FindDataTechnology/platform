@@ -195,6 +195,24 @@ test("eval anonymity: the judge prompt never carries arm role names (guidance do
   assert.match(seen[0], /【回答(甲|乙)】/);
 });
 
+test("promotion rolls back when the skill file cannot be materialized", async () => {
+  const cand = (await call("POST", "/api/skill-evolution/propose", GOOD({ name: "unwritable-skill" }))).body.candidate;
+  store.saveEvalReport(cand.id, { passed: true, reason: "mock green" });
+  store.markEvaluated(cand.id);
+
+  // Break only the disk half: the DB insert must be undone, and the candidate
+  // must NOT be left reading `promoted` (that is the silent-defect state).
+  // An ESM namespace is frozen, so the break rides the store's injection seam.
+  const { skillFilePathOf } = await import("../skill-materialize.js");
+  const broken = skillEvolutionStore({
+    materialize: { writeSkill: () => false, skillFilePathOf },
+  });
+  const out = broken.promote(cand.id, { by: "owner@test" });
+  assert.match(out.error, /rolled back/);
+  assert.equal(dbModule.getDb().prepare(`SELECT COUNT(*) AS n FROM custom_skills WHERE name = ?`).get("unwritable-skill").n, 0);
+  assert.equal(store.getCandidate(cand.id).status, "evaluated", "candidate stays promotable for a retry");
+});
+
 // ── promotion & rejection (route-level, the human gestures) ────────────────
 
 test("promotion: requires green evaluation; lands in custom_skills; lineage on the old row", async () => {
@@ -209,7 +227,15 @@ test("promotion: requires green evaluation; lands in custom_skills; lineage on t
   const ok = await call("POST", `/api/skill-evolution/candidates/${cand.id}/promote`, {});
   assert.equal(ok.status, 200);
   const row = dbModule.getDb().prepare(`SELECT name, description, content FROM custom_skills WHERE name = ?`).get("promote-me");
-  assert.ok(row, "the skill landed in custom_skills (materializer takes it live)");
+  assert.ok(row, "the skill landed in custom_skills");
+  // The disk is part of the same act: the row without its SKILL.md was the
+  // defect this pins — status said promoted, nothing materialized, the skill
+  // only appeared after a restart.
+  const { skillFilePathOf } = await import("../skill-materialize.js");
+  assert.ok(
+    fs.existsSync(skillFilePathOf({ name: "promote-me" })),
+    "the SKILL.md exists on disk BEFORE the response returns — no restart, no broadcast",
+  );
   const lineage = JSON.parse(dbModule.getDb().prepare(`SELECT evolution_lineage FROM custom_skills WHERE name = 'user-skill'`).get().evolution_lineage);
   assert.equal(lineage.supersededBy, "promote-me");
   assert.equal(lineage.candidateId, cand.id);
@@ -258,4 +284,39 @@ test("8.1 back-link: studio proposals carry sourceDocId; MCP-cell proposals stay
   const blank = await call("POST", "/api/skill-evolution/propose", GOOD({ name: "doc-blank", sourceDocId: "   " }));
   assert.equal(blank.status, 201);
   assert.equal(blank.body.candidate.sourceDocId ?? null, null, "blank normalizes to null");
+});
+
+// ── promotion authorization (agent-decided-learning-loop 5.1) ───────────────
+// A human still promotes exactly as before. A NON-human decider must clear the
+// independence graph — and the proposer can never sign its own candidate.
+
+test("a non-human decider is admitted only when the independence graph holds", async () => {
+  const green = async (name, proposedBy) => {
+    const cand = (await call("POST", "/api/skill-evolution/propose", GOOD({ name }), proposedBy)).body.candidate;
+    store.saveEvalReport(cand.id, { passed: true, lane: { model: "judge-model-x" } });
+    store.markEvaluated(cand.id);
+    return cand;
+  };
+
+  // Proposer is the internal bridge; the decider (also internal) is a DIFFERENT
+  // identity, and the judge lane supplies the grader model ⇒ graph holds.
+  const okCand = await green("agent-signed", "skill-evolution@internal");
+  const promoted = await call("POST", `/api/skill-evolution/candidates/${okCand.id}/promote`, {}, "deputy@internal");
+  assert.equal(promoted.status, 200, JSON.stringify(promoted.body));
+  assert.equal(promoted.body.authorizedVia, "independence");
+
+  // The proposer trying to sign its own candidate: proposer === decider ⇒
+  // agent-self ⇒ refused, with the reason naming the failing condition.
+  const ownCand = await green("self-signed", "skill-evolution@internal");
+  const refused = await call("POST", `/api/skill-evolution/candidates/${ownCand.id}/promote`, {}, "skill-evolution@internal");
+  assert.equal(refused.status, 403);
+  assert.equal(refused.body.code, "INDEPENDENCE_NOT_ESTABLISHED");
+  assert.match(refused.body.error, /提案者与裁决者/);
+  assert.equal(dbModule.getDb().prepare(`SELECT COUNT(*) AS n FROM custom_skills WHERE name = ?`).get("self-signed").n, 0);
+
+  // A human decider is unaffected by any of this.
+  const humanCand = await green("human-signed", "skill-evolution@internal");
+  const human = await call("POST", `/api/skill-evolution/candidates/${humanCand.id}/promote`, {}, "owner@test");
+  assert.equal(human.status, 200);
+  assert.equal(human.body.authorizedVia, "human");
 });

@@ -69,7 +69,9 @@ export function ProductIntroSection({ signedIn = false }: { signedIn?: boolean }
           empty on both sides while the figure wrapped in the narrow column. */}
       <section className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-start">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{t("facetIntro.title")}</h1>
+          {/* 降为 h2：入口页的 h1 是 hero（entryPlaza.hero.title）。一个页面只能有一个 h1 ——
+              2026-11-21 浏览器实测 h1count=2。 */}
+          <h2 className="text-2xl font-semibold tracking-tight">{t("facetIntro.title")}</h2>
           <p className="mt-3 max-w-3xl text-sm text-muted-foreground">{t("facetIntro.subtitle")}</p>
           <p className="mt-2 text-xs text-muted-foreground">{t("facetIntro.factRow")}</p>
           <div className="mt-6 flex flex-wrap gap-3">

@@ -23,6 +23,9 @@ import {
   FLEET_STATES,
   MEMBER_TARGET_KINDS,
   isPersonaBackedTargetKind,
+  LOCKED_BY_DEFAULT_CATEGORIES,
+  REVOKE_WINDOW_MIN,
+  REVOKE_WINDOW_MAX,
 } from "./fleets-db.js";
 import { reconcileFleet, deriveMemberStatus, cronPeriodMs, staleWindowMs } from "../fleet-reconcile.js";
 import { validateOrchestration, expandedEdges, dispatchAllowed, constraintsOf, CARRIERS } from "../fleet-orchestration.js";
@@ -30,11 +33,11 @@ import { validateFleetDraft, applyFleetDraft } from "../fleet-architect.js";
 import { buildConsoleViewModel } from "../console-blocks/index.js";
 import { splitToolTarget } from "../tool-turn.js";
 import { resolveServerEndpoint, resolveStdioServerConfig } from "../../lib/action-executor.js";
-import { classifyProvenance, deriveOwnerGrade } from "../../lib/precedent-grade.js";
+import { classifyProvenance, classifyRuling, deriveOwnerGrade, isAgentRuling, agentCoord } from "../../lib/precedent-grade.js";
 import { auditorAllowedFor, validateAuditorToolFace, AUDITOR_VERDICTS, isVerdict } from "../../lib/auditor-tool-face.js";
 import { domainFor } from "../../lib/personal-domain-map.js";
 import { validateRule } from "../../lib/precedent-candidate.js";
-import { agentMayHandle } from "../../lib/personal-mandate.js";
+import { agentMayHandle, NON_DOWNGRADABLE } from "../../lib/personal-mandate.js";
 
 // Team plugin landing (add-fleet-plugin-declaration 2.1). Called after a team is
 // born from a template and after a state change: the row set is RECOMPUTED from
@@ -2401,6 +2404,43 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
 
   // 校验归因岗位是否为本舰队委托策略的 deputy。返回 { fleet, deputy, policy }
   // 或 { error }。
+  /**
+   * 本舰队的审计官岗位（若有）。验证者坐标取自它的岗，不是请求体——一个自报
+   * 的 grader 坐标会让独立性图退回成一句声明。
+   */
+  function findAuditorMember(db, fleetId) {
+    return db.listMembers(fleetId).find((m) => m.targetKind === "auditor") ?? null;
+  }
+
+  /**
+   * 风险档 (agent-decided-learning-loop D3/5.4)。决策条目本身不声明 risk——
+   * 它声明 category / itemType。映射只有两条，其余一律「可回退」：
+   *
+   *   category ∈ 锁死集 且已被使用者解锁  → publish（高影响，且现在可委托）
+   *   锁死集但未解锁                      → 不可委托，走不到代理裁决，无意义
+   *   detail.risk 显式声明                → 原样采用（destructive/publish 才算）
+   *
+   * 传 policy 而不是读全局：解锁状态是**这一次**策略的事实，反事实要不要生成
+   * 取决于那一次裁决时该类到底解锁了没有。
+   */
+  function isNonDowngradableRisk(item, policy) {
+    const declared = typeof item?.detail?.risk === "string" ? item.detail.risk : null;
+    if (declared) return NON_DOWNGRADABLE.includes(declared);
+    const cat = item?.category ?? (item?.itemType === "config-change" ? "config-change" : null);
+    return Boolean(cat) && (policy?.unlocked ?? []).includes(cat);
+  }
+
+  /**
+   * 反事实：一句话写清「如果当时反着判，最坏会怎样」。由裁决方在已有证据上产，
+   * 不额外起一次生成调用（它已经在同一轮的取证里）。
+   */
+  function counterfactualLine(kind, item, choice) {
+    const picked = item.options?.find((o) => o.value === choice)?.label ?? choice ?? null;
+    return kind === "reject"
+      ? `反事实：若本次批准，${String(item.question).slice(0, 80)} 会立即生效且对外可见；驳回是可逆的，批准不是。`
+      : `反事实：若本次驳回，代价是「${String(picked ?? "该选项").slice(0, 60)}」延后一轮的等待成本；批准之后要走回滚。`;
+  }
+
   function deputyGuard({ db, attribution }) {
     if (attribution.kind === "none" || attribution.kind === "ambiguous") {
       return { error: attribution.error || "deputy identity could not be attributed", status: 409 };
@@ -2474,6 +2514,21 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
       }
       const patch = { auditorVerdict: verdict, auditorNote: reason };
       if (verdict === AUDITOR_VERDICTS.BLOCK) patch.route = "owner";
+      // 验证者坐标 (agent-decided-learning-loop 4.2)。审计官的工具面由服务端派生
+      // （lib/auditor-tool-face.js），它看不到提案者的推荐结论 ⇒ `blind: true` 是
+      // 结构事实，不是自报。模型取服务端观测值：自报的模型会让「换个模型复核」
+      // 变成一句声明，而独立性图比较的正是这两列。
+      const auditor = guard.auditor ?? findAuditorMember(db, fleet.id);
+      const auditorModel = auditor ? ctx?.fleetTurnLedger?.observedModelFor?.(auditor.id) ?? null : null;
+      const previousDetail = item.detail ?? {};
+      patch.detail = {
+        ...previousDetail,
+        chain: {
+          ...(previousDetail.chain ?? {}),
+          grader: auditor ? agentCoord(fleet.id, auditor.id) : null,
+          graderModel: auditorModel ?? null,
+        },
+      };
       const updated = db.transitionDecision(itemId, "open", patch);
       if (!updated) return res.status(409).json({ error: "first resolution wins" });
       res.json({ ok: true, item: updated });
@@ -2499,7 +2554,8 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
   }
 
   // Deputy 队列：route=deputy 的 open 项 + 每项的来源岗位上下文（标题/状态/
-  // 近期报数摘要）与主人过往同类判例（resolved_by=owner 的历史裁决）。
+  // 近期报数摘要）与同类判例（按**等级**取，不按签字人身份取——
+  // agent-decided-learning-loop 3.1）。
   router.post("/deputy/queue", async (req, res) => {
     try {
       const db = getFleetDatabase();
@@ -2531,10 +2587,10 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
       const queue = items.map((item) => {
         const m = memberOf(item.memberId);
         const recent = m ? db.listReports(m.id, { limit: 1 }) : [];
-        // 判例：主人过往对同一岗位/同类别的裁决（resolved_by=owner），且来源
-        // 等级必须是可引用的两级（owner-authored / owner-approved）。
-        // deputy-ruled 一律不进判例集：代理起草的稿被原样发出后字面上就是
-        // 主人的口径，不加分级回喂会形成自我强化。
+        // 判例：同一岗位/同类别过往的**可引用等级**裁决。等级集合见
+        // citationGrades（两个主人级 + 两个 agent 独立级）。`agent-self` 永不
+        // 出现：代理给自己背书回喂后会越来越同意自己，而记录看起来像独立判断
+        // ——这正是原先 deputy-ruled 不可引用的理由，换成坐标后仍然成立。
         const precedents = db
           .listCitablePrecedents({ fleetId: fleet.id, memberId: item.memberId, limit: 3 })
           .map((d) => ({
@@ -2643,7 +2699,10 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
         .listDecisions({ fleetId: fleet.id })
         .filter(
           (d) =>
-            d.resolvedBy === "deputy" &&
+            // Both the coordinate form and the historical literal count as an
+            // agent ruling — a budget that silently stopped counting after the
+            // shape change would read as "the daily cap was never reached".
+            isAgentRuling(d.resolvedBy) &&
             (d.resolvedAt ?? 0) > dayStart.getTime() &&
             // 分诊不消耗裁决预算（fix-triage-lane-has-no-consumer）。上面那道闸
             // 已经让分诊项无法被裁，这里再排一次是把不变量写在读处，而不是靠
@@ -2663,15 +2722,76 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
       // 模型链（后者会 out-of-band 漂移）。取不到就如实留空，不猜。
       const rulingModel = ctx?.fleetTurnLedger?.observedModelFor?.(deputy.id) ?? null;
 
+      // 签名链 (agent-decided-learning-loop 4.1)：席位是坐标不是角色词。
+      // `resolved_by = "deputy"` 说的是「图上哪个位置」，不是「哪个岗」——两支舰队的
+      // 常务岗在记录里本来分不开，而独立性图比较的正是坐标。
+      const deciderCoord = agentCoord(fleet.id, deputy.id) ?? "deputy";
+      // 提案者是**这条事项**来自哪个岗位。它是服务端已持有的事实（条目自己的
+      // member_id），不是请求体自报——自报的坐标会让图变成一句声明。
+      const proposerCoord = item.memberId ? agentCoord(fleet.id, item.memberId) : null;
+      // 验证者：本条目已有的审计官结论（若有）。审计官坐标来自它在舰队里的岗，
+      // 不是请求体。
+      const graderMember = item.auditorVerdict ? findAuditorMember(db, fleet.id) : null;
+      const graderCoord = graderMember ? agentCoord(fleet.id, graderMember.id) : null;
+      const graderModel = graderMember
+        ? ctx?.fleetTurnLedger?.observedModelFor?.(graderMember.id) ?? null
+        : null;
+
+      const ruled_ = classifyRuling({
+        proposer: proposerCoord,
+        decider: deciderCoord,
+        grader: graderCoord,
+        deciderModel: rulingModel,
+        graderModel,
+        // Blindness rides the VERDICT (agent-decided-learning-loop 5.2): the
+        // auditor's tool face is server-derived and carries no decision
+        // queue / no proposer recommendation (lib/auditor-tool-face.js), so a
+        // verdict it actually submitted was produced without sight of the
+        // recommendation — that is what makes it a check rather than an echo.
+        // A grader seat with no verdict has done nothing yet, so it stays
+        // non-blind and the ruling lands at `-unverified`.
+        blind: Boolean(item.auditorVerdict),
+      });
+
+      // 授权口径 (agent-decided-learning-loop 5.3)：**裁决动作仍由上面六道闸授权**，
+      // 独立性这里不拦裁决——它决定的是等级与能否被引用。两者分开是刻意的：
+      // 危险从来不是「agent 做了裁决」，而是「agent 的裁决成为它自己下一次的依据」。
+      // 所以一个自裁仍然会落库（它是事实），只是落成 agent-self、不进判例集。
+      // 把独立性写成裁决的前置闸会顺手干掉「岗位上报自己的事项、常务岗裁决」
+      // 这条每天都在走的正常链路。
+
       const updated = db.transitionDecision(itemId, "open", {
         state: kind === "reject" ? "rejected" : "approved",
         resolution: resolution.resolution,
         resolvedAt: Date.now(),
-        resolvedBy: "deputy",
+        resolvedBy: deciderCoord,
         resolvedByModel: rulingModel ? String(rulingModel).slice(0, 120) : null,
         rulingEvidence: typeof evidence === "string" ? evidence.slice(0, 2000) : null,
-        // 判级由产生路径决定，不看代理自报：代理自裁永远进不了判例集。
-        precedentGrade: classifyProvenance({ resolvedBy: "deputy" }),
+        // 等级由图判定，不看代理自报、也不看主体身份字样。
+        precedentGrade: ruled_.grade,
+        // 撤销窗 (5.4)：使用者解锁的高影响类别由代理裁决时，生效即可撤销一段
+        // 时间。未解锁的类别永远路由 owner、走不到这里；能到这里而没解锁，说明
+        // 策略在裁决后变了——那种情况按「不可撤销」处理，宁可少给一个窗口也不
+        // 假装可回退。窗口长度来自策略本身，不是常量。
+        ...(policy.unlocked?.includes(item.category) && Number.isFinite(policy.revokeWindowMinutes)
+          ? { revocableUntil: Date.now() + policy.revokeWindowMinutes * 60_000 }
+          : {}),
+        // 整条链落 detail（4.1/4.3）：省略与空值可区分——counterfactual 只在
+        // 不可降级档出现，其余档位这个键根本不写。
+        detail: {
+          ...(item.detail ?? {}),
+          chain: {
+            proposer: proposerCoord,
+            decider: deciderCoord,
+            grader: graderCoord,
+            deciderModel: rulingModel ?? null,
+            graderModel: graderModel ?? null,
+            independence: ruled_.independence,
+          },
+          ...(isNonDowngradableRisk(item, policy)
+            ? { counterfactual: counterfactualLine(kind, item, choice) }
+            : {}),
+        },
       });
       if (!updated) return res.status(409).json({ error: "first resolution wins — another decision just landed" });
       // 记忆镜像 (design D7 写侧)：代理裁决即时进主人记忆 reference 层——
@@ -2993,6 +3113,55 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
     }
   });
 
+  // 撤销窗内撤销 (agent-decided-learning-loop 5.4)。这是「已生效之后取消」，
+  // 与上面的 recall（裁决**之前**把条目从常务岗手里拿回来）不是一件事，所以
+  // 独立端点、独立语义。
+  //
+  // 三条不变量：
+  //   · 原裁决记录不改写——撤销是**另一条**事实（revoked_at），不是回滚历史；
+  //   · 未到期才可撤，过期如实拒绝（不假装还能撤）；
+  //   · 只认「被裁决过」的条目：open 的没有可撤的结论，delivered 的已执行。
+  router.post("/:id/decisions/:itemId/revoke", (req, res) => {
+    try {
+      const owned = requireOwnedFleet(req, res);
+      if (!owned) return;
+      const db = getFleetDatabase();
+      const item = db.getDecision(req.params.itemId);
+      if (!item || item.fleetId !== owned.fleet.id) return res.status(404).json({ error: "Decision not found" });
+      if (item.revokedAt) return res.status(409).json({ error: "already revoked", revokedAt: item.revokedAt });
+      if (!item.revocableUntil) {
+        return res.status(409).json({
+          error: "this ruling is not revocable — only rulings on a user-unlocked category carry a revoke window",
+          code: "NOT_REVOCABLE",
+        });
+      }
+      const now = Date.now();
+      if (item.revocableUntil <= now) {
+        return res.status(409).json({ error: "revoke window closed — the ruling is now final", code: "WINDOW_CLOSED" });
+      }
+      if (item.state !== "approved" && item.state !== "rejected") {
+        return res.status(409).json({ error: `only a landed ruling can be revoked (state: ${item.state})` });
+      }
+      const reason = typeof req.body?.reason === "string" ? req.body.reason.slice(0, 2000) : null;
+      const updated = db.transitionDecision(item.id, item.state, {
+        revokedAt: now,
+        // 撤销不是把状态改回 open（那会让条目重新进入队列、看起来像没发生）。
+        // 保持原终局，另标 revoked；下游读面按 revokedAt 判定「这条不再作数」。
+        detail: { ...(item.detail ?? {}), revocation: { at: now, by: resolveUser(req)?.email ?? null, reason } },
+      });
+      if (!updated) return res.status(409).json({ error: "concurrent change — reload and retry" });
+      try {
+        ctx?.broadcast?.({ type: "decision_revoked", fleetId: owned.fleet.id, decisionId: item.id, at: now });
+      } catch {
+        /* broadcast is best-effort; the row is the fact */
+      }
+      res.json({ decision: updated });
+    } catch (err) {
+      console.error("[fleets] decision revoke error:", err.message);
+      res.status(500).json({ error: err.message || "internal error" });
+    }
+  });
+
   // 委托策略设置面 (design：cell 默认 + 舰队覆写)。读 = 生效合并结果（+
   // cell 默认与覆写原文）；写 = 各自一路。高风险类别（config-change/hr/spend）
   // 的委托路由 SHALL 被归一化硬闸覆盖——写进来也会被归一成 owner。
@@ -3037,6 +3206,17 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
     try {
       const user = resolveUser(req);
       if (!user) return res.status(401).json({ error: "Authentication required" });
+      // 授权边界的写入口只认真人 (agent-decided-learning-loop 5.4)。
+      // 这条策略决定「代理能替主人决定什么」——让代理自己改它，就是把
+      // 「谁授权谁」交回给被授权者。内部桥接身份（fleet-bridge 等）在别的
+      // 路由上是被信任的，但本路由不在 FLEET_BRIDGE_PATHS 里，且这里再挡一次：
+      // 两份防护是刻意的，因为这条一旦漏，别的都白做。
+      if (user.internal) {
+        return res.status(403).json({
+          error: "delegation policy is the user's own trust decision — an agent cannot widen its own authority",
+          code: "SELF_GRANT_FORBIDDEN",
+        });
+      }
       const db = getFleetDatabase();
       const body = req.body ?? {};
       // 归一化即硬闸：routes 里的 config-change/hr/spend 会被强制归一为 owner
@@ -3065,6 +3245,18 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
         if (scope === "fleet") applyDeputyModel(db, body.fleetId, db.getFleetDelegationPolicy(body.fleetId));
         const effectiveMandate = scope === "cell" ? db.getCellMandatePolicy() : db.getFleetMandatePolicy(body.fleetId);
         return res.json({ ok: true, scope, mandate: effectiveMandate });
+      }
+      // 解锁必须带撤销窗 (5.4)：规格是 SHALL，所以在这里拒绝而不是靠归一化
+      // 静默降级——一次「看起来解锁了、其实没解锁」的写入比直接报错更难查。
+      const nextUnlocked = Array.isArray(body.policy?.unlocked) ? body.policy.unlocked.filter((c) => LOCKED_BY_DEFAULT_CATEGORIES.includes(c)) : [];
+      if (nextUnlocked.length > 0) {
+        const win = body.policy?.revokeWindowMinutes;
+        if (!Number.isFinite(win) || win < REVOKE_WINDOW_MIN || win > REVOKE_WINDOW_MAX) {
+          return res.status(400).json({
+            error: `unlocking ${nextUnlocked.join(", ")} requires a revoke window of ${REVOKE_WINDOW_MIN}–${REVOKE_WINDOW_MAX} minutes — an irreversible action with no undo is exactly what the window exists to prevent`,
+            code: "UNLOCK_REQUIRES_REVOKE_WINDOW",
+          });
+        }
       }
       if (scope === "cell") {
         db.setCellSetting("delegationPolicy", body.policy ?? null);

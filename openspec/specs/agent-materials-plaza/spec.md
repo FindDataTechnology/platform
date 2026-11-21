@@ -8,12 +8,32 @@ The Materials Plaza is the outward understanding surface of 壹座·智能体素
 
 ### Requirement: The human face is a five-locale static site with a fixed narrative structure
 
-The plaza site SHALL be a purely static site serving five locales (zh-CN, en, es, fr, ja) with locale parity enforced by the site-side parity gate. The human face SHALL present, in order: a hero whose primary data is the live material inventory itself — the three species counts (agents/packs, skills, MCP services) plus the tool count and the snapshot as-of date; the five material categories (功能集, 生态技能, MCP 服务, AI 分身, 官方数据锚) as one card each with a concrete example; the supply mechanism chain in four segments (publish → obtain → run → serve) each explained from the material's perspective; a material inventory gallery with species tabs, official/facade badges, category filtering, and search; and a dual audience section (human paths and AI paths) plus the five-line footer ladder with sibling-site links. No locale SHALL fall back to another locale's text on any page.
+The plaza's human face SHALL be an entry view rendered by the facet web shell at its hash root `#/`,
+serving five locales (zh-CN, en, es, fr, ja) with locale parity enforced by the shell's locale gate.
+It SHALL NO LONGER be a standalone static site with its own root path: the supply domain has one
+product address, and the entry view is part of that shell, not a second page competing for `/`.
+
+The entry view SHALL present, in order: the material narrative (what a material is, the five
+species as one card each with a concrete example); the live material inventory gallery (species
+tabs, official/facade badges, category filtering, search, and the per-species counts); the supply
+mechanism chain in four segments (publish → obtain → run → serve), each explained from the
+material's perspective; the product's team-template and creation-path narrative; and the dual
+audience section (human paths and AI paths). No locale SHALL fall back to another locale's text.
+
+The narrative sections SHALL be static; the inventory gallery SHALL be the entry view's one
+dynamic region, carrying the freshness semantics the plaza has always had (live refresh on load,
+snapshot fallback labeled with its as-of date, never an empty inventory). A viewer MUST be able to
+read the whole narrative and reach the rest of the shell with the catalog API unreachable.
 
 #### Scenario: Five locales render complete pages
 
-- **WHEN** a visitor opens any plaza page in each of the five locales
+- **WHEN** a visitor opens the entry view in each of the five locales
 - **THEN** every section renders fully in the requested locale, and the locale gate reports key parity across all five
+
+#### Scenario: The narrative reads without a catalog
+
+- **WHEN** the catalog API is unreachable or slow
+- **THEN** the narrative sections and the shell navigation render identically, and only the gallery degrades to its snapshot with an as-of date
 
 #### Scenario: The mechanism chain explains infrastructure through materials
 
@@ -22,8 +42,8 @@ The plaza site SHALL be a purely static site serving five locales (zh-CN, en, es
 
 #### Scenario: Hero carries the species inventory
 
-- **WHEN** the page loads with a valid catalog
-- **THEN** the hero shows the three species counts (agents, skills, MCP services) and the tool count, not only a single pack count
+- **WHEN** the entry view loads with a valid catalog
+- **THEN** the gallery shows the per-species counts (agents/packs, skills, MCP services, facades, official data) and the tool count, not only a single pack count
 
 #### Scenario: Species tab filters the gallery
 
@@ -32,8 +52,13 @@ The plaza site SHALL be a purely static site serving five locales (zh-CN, en, es
 
 #### Scenario: Hostname preselects the species
 
-- **WHEN** the site is opened through skills.finddatatech.cloud
-- **THEN** the gallery opens preselected on the skills species, while agent.finddatatech.cloud opens unfiltered
+- **WHEN** a visitor arrives through `skills.finddatatech.cloud`
+- **THEN** the redirect carries the skills species preselection and the gallery opens on it, while the bare canonical address opens unfiltered
+
+#### Scenario: A material link still resolves
+
+- **WHEN** a reader follows any material's self-contained page link from the gallery
+- **THEN** that page is served at its unchanged address, independent of which view renders the link
 
 ### Requirement: Machine surfaces are generated from the registries' own public faces
 
@@ -213,15 +238,22 @@ product face:
   health paths SHALL be served unchanged; its anonymous root SHALL redirect to the canonical front door. The
   registry console on this host is an operator surface, not a product entrance.
 
+The canonical front door SHALL serve the entry view at its root. It SHALL NOT serve a second, standalone
+human page at `/`: the shell owns the root, the entry view is one of its hash-addressed views, and every
+other shell view SHALL remain reachable at its own hash address.
+
 All hostnames SHALL be covered by the edge certificate (single SAN set; a re-sign that drops any prior domain
-is a failure). Brand strings served from any of these hosts SHALL name one product; a second product brand on
-a compatibility door is a defect.
+is a failure).
 
 #### Scenario: The canonical front door serves the whole supply domain
 
-- **WHEN** a visitor opens `facet.finddatatech.cloud`
-- **THEN** the front door, the storefront, the material catalog, the docs, the studio, the console and the
-  machine surfaces are all reachable under that one host, under one brand
+- **WHEN** a visitor opens the canonical front door without a hash
+- **THEN** the entry view renders inside the shell, and the shell's other views are reachable from it
+
+#### Scenario: Every shell view stays reachable
+
+- **WHEN** a signed-in user opens any of the shell's own views — the storefront, the creator console, the curation board, the studio, the docs, the fleet view — by address or by navigation
+- **THEN** each renders; a root-path static page SHALL NOT shadow them
 
 #### Scenario: An HTML request to a compatibility door redirects
 
@@ -250,7 +282,7 @@ a compatibility door is a defect.
 
 - **WHEN** an anonymous client requests the root of `mcp.finddatatech.cloud`
 - **THEN** it is redirected to the canonical front door, while a request to `/<server>/mcp` or `/api/*` on the
-  same domain is served by the registry unchanged
+  same host is served by the registry unchanged
 
 #### Scenario: Registry session keeps its console
 

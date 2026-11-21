@@ -161,6 +161,15 @@ function materializeAuxFiles(dir, files) {
   walk(dir);
 }
 
+/**
+ * The SKILL.md path for a row (exported so a writer can assert the file it just
+ * materialized actually exists — promotion must not report success on a row
+ * whose file never landed; see skill-evolution promote()).
+ */
+export function skillFilePathOf(skill) {
+  return skillFilePath(skill);
+}
+
 // Write one skill's SKILL.md atomically (temp+rename), plus its auxiliary
 // files when the row carries them. Returns true on success.
 export function writeSkill(skill) {

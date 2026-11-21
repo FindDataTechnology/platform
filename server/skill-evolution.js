@@ -3,8 +3,9 @@
 // The closed loop: agent proposes a skill CANDIDATE (via the skill-evolution
 // MCP tool over the loopback bridge) → candidate is evaluated (two-arm A/B:
 // the same scenario task answered with and without the candidate skill
-// injected, judge blind-ranked with arm names anonymized) → a human accepts
-// (promote into custom_skills, materializer hot-loads it) or rejects (final,
+// injected, judge blind-ranked with arm names anonymized) → an owner accepts
+// (promote writes custom_skills AND materializes the SKILL.md in the same
+// call — the row and the file are one act, see promote()) or rejects (final,
 // audited). supersedes candidates record lineage on the OLD skill — never
 // delete (永不删页只 lineage).
 //
@@ -17,7 +18,9 @@
 //     the candidate in `candidate` status with an honest reason
 //   - budget: per-day proposal cap + store cap + same-title debounce
 
+import { existsSync } from "node:fs";
 import * as dbModule from "../db.js";
+import * as materializer from "../skill-materialize.js";
 
 // db.js exposes getDb(); keep a short local handle (module-level `db` there is
 // initialized by initDb() at boot — call-time access, never import-time).
@@ -37,10 +40,13 @@ function deserialize(r) {
   let evalReport = null;
   try { evidence = JSON.parse(r.evidence); } catch { /* keep raw */ }
   try { evalReport = r.eval_report ? JSON.parse(r.eval_report) : null; } catch { evalReport = { raw: r.eval_report }; }
-  return { ...r, evidence, evalReport, sourceDocId: r.source_doc_id ?? null };
+  return { ...r, evidence, evalReport, sourceDocId: r.source_doc_id ?? null, proposedBy: r.proposed_by ?? null };
 }
 
-export function skillEvolutionStore() {
+export function skillEvolutionStore({ materialize = materializer } = {}) {
+  // Injectable for tests (an ESM namespace is frozen, so the disk half cannot
+  // be stubbed after import). Production always gets the real materializer.
+  const requireMaterializer = () => materialize;
   return {
     // ── proposals (the tool face's only write) ──────────────────────────────
     proposeGate({ name }) {
@@ -112,9 +118,19 @@ export function skillEvolutionStore() {
       const cand = this.getCandidate(id);
       if (!cand) return { error: "not found" };
       if (cand.status !== "evaluated") return { error: `candidate is '${cand.status}' — promote requires a green evaluation` };
-      // Lineage first (on the OLD row), then insert the new skill. The
-      // materializer mirrors custom_skills on the next CRUD broadcast — the
-      // skill goes live with zero restarts.
+
+      // The registry and the disk are ONE act. A row that lands without its
+      // SKILL.md is the defect this path used to have: status read `promoted`,
+      // nothing listened to `skills_changed`, and the skill only appeared on
+      // the next boot. Failures roll the row back rather than leave that state.
+      let materialize;
+      try {
+        materialize = requireMaterializer();
+      } catch (e) {
+        return { error: `cannot materialize skills in this environment: ${e.message}` };
+      }
+
+      // Lineage first (on the OLD row), then insert the new skill.
       if (cand.supersedes) {
         const old = D().prepare(`SELECT id FROM custom_skills WHERE name = ?`).get(cand.supersedes);
         if (old) {
@@ -124,10 +140,31 @@ export function skillEvolutionStore() {
       }
       const exists = D().prepare(`SELECT id FROM custom_skills WHERE name = ?`).get(cand.name);
       if (exists) return { error: `a skill named '${cand.name}' already exists — promotion would collide` };
+      const skillId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       D().prepare(
         `INSERT INTO custom_skills (id, name, description, content, enabled, created_at, updated_at)
          VALUES (?, ?, ?, ?, 1, ?, ?)`,
-      ).run(`cs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, cand.name, cand.description, cand.body, dbModule.nowIso(), dbModule.nowIso());
+      ).run(skillId, cand.name, cand.description, cand.body, dbModule.nowIso(), dbModule.nowIso());
+
+      // Materialize INSIDE the same call, then prove it exists on disk.
+      // Synchronous on purpose: no window for a caller to observe "promoted"
+      // before the file is readable.
+      let written = false;
+      try {
+        written = materialize.writeSkill({
+          name: cand.name,
+          description: cand.description,
+          content: cand.body,
+          enabled: true,
+        });
+      } catch {
+        written = false;
+      }
+      if (!written || !existsSync(materialize.skillFilePathOf({ name: cand.name }))) {
+        D().prepare(`DELETE FROM custom_skills WHERE id = ?`).run(skillId);
+        return { error: `promotion rolled back — the skill file could not be materialized for '${cand.name}'` };
+      }
+
       D().prepare(`UPDATE skill_candidates SET status = 'promoted', decided_at = ?, decided_by = ? WHERE id = ?`).run(dbModule.nowIso(), by, id);
       return { ok: true, promoted: cand.name };
     },

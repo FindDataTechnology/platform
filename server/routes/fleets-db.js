@@ -14,7 +14,7 @@ import * as dbModule from "../../db.js";
 import { mergeMandatePolicies, normalizeMandatePolicy } from "../../lib/personal-mandate.js";
 import { normalizeDomainMap } from "../../lib/personal-domain-map.js";
 import { normalizeRuleText, ruleKey } from "../../lib/precedent-candidate.js";
-import { classifyLegacyDecision } from "../../lib/precedent-grade.js";
+import { classifyLegacyDecision, normalizeLegacyGrade } from "../../lib/precedent-grade.js";
 
 export const FLEET_STATES = ["active", "paused", "archived"];
 export const MEMBER_TARGET_KINDS = ["persona", "cluster", "a2a", "tool", "auditor"];
@@ -227,6 +227,19 @@ export function createFleetDatabase({ file } = {}) {
   }
   try {
     db.exec("ALTER TABLE decision_items ADD COLUMN auditor_note TEXT");
+  } catch {
+    /* column already exists */
+  }
+  // 撤销窗 (agent-decided-learning-loop 5.4)：解锁的高影响类别由代理裁决后，
+  // 生效时落一个到期时刻；未到期前主人可撤销。NULL = 不可撤销（未解锁的类别
+  // 本来就不该被代理裁决，这条对它无意义）。
+  try {
+    db.exec("ALTER TABLE decision_items ADD COLUMN revocable_until INTEGER");
+  } catch {
+    /* column already exists */
+  }
+  try {
+    db.exec("ALTER TABLE decision_items ADD COLUMN revoked_at INTEGER");
   } catch {
     /* column already exists */
   }
@@ -1000,12 +1013,26 @@ export function createFleetDatabase({ file } = {}) {
   }
 
   /**
-   * 判例读取（widen-deputy-to-personal-domains 2.3）：只返回可引用等级。
-   * deputy-ruled 永不出现——它不是「差一点的判例」，它根本不是判例。
+   * 判例读取（widen-deputy-to-personal-domains 2.3；agent-decided-learning-loop
+   * 3.1）：**只按等级过滤，不按主体身份过滤**。
+   *
+   * 旧写法写死了 `resolved_by = 'owner'`，那一条就是「agent 学不会」的实现：
+   * 一个 agent 的裁决无论独立性多完整，都进不了下一次判断的依据。现在按等级取
+   * 四个可引用级（两个主人级 + 两个 agent 独立级）。
+   *
+   * `agent-self` 永不出现——它不是「差一点的判例」，它根本不是判例。
+   * 历史 `deputy-ruled` 行也不会出现：它不在可引用集合里，且读面把它规范成
+   * `agent-self`（normalizeLegacyGrade）。
    */
+  const CITABLE_GRADES = ["owner-authored", "owner-approved", "agent-independent", "agent-independent-unverified"];
+
   function listCitablePrecedents({ fleetId, memberId = null, limit = 3 } = {}) {
-    const where = ["fleet_id = ?", "resolved_by = 'owner'", "state = 'delivered'", "precedent_grade IN ('owner-authored','owner-approved')"];
-    const params = [fleetId];
+    const where = [
+      "fleet_id = ?",
+      "state = 'delivered'",
+      `precedent_grade IN (${CITABLE_GRADES.map(() => "?").join(",")})`,
+    ];
+    const params = [fleetId, ...CITABLE_GRADES];
     if (memberId) {
       where.push("member_id = ?");
       params.push(memberId);
@@ -1017,14 +1044,19 @@ export function createFleetDatabase({ file } = {}) {
   }
 
   /**
-   * 审计官反例集合 (3.5)：主人推翻过的判断。没有反例的审计官会和专家一起
-   * 走偏——两者都只看到「主人以前同意过什么」，于是复核退化成复述。
+   * 审计官反例集合 (3.5)：被推翻过的判断。没有反例的审计官会和专家一起
+   * 走偏——两者都只看到「以前同意过什么」，于是复核退化成复述。
    *
    * 「推翻过」= 被驳回，或被改批（resolution 与推荐不一致）。宁可多给，不可
    * 只给顺例。
+   *
+   * 2026-11-21（agent-decided-learning-loop 3.2）：去掉了 `resolved_by = 'owner'`。
+   * 反例的判据是「谁不同意这条推荐」，不是「谁签的字」——只收主人的反例会让
+   * agent 裁决的反例永远进不了审计官的负样本集，正负两侧因此不对称。
+   * `state IN (...)` 那一条已经排除了未决项，不需要身份兜底。
    */
   function listOverruledDecisions({ fleetId, memberId = null, limit = 5 } = {}) {
-    const where = ["fleet_id = ?", "resolved_by = 'owner'", "state IN ('rejected','approved')"];
+    const where = ["fleet_id = ?", "state IN ('rejected','approved')"];
     const params = [fleetId];
     if (memberId) {
       where.push("member_id = ?");
@@ -1208,7 +1240,7 @@ export function createFleetDatabase({ file } = {}) {
     // `route` 必须在白名单里（2026-11-10）：审计官「阻断并上报」要把条目转回主人，
 // 走的是 transitionDecision 的 patch。它不属于白名单时那一行会被**静默丢弃**——
 // 裁决记下了、route 还是 deputy，条目继续按原路由走，且没有任何报错。
-const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at", deliveredSessionId: "delivered_session_id", resolvedAt: "resolved_at", submittedAt: "submitted_at", recommendation: "recommendation", resolvedBy: "resolved_by", resolvedByModel: "resolved_by_model", rulingEvidence: "ruling_evidence", domain: "domain", precedentGrade: "precedent_grade", auditorVerdict: "auditor_verdict", auditorNote: "auditor_note", executedAt: "executed_at", executedSessionId: "executed_session_id", escalations: "escalations", lastEscalatedAt: "last_escalated_at" };
+const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at", deliveredSessionId: "delivered_session_id", resolvedAt: "resolved_at", submittedAt: "submitted_at", recommendation: "recommendation", resolvedBy: "resolved_by", resolvedByModel: "resolved_by_model", rulingEvidence: "ruling_evidence", domain: "domain", precedentGrade: "precedent_grade", auditorVerdict: "auditor_verdict", auditorNote: "auditor_note", executedAt: "executed_at", executedSessionId: "executed_session_id", escalations: "escalations", lastEscalatedAt: "last_escalated_at", revocableUntil: "revocable_until", revokedAt: "revoked_at" };
     for (const [key, value] of Object.entries(patch)) {
       const jsonCol = JSON_COLS[key];
       const plainCol = PLAIN_COLS[key];
@@ -2741,11 +2773,30 @@ export const DEFAULT_DECISION_POLICY = { expiryHours: 72, dailyCapPerMember: 10 
 //   deputy         — 常务岗可独立裁决（approve/reject）
 //   deputy-triage  — 常务岗只做归并/跟踪/上报，不算裁决（问题单类）
 //   owner          — 永远主人
-// config-change / hr / spend 三类 SHALL NOT 委托（硬编码，见 normalizeRoutes）。
+//
+// ── 高影响类别：默认锁死，可由使用者解锁 (agent-decided-learning-loop 5.4) ──
+//
+// 旧写法把 config-change / hr / spend 硬编码为 owner，并在归一化里**覆盖**任何
+// 写入——注释原文是「one UPDATE must never be able to unlock a destructive or
+// publish action」。那条规则保护的是「一次误写/一次带外改数据不该悄悄放开高影响
+// 动作」，但它的实现顺手把**使用者本人**也挡在外面：代理能替主人决定什么，是
+// 用软件的人的事，不是我们的。
+//
+// 现在的形状把这两件事分开：
+//   · 默认值不变（三类仍是 owner）——误配不会放开任何东西；
+//   · 放开需要另一个显式字段 `unlocked`（逐类列出），写 route 而不写 unlocked
+//     不生效。这条让「旧配置静默变宽」不可能发生，同一个语义有两个独立动作。
+//   · 解锁的类别在裁决时必须带撤销窗（revokeWindowMinutes），否则拒绝解锁：
+//     不可回退的动作没有撤销窗，等于把「先做后报」变成「做错了没得救」。
+//   · 写入口只认真人——内部桥接身份（agent 自己）不得改这条策略。
 export const DELEGATION_CATEGORIES = ["routine-ops", "infra-ticket", "config-change", "hr", "spend"];
-const HARD_OWNER_CATEGORIES = ["config-change", "hr", "spend"];
+/** 默认锁定、需使用者逐类解锁的高影响类别。 */
+export const LOCKED_BY_DEFAULT_CATEGORIES = ["config-change", "hr", "spend"];
 const DELEGATION_ROUTES = ["owner", "deputy", "deputy-triage"];
 export const SEVERITY_RANK = { low: 0, normal: 1, high: 2 };
+/** 解锁高影响类别时的撤销窗边界（分钟）。0 = 不允许解锁。 */
+export const REVOKE_WINDOW_MIN = 1;
+export const REVOKE_WINDOW_MAX = 7 * 24 * 60;
 
 export const DEFAULT_DELEGATION_POLICY = {
   enabled: false,
@@ -2755,19 +2806,35 @@ export const DEFAULT_DELEGATION_POLICY = {
   model: null,
   digest: "daily",
   deputyMemberId: null,
+  // 使用者显式解锁的高影响类别（空 = 全部锁定）。
+  unlocked: [],
+  // 解锁类别上裁决后保留的撤销窗（分钟）。非 null 才允许解锁。
+  revokeWindowMinutes: null,
 };
 
-function normalizeRoutes(routes) {
+function normalizeUnlocked(raw) {
+  if (!Array.isArray(raw)) return [];
+  return [...new Set(raw.filter((c) => LOCKED_BY_DEFAULT_CATEGORIES.includes(c)))];
+}
+
+function normalizeRoutes(routes, unlocked = []) {
   const out = {};
+  const open = new Set(unlocked);
   if (routes && typeof routes === "object") {
     for (const [k, v] of Object.entries(routes)) {
       if (!DELEGATION_ROUTES.includes(v)) continue;
       if (k === "default") out.default = v;
-      else if (DELEGATION_CATEGORIES.includes(k)) out[k] = HARD_OWNER_CATEGORIES.includes(k) ? "owner" : v;
+      else if (DELEGATION_CATEGORIES.includes(k)) {
+        // Locked categories accept a delegate route ONLY when the same policy
+        // names them in `unlocked`; otherwise they are forced back to owner.
+        out[k] = LOCKED_BY_DEFAULT_CATEGORIES.includes(k) && !open.has(k) ? "owner" : v;
+      }
     }
   }
-  // 硬闸：三类高风险永远 owner，策略里写了也会被归一化覆盖。
-  for (const k of HARD_OWNER_CATEGORIES) out[k] = "owner";
+  // Locked-and-not-unlocked categories are pinned to owner even if absent above.
+  for (const k of LOCKED_BY_DEFAULT_CATEGORIES) {
+    if (!open.has(k)) out[k] = "owner";
+  }
   if (!out.default) out.default = "owner";
   return out;
 }
@@ -2779,7 +2846,11 @@ export function normalizeDelegationPolicy(cellPolicy, fleetOverride) {
     routes: { ...DEFAULT_DELEGATION_POLICY.routes },
     ...(cellPolicy && typeof cellPolicy === "object" ? cellPolicy : {}),
   };
-  base.routes = normalizeRoutes(base.routes);
+  base.routes = normalizeRoutes(base.routes, base.unlocked);
+  base.unlocked = normalizeUnlocked(base.unlocked);
+  base.revokeWindowMinutes = Number.isFinite(base.revokeWindowMinutes) && base.revokeWindowMinutes >= REVOKE_WINDOW_MIN
+    ? Math.floor(base.revokeWindowMinutes)
+    : null;
   base.maxSeverity = SEVERITY_RANK[base.maxSeverity] !== undefined ? base.maxSeverity : DEFAULT_DELEGATION_POLICY.maxSeverity;
   base.dailyBudget = Number.isFinite(base.dailyBudget) && base.dailyBudget > 0 ? Math.floor(base.dailyBudget) : DEFAULT_DELEGATION_POLICY.dailyBudget;
   base.digest = ["daily", "weekly", "off"].includes(base.digest) ? base.digest : DEFAULT_DELEGATION_POLICY.digest;
@@ -2787,7 +2858,22 @@ export function normalizeDelegationPolicy(cellPolicy, fleetOverride) {
   if (!fleetOverride || typeof fleetOverride !== "object") return base;
   const merged = { ...base };
   if (fleetOverride.enabled !== undefined) merged.enabled = !!fleetOverride.enabled;
-  if (fleetOverride.routes && typeof fleetOverride.routes === "object") merged.routes = normalizeRoutes({ ...base.routes, ...fleetOverride.routes });
+  // `unlocked` merges on its OWN key, not only inside the routes branch: a
+  // fleet may open/close the locked set without also rewriting every route,
+  // and a window may be set without touching either.
+  if (fleetOverride.unlocked !== undefined) merged.unlocked = normalizeUnlocked(fleetOverride.unlocked);
+  if (fleetOverride.routes && typeof fleetOverride.routes === "object") {
+    merged.routes = normalizeRoutes({ ...base.routes, ...fleetOverride.routes }, merged.unlocked ?? []);
+  } else if (fleetOverride.unlocked !== undefined) {
+    // Routes inherited from base but the lock set changed ⇒ re-normalize, or a
+    // category unlocked here would still be pinned to owner by base's routes.
+    merged.routes = normalizeRoutes({ ...base.routes }, merged.unlocked);
+  }
+  if (Number.isFinite(fleetOverride.revokeWindowMinutes) && fleetOverride.revokeWindowMinutes >= REVOKE_WINDOW_MIN) {
+    merged.revokeWindowMinutes = Math.floor(fleetOverride.revokeWindowMinutes);
+  } else if (fleetOverride.revokeWindowMinutes === null) {
+    merged.revokeWindowMinutes = null;
+  }
   if (fleetOverride.maxSeverity && SEVERITY_RANK[fleetOverride.maxSeverity] !== undefined) merged.maxSeverity = fleetOverride.maxSeverity;
   if (Number.isFinite(fleetOverride.dailyBudget) && fleetOverride.dailyBudget > 0) merged.dailyBudget = Math.floor(fleetOverride.dailyBudget);
   if (fleetOverride.model !== undefined) merged.model = typeof fleetOverride.model === "string" && fleetOverride.model ? fleetOverride.model : null;
@@ -2812,7 +2898,7 @@ export function normalizeDelegationPolicy(cellPolicy, fleetOverride) {
 export function routeForItem({ category = null, itemType = null, severity = "normal" }, policy) {
   if (!policy?.enabled) return "owner";
   const cat = category || (itemType === "config-change" ? "config-change" : null);
-  if (cat && HARD_OWNER_CATEGORIES.includes(cat)) return "owner";
+  if (cat && LOCKED_BY_DEFAULT_CATEGORIES.includes(cat) && !(policy.unlocked ?? []).includes(cat)) return "owner";
   if ((SEVERITY_RANK[severity] ?? 1) > (SEVERITY_RANK[policy.maxSeverity] ?? 1)) return "owner";
   if (cat && policy.routes[cat]) return policy.routes[cat];
   return policy.routes.default || "owner";
@@ -3164,7 +3250,11 @@ function deserializeDecision(row) {
     // 个人事务域扩展 (widen-deputy-to-personal-domains)。旧行为 null：
     // domain=null 即既有舰队内部车道，判例等级=null 视为不可引用。
     domain: row.domain ?? null,
+    // 读面规范化（agent-decided-learning-loop D4）：历史 `deputy-ruled` 行没有
+    // 独立信息，诚实读法是 agent-self。不写迁移——事后为旧行编一个产生路径，
+    // 等于用今天猜的理由改写历史。
     precedentGrade: row.precedent_grade ?? null,
+    precedentGradeNormalized: normalizeLegacyGrade(row.precedent_grade ?? null),
     auditorVerdict: row.auditor_verdict ?? null,
     auditorNote: row.auditor_note ?? null,
     rulingEvidence: row.ruling_evidence ?? null,
@@ -3172,6 +3262,10 @@ function deserializeDecision(row) {
     lastEscalatedAt: row.last_escalated_at ?? null,
     executedAt: row.executed_at ?? null,
     executedSessionId: row.executed_session_id ?? null,
+    // 撤销窗 (agent-decided-learning-loop 5.4)：revocableUntil = 生效时可撤销的
+    // 截止时刻（null = 不可撤销）；revokedAt 非空 = 已被撤销，原裁决记录不改写。
+    revocableUntil: row.revocable_until ?? null,
+    revokedAt: row.revoked_at ?? null,
   };
 }
 

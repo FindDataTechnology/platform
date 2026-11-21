@@ -132,8 +132,12 @@ export function createPersonaEvolutionRoutes(app, ctx = null) {
     }
   });
 
-  // Promotion: human-only, requires a green evaluation (the double key), and
-  // SPLITS by target — custom preset materializes; pack persona forks.
+  // Promotion: requires a green evaluation. The double key (AI evidence, the
+  // promoting actor's signature) is structural — see agent-decision-
+  // independence for when a non-human actor may sign. SPLITS by target —
+  // custom preset materializes in this call; pack persona forks to a DRAFT
+  // that is NOT live. Both responses say which one happened (`appliesAt`), so
+  // "promoted" never implies "in force" for a fork.
   router.post("/candidates/:id/promote", async (req, res) => {
     const user = requireUser(req, res);
     if (!user) return;
@@ -160,7 +164,7 @@ export function createPersonaEvolutionRoutes(app, ctx = null) {
         outcome: { kind: "preset", presetId: cand.target_ref, previousPersona: preset.persona ?? null },
       });
       if (out.error) return res.status(409).json({ error: out.error });
-      return res.json({ ok: true, promoted: { kind: "preset", presetId: cand.target_ref } });
+      return res.json({ ok: true, promoted: { kind: "preset", presetId: cand.target_ref }, appliesAt: "next-session" });
     }
 
     if (cand.target_kind === "pack") {
@@ -196,7 +200,14 @@ export function createPersonaEvolutionRoutes(app, ctx = null) {
         outcome: { kind: "fork-draft", draftId: draft?.draft?.id ?? draft?.id ?? null, packId: cand.target_ref, agentId: cand.agent_id },
       });
       if (out.error) return res.status(409).json({ error: out.error });
-      return res.json({ ok: true, promoted: { kind: "fork-draft", packId: cand.target_ref, agentId: cand.agent_id } });
+      // A fork is NOT live — say so in the response instead of leaving the
+      // caller to infer it from `kind`.
+      return res.json({
+        ok: true,
+        promoted: { kind: "fork-draft", packId: cand.target_ref, agentId: cand.agent_id },
+        appliesAt: "never-until-published",
+        note: "pack personas are forked into a draft, never written in place — the draft takes effect only after the pack is published and re-installed",
+      });
     }
 
     return res.status(400).json({ error: `unknown target kind '${cand.target_kind}'` });
