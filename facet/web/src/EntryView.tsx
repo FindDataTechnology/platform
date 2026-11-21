@@ -14,7 +14,7 @@
 import { useTranslation } from "react-i18next";
 import { Container } from "./Container";
 import { MaterialGallery } from "./MaterialGallery";
-import { TeamTemplatesSection, CreationPathSection, ProductIntroSection } from "./EntrySections";
+import { ProductIntroSection } from "./EntrySections";
 
 const SPECIES = ["pack", "skill", "mcp", "facade", "official-data"] as const;
 
@@ -69,9 +69,10 @@ export function EntryView({ signedIn = false }: { signedIn?: boolean } = {}) {
             就消失。以 section 形式复用旧组件，文案与 CLI 事实仍是单源。 */}
         <ProductIntroSection signedIn={signedIn} />
 
-        {/* 5-6. 团队模板与创作路径（与旧介绍视图共用同一组件） */}
-        <TeamTemplatesSection />
-        <CreationPathSection signedIn={signedIn} />
+        {/* 团队模板与创作路径**不在这里单独渲染**：ProductIntroSection（原 IntroView）
+            内部已经包含它们。2026-11-21 实撞——两处都调导致这四段各出现两次
+            （浏览器实测 intro-team-templates / intro-creation-path 等 testid 重复）。
+            入口页的职责只是排序，不复制内容。 */}
 
         {/* 6. 给谁用 */}
         <section className="rounded-lg border border-border p-6" data-testid="entry-audience">
