@@ -246,8 +246,12 @@ test("every fixtured rejection is refused here, naming the same key", (t) => {
   }
 });
 
-test("the axis list is closed at four — adding one is a spec change", () => {
-  assert.deepEqual([...MEMORY_AXES], ["store", "read", "write", "process"]);
+test("the axis list is closed at five — adding one is a spec change", () => {
+  // Deliberately a closed-set assertion rather than a "contains" check: growing
+  // the vocabulary must be a conscious spec change, not something that slips in
+  // alongside unrelated work. It went red exactly once, for
+  // add-memory-schema-axis — which is the behaviour this test exists for.
+  assert.deepEqual([...MEMORY_AXES], ["store", "read", "write", "process", "schema"]);
 });
 
 // ── the authoring doc's own example must validate ──────────────────────────

@@ -336,13 +336,34 @@ print(json.dumps(rows["process.distill"]))
     skips.push("fd-memory contract (sibling not built: run `npm test` or `npm run build` in fd-memory)");
   }
   if (fdm) {
-    const { compilePackMemoryPolicy } = await import(join(PAAS, "lib", "pack-memory-policy.js"));
+    const { POLICY_KEYS, compilePackMemoryPolicy } = await import(join(PAAS, "lib", "pack-memory-policy.js"));
     const sameList = (a, b) => JSON.stringify([...a]) === JSON.stringify([...b]);
 
-    if (sameList(paas.MEMORY_AXIS_KEYS.process, fdm.PROCESS_KEYS)) {
-      ok("policy document keys agree with the memory service", JSON.stringify([...fdm.PROCESS_KEYS]));
+    // Compare what the COMPILER can emit against what the service can accept —
+    // `POLICY_KEYS` vs `PROCESS_KEYS`, not the pack face's `process` axis group.
+    // Those stopped being the same list when the schema axis landed: the
+    // document carries `key_by` too, so comparing the axis group would have
+    // stayed green while a document the compiler emits was refused on arrival.
+    const serviceKeys = [...fdm.PROCESS_KEYS, ...fdm.SCHEMA_KEYS].filter((k) => POLICY_KEYS.includes(k));
+    if (sameList(POLICY_KEYS, serviceKeys)) {
+      ok("policy document keys agree with the memory service", JSON.stringify([...POLICY_KEYS]));
     } else {
-      bad("policy document keys", `memory-service=${JSON.stringify(fdm.PROCESS_KEYS)} pack-face=${JSON.stringify(paas.MEMORY_AXIS_KEYS.process)}`);
+      bad("policy document keys", `compiler=${JSON.stringify(POLICY_KEYS)} memory-service=${JSON.stringify(serviceKeys)}`);
+    }
+
+    // And the executed claim, narrowed to the axis that is IN the document for
+    // that reason. `promote_after` / `cold_after_days` are carried but
+    // deliberately unexecuted — the read face reports them in `not_executed`,
+    // which is the honest answer for a knob this version has no data for.
+    // `key_by` is different: its entire justification is that something reads it.
+    // A compiled document carrying an unhonoured schema key would be a
+    // declaration landing in a row no code consults.
+    const schemaCarried = POLICY_KEYS.filter((k) => fdm.SCHEMA_KEYS.includes(k));
+    const unhonoured = schemaCarried.filter((k) => !fdm.EXECUTED_SUBKEYS.has(k));
+    if (unhonoured.length === 0) {
+      ok("every compiled schema key is executed by the memory service", JSON.stringify(schemaCarried));
+    } else {
+      bad("compiled schema keys must be executed", `carried but unhonoured: ${JSON.stringify(unhonoured)}`);
     }
 
     // Every document the compiler can produce must be accepted AND come back
@@ -354,6 +375,9 @@ print(json.dumps(rows["process.distill"]))
       { process: { promote_after: 5 } },
       { process: { cold_after_days: 0 } },
       { process: { distill: "off", promote_after: 3, cold_after_days: 90 } },
+      // The schema axis (add-memory-schema-axis): alone, and beside process.
+      { schema: { key_by: "instrument" } },
+      { process: { distill: "off" }, schema: { key_by: "party" } },
     ];
     let landed = 0;
     for (const decl of DECLS) {

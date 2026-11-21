@@ -73,9 +73,11 @@ test("no process declaration means NO write (an empty doc would clear a sibling'
   assert.equal(withProcess.empty, true, "an empty process block is still no declaration");
 });
 
-test("other axes are validated but not carried into the policy document", () => {
+test("member-side axes are validated but not carried into the policy document", () => {
   // Carrying them would put a declaration where nothing reads it; refusing them
   // would fail materialization for most packs, since most declare a read scope.
+  // `schema` is NOT in this group — see the test below: it belongs to the root
+  // document because that is where « this pack files under X » is declared.
   const r = compilePackMemoryPolicy(
     {
       store: { home: "member" },
@@ -86,12 +88,38 @@ test("other axes are validated but not carried into the policy document", () => 
     { packId: "p" },
   );
   assert.equal(r.ok, true);
-  assert.deepEqual(r.doc, { distill: "off" }, "only the process axis is a policy document");
+  assert.deepEqual(r.doc, { distill: "off" }, "only process + schema.key_by are a policy document");
   // A typo on any axis still fails, though — the validator runs over the whole
   // declaration before this module decides what to carry.
   const typo = compilePackMemoryPolicy({ read: { scop: "shared" } }, { packId: "p" });
   assert.equal(typo.ok, false);
   assert.equal(typo.errors[0].code, "memory_key_unknown");
+});
+
+test("schema.key_by is carried into the root document; schema.domain is not", () => {
+  // The root policy is the unit that says « this pack files under instrument ».
+  // Keeping it member-side would let two teams of one pack disagree about the
+  // shape of the root they share.
+  const withProcess = compilePackMemoryPolicy(
+    { process: { distill: "off" }, schema: { key_by: "party", domain: "lex" } },
+    { packId: "legal-crew" },
+  );
+  assert.equal(withProcess.ok, true);
+  assert.deepEqual(withProcess.doc, { distill: "off", key_by: "party" });
+  assert.equal(withProcess.empty, false);
+
+  // Alone, too: a pack that declares ONLY a schema must still land a document.
+  // `empty` would mean "no write", and an empty doc is the CLEAR operation — so
+  // getting this wrong silently deletes a sibling team's policy.
+  const schemaOnly = compilePackMemoryPolicy({ schema: { key_by: "instrument" } }, { packId: "invest-crew" });
+  assert.equal(schemaOnly.ok, true);
+  assert.deepEqual(schemaOnly.doc, { key_by: "instrument" });
+  assert.equal(schemaOnly.empty, false, "a schema-only declaration is NOT an empty document");
+
+  // The closed vocabulary holds here because it holds in the shared validator.
+  const outside = compilePackMemoryPolicy({ schema: { key_by: "portfolio_id" } }, { packId: "p" });
+  assert.equal(outside.ok, false);
+  assert.equal(outside.errors[0].code, "schema_key_by_invalid");
 });
 
 test("an invalid value is refused by the shared validator, not by this module", () => {
