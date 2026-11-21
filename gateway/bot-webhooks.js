@@ -13,6 +13,10 @@
 // binding key). Results are cached — positive for minutes, negative for
 // seconds — so conversational webhook rates never rescan, and a bot created a
 // moment ago is found on the next retry.
+//
+// A second address rides the same scan: fd-bot's subscriber envelope carries a
+// `bindingId` (not our bot id), so `/api/bots/events` resolves by
+// `bots.fd_bot_binding_id` instead — see resolveByBinding.
 
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
@@ -23,8 +27,6 @@ const NEGATIVE_TTL_MS = 10_000;
 const CELL_DIR = /^[0-9a-f]{16}$/;
 
 export function createBotWebhookRouter({ dataRoot, openDb }) {
-  const cache = new Map(); // botId → { email, userId, at } (email null = miss)
-
   // The registry knows which USER owns which cell — exact, and independent of
   // whatever sign-in history a cell's session rows happen to carry. It is the
   // authority the registry exists for; the session inference below is only a
@@ -68,16 +70,20 @@ export function createBotWebhookRouter({ dataRoot, openDb }) {
     return email ?? null;
   }
 
-  function resolve(botId) {
+  // One scan, two addresses. `id` is the legacy webhook's path segment;
+  // `fd_bot_binding_id` is what fd-bot's envelope carries (adopt-fd-bot-transport
+  // 6.1) — the row stores it when the binding is created, so it is a lookup, not
+  // a derivation (two bots may share a platform).
+  function scan(cache, key, sql) {
     const now = Date.now();
-    const hit = cache.get(botId);
+    const hit = cache.get(key);
     if (hit && now - hit.at < (hit.email ? POSITIVE_TTL_MS : NEGATIVE_TTL_MS)) return hit;
     let entry = { email: null, userId: null, at: now };
     let dirs;
     try {
       dirs = readdirSync(dataRoot);
     } catch {
-      cache.set(botId, entry);
+      cache.set(key, entry);
       return entry;
     }
     for (const dir of dirs) {
@@ -91,7 +97,7 @@ export function createBotWebhookRouter({ dataRoot, openDb }) {
         continue; // locked or foreign file: not ours to read
       }
       try {
-        const bot = db.prepare("SELECT id, owner_email FROM bots WHERE id = ?").get(botId);
+        const bot = db.prepare(sql).get(key);
         if (!bot) continue;
         // Creator identity first (fix-gateway-bot-owner): the row records who
         // created the bot, which is exact even on cells with mixed sign-in
@@ -113,9 +119,21 @@ export function createBotWebhookRouter({ dataRoot, openDb }) {
         }
       }
     }
-    cache.set(botId, entry);
+    cache.set(key, entry);
     return entry;
   }
 
-  return { resolve };
+  // Separate caches: a bot id and a binding id are different key spaces (and an
+  // id can only ever collide by accident), so a hit in one must never answer
+  // for the other.
+  const byBotId = new Map(); // botId → { email, userId, at } (email null = miss)
+  const byBinding = new Map(); // fd_bot_binding_id → same shape
+
+  return {
+    resolve: (botId) => scan(byBotId, botId, "SELECT id, owner_email FROM bots WHERE id = ?"),
+    // fd-bot's envelope names the binding, never our bot id (the binding is
+    // created on fd-bot's side; we store what it returns on the row).
+    resolveByBinding: (bindingId) =>
+      scan(byBinding, bindingId, "SELECT id, owner_email FROM bots WHERE fd_bot_binding_id = ?"),
+  };
 }

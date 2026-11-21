@@ -350,6 +350,10 @@ export function createCellRegistry(config) {
       // never reached any dsh profile (2026-10-10 fd-prod gap).
       const cellMcpJson = path.join(root, "mcp.json");
       const env = {
+        // NOTE: BOTS_EVENTS_TOKEN / FD_BOT_* / PUBLIC_BASE_URL propagate from
+        // here too. The events token is a DEPLOYMENT-WIDE shared secret (the
+        // gateway forwards it, every cell verifies it) — set it once on the
+        // platform Deployment, never per cell.
         ...baseEnv,
         PORT: String(port),
         HOST: "127.0.0.1",

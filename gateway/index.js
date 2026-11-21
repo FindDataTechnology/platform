@@ -32,7 +32,7 @@ import { registerFleetMachineRoutes } from "./fleet-machines-routes.js";
 import { createTeamDirectory, registerTeamDirectoryRoutes, cellCardSampler } from "./team-directory.js";
 import { cellIdFor } from "../server/team-card.js";
 import { rm } from "node:fs/promises";
-import { forwardedHeaders, machineHeaders, proxyHttp, proxyUpgrade } from "./proxy.js";
+import { forwardedHeaders, machineHeaders, proxyBufferedBody, proxyHttp, proxyUpgrade, readBodyBounded } from "./proxy.js";
 import { decideMandateDoor, MANDATE_OWNER_HEADER, MANDATE_VERDICT_PATH } from "./mandate-door.js";
 import { decideInputRequestDoor, INPUT_REQUEST_MCP_PATH, INPUT_REQUEST_OWNER_HEADER } from "./input-request-door.js";
 import { decideRunnerFleetDoor, FLEET_OWNER_HEADER, RUNNER_FLEET_PATH_RE } from "./runner-fleet-door.js";
@@ -1240,6 +1240,54 @@ app.all("/api/bots/webhook/:botId/:secret", async (req, res) => {
     });
   } catch (err) {
     console.error(`[gateway] webhook cell start failed for ${target.email}: ${err.message}`);
+    res.status(503).json({ error: "Your workspace failed to start" });
+  }
+});
+
+// ── fd-bot subscriber push: the envelope names its own cell ─────────────────
+// fd-bot is ONE external service for the whole deployment; it pushes a
+// normalized envelope to a subscriber URL that is identical for every cell
+// (there is no per-cell path to route on — and a binding's subscriber URL is
+// fixed when the binding is created, so it cannot carry an id fd-bot has not
+// minted yet). The binding id therefore rides INSIDE the JSON body, which means
+// this route must read the body to route — unlike trial-exec, which only pipes.
+//
+// Read is bounded (64kb, the cell's own parser limit) and the EXACT bytes are
+// replayed to the cell, so its parser sees what fd-bot sent. Auth stays the
+// cell's: the inbound `authorization` header passes through machineHeaders
+// untouched and the cell re-verifies BOTS_EVENTS_TOKEN itself — the gateway
+// secret only attributes origin. BOTS_EVENTS_TOKEN is a DEPLOYMENT-WIDE shared
+// secret: one env var on the platform Deployment, inherited by the gateway and
+// by every cell (spawner baseEnv spreads process.env).
+app.all("/api/bots/events", async (req, res) => {
+  let body;
+  try {
+    body = await readBodyBounded(req);
+  } catch (err) {
+    return res.status(err.code === "TOO_LARGE" ? 413 : 400).json({ error: "Malformed request body" });
+  }
+  let bindingId = "";
+  try {
+    bindingId = String(JSON.parse(body.toString("utf8"))?.bindingId ?? "");
+  } catch {
+    /* not JSON → the cell answers the honest 400; there is nothing to route on */
+  }
+  const target = bindingId ? botWebhookRouter.resolveByBinding(bindingId) : { email: null };
+  if (!target.email) {
+    // Same lesson as the webhook route: "fd-bot never called" and "we could not
+    // attribute the binding" must be distinguishable in the log.
+    console.warn(`[gateway] events for unknown binding ${bindingId || "(none)"} from ${req.ip}`);
+    return res.sendStatus(404);
+  }
+  try {
+    const cell = await registry.ensure({ email: target.email, groups: [] });
+    proxyBufferedBody(req, res, body, {
+      host: "127.0.0.1",
+      port: cell.port,
+      headers: machineHeaders(req, SECRET),
+    });
+  } catch (err) {
+    console.error(`[gateway] events cell start failed for ${target.email}: ${err.message}`);
     res.status(503).json({ error: "Your workspace failed to start" });
   }
 });

@@ -16,8 +16,10 @@ import { createBotAcceptance } from "../bot-acceptance.js";
 import { BOT_TYPES, credentialFieldsFor, qrCapabilityFor, adapterForBot, isOutboundOnly } from "../bots/adapter.js";
 import { qrSvg } from "../bots/qr.js";
 import { GENERIC_BOT_TYPES } from "../../lib/generic-bot-types.js";
+import { escalateToHuman } from "../../lib/escalate.js";
 import { validateConfigDims, effortUnionFrom } from "../fleet-model.js";
 import { summarizeDispositions } from "../fleet-turn-mandate.js";
+import { ensureFdBotBinding } from "../../lib/fd-bot-binding.js";
 
 // The webhook path prefix, shared with the forward-auth exemption in auth.js.
 export const WEBHOOK_PREFIX = "/api/bots/webhook/";
@@ -356,7 +358,7 @@ export function registerBotRoutes(ctx) {
     });
   });
 
-  app.post("/api/bots", (req, res) => {
+  app.post("/api/bots", async (req, res) => {
     if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
     const { type, name, credentials, enabled = true, persona, allowTools, allowedSenders } = req.body || {};
     if (!type || !name) return res.status(400).json({ error: "Missing type or name" });
@@ -387,11 +389,15 @@ export function registerBotRoutes(ctx) {
       // cells with mixed sign-in history.
       ownerEmail: req.user?.email ?? null,
     });
-    bots.reload(bot);
-    res.json(bots.maskBot(bot));
+    // fd-bot binding (adopt-fd-bot-transport 6.1). Never fails bot creation: no
+    // config / an fd-bot refusal leaves the row on legacy and logs why.
+    await ensureFdBotBinding({ bot, publicBaseUrl: bots.publicBaseUrl() });
+    const saved = db.getBot(bot.id) ?? bot;
+    bots.reload(saved);
+    res.json(bots.maskBot(saved));
   });
 
-  app.patch("/api/bots/:id", (req, res) => {
+  app.patch("/api/bots/:id", async (req, res) => {
     if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
     const existing = db.getBot(req.params.id);
     if (!existing) return res.status(404).json({ error: "Bot not found" });
@@ -435,8 +441,16 @@ export function registerBotRoutes(ctx) {
       ...(allowTools !== undefined ? { allowTools } : {}),
       ...(allowPatch !== undefined ? { allowedSenders: allowPatch } : {}),
     });
-    bots.reload(bot);
-    res.json(bots.maskBot(bot));
+    // Credentials changed → the fd-bot binding still holds the OLD secret, so
+    // re-bind (the existing id is replaced, not stacked). Other field edits
+    // leave the binding alone.
+    let saved = bot;
+    if (credentials !== undefined) {
+      await ensureFdBotBinding({ bot, publicBaseUrl: bots.publicBaseUrl(), force: true });
+      saved = db.getBot(bot.id) ?? bot;
+    }
+    bots.reload(saved);
+    res.json(bots.maskBot(saved));
   });
 
   // Inbound disposition summary (add-staff-fleet-channels): the read half of
@@ -568,6 +582,28 @@ export function registerBotRoutes(ctx) {
       res.json({ ok: true });
     } catch (err) {
       res.status(502).json({ error: err.message });
+    }
+  });
+
+  // ── Escalate a chatwoot conversation to the human queue (unify-im-solution 1.4) ─
+  // The AI's other half of the human-handoff loop: the stop-guard makes the AI go
+  // silent once a conversation is `pending` or human-assigned; THIS puts it there.
+  // Operator-triggered today (a UI button / automation can call it); an agent tool
+  // that decides to escalate can reuse the same lib function.
+  app.post("/api/bots/:id/escalate", async (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    const bot = db.getBot(req.params.id);
+    if (!bot) return res.status(404).json({ error: "Bot not found" });
+    if (bot.type !== "chatwoot") return res.status(400).json({ error: "escalate is only supported for chatwoot bots" });
+    const { chatKey } = req.body || {};
+    if (!chatKey) return res.status(400).json({ error: "Missing chatKey" });
+    try {
+      const result = await escalateToHuman(bot, chatKey);
+      // A platform verdict (ok:false) is a real outcome, not a server error — 200
+      // with the classified result, matching fd-bot's send discipline.
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
     }
   });
 }

@@ -89,3 +89,37 @@ test("the registry's owner of the cell beats session inference", () => {
   const router = createBotWebhookRouter({ dataRoot: tmp, openDb: (p) => new Database(p, { readonly: true }) });
   assert.equal(router.resolve("bot-4444").email, "real-owner@example.com");
 });
+
+// ── binding-keyed resolution (fd-bot subscriber lane) ──────────────────────────
+// fd-bot's envelope names the BINDING, never our bot id — the second address
+// must find the same cell, and the two caches must never answer for each other.
+function makeBindingCell(userId, { id, binding, owner = null }) {
+  const dir = path.join(tmp, userId);
+  mkdirSync(path.join(dir, "data", "data"), { recursive: true });
+  const db = new Database(path.join(dir, "data", "data", "app.db"));
+  db.exec("CREATE TABLE bots (id TEXT PRIMARY KEY, owner_email TEXT, fd_bot_binding_id TEXT)");
+  db.exec("CREATE TABLE chat_sessions (id TEXT PRIMARY KEY, owner TEXT)");
+  db.exec("CREATE TABLE user_preferences (key TEXT PRIMARY KEY, value TEXT)");
+  db.prepare("INSERT INTO bots (id, fd_bot_binding_id) VALUES (?, ?)").run(id, binding);
+  if (owner) db.prepare("INSERT INTO chat_sessions (id, owner) VALUES ('s1', ?)").run(owner);
+  db.close();
+  return dir;
+}
+
+test("resolveByBinding finds the owning cell by fd_bot_binding_id", () => {
+  makeBindingCell("1111111111111111", { id: "bot-r1", binding: "b_route1", owner: "bind@example.com" });
+  const router = createBotWebhookRouter({ dataRoot: tmp, openDb: (p) => new Database(p, { readonly: true }) });
+  const hit = router.resolveByBinding("b_route1");
+  assert.equal(hit.email, "bind@example.com");
+  assert.equal(hit.userId, "1111111111111111");
+});
+
+test("resolveByBinding misses an unknown binding; the two key spaces stay separate", () => {
+  makeBindingCell("2222222222222222", { id: "bot-only-id", binding: "b_route2", owner: "sep@example.com" });
+  const router = createBotWebhookRouter({ dataRoot: tmp, openDb: (p) => new Database(p, { readonly: true }) });
+  assert.equal(router.resolveByBinding("nope").email, null);
+  // A bot id is not a binding id.
+  assert.equal(router.resolveByBinding("bot-only-id").email, null);
+  // …and a negatived binding id does not poison the bot-id cache.
+  assert.equal(router.resolve("bot-only-id").email, "sep@example.com");
+});

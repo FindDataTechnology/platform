@@ -1452,6 +1452,32 @@ const MIGRATIONS = [
       )`,
     ],
   },
+  {
+    version: 128,
+    // Outbound accountability ledger (unify-im-solution C4). Every message the
+    // system says on someone's behalf — bot lane, Chatwoot, alert relay, copilot
+    // notice — lands one row here, carrying the 7+1 fields the
+    // principal-disclosure-accountability spec requires. Content原文 is NEVER
+    // stored: only its digest. Kept SEPARATE from action_audit (that table is
+    // "an action from a proposal was executed"; its NOT-NULL columns cannot be
+    // filled by "said one sentence"). Additive only.
+    statements: [
+      `CREATE TABLE IF NOT EXISTS outbound_ledger (
+        id TEXT PRIMARY KEY,
+        channel TEXT NOT NULL,
+        principal TEXT,
+        audience TEXT,
+        disclose_level TEXT,
+        mandate_ref TEXT,
+        precedent_refs TEXT,
+        content_digest TEXT NOT NULL,
+        reversible_until INTEGER,
+        created_at INTEGER NOT NULL
+      )`,
+      `CREATE INDEX IF NOT EXISTS outbound_ledger_by_principal ON outbound_ledger (principal, created_at)`,
+      `CREATE INDEX IF NOT EXISTS outbound_ledger_by_audience ON outbound_ledger (audience, created_at)`,
+    ],
+  },
 ];
 
 function nowIso() {
@@ -4043,6 +4069,46 @@ export function setBotTransport(botId, transport, fdBotBindingId = null) {
     binding: transport === "legacy" ? null : fdBotBindingId || null,
   });
   return getBot(botId);
+}
+
+// ── Outbound accountability ledger (unify-im-solution C4) ────────────────────
+// One row per message the system says on someone's behalf. Content原文 never
+// stored — only its digest. Maps the outbound-message gate's ledger shape onto
+// the principal-disclosure-accountability spec's columns. Returns the row id on
+// success, null when the db is unavailable (callers must NOT treat null as a
+// successful write — the spec requires the absence be visible).
+export function insertOutboundLedger(entry) {
+  if (!dbReady) return null;
+  const row = {
+    id: crypto.randomUUID(),
+    channel: String(entry.channel ?? "unknown"),
+    principal: entry.principal ?? null,
+    audience: entry.audience ?? null,
+    disclose_level: entry.discloseLevel ?? null,
+    mandate_ref: typeof entry.mandateRef === "object" && entry.mandateRef ? JSON.stringify(entry.mandateRef) : (entry.mandateRef ?? null),
+    precedent_refs: entry.precedentRefs != null ? JSON.stringify(entry.precedentRefs) : null,
+    content_digest: String(entry.contentDigest ?? ""),
+    reversible_until: Number.isFinite(entry.reversibleUntil) ? entry.reversibleUntil : null,
+    created_at: Date.now(),
+  };
+  if (!row.content_digest) throw new Error("insertOutboundLedger: contentDigest is required");
+  stmt(
+    `INSERT INTO outbound_ledger (id, channel, principal, audience, disclose_level, mandate_ref, precedent_refs, content_digest, reversible_until, created_at)
+     VALUES (@id, @channel, @principal, @audience, @disclose_level, @mandate_ref, @precedent_refs, @content_digest, @reversible_until, @created_at)`,
+  ).run(row);
+  return row.id;
+}
+
+// "What did we say to this principal / on this audience?" — one read face.
+export function listOutboundLedger({ principal = null, audience = null, limit = 200 } = {}) {
+  if (!dbReady) return [];
+  const where = [];
+  const params = {};
+  if (principal) { where.push("principal = @principal"); params.principal = principal; }
+  if (audience) { where.push("audience = @audience"); params.audience = audience; }
+  params.limit = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+  const sql = `SELECT * FROM outbound_ledger ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY created_at DESC LIMIT @limit`;
+  return stmt(sql).all(params);
 }
 
 // add-zhiyu-im-bridge: the output bridge's restart-safe cursor (room message

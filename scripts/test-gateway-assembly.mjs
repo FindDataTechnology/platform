@@ -203,6 +203,13 @@ test("gateway assembly smoke: the full route surface assembles in test mode with
     routes.some((r) => r.kind === "route" && String(r.path).includes("api\\/bots\\/relay")),
     "the bot relay regex lane must be registered",
   );
+  // fd-bot's subscriber push: ONE id-free path for the whole deployment (the
+  // binding id rides the body), so it must be a machine door before the
+  // catch-all like its siblings.
+  assert.ok(
+    findRoute(routes, "post", "/api/bots/events"),
+    "the fd-bot events door must be registered before the cell-proxy catch-all",
+  );
 
   // 5b. Disclosure-gate machine door (fix-disclosure-gate-reachability): the
   // verdict channel is machine-to-machine, so it CANNOT live behind the

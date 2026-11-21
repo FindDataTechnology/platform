@@ -39,9 +39,10 @@ import { registry as wecomBot } from "./wecom-bot.js";
 import { registry as wecomWebhook } from "./wecom-webhook.js";
 import { registry as slack } from "./slack.js";
 import { registry as mattermost } from "./mattermost.js";
+import { registry as chatwoot } from "./chatwoot.js";
 import { fetchWithTimeout } from "../../lib/fetch-with-timeout.js";
 
-export const BOT_TYPES = ["telegram", "feishu", "wecom", "wechat-oa", "wecom-bot", "slack", "mattermost", "wecom-webhook"];
+export const BOT_TYPES = ["telegram", "feishu", "wecom", "wechat-oa", "wecom-bot", "slack", "mattermost", "wecom-webhook", "chatwoot"];
 
 // Types that cannot receive a callback (make-im-lane-outbound-capable). Only
 // `wecom-webhook` today: a group robot is push-only by platform design. The
@@ -53,7 +54,7 @@ export function isOutboundOnly(type) {
 
 let registry = null;
 function adapters() {
-  if (!registry) registry = { telegram, feishu, wecom, "wechat-oa": wechatOa, "wecom-bot": wecomBot, slack, mattermost, "wecom-webhook": wecomWebhook };
+  if (!registry) registry = { telegram, feishu, wecom, "wechat-oa": wechatOa, "wecom-bot": wecomBot, slack, mattermost, "wecom-webhook": wecomWebhook, chatwoot };
   return registry;
 }
 

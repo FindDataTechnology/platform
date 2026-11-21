@@ -45,7 +45,7 @@ export function registerBotEventRoutes(ctx) {
   // into a frozen ESM namespace.
   const runTurn = (botId, args) => (ctx.botTurnRunner ?? bots.handleMessage)(botId, args);
 
-  app.post(EVENTS_PREFIX, express.json({ limit: "64kb" }), async (req, res) => {
+  app.post([EVENTS_PREFIX, `${EVENTS_PREFIX}/:bindingId`], express.json({ limit: "64kb" }), async (req, res) => {
     const expected = eventsToken();
     // No token configured → the route answers 404, never a weaker form of
     // itself (same rule as the relay).
@@ -56,7 +56,9 @@ export function registerBotEventRoutes(ctx) {
 
     const db = ctx.db;
     const envelope = req.body ?? {};
-    const bindingId = String(envelope.bindingId ?? "");
+    // A path id (when a deployment points the subscriber URL at it) is the
+    // authority; the body field is the contract fd-bot ships today.
+    const bindingId = String(req.params.bindingId ?? envelope.bindingId ?? "");
     if (!bindingId) return res.status(400).json({ error: "Missing bindingId" });
 
     const bot = botForBinding(db, bindingId);

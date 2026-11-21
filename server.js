@@ -264,7 +264,7 @@ const jsonBodyParser = express.json();
 const packJsonBodyParser = express.json({ limit: "24mb" });
 const PACK_BODY_PREFIXES = ["/api/packs", "/api/pack-drafts", "/api/mypacks"];
 app.use((req, res, next) => {
-  if (req.path.startsWith(WEBHOOK_PREFIX) || req.path.startsWith(RELAY_PREFIX) || req.path === EVENTS_PREFIX) return next();
+  if (req.path.startsWith(WEBHOOK_PREFIX) || req.path.startsWith(RELAY_PREFIX) || req.path.startsWith(EVENTS_PREFIX)) return next();
   // ERP 代理转发的是「原始请求」：body 若先被 json parser 吃掉，代理只能拿到
   // 重新序列化的对象（丢字节、丢重复键）。故该前缀跳过解析，由 erp-proxy.js
   // 自己读原始流（add-erp-supply-chain-gateway-proxy）。

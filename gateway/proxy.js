@@ -101,6 +101,53 @@ export function proxyHttp(req, res, target) {
   req.pipe(upstream);
 }
 
+// A door that must READ the body to pick a routing key, then forward the EXACT
+// bytes it read (fd-bot's envelope names its binding inside the JSON, and the
+// cell's own parser re-reads the same payload). One explicit content-length and
+// one write — no stream left to pipe.
+export function readBodyBounded(req, limit = 64 * 1024) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        const err = new Error(`body exceeds ${limit} bytes`);
+        err.code = "TOO_LARGE";
+        reject(err);
+        return; // stop buffering; the response is already on its way
+      }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
+    req.on("error", reject);
+  });
+}
+
+export function proxyBufferedBody(req, res, body, target) {
+  const headers = { ...target.headers, "content-length": String(body.length) };
+  delete headers["transfer-encoding"];
+  const upstream = http.request(
+    {
+      host: target.host,
+      port: target.port,
+      method: req.method,
+      path: req.originalUrl || req.url,
+      headers,
+    },
+    (up) => {
+      res.writeHead(up.statusCode, up.headers);
+      up.pipe(res);
+    },
+  );
+  upstream.on("error", (err) => {
+    if (res.headersSent) return res.end();
+    res.writeHead(502, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: `Cell unavailable: ${err.message}` }));
+  });
+  upstream.end(body);
+}
+
 // WebSocket stickiness is implicit: the same authenticated user resolves to the
 // same cell record every time, so a reconnect lands on the same process while
 // it lives. Done at the socket level (replay the request head, then pipe both
