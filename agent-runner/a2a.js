@@ -161,8 +161,21 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
           // (usually the task already settled), never a fake "cancelled".
           return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
         }
+        // A confirmed stop IS the terminal answer, and it has to be recorded
+        // here rather than read back: the abort settles the live collector
+        // asynchronously, so an immediate `describe` still reports `running`.
+        // Returning that made the facade map a confirmed stop to `unknown`,
+        // refuse to settle its ledger, and then record the completing flight as
+        // `done` — the two-sided disagreement this whole lane forbids (measured
+        // live 2026-11-21 through the public facade: runner answered
+        // `state: cancelled`, facade answered `done`).
         tasks.cancel(taskId, { by: `caller:${params?.cancelled_by ?? "unknown"}` });
-        return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+        const settled = tasks.describe(taskId);
+        return res.status(200).json({
+          jsonrpc: "2.0",
+          id: id ?? null,
+          result: settled.state === "running" ? { ...settled, state: "cancelled", cancelled_by: `caller:${params?.cancelled_by ?? "unknown"}` } : settled,
+        });
       }
       // tasks/resubscribe: no per-task event buffer is kept (see tasks.js), so
       // the honest answer is the CURRENT state with an explicit note on why no

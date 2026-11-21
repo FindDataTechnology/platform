@@ -755,3 +755,25 @@ slug 未公开、团队不存在或团队已归档时，该页 SHALL 返回 404 
 
 - **WHEN** 页面刚加载、身份探测尚未返回
 - **THEN** 不渲染「进入创作台」入口；身份确认后才出现
+
+### Requirement: The facet service is the supply domain's canonical public address
+
+The facet service's public domain SHALL be the supply domain's canonical front door: every product surface
+of the supply domain — front hall, storefront, material catalog, docs, studio, console, and the machine
+surfaces — SHALL be reachable under it, and it SHALL be the address named in any published material link,
+CLI output, or client documentation. A second hostname SHALL NOT be presented as an equivalent product
+address; compatibility hostnames exist only as redirects or as the execution plane's own host.
+
+Brand strings served by the facet service SHALL name the facet product; no surface it serves SHALL carry a
+second product's brand.
+
+#### Scenario: One published address
+
+- **WHEN** any generated material link, CLI output, or client document names where the supply domain lives
+- **THEN** it names the facet service's canonical domain, not a compatibility hostname
+
+#### Scenario: The front door survives 壹座 being down
+
+- **WHEN** every 壹座 process is stopped and a visitor opens the canonical front door
+- **THEN** the front hall, the storefront, the material catalog and the machine surfaces all serve, with no
+  dependency on 壹座

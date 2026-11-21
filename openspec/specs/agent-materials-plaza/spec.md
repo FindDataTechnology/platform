@@ -197,24 +197,73 @@ Material page slugs SHALL be stable identifiers that do not change when content 
 
 ### Requirement: Three domains open one inventory
 
-The plaza SHALL be reachable through three domains as three doors into one inventory: agent.finddatatech.cloud is the canonical door opening unfiltered; skills.finddatatech.cloud serves the same site with the gallery preselected on the skills species; mcp.finddatatech.cloud's anonymous root path SHALL redirect to the plaza (species-preselected on MCP) while every other path on that domain — the MCP protocol endpoints (/<server>/mcp), the registry console, and its API/registry.json faces — SHALL be untouched, and a request to the mcp. root carrying the registry session SHALL still reach the registry console as its spec governs. All three hostnames SHALL be covered by the edge certificate (single SAN set, all domains listed — a re-sign that drops any prior domain is a failure).
+The supply domain SHALL present one inventory through one canonical front door — `facet.finddatatech.cloud` —
+and the remaining historical hostnames SHALL be compatibility doors over that same inventory, never a second
+product face:
+
+- `agent.finddatatech.cloud` — a compatibility door for everything already pointing at it. An HTML request
+  SHALL redirect to the canonical front door. The machine surfaces (`/llms.txt`, `/llms-full.txt`,
+  `/catalog.json`, `/robots.txt`) and per-material pages (`/materials/*`) SHALL be served with their own bytes
+  and HTTP 200 from this host, without a redirect: those addresses are already published to AI crawlers and
+  embedded material links, and a redirect would both add a hop to every crawl and turn a stable machine
+  address into an unstable one.
+- `skills.finddatatech.cloud` — redirect to the canonical front door with the skills species preselected, for a
+  bounded compatibility window.
+- `mcp.finddatatech.cloud` — the execution plane's host. Its protocol endpoints (`/<server>/mcp`), API, and
+  health paths SHALL be served unchanged; its anonymous root SHALL redirect to the canonical front door. The
+  registry console on this host is an operator surface, not a product entrance.
+
+All hostnames SHALL be covered by the edge certificate (single SAN set; a re-sign that drops any prior domain
+is a failure). Brand strings served from any of these hosts SHALL name one product; a second product brand on
+a compatibility door is a defect.
+
+#### Scenario: The canonical front door serves the whole supply domain
+
+- **WHEN** a visitor opens `facet.finddatatech.cloud`
+- **THEN** the front door, the storefront, the material catalog, the docs, the studio, the console and the
+  machine surfaces are all reachable under that one host, under one brand
+
+#### Scenario: An HTML request to a compatibility door redirects
+
+- **WHEN** an anonymous client requests an HTML page on `agent.finddatatech.cloud`
+- **THEN** it is redirected to the canonical front door
+
+#### Scenario: A machine surface on a compatibility door does not redirect
+
+- **WHEN** a client requests `/llms.txt`, `/llms-full.txt`, `/catalog.json` or `/robots.txt` on
+  `agent.finddatatech.cloud`
+- **THEN** the response is HTTP 200 carrying that surface's own bytes with a matching content type, with no
+  redirect
+
+#### Scenario: A material deep link survives on the compatibility door
+
+- **WHEN** an already-published `/materials/<slug>` URL is requested on `agent.finddatatech.cloud`
+- **THEN** the page is served with HTTP 200 and its content, with no redirect
 
 #### Scenario: Skills door preselects the species
 
-- **WHEN** a visitor opens skills.finddatatech.cloud
-- **THEN** they see the same plaza inventory with the skills species preselected, and can clear the filter to see everything
+- **WHEN** a visitor opens `skills.finddatatech.cloud`
+- **THEN** they are redirected to the canonical front door with the skills species preselected, and can clear
+  the filter to see everything
 
 #### Scenario: MCP anonymous root redirects, protocol endpoints never
 
-- **WHEN** an anonymous client requests the root of mcp.finddatatech.cloud
-- **THEN** it is redirected to the plaza (MCP species preselected), while a request to /<server>/mcp or /api/mcp-registry.json on the same domain is served by the registry unchanged
+- **WHEN** an anonymous client requests the root of `mcp.finddatatech.cloud`
+- **THEN** it is redirected to the canonical front door, while a request to `/<server>/mcp` or `/api/*` on the
+  same domain is served by the registry unchanged
 
 #### Scenario: Registry session keeps its console
 
-- **WHEN** a client with a valid registry session requests the root of mcp.finddatatech.cloud
-- **THEN** the registry console answers as its own product spec requires — the redirect only governs anonymous traffic
+- **WHEN** a client with a valid registry session requests the root of `mcp.finddatatech.cloud`
+- **THEN** the registry console answers as its own spec requires — the redirect only governs anonymous traffic
 
 #### Scenario: Certificate covers every door
 
-- **WHEN** the edge certificate is re-signed for the plaza's domains
-- **THEN** its SAN list includes every prior domain plus the new ones, and a TLS handshake succeeds for all of them
+- **WHEN** the edge certificate is re-signed for the supply domain's hostnames
+- **THEN** its SAN list includes every prior domain plus the new ones, and a TLS handshake succeeds for all of
+  them
+
+#### Scenario: One brand across every door
+
+- **WHEN** a client reads the brand string served from any of the four hostnames
+- **THEN** it names the same product, and no host serves a second competing product brand
