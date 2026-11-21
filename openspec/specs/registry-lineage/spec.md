@@ -118,3 +118,37 @@ sentence-transformers（torch 后端）路径 MAY 作为可选安装保留，但
 
 - **WHEN** 后续变更向 registry 运行时依赖清单新增条目
 - **THEN** 该依赖在运行时代码（含管理脚本）中存在实际 import 或调用路径，否则 CI 的体积断言或依赖审计 SHALL 拦截合入
+
+### Requirement: The release lineage and the production record agree
+
+Every image tag pinned in production SHALL exist in the recorded release repository, and the maintenance
+ledger's record of which tag production runs SHALL equal the tag named by the deployment manifest. A
+release repository SHALL be distinguishable from a fork repository: the ledger SHALL name which repository
+produces production images, because checking a production tag against a fork's history yields a false
+"commit not found" verdict.
+
+A recorded discrepancy SHALL be checked mechanically, not by reading prose: an automated check SHALL compare
+the deployment manifest's image tag against the ledger's recorded tag and assert the commit is reachable in the
+release repository, and SHALL fail on any mismatch.
+
+#### Scenario: Manifest and ledger agree
+
+- **WHEN** the automated lineage check runs against the current production deployment
+- **THEN** the deployment manifest's image tag equals the ledger's recorded production tag, and the commit is
+  reachable in the release repository
+
+#### Scenario: A drifted record fails the check
+
+- **WHEN** the ledger records a different tag from the one the deployment manifest pins
+- **THEN** the check exits non-zero naming both values
+
+#### Scenario: A tag is checked against the right repository
+
+- **WHEN** the lineage check resolves a production tag
+- **THEN** it queries the release repository named in the ledger, and never reports absence based on a fork
+  repository's history
+
+#### Scenario: Rebuild reproduces the capability set
+
+- **WHEN** an image is built from the release repository's branch for a recorded tag
+- **THEN** it serves the same capability set the running image served, including the spine replica read path

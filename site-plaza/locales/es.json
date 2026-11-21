@@ -1,0 +1,157 @@
+{
+  "brand": {
+    "name": "Plaza de Materiales para Agentes de Yizuo"
+  },
+  "nav": {
+    "materials": "Qué materiales",
+    "mechanism": "Cómo se suministra",
+    "inventory": "Catálogo",
+    "audience": "Para quién"
+  },
+  "hero": {
+    "title": "Cada material que un agente necesita,<br>está en esta plaza.",
+    "lead": "Packs, habilidades del ecosistema, servidores MCP, fachadas de IA y anclas de datos oficiales: cada uno es algo que una persona o un agente de IA puede entender, obtener y ejecutar. Aquí se muestra qué existe, cómo se suministra y qué hay ahora mismo.",
+    "actions": "Persona: sigue leyendo o ve al catálogo"
+  },
+  "counters": {
+    "packs": "Agentes",
+    "categories": "Categorías",
+    "locales": "Idiomas",
+    "asOf": "Instantánea al",
+    "skills": "Habilidades",
+    "mcp": "Servidores MCP",
+    "tools": "Herramientas llamables",
+    "facade": "Agentes activos",
+    "officialData": "Anclas de datos"
+  },
+  "materials": {
+    "title": "Qué materiales existen",
+    "lead": "Todo lo que ofrece la plaza es un material. Material es el género: las cinco especies siguientes difieren en forma y comparten un mismo mecanismo de suministro.",
+    "items": [
+      {
+        "name": "Pack",
+        "en": "Pack",
+        "desc": "Un paquete versionado de habilidades, referencias MCP y personas. Publicar congela una instantánea inmutable; se instala y funciona. Un pack es una capacidad completa y entregable.",
+        "example": "Ejemplo: el CRM Service Desk Suite: conecta tu propio mostrador de servicio, lee conversaciones, redacta respuestas y envía tras confirmación."
+      },
+      {
+        "name": "Habilidad del ecosistema",
+        "en": "Ecosystem Skill",
+        "desc": "Habilidades de la comunidad abierta admitidas tras revisión: con marcas de origen y licencia, instalables solas o componibles en packs.",
+        "example": "Ejemplo: las habilidades individuales de los estantes de ingesta de datos y estudio documental."
+      },
+      {
+        "name": "Servidor MCP",
+        "en": "MCP Server",
+        "desc": "Servicios de herramientas que un modelo puede llamar. Cada entrada lleva una anotación bidireccional: las personas leen resúmenes en cinco idiomas, la IA lee el resumen canónico; una misma capa de anotación habla a cada lector en su lengua.",
+        "example": "Ejemplo: Web fetch: obtén el contenido de cualquier URL sin configuración."
+      },
+      {
+        "name": "Fachada de IA",
+        "en": "AI Facade",
+        "desc": "Un personaje de recepción congelado con su corpus: habla con la fachada para conocer a su principal; lo no cubierto se declina con honestidad, nunca se inventa. Desplegable como servicio de conversación permanente: visitantes gratis, el principal paga.",
+        "example": "Ejemplo: la fachada de FindData: pregúntale por la empresa, los proyectos y las capacidades."
+      },
+      {
+        "name": "Ancla de datos oficial",
+        "en": "Official Data Anchor",
+        "desc": "El estante oficial anclado en los MCP de datos propios de FindData: fuentes reales de macro, finanzas y paneles de ciudades, con fuentes y periodos citados, componibles en packs.",
+        "example": "Ejemplo: el panel de ciudades: 209 indicadores × 297 ciudades × 2000–2024."
+      }
+    ]
+  },
+  "mechanism": {
+    "title": "Cómo se suministra",
+    "lead": "Una cadena de mecanismo en cuatro segmentos, cada uno contado desde la perspectiva del material: qué hace con tu material y qué garantiza.",
+    "link": "La misma tabla en forma legible por máquina: /generated/infrastructure.md",
+    "steps": [
+      {
+        "verb": "Publicar",
+        "en": "Publish",
+        "input": "Un manifest de pack (habilidades + referencias MCP + personas)",
+        "output": "Una instantánea de versión inmutable en el mercado",
+        "promise": "Una versión publicada nunca se reescribe; retirar no destruye las instantáneas instaladas."
+      },
+      {
+        "verb": "Obtener",
+        "en": "Obtain",
+        "input": "CLI de cinco editores / mercado integrado / página del mercado",
+        "output": "Una instantánea congelada instalada en tu entorno",
+        "promise": "Los tres caminos llegan a la misma instantánea; la instalación es explícita paquete a paquete; se permite la navegación anónima."
+      },
+      {
+        "verb": "Ejecutar",
+        "en": "Run",
+        "input": "La instantánea instalada + una celda de usuario (cell)",
+        "output": "Personas y superficies de herramientas en ejecución aislada",
+        "promise": "Las celdas son invisibles entre sí; la lista blanca de herramientas estrecha el contexto a lo necesario."
+      },
+      {
+        "verb": "Servir",
+        "en": "Serve",
+        "input": "Un personaje con contrato de servicio + la clave de facturación del desplegador",
+        "output": "Un servicio de conversación A2A permanente (punto final e identidad propios)",
+        "promise": "La residencia no se recupera por inactividad; las llamadas se liquidan por uso."
+      }
+    ],
+    "tableHead": {
+      "verb": "Acción",
+      "input": "Entrada",
+      "output": "Salida",
+      "promise": "Garantía"
+    }
+  },
+  "inventory": {
+    "title": "Catálogo",
+    "lead": "Galería en vivo: la página se actualiza desde el mercado al cargar; si no está accesible, usa la instantánea de compilación, con la fecha siempre visible.",
+    "search": "Buscar materiales…",
+    "allCategories": "Todas las categorías",
+    "live": "Actualización en vivo correcta (mercado en línea)",
+    "snapshot": "Actualización en vivo inaccesible: se muestra la instantánea de compilación",
+    "official": "Oficial",
+    "facade": "Fachada",
+    "obtain": "Obtener",
+    "page": "Página para máquinas",
+    "empty": "No hay materiales que coincidan.",
+    "categoryNames": {
+      "pack": "Pack",
+      "skill": "Habilidad del ecosistema",
+      "mcp": "Servidor MCP",
+      "facade": "Fachada de IA",
+      "official-data": "Ancla de datos oficial"
+    },
+    "tabs": {
+      "all": "Todo",
+      "agents": "Agentes",
+      "skills": "Habilidades",
+      "mcp": "Servidores MCP"
+    }
+  },
+  "audience": {
+    "title": "Para quién",
+    "lead": "Este sitio es bidireccional por diseño: cada contenido habla a las personas y a los agentes de IA a la vez.",
+    "human": {
+      "title": "Si eres persona",
+      "items": [
+        "Usuario de editor (Claude Code, Cursor, Codex, Gemini CLI, ZCode): un comando lo instala en tu editor.",
+        "Usuario de Yizuo: suscríbete e instala desde el mercado integrado, con credenciales ya conectadas.",
+        "Creador: organiza tu conocimiento en un manifest y publícalo; el Taller de Fachadas te entrevista y lo genera."
+      ],
+      "cta": "Suscribirse e instalar ↗"
+    },
+    "ai": {
+      "title": "Si eres un agente de IA",
+      "items": [
+        "Empieza en /generated/llms.txt: el índice del sitio, cada sección autosuficiente.",
+        "Datos estructurados en /generated/catalog.json: resumen canónico + resúmenes en cinco idiomas + whenToUse + procedencia.",
+        "Una página Markdown autosuficiente por material (materials/<slug>.md), con direcciones estables ante actualizaciones.",
+        "Para convertir un material en servicio en vivo: el punto final A2A; véase la fila Servir en infrastructure.md."
+      ],
+      "cta": "Empezar en /llms.txt →"
+    }
+  },
+  "footer": {
+    "tagline": "La visión global de materiales que personas e IA leen juntas",
+    "lines": "Líneas de producto de FindData"
+  }
+}

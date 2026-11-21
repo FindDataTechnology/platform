@@ -99,6 +99,22 @@ export function registerBotEventRoutes(ctx) {
     }
     if (!text.trim() && !media.length) return res.status(200).json({ ok: true, note: "empty" });
 
+    // Human-in-the-loop guard: Chatwoot's bot_handoff! moves a conversation to the
+    // human queue ("pending", often still unassigned) and only later does a human
+    // assign themselves ("User" assignee). In BOTH states the AI must go silent —
+    // answering while a human waits to pick it up is the exact failure this stops.
+    // Unassigned, or an AgentBot owner, keeps today's behaviour; a platform that
+    // never sends these fields is unaffected.
+    const assignee = envelope.assignee ?? null;
+    if (assignee?.type === "User") {
+      console.log(`[bot-events] bot "${bot.name}" skipped: conversation assigned to a human (${assignee.id})`);
+      return res.status(200).json({ ok: true, note: "handed-off" });
+    }
+    if (envelope.conversationStatus === "pending") {
+      console.log(`[bot-events] bot "${bot.name}" skipped: conversation pending in human queue`);
+      return res.status(200).json({ ok: true, note: "handed-off" });
+    }
+
     // Deliberately not awaited: fd-bot retries on a non-2xx, and an agent turn
     // that takes minutes must not hold the delivery confirmation open. A failed
     // turn is THIS cell's problem to log, not a reason to redeliver a message

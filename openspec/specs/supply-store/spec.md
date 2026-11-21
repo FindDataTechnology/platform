@@ -103,3 +103,38 @@ A patch to a registration row's `metadata` SHALL merge key-by-key into the store
 
 - **WHEN** a patch names a field outside the patchable set
 - **THEN** the write is rejected with the unknown-field error and the row is unchanged, as before
+
+### Requirement: The spine's complete state is backed up and restore-drilled
+
+The backup of the spine store SHALL cover its complete state, not just the primary database file: every sidecar the store needs to serve (including the configuration/bindings file that lives beside the database and any projection input the registry replica is rebuilt from) SHALL be included in the same backup, or explicitly recorded as uncovered with a known reason. The backup SHALL be taken in a way that a WAL-mode database is readable afterwards — copying the main file alone out of a live WAL database is not a backup.
+
+A restore drill SHALL be executed and recorded: restoring the backup into a clean location SHALL yield a store that serves the same entries, the same visibility, and the same bindings the pre-backup store served. "A backup job exists" SHALL NOT be accepted as evidence that this state is backed up; the drill's observed result is the evidence.
+
+#### Scenario: The sidecar configuration is in the backup
+
+- **WHEN** the backup runs and then the store's sidecar configuration file is inspected in the backup artifact
+- **THEN** the sidecar is present and byte-comparable to the source, and no component of the served state is left outside the backup without a recorded reason
+
+#### Scenario: A WAL-mode database restores readable
+
+- **WHEN** the backup of the live WAL-mode store is restored into a clean location and opened
+- **THEN** it opens without repair and serves the same entries and visibility as the pre-backup store
+
+#### Scenario: The restore drill is the evidence
+
+- **WHEN** a claim is made that the spine is backed up
+- **THEN** it is backed by a recorded drill that actually restored the artifact, not merely by the existence of a scheduled job
+
+### Requirement: The registry replica's staleness is visible to its consumers
+
+The registry's read-only replica of the spine SHALL expose how old its last successful pull is, and a failed pull SHALL be visible as staleness rather than as an invented healthy state. A consumer that reads registration data through the registry SHALL be able to tell that it is being served the previous copy, and the staleness SHALL continue to be reported until a pull succeeds — it MUST NOT be cleared by a restart, a new process, or an unrelated successful request.
+
+#### Scenario: A failed pull is visible as stale
+
+- **WHEN** the registry's scheduled pull from the spine fails
+- **THEN** its health/status surface reports the replica as stale with the age of the last successful pull, while continuing to serve that copy
+
+#### Scenario: Staleness does not clear on restart
+
+- **WHEN** the registry process restarts while the spine is unreachable
+- **THEN** the replica is still reported stale rather than appearing freshly synchronized

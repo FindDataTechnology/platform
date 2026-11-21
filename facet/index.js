@@ -193,6 +193,8 @@ const plazaExport = startExportSchedule({
   base: (process.env.FACET_SELF_BASE_URL || `http://127.0.0.1:${PORT}`).replace(/\/+$/, ""),
   siteBase: process.env.PLAZA_SITE_BASE || "https://facet.finddatatech.cloud",
   exportScript: path.resolve(process.cwd(), "scripts", "plaza-export.mjs"),
+  // 门厅静态物随镜像走（D2 的另一半）：机器面由导出产出，首页是代码。
+  frontHallSource: path.resolve(process.cwd(), "site-plaza"),
   intervalSecs: Number(process.env.PLAZA_EXPORT_INTERVAL_SECS || 86400),
 });
 

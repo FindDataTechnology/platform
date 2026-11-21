@@ -133,3 +133,41 @@ An entry whose state is `缺证据` or `待复审` SHALL still be listable (so a
 
 - **WHEN** an entry carries complete, unexpired evidence but fails its species' own admission rule (for example a plugin absent from the curated catalogue)
 - **THEN** the catalog does not admit it on evidence alone — evidence state never overrides the species' source of truth
+
+### Requirement: The facade species absorbs registered-but-undeployed agents
+
+An agent that exists as a registry entry (an AgentCard: a name, a description, an identity, and a declared capability) SHALL appear in the catalog as a `facade` entry, never as a seventh species. The species enumeration stays as it is; the difference between a deployed and an undeployed agent SHALL be expressed by two fields on the facade entry:
+
+- `runnable` — exactly one of `installable` (a pack the consumer can obtain and run locally) or `reachable` (a service the consumer calls at an endpoint);
+- `deployment` — an object carrying the deployment `state` and `provenance`, where an undeployed or unknown agent reports an explicit state rather than a fabricated `serving`.
+
+An entry with no deployment record SHALL render as undeployed with provenance naming the registry as its only source. The catalog SHALL NOT invent an endpoint, a live status, or a running instance for an agent that no serving plane reports.
+
+#### Scenario: A registered agent with no deployment appears as an undeployed facade
+
+- **WHEN** the registry holds an AgentCard for an agent that no serving plane has deployed
+- **THEN** the catalog carries exactly one `facade` entry for it, with `runnable: "reachable"`, `deployment.state` stating it is not deployed, and provenance naming the registry
+
+#### Scenario: A deployed agent carries its serving state
+
+- **WHEN** the same agent has also been deployed and the serving plane reports its public status
+- **THEN** its single facade entry carries that reported state and the serving plane as provenance, and no second entry appears for it
+
+#### Scenario: No seventh species is introduced
+
+- **WHEN** a client reads the species enumeration after this change
+- **THEN** it still reports the same six species with the same version, and registry agents are found under `facade`
+
+### Requirement: One catalog presentation across the supply domain
+
+Every surface that lists materials SHALL present them from the unified catalog projection. A second product surface that renders its own list of the same materials — a separate registry console catalogue, a second directory page, or an independently fetched inventory — SHALL NOT exist as a product face: registry-side catalogue screens either read the projection or are retired from the product surface. Operator-only screens (token issuance, user groups, audit, virtual servers, health probes) are outside this rule because they do not present the material inventory.
+
+#### Scenario: Two surfaces report the same material identically
+
+- **WHEN** a material is listed on any two product surfaces in the same refresh window
+- **THEN** both render it from the projection with the same identity, name, description, and provenance
+
+#### Scenario: No product surface keeps its own inventory
+
+- **WHEN** an operator or customer browses the material inventory on any product face
+- **THEN** no surface is serving a list fetched independently from the registry's own catalogue store rather than the projection

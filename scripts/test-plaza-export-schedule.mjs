@@ -19,7 +19,7 @@ import path from "node:path";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { runExportOnce, startExportSchedule } from "../facet/plaza-export-schedule.js";
+import { runExportOnce, startExportSchedule, seedFrontHall } from "../facet/plaza-export-schedule.js";
 
 const SURFACE = {
   "catalog.json": '{"generatedAt":"2026-11-20","sentinel":"previous-generation"}\n',
@@ -185,4 +185,35 @@ test("the schedule's trigger debounces a burst into one run", async () => {
   await new Promise((r) => setTimeout(r, 80));
   sched.stop();
   assert.equal(calls.length, 1, `three triggers must collapse to one run, got ${calls.length}`);
+});
+
+test("seedFrontHall copies the page assets, never generated/ or deploy/", () => {
+  // 门厅首页是随镜像走的**代码**，不是导出产物。缺了它 facet 根路径落到 SPA
+  // 介绍页，「把 agent. 跳过来」就变成产品退步（2026-11-21 实撞）。
+  const src = fs.mkdtempSync(path.join(os.tmpdir(), "hall-src-"));
+  const dst = fs.mkdtempSync(path.join(os.tmpdir(), "hall-dst-"));
+  for (const f of ["index.html", "style.css", "script.js", "favicon.svg"]) {
+    fs.writeFileSync(path.join(src, f), `<${f}>`);
+  }
+  fs.mkdirSync(path.join(src, "locales"));
+  fs.writeFileSync(path.join(src, "locales", "zh-CN.json"), "{}");
+  // 脏东西：必须不被搬
+  fs.mkdirSync(path.join(src, "generated"));
+  fs.writeFileSync(path.join(src, "generated", "snapshot.json"), '{"mail":"x@y.com"}');
+  fs.mkdirSync(path.join(src, "deploy"));
+  // 用明显的假内容，不用真实地址——本文件会进公开快照，泄漏门会（正确地）拦它。
+  fs.writeFileSync(path.join(src, "deploy", "README.md"), "placeholder deploy notes");
+
+  const copied = seedFrontHall({ siteRoot: dst, from: src });
+  assert.ok(copied.includes("index.html"));
+  assert.equal(fs.readFileSync(path.join(dst, "index.html"), "utf8"), "<index.html>");
+  assert.equal(fs.existsSync(path.join(dst, "locales", "zh-CN.json")), true);
+  assert.equal(fs.existsSync(path.join(dst, "generated")), false, "导出产物不搬");
+  assert.equal(fs.existsSync(path.join(dst, "deploy")), false, "部署手册不搬");
+});
+
+test("seedFrontHall is a no-op without a source, never throws", () => {
+  const dst = fs.mkdtempSync(path.join(os.tmpdir(), "hall-dst2-"));
+  assert.deepEqual(seedFrontHall({ siteRoot: dst, from: "" }), []);
+  assert.deepEqual(seedFrontHall({ siteRoot: dst, from: "/nonexistent/hall" }), []);
 });

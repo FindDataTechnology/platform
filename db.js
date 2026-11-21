@@ -1433,6 +1433,25 @@ const MIGRATIONS = [
       }
     },
   },
+  {
+    version: 127,
+    // Channel → room/conversation mapping (Chatwoot reception). Purely additive:
+    // no existing table changes, no consumers yet. One row per (platform, chat
+    // key); `unbound_at` retires a mapping without deleting it, so a resolve
+    // after unbind reads as unmapped while the history survives. Integer ms for
+    // timestamps, same as bot_reply_windows / marketing_events.
+    statements: [
+      `CREATE TABLE IF NOT EXISTS channel_identity (
+        platform TEXT NOT NULL,
+        chat_key TEXT NOT NULL,
+        room_id TEXT,
+        conversation_id TEXT,
+        created_at INTEGER NOT NULL,
+        unbound_at INTEGER,
+        PRIMARY KEY (platform, chat_key)
+      )`,
+    ],
+  },
 ];
 
 function nowIso() {

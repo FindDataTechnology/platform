@@ -83,6 +83,11 @@ architect 面——两处共享 fleet 段校验函数与起草批准纪律，但
 
 铸造 SHALL 按既有形态产出集群模板 manifest：依赖占位 `{{PACK_ID:*}}` 补齐、`_casting` 段记录来源蓝图路径/草案版本/主取凭据与批准时间；上架 SHALL 只经既有市场发行通道（pack 发行门），市场条目标注模板归位（「集群模板」专辑/类目）。上架 SHALL NOT 引入与既有 pack 发行不同的第二上架路径；铸造产物在人工后续改写时按既有「用—养—传」纪律与构造链不冲突共存。
 
+铸造产物 SHALL 保留蓝图 `content` 所声明的 i18n 块（`content.i18n` 为非数组对象时原样并入
+manifest），使官方作者（发版门 `PACK_OFFICIAL_EN_GATE` 生效时的 `OFFICIAL_AUTHOR_EMAILS` 成员）
+经创作台铸造时，其声明的英文覆盖能被官方 en 门看见。蓝图未声明 `i18n` 时产物 SHALL 与未支持该
+段前逐字节一致（不加键、不报错）。
+
 #### Scenario: 铸造产物的 `_casting` 完整
 
 - **WHEN** 检查新上架模板的 manifest
@@ -92,6 +97,12 @@ architect 面——两处共享 fleet 段校验函数与起草批准纪律，但
 
 - **WHEN** 上架一封集群模板 pack
 - **THEN** 该条目过既有发布门（工具面声明闭包与商业集闸），在集群模板专辑可见；未发现走另一通道的条目
+
+#### Scenario: 蓝图声明的 i18n 进入铸造产物
+
+- **WHEN** 蓝图 `content` 带 `i18n.en` 覆盖，且作者属官方名单、官方 en 门生效
+- **THEN** 铸造产物的 manifest 携带该 i18n 块，官方 en 门按它核算覆盖并放行（不再恒 422）
+- **AND** 蓝图 `content` 未声明 `i18n` 时，产物 manifest 不含 `i18n` 键，与改动前逐字节一致
 
 ### Requirement: 试跑验收为可售态的真源
 

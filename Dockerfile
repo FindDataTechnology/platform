@@ -291,6 +291,12 @@ COPY --chown=node:node --from=builder /app/web/dist ./web/dist
 # NOT shipped) imports facet/cli/, so the runtime needed the pattern without it.
 COPY --chown=node:node --from=builder /app/facet/index.js /app/facet/identity.js /app/facet/mcp-catalog.js /app/facet/supply-catalog.js /app/facet/marketplace-json.js /app/facet/pairing.js /app/facet/publish-gate.js /app/facet/mcp-registry-json.js /app/facet/credential-pattern.js /app/facet/studio.js /app/facet/preview-sandbox.js /app/facet/machine-paths.js /app/facet/team-console-proxy.js /app/facet/fleets-db.js /app/facet/fleets-routes.js /app/facet/plaza-export-schedule.js ./facet/
 COPY --chown=node:node --from=builder /app/facet/web/dist ./facet/web/dist
+# 门厅静态物（unify-supply-spine-lineage D2）：facet 进程启动时把它铺到
+# FACET_SITE_ROOT，让根路径直接是素材广场而不是 SPA 介绍页。
+# 只带页面资产——generated/（运行时导出产物）与 deploy/（部署手册，含雷池 IP）
+# 不进镜像。
+COPY --chown=node:node --from=builder /app/site-plaza/index.html /app/site-plaza/style.css /app/site-plaza/script.js /app/site-plaza/favicon.svg /app/site-plaza/og.png ./site-plaza/
+COPY --chown=node:node --from=builder /app/site-plaza/locales ./site-plaza/locales
 
 # Application source: all root .js (server.js, paths.js, local-services.js,
 # bundle-manifest.js, chat-history.js, documents.js, mcp-bridge.js, …) + the

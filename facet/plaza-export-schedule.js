@@ -163,6 +163,49 @@ export async function runExportOnce({
   return { ok: true, generatedAt: counts.generatedAt, stale: Boolean(counts.stale), counts };
 }
 
+/**
+ * Seed the front hall's own static assets into the site root.
+ *
+ * unify-supply-spine-lineage D2 的另一半（2026-11-21）：机器面由导出产出，
+ * 但**门厅首页**是随镜像走的代码（index.html/style.css/script.js/locales），
+ * 它不该由导出器生成——导出器只产数据。缺了它，facet 根路径会落到 SPA 兜底，
+ * 访客看到的是「谦面介绍页」而不是素材广场，于是「把 agent. 跳过来」就成了退步。
+ *
+ * 幂等：每次都覆盖，因为它们是镜像的一部分（换镜像=换门厅），不是运行时状态。
+ *
+ * @returns {string[]} the asset names that were copied
+ */
+export function seedFrontHall({ siteRoot, from, log = () => {} } = {}) {
+  if (!siteRoot || !from || !fs.existsSync(from)) return [];
+  const copied = [];
+  for (const name of ["index.html", "style.css", "script.js", "favicon.svg", "og.png"]) {
+    const src = path.join(from, name);
+    if (!fs.existsSync(src)) continue;
+    try {
+      fs.copyFileSync(src, path.join(siteRoot, name));
+      copied.push(name);
+    } catch (err) {
+      log(`[plaza-export] could not seed ${name}: ${err?.message ?? err}`);
+    }
+  }
+  const localesSrc = path.join(from, "locales");
+  if (fs.existsSync(localesSrc)) {
+    const dest = path.join(siteRoot, "locales");
+    fs.mkdirSync(dest, { recursive: true });
+    for (const f of fs.readdirSync(localesSrc)) {
+      if (!f.endsWith(".json")) continue;
+      try {
+        fs.copyFileSync(path.join(localesSrc, f), path.join(dest, f));
+        copied.push(`locales/${f}`);
+      } catch (err) {
+        log(`[plaza-export] could not seed locales/${f}: ${err?.message ?? err}`);
+      }
+    }
+  }
+  if (copied.length) log(`[plaza-export] front hall seeded (${copied.length} assets)`);
+  return copied;
+}
+
 /** Last observed export outcome, read by the export-owner probe. */
 export const plazaExportState = { lastResult: null };
 
@@ -183,6 +226,7 @@ export function startExportSchedule({
   base,
   siteBase,
   exportScript,
+  frontHallSource = "", // 门厅静态物在镜像里的目录（site-plaza/），随镜像走
   intervalSecs = 86400,
   bootDelayMs = 30_000,
   debounceMs = 60_000,
@@ -193,6 +237,9 @@ export function startExportSchedule({
     log("[plaza-export] FACET_SITE_ROOT unset — machine surfaces fall back to the image seed");
     return { trigger() {}, stop() {} };
   }
+
+  // 门厅静态物先铺（幂等，随镜像走）。它与导出无关，所以不等导出成功。
+  if (frontHallSource) seedFrontHall({ siteRoot, from: frontHallSource, log });
 
   // robots.txt is static and does not depend on the export succeeding, so it is
   // written once here rather than inside the swap. Its content used to be the
