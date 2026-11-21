@@ -51,6 +51,16 @@ export function dshToolEvent(ev, toolNames) {
 
 export class DshHarnessAdapter {
   #collectors = new Map(); // wire session id → turn collector
+  // Wire sessions a caller has asked to stop (a2a-task-handle). A cancel makes
+  // the runtime go idle with no assistant text, which on this harness is
+  // indistinguishable from "the model produced nothing" — measured live
+  // 2026-11-21: `tasks/cancel` answered `state: cancelled` while the same
+  // call's `message/send` answered -32005 "model unavailable", and the tenant's
+  // ledger recorded an error for a turn they had just stopped. Recording the
+  // INTENT here (the only place that knows a cancel was requested) lets the
+  // empty-idle branch answer "this turn was cancelled" instead of guessing
+  // from the error code at a layer that cannot see the cancel at all.
+  #cancelRequested = new Set();
   // Pod members whose sessions were prepared on THIS runtime (add-dsh-pod-adapter):
   // preset/set + model/set parked before the session's first prompt. A rebuilt
   // runtime starts empty and re-parks on first touch — which is exactly what a
@@ -136,6 +146,16 @@ export class DshHarnessAdapter {
   // context reap pass skips active sessions; add-wanxing-serving-api D10).
   isActive(wireSessionId) {
     return this.#collectors.has(wireSessionId);
+  }
+
+  // Record that a caller asked this session's turn to stop. The manager calls
+  // this right before it forwards `session/cancel`; the collector then reports
+  // the turn as cancelled instead of as an empty (model-failed) turn. The entry
+  // is dropped when the turn settles, so it can never leak into a later turn on
+  // the same session.
+  markCancelRequested(wireSessionId) {
+    if (!wireSessionId) return;
+    this.#cancelRequested.add(wireSessionId);
   }
 
   // Session-boundary model hot-swap (add-model-session-boundary): the
@@ -455,6 +475,7 @@ export class DshHarnessAdapter {
         clearTimeout(graceTimer);
         clearTimeout(askTimer);
         this.#collectors.delete(wireId);
+        this.#cancelRequested.delete(wireId);
         this.#activeTurns -= 1;
         fn(arg);
       };
@@ -514,7 +535,15 @@ export class DshHarnessAdapter {
           // 700/700 ok:true meter rows carry tokens:null), so a null usage
           // proves nothing. -32005 stays distinct from -32003 (a failure the
           // LLM request itself reported) for triage attribution.
+          //
+          // A caller-initiated stop is NOT that shape, even though it looks
+          // identical from here (idle, no text): the cancel made the runtime
+          // stop before it could speak. Reporting it as -32005 told the caller
+          // the model was unavailable and billed the turn as a failure.
           if (!finalText.trim()) {
+            if (this.#cancelRequested.has(wireId)) {
+              return settle(true, { text: "", usage: lastUsage, cancelled: true });
+            }
             return settle(false, Object.assign(
               new Error("turn ended without any assistant output (model unavailable or refused)"),
               { code: -32005 },

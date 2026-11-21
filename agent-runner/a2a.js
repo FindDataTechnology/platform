@@ -216,6 +216,19 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
         // once (caller-cannot-answer), so the reply arrives on its usual path.
         try {
           const out = await manager.turn(entry, sessionId, text, { kind: "message", delegationDepth: depth, visitorScope: visitorScopeOf(message) });
+          if (out?.cancelled) {
+            // The turn resolved, but it ended because the caller stopped it.
+            // Same answer shape as the cancel-during-failure branch below: the
+            // caller asked for a stop and got one, so this is neither an error
+            // nor a completed turn.
+            tasks.settle(taskId, { state: "cancelled", cancelledBy: "caller" });
+            const settled = tasks.describe(taskId);
+            return res.json({
+              jsonrpc: "2.0",
+              id,
+              result: { ...assistantMessage(contextId ?? sessionId, ""), state: "cancelled", cancelled_by: settled.cancelled_by, task_id: taskId },
+            });
+          }
           const reply = assistantMessage(contextId ?? sessionId, out.text);
           tasks.settle(taskId, { state: "done", result: reply });
           return res.json({ jsonrpc: "2.0", id, result: { ...reply, task_id: taskId } });
@@ -325,6 +338,14 @@ export function createAgentApp({ entry, getEntry, manager, config, log = console
         });
       } finally {
         settleAsk();
+      }
+      if (out?.cancelled) {
+        // A stopped stream must not emit a `message` frame carrying empty text:
+        // that is the caller-facing shape of a completed turn. It ends with the
+        // same task_id so the caller can query it, and the registry says why.
+        tasks.settle(taskId, { state: "cancelled", cancelledBy: "caller" });
+        res.write(`event: done\ndata: ${JSON.stringify({ task_id: taskId, state: "cancelled" })}\n\n`);
+        return res.end();
       }
       send("message", assistantMessage(contextId ?? sessionId, out.text));
       tasks.settle(taskId, { state: "done", result: assistantMessage(contextId ?? sessionId, out.text) });

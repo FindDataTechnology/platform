@@ -1012,8 +1012,14 @@ export class ChildManager {
       this.activeSessions.set(`${key}\u0000scope`, visitorScope ?? null);
       try {
         const out = await child.turn(sessionId, text, { onDelta, onAsk, agentKey: route?.pod ? key : undefined, onEvent: onMemoryEvent });
+        // A caller-stopped turn resolves (not rejects) with `cancelled: true`:
+        // it ended the way the caller asked, so it is not a failure — but it is
+        // not `ok` either. Both the meter and the fleet event say so, and the
+        // answer path reads this flag to report `cancelled` instead of billing
+        // a completed turn.
         this.#meterLine(key, kind, {
-          ok: true,
+          ok: !out?.cancelled,
+          ...(out?.cancelled ? { cancelled: true } : {}),
           tokens: tokensOf(out?.usage),
           durationMs: this.now() - startedAt,
           depth: delegationDepth || undefined,
@@ -1022,10 +1028,10 @@ export class ChildManager {
           turn_kind: kind,
           session: sessionId,
           duration_ms: this.now() - startedAt,
-          outcome: "ok",
+          outcome: out?.cancelled ? "cancelled" : "ok",
           ...(() => { const t = tokensOf(out?.usage); return t == null ? {} : { tokens: t }; })(),
         });
-        this.#memoryObserve(entry, sessionId, kind, "ok", tokensOf(out?.usage), this.now() - startedAt);
+        this.#memoryObserve(entry, sessionId, kind, out?.cancelled ? "cancelled" : "ok", tokensOf(out?.usage), this.now() - startedAt);
         // 对外披露闸 (add-principal-disclosure-gate 1.6)。只在**对外车道**上生效：
         // 调用方声明了 mandateDomain 才算「这句话要说给外部听」。舰队/自迭代回合
         // 没有这一项，行为与改造前逐字节一致。
@@ -1452,6 +1458,10 @@ export class ChildManager {
     })();
     if (caps.cancel !== true) return { ok: true, stopped: "unsupported" };
     try {
+      // Tell the adapter a cancel was REQUESTED before the abort can settle the
+      // turn. Only this layer knows intent; the adapter sees just an idle
+      // runtime with no text, which is otherwise the empty-failure shape.
+      child.adapter?.markCancelRequested?.(isActive ?? wireId);
       await child.request("session/cancel", { sessionId: isActive ?? wireId });
       return { ok: true, stopped: "cancelled" };
     } catch (e) {

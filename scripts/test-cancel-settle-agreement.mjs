@@ -93,3 +93,42 @@ test("a genuine model failure still answers with its own error (no over-reach)",
     assert.equal(send.body?.error?.code, -32005, "an uncancelled empty turn stays a model failure");
   } finally { await h.close(); }
 });
+
+test("the adapter reports a caller-stopped turn as cancelled, not as an empty failure", async () => {
+  // The layer BELOW the a2a face: the runtime goes idle with no text after a
+  // cancel. Only the adapter knows a cancel was requested, so this is where the
+  // intent flag has to live — the empty-idle shape is otherwise identical to a
+  // model that produced nothing.
+  const { DshHarnessAdapter } = await import("../agent-runner/harness/dsh.js");
+  // Same fake-client shape the ask-lane tests use: a push queue the adapter
+  // pumps. The prompt parks (never resolves) so the cancel is what settles it.
+  const queue = [];
+  let listeners = [];
+  let emit;
+  const client = {
+    start() {},
+    async initialize() { return { ok: true }; },
+    async request(m) {
+      if (m === "session/cancel") setTimeout(() => emit({ method: "session.status", params: { sessionId: "s1", status: "idle" } }), 5);
+      return { accepted: true };
+    },
+    subscribe() {
+      emit = (n) => { queue.push(n); const w = listeners; listeners = []; for (const r of w) r(); };
+      return { next: async () => { for (;;) { const n = queue.shift(); if (n) return n; await new Promise((r) => listeners.push(r)); } } };
+    },
+    async prompt() { return "m1"; }, // never speaks, never idles on its own
+    async stop() {},
+  };
+  const adapter = new DshHarnessAdapter({
+    key: "a", spawnSpec: { profile: "p", patchPaths: [], cwd: "/tmp", env: {}, provider: "x", model: "y", presetId: null },
+    clientFactory: () => client, log: { log() {}, warn() {}, error() {} }, turnTimeoutMs: 60_000, askGraceMs: 5_000,
+  });
+  await adapter.start();
+  const turn = adapter.turn("s1", "hi", {});
+  await new Promise((r) => setTimeout(r, 20));
+  adapter.markCancelRequested("s1");
+  await adapter.request("session/cancel", { sessionId: "s1" });
+  const out = await turn;
+  assert.equal(out.cancelled, true, "a stopped turn resolves as cancelled");
+  assert.equal(out.text, "");
+});
