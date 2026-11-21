@@ -55,8 +55,10 @@ export type CatalogItem = {
   badges: string[];
   /** 详情或机器可读页的目的地（无则 null）。 */
   href: string | null;
-  /** 有深度视图的物种才有。 */
+  /** 有深度视图的物种才有（mcp / skill）。 */
   depth: boolean;
+  /** 有就地只读详情的物种（pack）：目录页打开 `PackDetailDialog`，不跳走。 */
+  detail: boolean;
 };
 
 const str = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
@@ -86,8 +88,11 @@ export function toCatalogItem(species: Species, raw: Record<string, unknown>): C
         title: name,
         summary: firstStr(raw.description),
         badges: [firstStr(raw.category)].filter(Boolean),
-        href: `#/packs`,
+        // 目录页就地打开详情（catalog-owns-browse-market-owns-trade D2）：
+        // 以前链到 #/packs 会把访客甩出目录、丢掉浏览位置。
+        href: null,
         depth: false,
+        detail: true,
       };
     }
     case "mcp": {
@@ -103,6 +108,7 @@ export function toCatalogItem(species: Species, raw: Record<string, unknown>): C
         badges: Array.isArray(raw.requiredGroups) && raw.requiredGroups.length ? ["受限"] : [],
         href: null,
         depth,
+        detail: false,
       };
     }
     case "skill": {
@@ -118,6 +124,7 @@ export function toCatalogItem(species: Species, raw: Record<string, unknown>): C
         badges: Array.isArray(raw.tags) ? (raw.tags as unknown[]).map(str).filter(Boolean).slice(0, 2) : [],
         href: firstStr(raw.repositoryUrl) || null,
         depth,
+        detail: false,
       };
     }
     case "facade": {
@@ -135,6 +142,7 @@ export function toCatalogItem(species: Species, raw: Record<string, unknown>): C
         badges: [firstStr(raw.runnable), state && state !== "undeployed" ? state : "未部署"].filter(Boolean),
         href: null,
         depth: false,
+        detail: false,
       };
     }
     case "data-anchor": {
@@ -150,6 +158,7 @@ export function toCatalogItem(species: Species, raw: Record<string, unknown>): C
         badges: [firstStr(raw.kind)].filter(Boolean),
         href: null,
         depth: false,
+        detail: false,
       };
     }
     default:

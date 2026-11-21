@@ -5268,7 +5268,7 @@
       "all": "Todo"
     },
     "species": {
-      "pack": "Agentes",
+      "pack": "Packs",
       "skill": "Habilidades",
       "mcp": "Servicios MCP",
       "facade": "Fachadas",
@@ -5287,6 +5287,7 @@
       "skillHint": "Consulta el detalle de esta habilidad en la pestaña Habilidades."
     },
     "allHint": "Abrir esta especie",
-    "sourceAbsent": "Esta especie no tiene fuente de datos configurada en este despliegue (no es lo mismo que «no hay nada»)."
+    "sourceAbsent": "Esta especie no tiene fuente de datos configurada en este despliegue (no es lo mismo que «no hay nada»).",
+    "openDetail": "Ver detalles"
   }
 }

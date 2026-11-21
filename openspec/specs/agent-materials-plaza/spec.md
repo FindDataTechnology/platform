@@ -14,16 +14,19 @@ It SHALL NO LONGER be a standalone static site with its own root path: the suppl
 product address, and the entry view is part of that shell, not a second page competing for `/`.
 
 The entry view SHALL present, in order: the material narrative (what a material is, the five
-species as one card each with a concrete example); the live material inventory gallery (species
-tabs, official/facade badges, category filtering, search, and the per-species counts); the supply
-mechanism chain in four segments (publish → obtain → run → serve), each explained from the
-material's perspective; the product's team-template and creation-path narrative; and the dual
-audience section (human paths and AI paths). No locale SHALL fall back to another locale's text.
+species as one card each with a concrete example); the supply mechanism chain in four segments
+(publish → obtain → run → serve), each explained from the material's perspective; the product's
+team-template and creation-path narrative; and the dual audience section (human paths and AI paths).
+No locale SHALL fall back to another locale's text.
 
-The narrative sections SHALL be static; the inventory gallery SHALL be the entry view's one
-dynamic region, carrying the freshness semantics the plaza has always had (live refresh on load,
-snapshot fallback labeled with its as-of date, never an empty inventory). A viewer MUST be able to
-read the whole narrative and reach the rest of the shell with the catalog API unreachable.
+The entry view SHALL NOT embed the full inventory. It MAY carry a **bounded preview** that counts the
+species and routes into the catalog; it MUST NOT render a species' full list. The inventory itself
+lives in the shell's single catalog view (`#/catalog`), which carries the per-species tabs, the
+official/facade badges, the category filtering, the search, and the per-species counts.
+
+The narrative sections SHALL be static. A viewer MUST be able to read the whole narrative and reach
+the rest of the shell with every catalog source unreachable — the entry view SHALL NOT depend on any
+material fetch to render.
 
 #### Scenario: Five locales render complete pages
 
@@ -32,8 +35,8 @@ read the whole narrative and reach the rest of the shell with the catalog API un
 
 #### Scenario: The narrative reads without a catalog
 
-- **WHEN** the catalog API is unreachable or slow
-- **THEN** the narrative sections and the shell navigation render identically, and only the gallery degrades to its snapshot with an as-of date
+- **WHEN** every catalog source is unreachable or slow
+- **THEN** the narrative sections and the shell navigation render identically, and no section of the entry view is missing or empty
 
 #### Scenario: The mechanism chain explains infrastructure through materials
 
@@ -42,22 +45,22 @@ read the whole narrative and reach the rest of the shell with the catalog API un
 
 #### Scenario: Hero carries the species inventory
 
-- **WHEN** the entry view loads with a valid catalog
-- **THEN** the gallery shows the per-species counts (agents/packs, skills, MCP services, facades, official data) and the tool count, not only a single pack count
+- **WHEN** the entry view's preview loads with a valid source
+- **THEN** it shows the per-species counts (agents/packs, skills, MCP services, facades, official data) and the tool count, not only a single pack count
 
 #### Scenario: Species tab filters the gallery
 
-- **WHEN** a visitor selects the skills or MCP species tab
-- **THEN** the gallery narrows to that species and the other species' cards are hidden, with counts per tab visible
+- **WHEN** a visitor selects the skills or MCP species tab in the catalog
+- **THEN** the catalog narrows to that species and the other species' cards are hidden, with counts per tab visible
 
 #### Scenario: Hostname preselects the species
 
 - **WHEN** a visitor arrives through `skills.finddatatech.cloud`
-- **THEN** the redirect carries the skills species preselection and the gallery opens on it, while the bare canonical address opens unfiltered
+- **THEN** the redirect carries the skills species preselection and the catalog opens on it, while the bare canonical address opens the entry view unfiltered
 
 #### Scenario: A material link still resolves
 
-- **WHEN** a reader follows any material's self-contained page link from the gallery
+- **WHEN** a reader follows any material's self-contained page link from the catalog
 - **THEN** that page is served at its unchanged address, independent of which view renders the link
 
 ### Requirement: Machine surfaces are generated from the registries' own public faces

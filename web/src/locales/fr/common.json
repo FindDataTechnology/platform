@@ -5268,7 +5268,7 @@
       "all": "Tout"
     },
     "species": {
-      "pack": "Agents",
+      "pack": "Packs",
       "skill": "Compétences",
       "mcp": "Services MCP",
       "facade": "Façades",
@@ -5287,6 +5287,7 @@
       "skillHint": "Voir le détail de cette compétence dans l’onglet Compétences."
     },
     "allHint": "Ouvrir cette espèce",
-    "sourceAbsent": "Cette espèce n’a pas de source de données configurée dans ce déploiement (ce n’est pas « il n’y a rien »)."
+    "sourceAbsent": "Cette espèce n’a pas de source de données configurée dans ce déploiement (ce n’est pas « il n’y a rien »).",
+    "openDetail": "Voir le détail"
   }
 }

@@ -16,6 +16,7 @@ import { useTranslation } from "react-i18next";
 
 import { SPECIES_SPECS, mapResponse, type CatalogItem, type Species } from "./catalog-model";
 import { ServerDepth } from "./McpCatalog";
+import { PackDetailDialog } from "@/components/packs/PackDetailDialog";
 
 type Tab = "all" | Species;
 
@@ -43,6 +44,9 @@ export function CatalogView({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [depth, setDepth] = useState<{ species: Species; id: string } | null>(null);
+  // 就地只读详情（catalog-owns-browse-market-owns-trade 1.2）：pack 卡片打开它，
+  // 不跳到 #/packs —— 跳走会丢掉访客的浏览位置与页签。
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   // 计数汇总（「全部」页签与页签上的数字）：一次轻量请求拿各类计数。
   // 它读的是导出产物 counts.json —— 只用于显示数字，不做列表数据源。
@@ -200,7 +204,12 @@ export function CatalogView({
                 data-testid="catalog-grid"
               >
                 {shown.map((item) => (
-                  <Card key={item.key} item={item} onOpenDepth={() => setDepth({ species: item.species, id: item.id })} />
+                  <Card
+                    key={item.key}
+                    item={item}
+                    onOpenDepth={() => setDepth({ species: item.species, id: item.id })}
+                    onOpenDetail={() => setDetailId(item.id)}
+                  />
                 ))}
               </div>
               {filtered.length > shown.length && (
@@ -217,6 +226,15 @@ export function CatalogView({
           )}
         </>
       )}
+
+      {/* 只读详情：installSurface={false} 让弹窗不渲染任何订阅/安装动作。
+          交易仍在 #/packs —— 一个动作只在一个地方发生。 */}
+      <PackDetailDialog
+        packId={detailId}
+        installSurface={false}
+        onOpenChange={(open) => !open && setDetailId(null)}
+        onSubscribed={() => {}}
+      />
     </div>
   );
 }
@@ -253,7 +271,15 @@ function TabButton({
   );
 }
 
-function Card({ item, onOpenDepth }: { item: CatalogItem; onOpenDepth: () => void }) {
+function Card({
+  item,
+  onOpenDepth,
+  onOpenDetail,
+}: {
+  item: CatalogItem;
+  onOpenDepth: () => void;
+  onOpenDetail: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <article className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4" data-testid={`catalog-card-${item.key}`}>
@@ -271,7 +297,16 @@ function Card({ item, onOpenDepth }: { item: CatalogItem; onOpenDepth: () => voi
         <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground">{item.summary}</p>
       )}
       <div className="mt-auto">
-        {item.depth ? (
+        {item.detail ? (
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            className="text-xs text-primary underline-offset-2 hover:underline"
+            data-testid={`catalog-detail-open-${item.id}`}
+          >
+            {t("catalog.openDetail")} →
+          </button>
+        ) : item.depth ? (
           <button
             type="button"
             onClick={onOpenDepth}

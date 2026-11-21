@@ -733,7 +733,19 @@ The facet web shell SHALL lay every view on a single shared container grid so th
 
 ### Requirement: Navigation names modules by the viewer's task
 
-The shell SHALL name each module by the task the viewer performs there, in the viewer's own locale, and SHALL NOT present an untranslated term or an internal architecture term as a user-facing label. Each concept SHALL carry exactly one name across the shell: the tab label, the view's own title, and every reference from the docs view SHALL agree. The canonical label set is: intro `介绍`, packs market `智能体市场`, MCP catalog `MCP 与技能`, docs `使用指南`, creation face `创作台`, creator console `我的发布`, curation board `内容运营`; the English source names are the same concepts in English, and the remaining target locales SHALL translate them rather than carry the English word. A label SHALL NOT be reused for two different concepts (the viewer's published packs and 壹座's installed agents SHALL NOT share a name).
+The shell SHALL name each module by the task the viewer performs there, in the viewer's own locale,
+and SHALL NOT present an untranslated term or an internal architecture term as a user-facing label.
+Each concept SHALL carry exactly one name across the shell: the tab label, the view's own title, and
+every reference from the docs view SHALL agree. The canonical label set is: intro `介绍`, packs
+market `智能体市场`, material catalog `素材目录`, docs `使用指南`, creation face `创作台`, creator
+console `我的发布`, curation board `内容运营`; the English source names are the same concepts in
+English, and the remaining target locales SHALL translate them rather than carry the English word. A
+label SHALL NOT be reused for two different concepts (the viewer's published packs and 壹座's
+installed agents SHALL NOT share a name).
+
+The catalog's label SHALL name the **set of materials**, not one of its species: a label naming only
+MCP servers and skills described the two species the old view happened to carry, and became wrong
+the moment the view gained the other four.
 
 #### Scenario: no latin-only or jargon labels in a translated locale
 
@@ -754,6 +766,11 @@ The shell SHALL name each module by the task the viewer performs there, in the v
 
 - **WHEN** the shell presents the viewer's authored packs
 - **THEN** the label differs from the name 壹座 uses for the viewer's installed agents
+
+#### Scenario: the catalog label names the set, not one species
+
+- **WHEN** the catalog entry label is rendered in any locale
+- **THEN** it names materials as a set rather than naming only MCP servers and skills
 
 ### Requirement: 谦面提供团队控制台分享页
 
@@ -847,3 +864,87 @@ second product's brand.
 - **WHEN** every 壹座 process is stopped and a visitor opens the canonical front door
 - **THEN** the front hall, the storefront, the material catalog and the machine surfaces all serve, with no
   dependency on 壹座
+
+### Requirement: The material catalog is one page, loaded one species at a time
+
+The shell SHALL present every material species in **one** catalog view at `#/catalog`, addressed by
+species tabs — 全部 · 智能体 · 技能 · MCP · 分身 · 数据锚 — with search and per-species counts. It SHALL
+NOT split the species across two different views with two different presentations and two different
+data paths.
+
+The catalog SHALL load **one species at a time**: selecting a species tab fetches that species' own
+endpoint and nothing else. The 全部 tab SHALL NOT fetch the full inventory; it SHALL present each
+species' count and a short preview, and route the viewer into the species they choose. This bound is
+a requirement, not an optimisation: an unbounded catalog once rendered 822 cards inline and pushed
+the page to 32,600px — forty viewports — burying every section below it.
+
+A material that has a **depth view** (its own tool surface, licence and tier) SHALL be reachable
+into that depth from its card in the catalog. A catalog that lists a species but cannot reach its
+depth SHALL NOT be considered complete for that species.
+
+The catalog SHALL keep three invariants the previous surfaces had:
+
+- **every species is present** — a species appearing in the supply enumeration appears here;
+- **admission is each species' own** — the catalog SHALL NOT invent or restate an admission rule,
+  and an entry a viewer may not see MUST NOT be listed for that viewer;
+- **never an empty list while a source answers** — a failed fetch renders an explicit error, never a
+  blank grid that reads as "this species has nothing".
+
+The retired `#/mcp` address SHALL redirect to `#/catalog`, and any address that used to open the MCP
+catalog SHALL keep resolving to a view that lists MCP servers.
+
+#### Scenario: one catalog carries every species
+
+- **WHEN** a visitor opens `#/catalog`
+- **THEN** the species tabs name every species in the supply enumeration, and each tab lists that species
+
+#### Scenario: a species tab fetches only its own source
+
+- **WHEN** a visitor selects the MCP tab
+- **THEN** the catalog requests the MCP source and does not request the pack, facade or data-anchor sources
+
+#### Scenario: the 全部 tab does not load the whole inventory
+
+- **WHEN** a visitor opens the 全部 tab
+- **THEN** the catalog presents per-species counts and a bounded preview, and does not render the full inventory of any species
+
+#### Scenario: a depth-capable material reaches its depth
+
+- **WHEN** a visitor opens a material whose species exposes a depth view
+- **THEN** its card leads into that depth view (tool surface, licence, tier), and returning restores the catalog at the same species tab
+
+#### Scenario: an invisible entry stays invisible
+
+- **WHEN** the catalog is served to a viewer who may not see a given entry
+- **THEN** that entry is absent from the catalog for that viewer, and the absence is not reported as an error
+
+#### Scenario: a failed fetch is an error, not an empty species
+
+- **WHEN** a species' source cannot be reached
+- **THEN** that tab renders an explicit failure state naming the species, and does not render an empty list
+
+#### Scenario: the retired address still resolves
+
+- **WHEN** a client opens `#/mcp`
+- **THEN** it lands on the catalog with the MCP species selected
+
+### Requirement: The entry page's height is bounded
+
+The shell's entry view SHALL stay readable as an introduction: its total height SHALL be bounded by
+its own narrative and SHALL NOT grow with the size of the inventory. An inventory embedded in the
+entry view SHALL be a bounded preview that routes into the catalog, never the full list.
+
+This requirement exists because the entry view once embedded the full gallery: 822 cards rendered
+inline, the document reached 32,600px, and the sections below the gallery — how supply works, the
+product introduction, who it is for — sat between 31,000px and 33,000px, where no visitor reaches
+them.
+
+#### Scenario: the entry view does not grow with the inventory
+
+- **WHEN** the inventory grows by any amount
+- **THEN** the entry view's height is unchanged, and the added materials appear only in the catalog
+
+#### Scenario: the narrative below the preview is reachable
+
+- **WHEN** a visitor scrolls the entry view
+- **THEN** every narrative section is reachable within a bounded number of viewports, and none is pushed out of reach by an embedded list

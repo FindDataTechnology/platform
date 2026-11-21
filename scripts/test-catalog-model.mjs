@@ -33,6 +33,9 @@ test("pack maps name/description/category", () => {
   assert.equal(item.title, "crm-suite");
   assert.equal(item.summary, "客服套件");
   assert.deepEqual(item.badges, ["fleet"]);
+  // 目录页就地打开详情，不再链到 #/packs（catalog-owns-browse-market-owns-trade D2）
+  assert.equal(item.detail, true);
+  assert.equal(item.href, null, "pack must not link out; the detail opens in place");
 });
 
 test("mcp prefers the annotation's name and summary", () => {
@@ -121,4 +124,17 @@ test("an endpoint that carries no source_absent key is not guessed", () => {
   const r = mapResponse("mcp", { servers: [] });
   assert.equal(r.sourceAbsent, false);
   assert.equal(r.error, null);
+});
+
+test("only pack declares an in-place detail", () => {
+  const pack = toCatalogItem("pack", { name: "p" });
+  assert.equal(pack.detail, true);
+  for (const [species, raw] of [
+    ["mcp", { name: "m" }],
+    ["skill", { name: "s" }],
+    ["facade", { id: "f" }],
+    ["data-anchor", { id: "a", kind: "k" }],
+  ]) {
+    assert.equal(toCatalogItem(species, raw).detail, false, `${species} has no pack-style detail`);
+  }
 });

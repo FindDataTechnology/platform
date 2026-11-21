@@ -5268,7 +5268,7 @@
       "all": "All"
     },
     "species": {
-      "pack": "Agents",
+      "pack": "Packs",
       "skill": "Skills",
       "mcp": "MCP services",
       "facade": "Facades",
@@ -5287,6 +5287,7 @@
       "skillHint": "See this skill’s details under the Skills tab."
     },
     "allHint": "Open this species",
-    "sourceAbsent": "This species has no configured data source in this deployment (which is not the same as \"nothing here\")."
+    "sourceAbsent": "This species has no configured data source in this deployment (which is not the same as \"nothing here\").",
+    "openDetail": "View details"
   }
 }
