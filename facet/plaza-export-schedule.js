@@ -178,7 +178,27 @@ export async function runExportOnce({
 export function seedFrontHall({ siteRoot, from, log = () => {} } = {}) {
   if (!siteRoot || !from || !fs.existsSync(from)) return [];
   const copied = [];
-  for (const name of ["index.html", "style.css", "script.js", "favicon.svg", "og.png"]) {
+
+  // 根路径归 SPA（merge-plaza-into-facet-entry D1，2026-11-21）。
+  //
+  // 这里**不再铺 index.html**，而且要主动删掉残留：`facet/index.js` 把
+  // express.static(SITE_ROOT) 挂在 WEB_DIST 之前、带着 index:"index.html"，
+  // 所以站点根一旦有这个文件，`GET /` 就被它吃掉，谦面 SPA 的八个 hash 视图
+  // 全部不可达（我的发布 / 运营板 / 创作台 —— 产品失去操作界面）。
+  //
+  // 只改"不铺"不够：hostPath 上上一版铺进去的那个文件还在，旧文件照旧接管。
+  // 用文件存在性做路由是隐式的，所以这里显式清理。
+  const staleIndex = path.join(siteRoot, "index.html");
+  if (fs.existsSync(staleIndex)) {
+    try {
+      fs.rmSync(staleIndex);
+      log("[plaza-export] removed stale site-root index.html (shell owns /)");
+    } catch (err) {
+      log(`[plaza-export] could not remove stale index.html: ${err?.message ?? err}`);
+    }
+  }
+
+  for (const name of ["style.css", "script.js", "favicon.svg", "og.png"]) {
     const src = path.join(from, name);
     if (!fs.existsSync(src)) continue;
     try {

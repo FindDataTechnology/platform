@@ -381,9 +381,19 @@ initSupplyCatalog(app, {
 // static handler below.
 app.use(machineSurfaceGuard({ siteRoot: SITE_ROOT }));
 if (SITE_ROOT) {
-  // Front hall assets (index.html/style.css/script.js/locales/…) and the
-  // generated material pages, served read-only from the site root.
-  app.use(express.static(SITE_ROOT, { index: "index.html" }));
+  // 站点根只供**非根路径**的资产：生成物（generated/、materials/）与门厅的
+  // 样式/语种文件。**根路径归 SPA**（merge-plaza-into-facet-entry D1）。
+  //
+  // 2026-11-21 的回归就出在这一行：原来写 `index: "index.html"`，而 seedFrontHall
+  // 又把广场页铺成了站点根的 index.html，于是 `GET /` 被它吃掉，谦面 SPA 的
+  // hash 视图（我的发布 / 运营板 / 创作台）全部不可达——产品失去操作界面。
+  //
+  // 两道保险都要在：
+  //   ① `index: false` —— 本挂载永不把任何文件当作目录索引；
+  //   ② seedFrontHall 不铺 index.html 且删残留 —— 让站点根根本没有那个文件。
+  // 只做①，残留文件仍可能被某个具体路径命中；只做②，将来谁放进一个
+  // index.html 就重演。用文件存在性做路由是隐式的，所以两处都显式关掉。
+  app.use(express.static(SITE_ROOT, { index: false }));
 }
 
 // Export owner (unify-supply-spine-lineage D2): the retired host chain asks

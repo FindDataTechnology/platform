@@ -17,7 +17,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { CurateView } from "./CurateView";
 import { DocsView } from "./DocsView";
 import { FleetsView } from "./FleetsView";
-import { IntroView } from "./IntroView";
+import { EntryView } from "./EntryView";
 import { McpCatalog } from "./McpCatalog";
 import { MineView } from "./MineView";
 import { StudioView } from "./StudioView";
@@ -456,7 +456,7 @@ export function App() {
             <TeamConsoleView />
           ) : (
             <>
-          {view === "intro" && <IntroView signedIn={Boolean(user)} />}
+          {view === "intro" && <EntryView signedIn={Boolean(user)} />}
           {view === "packs" && (
             <Container className="space-y-4">
               {/* One page-level h1 per view (the module's task name), the way

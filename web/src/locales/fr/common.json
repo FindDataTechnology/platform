@@ -5152,5 +5152,97 @@
     },
     "blockedBy": "Bloquée par {names}",
     "noReason": "Non exécuté (aucun motif enregistré)"
+  },
+  "entryPlaza": {
+    "materials": {
+      "title": "Quels matériaux existent",
+      "lead": "Tout ce que la place offre est un matériau. Matériau est le genre : les cinq espèces ci-dessous diffèrent par leur forme et partagent un même mécanisme de fourniture.",
+      "species": {
+        "pack": {
+          "title": "Pack",
+          "body": "Un paquet versionné de compétences, de références MCP et de personas. Publier fige un instantané immuable ; installé, il fonctionne. Un pack est une capacité complète et livrable.",
+          "example": "Exemple : le CRM Service Desk Suite — connectez votre propre service client, lisez les conversations, rédigez les réponses, envoyez après confirmation."
+        },
+        "skill": {
+          "title": "Compétence de l'écosystème",
+          "body": "Compétences de la communauté ouverte admises après revue : avec marques d'origine et de licence, installables seules ou composables en packs.",
+          "example": "Exemple : les compétences unitaires des rayons d'ingestion de données et d'atelier documentaire."
+        },
+        "mcp": {
+          "title": "Serveur MCP",
+          "body": "Des services d'outils qu'un modèle peut appeler. Chaque entrée porte une annotation bidirectionnelle — les humains lisent des résumés en cinq langues, l'IA lit le brief canonique ; une même couche d'annotation parle à chaque lecteur dans sa langue.",
+          "example": "Exemple : Web fetch — récupère le contenu de n'importe quelle URL sans configuration."
+        },
+        "facade": {
+          "title": "Façade IA",
+          "body": "Un personnage d'accueil figé avec son corpus : parlez à la façade pour connaître son principal ; ce qui n'est pas couvert est honnêtement décliné, jamais inventé. Déployable comme service de conversation permanent — visiteurs gratuits, le principal paie.",
+          "example": "Exemple : la façade FindData — demandez-lui l'entreprise, les projets en cours et les capacités."
+        },
+        "official-data": {
+          "title": "Ancre de données officielle",
+          "body": "Le rayon officiel ancré sur les MCP de données propres à FindData : sources réelles macro, finance et panels de villes, avec sources et périodes citées, composables en packs.",
+          "example": "Exemple : le panel de villes — 209 indicateurs × 297 villes × 2000–2024."
+        }
+      }
+    },
+    "mechanism": {
+      "title": "Comment c'est fourni",
+      "lead": "Une chaîne de mécanisme en quatre segments, chacun raconté du point de vue du matériau : ce qu'il fait à votre matériau, et ce qu'il garantit.",
+      "publish": {
+        "title": "Publier",
+        "body": "Une version publiée ne se réécrit jamais ; le retrait ne détruit pas les instantanés installés."
+      },
+      "obtain": {
+        "title": "Obtenir",
+        "body": "Les trois chemins arrivent au même instantané ; l'installation est explicite paquet par paquet ; la navigation anonyme est permise."
+      },
+      "run": {
+        "title": "Exécuter",
+        "body": "Les cellules sont invisibles entre elles ; la liste blanche d'outils resserre le contexte au nécessaire."
+      },
+      "serve": {
+        "title": "Servir",
+        "body": "La résidence survit à l'inactivité ; les appels se règlent à l'usage."
+      }
+    },
+    "audience": {
+      "title": "Pour qui",
+      "lead": "Ce site est lui-même bidirectionnel : chaque contenu s'adresse aux humains et aux agents IA à la fois.",
+      "human": {
+        "title": "Si vous êtes humain",
+        "body": "Utilisateur d'éditeur (Claude Code, Cursor, Codex, Gemini CLI, ZCode) : une commande l'installe dans votre éditeur. Utilisateur de Yizuo : abonnez-vous et installez depuis le marché intégré, identifiants déjà câblés. Créateur : organisez vos connaissances en manifest et publiez — l'Atelier de Façades vous interviewe et le génère.",
+        "cta": "S'abonner et installer ↗"
+      },
+      "ai": {
+        "title": "Si vous êtes un agent IA",
+        "body": "Commencez à /generated/llms.txt : l'index du site, chaque section autosuffisante. Données structurées à /generated/catalog.json : brief canonique + résumés en cinq langues + whenToUse + provenance. Une page Markdown autosuffisante par matériau (materials/<slug>.md), adresses stables malgré les mises à jour. Pour transformer un matériau en service en ligne : le point d'accès A2A — voir la ligne Servir dans infrastructure.md.",
+        "cta": "Commencer à /llms.txt →"
+      }
+    }
+  },
+  "entryGallery": {
+    "title": "Catalogue",
+    "lead": "Galerie en direct : la page se rafraîchit depuis le marché au chargement ; si inaccessible, l'instantané de build prend le relais, avec la date toujours visible.",
+    "searchPlaceholder": "Rechercher des matériaux…",
+    "allCategories": "Toutes les catégories",
+    "live": "Rafraîchissement en direct réussi (marché en ligne)",
+    "snapshot": "Rafraîchissement en direct inaccessible — instantané de build affiché",
+    "official": "Officiel",
+    "facade": "Façade",
+    "page": "Page machine",
+    "empty": "Aucun matériau correspondant.",
+    "tabs": {
+      "all": "Tout",
+      "agents": "Agents",
+      "skills": "Compétences",
+      "mcp": "Serveurs MCP"
+    },
+    "categoryNames": {
+      "pack": "Pack",
+      "skill": "Compétence de l'écosystème",
+      "mcp": "Serveur MCP",
+      "facade": "Façade IA",
+      "official-data": "Ancre de données officielle"
+    }
   }
 }

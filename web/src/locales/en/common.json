@@ -5152,5 +5152,97 @@
     },
     "blockedBy": "Blocked by {names}",
     "noReason": "Not executed (no reason recorded)"
+  },
+  "entryPlaza": {
+    "materials": {
+      "title": "What materials exist",
+      "lead": "Everything the plaza offers is a material. Material is the genus — the five species below differ in shape and share one supply mechanism.",
+      "species": {
+        "pack": {
+          "title": "Pack",
+          "body": "A versioned bundle of skills, MCP references, and personas. Publishing freezes an immutable snapshot; install it and it works. One pack is one deliverable capability.",
+          "example": "Example: the CRM Service Desk Suite — connect your own service desk, read conversations, draft replies, send after confirmation."
+        },
+        "skill": {
+          "title": "Ecosystem Skill",
+          "body": "Open-community skills admitted through review: carrying source and license marks, installable alone or composed into packs.",
+          "example": "Example: individual skills inside the data-ingestion and document-studio shelves."
+        },
+        "mcp": {
+          "title": "MCP Server",
+          "body": "Tool services a model can call. Every entry carries a two-way annotation — humans read five-locale summaries, AI reads the canonical brief; one annotation layer, speaking to each reader in its own language.",
+          "example": "Example: Web fetch — pull any URL's content with zero configuration."
+        },
+        "facade": {
+          "title": "AI Facade",
+          "body": "A reception persona frozen with its corpus: chat with the facade to learn about its principal; anything uncovered is honestly declined, never invented. Deployable as a standing conversation service — visitors free, the principal pays.",
+          "example": "Example: the FindData facade — ask it about the company, running projects, and capabilities."
+        },
+        "official-data": {
+          "title": "Official Data Anchor",
+          "body": "The official shelf anchored on FindData's own data MCPs: macro, financial, and city-panel sources with cited sources and periods, composable into packs.",
+          "example": "Example: the city panel — 209 indicators × 297 cities × 2000–2024."
+        }
+      }
+    },
+    "mechanism": {
+      "title": "How it is supplied",
+      "lead": "A four-segment mechanism chain, each segment told from the material's perspective: what it does to your material, and what it guarantees.",
+      "publish": {
+        "title": "Publish",
+        "body": "A published version can never be rewritten; unpublishing never destroys installed snapshots."
+      },
+      "obtain": {
+        "title": "Obtain",
+        "body": "All three paths land the same snapshot; installation is per-pack and explicit; anonymous browsing is allowed."
+      },
+      "run": {
+        "title": "Run",
+        "body": "Cells are invisible to each other; tool allowlists narrow the context to what is needed."
+      },
+      "serve": {
+        "title": "Serve",
+        "body": "Residency survives idle periods; calls settle per use."
+      }
+    },
+    "audience": {
+      "title": "Who it is for",
+      "lead": "This site is itself two-way: every piece of content speaks to humans and to AI agents at once.",
+      "human": {
+        "title": "If you are human",
+        "body": "Editor user (Claude Code, Cursor, Codex, Gemini CLI, ZCode): one command installs it into your editor. Yizuo user: subscribe and install from the built-in market, credentials pre-wired. Creator: organize your knowledge into a manifest and publish — the Facade Builder interviews you and generates it.",
+        "cta": "Subscribe and install ↗"
+      },
+      "ai": {
+        "title": "If you are an AI agent",
+        "body": "Start at /generated/llms.txt: the site index, every section self-contained. Structured data at /generated/catalog.json: canonical brief + five-locale summaries + whenToUse + provenance. One self-contained Markdown page per material (materials/<slug>.md), addresses stable across content updates. To turn a material into a live service: the A2A endpoint — see the Serve row in infrastructure.md.",
+        "cta": "Start at /llms.txt →"
+      }
+    }
+  },
+  "entryGallery": {
+    "title": "Inventory",
+    "lead": "A live gallery: the page refreshes from the market on load; when unreachable it falls back to the build-time snapshot, with the as-of date always visible.",
+    "searchPlaceholder": "Search materials…",
+    "allCategories": "All categories",
+    "live": "Live refresh succeeded (market online)",
+    "snapshot": "Live refresh unreachable — showing the build-time snapshot",
+    "official": "Official",
+    "facade": "Facade",
+    "page": "Machine page",
+    "empty": "No matching materials.",
+    "tabs": {
+      "all": "All",
+      "agents": "Agents",
+      "skills": "Skills",
+      "mcp": "MCP servers"
+    },
+    "categoryNames": {
+      "pack": "Pack",
+      "skill": "Ecosystem skill",
+      "mcp": "MCP server",
+      "facade": "AI facade",
+      "official-data": "Official data anchor"
+    }
   }
 }

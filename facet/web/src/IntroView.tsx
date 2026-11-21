@@ -13,13 +13,11 @@
 // packaging and never the outcome — a visitor could not tell that this market
 // also sells teams, or that they can build one here.
 import { useTranslation } from "react-i18next";
-import { Container } from "./Container";
+import { TeamTemplatesSection, CreationPathSection } from "./EntrySections";
 import { FACET_HELP_COMMAND, FACET_INSTALL_COMMAND, FACET_TARGETS } from "./cliFacts";
 
 const CARDS = ["contents", "install", "version"] as const;
-const CREATION_STAGES = ["stage1", "stage2", "stage3", "stage4"] as const;
 /** The team-template section's feature rows: a fleet's declaration surface. */
-const TEAM_FACETS = ["roles", "cadence", "slots", "edges", "acceptance"] as const;
 
 /** One node→node edge row: [node] —edge→ [node], with an optional note under the edge. */
 function PathRow({
@@ -56,7 +54,7 @@ function PathRow({
   );
 }
 
-export function IntroView({ signedIn = false }: { signedIn?: boolean } = {}) {
+export function ProductIntroSection({ signedIn = false }: { signedIn?: boolean } = {}) {
   const { t, i18n } = useTranslation();
   const lang = (i18n.resolvedLanguage ?? i18n.language ?? "").toLowerCase();
   const lineUrl = lang.startsWith("zh")
@@ -64,7 +62,7 @@ export function IntroView({ signedIn = false }: { signedIn?: boolean } = {}) {
     : "https://www.finddatatech.cloud/products/facet/";
 
   return (
-    <Container className="space-y-10 pb-10">
+    <div className="space-y-10">
       {/* Hero + path figure share the first screen: the copy keeps a reading
           measure on the left, the three-node graph fills the right. Capping the
           whole page at 768px (the pre-overhaul shape) left half a 1920 screen
@@ -138,60 +136,12 @@ export function IntroView({ signedIn = false }: { signedIn?: boolean } = {}) {
         ))}
       </section>
 
-      {/* What the mechanisms are FOR. Both sections are unconditional: the
-          team-template one must not disappear on the grounds that not every
-          pack is a team (spec: "team templates are presented as a first-class
-          use"), and the creation path names the human gate explicitly so the
-          studio does not read as "the AI writes it for you". */}
-      <section className="rounded-lg border border-border p-6" data-testid="intro-team-templates">
-        <h2 className="text-lg font-semibold">{t("facetIntro.teamTemplates.title")}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {t("facetIntro.teamTemplates.body")}
-        </p>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {TEAM_FACETS.map((f) => (
-            <div key={f} className="rounded-md border border-border/60 bg-muted/30 px-3 py-2">
-              <dt className="text-sm font-medium">{t(`facetIntro.teamTemplates.facet.${f}.title`)}</dt>
-              <dd className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                {t(`facetIntro.teamTemplates.facet.${f}.body`)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-
-      <section className="rounded-lg border border-border p-6" data-testid="intro-creation-path">
-        <h2 className="text-lg font-semibold">{t("facetIntro.creationPath.title")}</h2>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          {t("facetIntro.creationPath.body")}
-        </p>
-        <ol className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {CREATION_STAGES.map((s, i) => (
-            <li key={s} className="rounded-md border border-border/60 bg-muted/30 px-3 py-2">
-              <span className="text-xs font-mono text-muted-foreground">{i + 1}</span>
-              <p className="mt-1 text-sm font-medium">{t(`facetIntro.creationPath.${s}`)}</p>
-            </li>
-          ))}
-        </ol>
-        {/* The gate is the point: the model drafts, a human adopts. Saying it
-            here keeps the studio from reading as automation. */}
-        <p className="mt-3 text-xs text-muted-foreground" data-testid="intro-creation-gate">
-          {t("facetIntro.creationPath.gate")}
-        </p>
-        {/* Visibility follows the CONFIRMED login state — the caller passes
-            `signedIn` only once the identity probe has answered, so the entry
-            never paints and then vanishes. Not a redirect: `#/` is the public
-            front door and a signed-in visitor opening it should still see it. */}
-        {signedIn && (
-          <a
-            href="#/studio"
-            data-testid="intro-cta-studio"
-            className="mt-5 inline-block rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            {t("facetIntro.creationPath.cta")}
-          </a>
-        )}
-      </section>
+      {/* 两段产品叙事已抽到 EntrySections（merge-plaza-into-facet-entry 3.1）：
+          入口页与这里共用同一个组件，文案不分叉。两段都无条件渲染——
+          团队模板不能因为"不是每个包都是团队"就消失；创作路径必须点名人的
+          采用是唯一闸门，否则创作台会读成「AI 替你写完」。 */}
+      <TeamTemplatesSection />
+      <CreationPathSection signedIn={signedIn} />
 
       <a
         className="inline-block text-xs text-muted-foreground underline hover:text-foreground"
@@ -201,6 +151,6 @@ export function IntroView({ signedIn = false }: { signedIn?: boolean } = {}) {
       >
         {t("facetIntro.lineLink")}
       </a>
-    </Container>
+    </div>
   );
 }
