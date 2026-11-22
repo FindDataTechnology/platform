@@ -167,7 +167,40 @@ export const registry = {
     // postJson throws on any non-2xx and returns the parsed body on success, so
     // a revoked token or a missing channel surfaces as a real error rather than
     // a silent no-op.
-    await postJson(`${site}/api/v4/posts`, body, { authorization: `Bearer ${token}` });
+    const created = await postJson(`${site}/api/v4/posts`, body, { authorization: `Bearer ${token}` });
+    return created?.id ?? null;
+  },
+
+  // 中间态：占位 + PUT /posts/{id} 改写（Mattermost 的 post id 就是编辑句柄）。
+  ack: {
+    mode: "edit",
+    async placeholder(cred, chatKey, text) {
+      const site = siteOf(cred);
+      const token = String(cred?.botToken ?? "").trim();
+      if (!site || !token) throw new Error("mattermost: siteUrl and botToken are required");
+      const { channelId, rootId } = splitChatKey(chatKey);
+      if (!channelId) throw new Error("mattermost: chatKey carries no channel");
+      const body = { channel_id: channelId, message: String(text ?? "") };
+      if (rootId) body.root_id = rootId;
+      const created = await postJson(`${site}/api/v4/posts`, body, { authorization: `Bearer ${token}` });
+      return created?.id ?? null;
+    },
+    async edit(cred, chatKey, messageId, text) {
+      const site = siteOf(cred);
+      const token = String(cred?.botToken ?? "").trim();
+      if (!site || !token) return false;
+      try {
+        // Mattermost 的 PUT 要整条重写，id 必须在 body 里——不是只传新文本。
+        await postJson(
+          `${site}/api/v4/posts/${encodeURIComponent(messageId)}`,
+          { id: messageId, message: String(text ?? "") },
+          { authorization: `Bearer ${token}` },
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
   },
 
   // ── subscribe (websocket) ────────────────────────────────────────────────

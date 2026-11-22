@@ -35,7 +35,7 @@ const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SECRET = "onboarding-hosted-secret";
 const SESSION_SECRET = "onboarding-hosted-session";
 
-// The market's id for 法律-合同: randomly minted in the real deployment
+// The market's id for 识律 · 合同审查套件: randomly minted in the real deployment
 // (`randomBytes(16)` in gateway/packs.js), which is exactly why the recipe
 // carries the authored NAME and the plan resolves it.
 const LEGAL_PACK_ID = "J9sO_wRCgUVjbYVEqD4Pog";
@@ -90,25 +90,25 @@ async function startStubMarket() {
     res.setHeader("content-type", "application/json");
     if (url.pathname === "/api/packs") {
       const search = url.searchParams.get("search") || "";
-      const hit = search === "法律-合同";
+      const hit = search === "识律 · 合同审查套件";
       return res.end(JSON.stringify({
         total: hit ? 1 : 0,
         page: 1,
         pageSize: 50,
-        packs: hit ? [{ id: LEGAL_PACK_ID, name: "法律-合同", version: 1 }] : [],
+        packs: hit ? [{ id: LEGAL_PACK_ID, name: "识律 · 合同审查套件", version: 1 }] : [],
       }));
     }
     if (url.pathname === `/api/packs/${LEGAL_PACK_ID}`) {
       return res.end(JSON.stringify({
         id: LEGAL_PACK_ID,
-        name: "法律-合同",
+        name: "识律 · 合同审查套件",
         version: 2,
         manifest: {
-          name: "法律-合同",
+          name: "识律 · 合同审查套件",
           version: 2,
           skills: [],
           // The persona the recipe names as defaultExpert — the pack's own
-          // manifest id, as the real 法律-合同 pack publishes it.
+          // manifest id, as the real 识律 · 合同审查套件 pack publishes it.
           agents: [{ id: "pack-contract-reviewer", name: "合同审查官", persona: "你是「合同审查官」——资深商事合同律师角色。" }],
         },
       }));
@@ -287,7 +287,7 @@ test("hosted: answers resolves recipe references and provision installs without 
     // Defect ②: the recipe names the pack by its authored display name; the
     // plan must carry this deployment's minted id.
     assert.equal(plan.packs[0].packId, LEGAL_PACK_ID, `the reference must resolve to the market id: ${JSON.stringify(plan.packs[0])}`);
-    assert.equal(plan.packs[0].name, "法律-合同", "the plan carries the authored name for display");
+    assert.equal(plan.packs[0].name, "识律 · 合同审查套件", "the plan carries the authored name for display");
     assert.equal(plan.degraded, false, "a fully resolved plan is not degraded");
     assert.equal(plan.defaultExpert, "pack-contract-reviewer", "the expert is the pack's own persona id");
 
@@ -299,7 +299,7 @@ test("hosted: answers resolves recipe references and provision installs without 
     assert.equal(prov.status, 200);
     assert.equal(prov.json.results[0].status, "installed", `the resolved pack installs: ${JSON.stringify(prov.json.results[0])}`);
     assert.equal(prov.json.results[0].packId, LEGAL_PACK_ID);
-    assert.equal(prov.json.results[0].name, "法律-合同");
+    assert.equal(prov.json.results[0].name, "识律 · 合同审查套件");
 
     // Defect ③: with no socket the switch used to dereference `ws.user` and
     // throw. This harness has no dsh runtime, so the roster may be empty — the

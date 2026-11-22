@@ -83,7 +83,30 @@ export const registry = {
   },
 
   async sendText(cred, chatKey, text) {
-    await call(cred.token, "sendMessage", { chat_id: chatKey, text });
+    const msg = await call(cred.token, "sendMessage", { chat_id: chatKey, text });
+    return msg?.message_id != null ? String(msg.message_id) : null;
+  },
+
+  // 中间态：先发一条占位，整轮跑完后**编辑成**真实答案。Telegram 支持
+  // editMessageText，这是最干净的一种——同一条问话始终只有一条消息，用户看到
+  // 它从「正在处理…」变成答案，既不刷屏也不留下两条。
+  //
+  // 编辑失败（平台偶发 400 / 消息被删）时 ack 的 edit 返回 false，调度层回落到
+  // 另发一条：宁可多一条消息，也不能让答案丢了。
+  ack: {
+    mode: "edit",
+    async placeholder(cred, chatKey, text) {
+      const msg = await call(cred.token, "sendMessage", { chat_id: chatKey, text });
+      return msg?.message_id != null ? String(msg.message_id) : null;
+    },
+    async edit(cred, chatKey, messageId, text) {
+      try {
+        await call(cred.token, "editMessageText", { chat_id: chatKey, message_id: Number(messageId), text });
+        return true;
+      } catch {
+        return false;
+      }
+    },
   },
 
   // Polling fallback. `deliver(message)` runs one agent turn; failures are

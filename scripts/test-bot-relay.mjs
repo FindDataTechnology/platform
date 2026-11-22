@@ -131,6 +131,10 @@ async function makeBot(name = "relaybot") {
   entry.adapter = {
     ...entry.adapter,
     start: undefined,
+    // 这条测试测的是 relay 链路（入站记录 → 出站投递），不是中间态：把 ack
+    // 关掉，否则 telegram 会先发一条占位再编辑，`sent` 里多出一条与 relay
+    // 无关的记录，断言数就对不上了。中间态本身由 test-bot-ack-turn 覆盖。
+    ack: { mode: "none" },
     async sendText(cred, chatKey, text) {
       calls.push({ cred, chatKey, text });
       sent.push({ chatKey, text });
@@ -310,6 +314,10 @@ test("a channel whose bot is disabled is refused without contacting the platform
   entry.adapter = {
     ...entry.adapter,
     start: undefined,
+    // 这条测试测的是 relay 链路（入站记录 → 出站投递），不是中间态：把 ack
+    // 关掉，否则 telegram 会先发一条占位再编辑，`sent` 里多出一条与 relay
+    // 无关的记录，断言数就对不上了。中间态本身由 test-bot-ack-turn 覆盖。
+    ack: { mode: "none" },
     async sendText(cred, chatKey, text) {
       calls.push({ cred, chatKey, text });
       sent.push({ chatKey, text });

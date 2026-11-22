@@ -13,7 +13,8 @@
 
 import { stripReasoningLeak } from "./reasoning-leak.js";
 import crypto from "node:crypto";
-import { adapterForBot, validateCredentials } from "./bots/adapter.js";
+import { adapterForBot, validateCredentials, ackCapabilityOfBot } from "./bots/adapter.js";
+import { createLaneConfig, copyForEvent } from "../gateway/zhiyu/lane-config.js";
 import { sendThrough, fdBotConfigured } from "./fd-bot-client.js";
 import { isGenericBotType, packBotMeta, PACK_BOT_CREDENTIAL_KEY } from "../lib/generic-bot-types.js";
 import { observeTurnTap } from "./observe-tap.js";
@@ -39,6 +40,13 @@ function recordOutboundLedger(entry, channel = "bot") {
 const MAX_MESSAGE_CHARS = 4000;
 const RATE_LIMIT_PER_MIN = 10;
 const TURN_TIMEOUT_MS = Number(process.env.BOTS_TURN_TIMEOUT_MS) || 180_000;
+
+// 中间态心跳（waiting-ack）：回合跑得久时，占位消息不能一直停在同一句话上
+// ——「正在处理…」静止三分钟和黑洞的区别就没了。每 BOTS_ACK_BEAT_MS 把它
+// 改写一次，带上已经过去的秒数，用户看到的是「还在动」。
+// 只在 edit 车道有意义（消息 id 在手才能改）；placeholder 车道改不了，
+// 靠一开始那句回执撑住。
+const ACK_BEAT_MS = Number(process.env.BOTS_ACK_BEAT_MS) || 45_000;
 
 // Relay guards (add-bot-relay-endpoint, design D6). The same bounds as the
 // inbound pipeline's, named separately so either path can move without the
@@ -78,6 +86,8 @@ const NO_TOOLS_PREFIX =
 const ASK_WAIT_MS = Number(process.env.BOTS_ASK_WAIT_MS) || 600_000;
 const ASK_MAX_ATTEMPTS = 3;
 const ASK_CANCEL_WORDS = new Set(["取消", "cancel"]);
+
+const laneCfg = createLaneConfig();
 
 const state = {
   ctx: null,
@@ -997,6 +1007,10 @@ function mountedSkillPreamble(bot) {
 
 async function runTurn({ bot, adapter }, sessionId, chatKey, text) {
   const ctx = state.ctx;
+  // 中间态句柄（waiting-ack）：edit 车道会在结束时把答案编辑进占位消息，
+  // placeholder 车道的占位已经发出去、答案另发。none 车道这里拿到 null。
+  // 放在最前面：用户等的是「有没有被接住」，越早越好。
+  const ackBinding = await beginAck(bot, adapter, chatKey);
   const reply = async (body) => {
     const clean = stripReasoningLeak(body);
     if (!clean) {
@@ -1028,7 +1042,12 @@ async function runTurn({ bot, adapter }, sessionId, chatKey, text) {
       console.warn(`[bots] "${bot.name}" reply withheld by disclosure gate (${gate.reason})`);
       return;
     }
-    await deliverText(bot, adapter, chatKey, body);
+    // 中间态是 edit 时，答案直接编辑进那条占位消息——同一条消息从头到尾，
+    // 用户不会先看到「正在处理」再看到答案，而是它变成了答案。编辑失败则
+    // deliverText 另发一条（setttleAck 返回 false）。
+    if (!(await settleAck(bot, null, ackBinding, body))) {
+      await deliverText(bot, adapter, chatKey, body);
+    }
     // 台账写入 (3.2)：只存 digest，不存原文。写失败不阻断发送——发送已经
     // 发生了，把失败留给日志而不是回滚一条已发出的消息。
     if (gate.ok && gate.ledger) {
@@ -1110,6 +1129,8 @@ async function runTurn({ bot, adapter }, sessionId, chatKey, text) {
     console.warn(`[bots] "${bot.name}" turn failed: ${e.message}`);
     return reply("Sorry — I could not complete that request.");
   } finally {
+    // 心跳必须在这里停：它在 finally 之外还可能延续到回合结束后。
+    if (ackBinding?.beat) { clearInterval(ackBinding.beat); ackBinding.beat = null; }
     ctx.setStreaming?.(sessionId, false);
     // Platform-guaranteed capture (add-platform-guaranteed-capture D1.2): one
     // L0 turn_outcome per bot turn into the deployment owner's person root —
@@ -1138,6 +1159,14 @@ async function runTurn({ bot, adapter }, sessionId, chatKey, text) {
   }
   // Assistant final text only — never tool output or raw events (design D3.4).
   if (result.text) await reply(result.text);
+
+  // 占位消息的兜底收尾（waiting-ack）：正常路径上 reply 已经通过 settleAck
+  // 把占位编辑成答案了；但披露闸拦截、tools-posture 拦截这类**不发**的分支
+  // 不会调用 reply，占位就会永远停在「正在处理…」——那比黑洞更糟（它明确
+  // 承诺了有下文）。放在所有 reply 之后：早放会抢在答案前面把占位改写掉。
+  if (ackBinding && !ackBinding.used && ackBinding.messageId) {
+    await settleAck(bot, null, ackBinding, "抱歉，这次没能给出回答，请再试一次。").catch(() => {});
+  }
 }
 
 /**
@@ -1186,6 +1215,89 @@ export function noteOutboundBypass(source, detail = null) {
  * failure — but the classification survives for the caller to report.
  * A transport failure (service down) throws with `.code = "fd_bot_unreachable"`.
  */
+// ── 中间态：让提问的人知道消息被接住了 ────────────────────────────────────────
+//
+// 问题的形状（2026-11-22）：复杂问话的回答可能要几分钟，而这期间平台上**一条
+// 消息都没有**——用户看到的是吞掉输入的黑洞，读成「功能坏了」。
+//
+// 但「怎么告诉用户在处理」不是一句话能统一的事，平台机制差别极大（能力位声明
+// 在 adapter.ack，这里只按能力执行）：
+//
+//   edit        先发占位，跑完后编辑成答案。一条消息从头到尾，最干净。
+//               编辑失败 → 回落成另发一条（答案不能因为编辑失败丢）。
+//   placeholder 先发短回执，答案另发。两条消息，但每个平台都能做。
+//   none        不发（wecom-bot 的 response_code 一次性消费，发了回执答案就发
+//               不出去；wecom-webhook 出站专用）。这条车道只能靠「尽快出答案」。
+//
+// 中间态的任何失败都**不能**影响答案：这里的每一个调用都是尽力而为，抛了就记
+// 日志继续跑回合。
+const ACK_COPY_EVENT = "bot_ack";
+
+function ackCopy() {
+  try {
+    const text = copyForEvent(laneCfg.get(), ACK_COPY_EVENT, null);
+    return String(text ?? "").trim();
+  } catch {
+    return "";
+  }
+}
+
+// 回合开始：按能力发中间态。返回一个句柄给 settleAck 用；null = 这条车道不发
+// （能力 none，或文案被配置成空）。
+async function beginAck(bot, adapter, chatKey) {
+  const cap = ackCapabilityOfBot(bot);
+  if (cap.mode !== "edit" && cap.mode !== "placeholder") return null;
+  const text = ackCopy();
+  if (!text) return null;
+  // fd-bot transport owns its own delivery window; the intermediate state is a
+  // property of the platform adapter, so an fd-bot bot skips it here rather
+  // than double-sending through two paths.
+  if (bot.transport === "fd-bot" && bot.fdBotBindingId) return null;
+  const ack = adapter?.ack;
+  if (!ack || typeof ack.placeholder !== "function") return null;
+  try {
+    const messageId = await ack.placeholder(bot.credentials, chatKey, text);
+    const binding = { mode: cap.mode, chatKey, messageId: messageId ?? null, ack, used: false, beat: null };
+    // 心跳只对 edit 生效（没有 messageId 就无从改写）。
+    if (cap.mode === "edit" && binding.messageId && typeof ack.edit === "function" && ACK_BEAT_MS > 0) {
+      const started = Date.now();
+      binding.beat = setInterval(() => {
+        if (binding.used) return;
+        const secs = Math.round((Date.now() - started) / 1000);
+        const tick = `${text.replace(/[….]+$/, "")}（已 ${secs} 秒）`;
+        ack.edit(bot.credentials, chatKey, binding.messageId, tick).catch(() => {});
+      }, ACK_BEAT_MS);
+      if (typeof binding.beat.unref === "function") binding.beat.unref();
+    }
+    return binding;
+  } catch (e) {
+    console.warn(`[bots] "${bot?.name}" ack placeholder failed: ${e.message}`);
+    return null;
+  }
+}
+
+// 回合结束：把答案交给中间态（编辑成答案），或者回落到另发一条。
+// 返回 true 表示答案已经送出去了，调用方不必再 deliverText。
+async function settleAck(bot, entry, binding, answer) {
+  if (!binding || binding.used) return false;
+  // placeholder 模式：占位已经发出去了，答案另发一条（走正常的发送路径，
+  // 因为答案要过披露闸）。
+  if (binding.mode !== "edit" || !binding.messageId) return false;
+  // 编辑只发生一次：这条回合的第一个真实回复占据占位消息。之后的回复
+  // （问询追问、错误兜底）另发——占位消息已经是第一条答案的正文。
+  binding.used = true;
+  if (binding.beat) { clearInterval(binding.beat); binding.beat = null; }
+  try {
+    const ok = await binding.ack.edit(bot.credentials, binding.chatKey, binding.messageId, answer);
+    if (ok) return true;
+    console.warn(`[bots] "${bot?.name}" ack edit failed; falling back to a separate answer message`);
+    return false;
+  } catch (e) {
+    console.warn(`[bots] "${bot?.name}" ack edit threw: ${e.message}; falling back`);
+    return false;
+  }
+}
+
 async function deliverText(bot, adapter, chatKey, text) {
   if (bot.transport === "fd-bot" && bot.fdBotBindingId) {
     if (!fdBotConfigured()) {

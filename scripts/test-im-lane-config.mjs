@@ -149,3 +149,16 @@ test("the WeCom dispatch rule comes from config, not from a literal regex", asyn
     globalThis.fetch = originalFetch;
   }
 });
+
+test("every echoed event has a copy sentence (no '（会话事件）' placeholder leaks)", () => {
+  // Regression guard for the 2026-11-22 bug: echo.events listed
+  // commander_degraded but copy.events had no entry, so copyForEvent fell back
+  // to copy.default ("（会话事件）") and the GROUP received that literal string.
+  // Every event the lane echoes MUST have a sentence (or be a deliberate null
+  // silence); a missing entry is the placeholder leak, caught here not in prod.
+  const here = path.dirname(new URL(import.meta.url).pathname);
+  const shipped = JSON.parse(fs.readFileSync(path.join(here, "..", "gateway", "zhiyu", "im-lanes.json"), "utf8"));
+  const echoed = shipped.echo?.events ?? [];
+  const missing = echoed.filter((e) => !(e in (shipped.copy?.events ?? {})));
+  assert.deepEqual(missing, [], `echoed events without copy (would render the default placeholder): ${missing.join(", ")}`);
+});

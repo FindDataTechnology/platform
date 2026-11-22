@@ -84,10 +84,23 @@ test("deployed public facade appears with provenance join", async () => {
     const { body } = await get(base, "/api/facades-catalog");
     assert.equal(body.facades.length, 2);
     const joined = body.facades.find((f) => f.id === "law-bench-assistant");
-    assert.deepEqual(joined.deployment, { packId: "law-bench", agentId: "assistant", deployedAt: 1730000000000 });
-    // 无簿记连接的条目如实 null，不造出处。
+    // The join is bookkeeping + the resolved state (10d588314 / D5): `state`
+    // says whether anything is actually serving it, so assert the bookkeeping
+    // passes through and a state was resolved — not exact equality, which would
+    // pin the row to the pre-state shape.
+    assert.deepEqual(
+      { packId: joined.deployment.packId, agentId: joined.deployment.agentId, deployedAt: joined.deployment.deployedAt },
+      { packId: "law-bench", agentId: "assistant", deployedAt: 1730000000000 },
+    );
+    assert.equal(typeof joined.deployment.state, "string", "the join resolves a state");
+    // 无簿记连接的条目不再 null：10d588314 / D5 让「只有 AgentCard、从未部署」的
+    // agent 也作为 facade 出现（可被发现），deployment 如实写
+    // {state:'undeployed', provenance:'registry-agentcard'} —— 显式未知，不造出处、
+    // 也不伪装成在服。旧的 `null` 断言钉的是这条语义变更之前的行为。
     const orphan = body.facades.find((f) => f.id === "data-anchor-bot");
-    assert.equal(orphan.deployment, null);
+    assert.equal(orphan.deployment.state, "undeployed");
+    assert.equal(orphan.deployment.provenance, "registry-agentcard");
+    assert.equal("packId" in orphan.deployment, false, "an undeployed facade has no deployment bookkeeping");
   } finally { close(); }
 });
 
@@ -114,9 +127,15 @@ test("facade entry carries the production annotation shape", async () => {
     for (const slot of ["zh", "en", "ja", "es", "fr"]) assert.equal(typeof ann.human[slot].name, "string");
     assert.equal(ann.provenance.source, "wanxing-facade");
     assert.ok(ann.provenance.updatedAt);
-    // whenToUse 从 skills 合成（有则给，无则 null）。
+    // whenToUse: from skills when present, else the fallback synthesizes a
+    // non-empty one (ee2769b39 — the fallback must NOT yield an empty whenToUse;
+    // the plaza G2 gate requires every species to carry one). So the second
+    // facade gets a synthesized string, not null.
     assert.equal(body.facades[0].annotation.whenToUse, "skills: case-retrieval");
-    assert.equal(body.facades[1].annotation.whenToUse, null);
+    assert.ok(
+      typeof body.facades[1].annotation.whenToUse === "string" && body.facades[1].annotation.whenToUse.length > 0,
+      "the fallback annotation always carries a non-empty whenToUse",
+    );
   } finally { close(); }
 });
 

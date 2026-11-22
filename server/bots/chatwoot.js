@@ -68,6 +68,52 @@ export const registry = {
       const body = await res.text().catch(() => "");
       throw new Error(`chatwoot send failed: ${res.status} ${body.slice(0, 160)}`.trim());
     }
+    const created = await res.json().catch(() => ({}));
+    return created?.id != null ? String(created.id) : null;
+  },
+
+  // 中间态：占位 + PATCH 改写（Chatwoot 支持编辑自己发的 outgoing 消息）。
+  ack: {
+    mode: "edit",
+    async placeholder(cred, chatKey, text) {
+      const base = String(cred?.baseUrl ?? "").trim().replace(/\/+$/, "");
+      const token = String(cred?.apiToken ?? "").trim();
+      const accountId = String(cred?.accountId ?? "").trim();
+      if (!base || !token || !accountId) throw new Error("chatwoot: baseUrl/apiToken/accountId are required");
+      const { conversationId } = splitChatKey(chatKey);
+      if (!conversationId) throw new Error("chatwoot: chatKey carries no conversation id");
+      const res = await fetchWithTimeout(
+        `${base}/api/v1/accounts/${accountId}/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+          body: JSON.stringify({ content: String(text ?? ""), message_type: "outgoing" }),
+        },
+      );
+      if (!res.ok) throw new Error(`chatwoot ack failed: ${res.status}`);
+      const created = await res.json().catch(() => ({}));
+      return created?.id != null ? String(created.id) : null;
+    },
+    async edit(cred, chatKey, messageId, text) {
+      const base = String(cred?.baseUrl ?? "").trim().replace(/\/+$/, "");
+      const token = String(cred?.apiToken ?? "").trim();
+      const accountId = String(cred?.accountId ?? "").trim();
+      const { conversationId } = splitChatKey(chatKey);
+      if (!base || !token || !accountId || !conversationId) return false;
+      try {
+        const res = await fetchWithTimeout(
+          `${base}/api/v1/accounts/${accountId}/conversations/${conversationId}/messages/${encodeURIComponent(messageId)}`,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+            body: JSON.stringify({ content: String(text ?? "") }),
+          },
+        );
+        return res.ok;
+      } catch {
+        return false;
+      }
+    },
   },
 };
 

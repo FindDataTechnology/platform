@@ -43,6 +43,9 @@ const ZH_ENTRIES = {
   docs: "使用指南",
   studio: "创作台",
   fleets: "我的团队",
+  // 2026-11-22: the material catalog entry (2d5c0f19a, "one material catalog, six
+  // species") added a shell entry; the decided set predated it.
+  catalog: "素材目录",
 };
 const ZH_ACCOUNT = { menuLabel: "账号", mine: "我的发布", curate: "内容运营" };
 

@@ -15,6 +15,7 @@
 //        — the webhook acceptance layer's idempotency key input; absent/null
 //        means the payload dedupes by nothing (never a guessed key).
 //   sendText(cred, chatKey, text) -> Promise<void>
+//   ack?: { mode }   // 中间态：让用户知道「正在处理」（见下方 ACK_MODES）
 //   start?(bot, deliver) / stop?()   // optional polling loop (telegram)
 //   qr: { strategy, hintKey, field?, resolve?(cred) }
 //        User-entry QR capability (redesign-bots-surface). strategy is
@@ -62,6 +63,14 @@ export function getAdapter(type) {
   return adapters()[type] ?? null;
 }
 
+// Test seam (scripts/test-bot-ack-turn.mjs): swap ONE platform's adapter so a
+// test can observe what the dispatcher does with a declared capability without
+// touching the network. Not exported for production use — nothing in the
+// server calls it, and importing it from shipping code would be a smell.
+export function __setAdapterForTest(type, adapter) {
+  if (type) adapters()[type] = adapter;
+}
+
 // Resolve a bot ROW's adapter (pack-bot-units). A plain row names its platform
 // in `type`. A generic-type row (v1: "channel", born from a pack install)
 // defers the platform choice to the operator's binding inside credentials —
@@ -93,6 +102,43 @@ export function credentialFieldsFor(type) {
 //   passive-window      can only reply inside the window a recent inbound opened
 //   none                no outbound path at all
 export const OUTBOUND_MODES = ["url-keyed", "proactive-ip-gated", "passive-window", "none"];
+
+// ── 中间态能力（waiting-ack 车道）─────────────────────────────────────────────
+//
+// 问题的形状（2026-11-22 用户提出）：复杂问话的回答可能要几分钟，而平台侧
+// **一条消息都没有**——用户看到的是一个吞掉了输入的黑洞，读成「功能坏了」。
+// 但「怎么让用户知道在处理」各平台差别极大：
+//
+//   typing           能显示「对方正在输入…」（Telegram sendChatAction、Slack
+//                    typing）。最自然，不占聊天记录，但多数平台只在会话打开时
+//                    可见、有存活期，长时间要重复发。
+//   edit             先发一条占位、整轮跑完后**编辑成**真实答案（Slack
+//                    chat.update、Mattermost PUT /posts/{id}）。无消息轰炸，
+//                    但要求平台能编辑、且答案必须是同一条消息的替换。
+//   placeholder      只支持「先发一条、之后无法编辑」：发一条短回执，答案另发。
+//                    比黑洞好，但同一条问话会产出两条消息。
+//   passive-window   被动回复窗口：只有「回执 + 答案」都挤在首个窗口内才成立
+//                    （WeCom bot 的 response_url 会过期）。窗口之外的答案走不了，
+//                    所以这里的中间态必须极短、且答案必须尽快回。
+//   none             没有任何中间态路径（纯 webhook 推送，如 wecom-webhook 出站
+//                    专用）。只能靠「尽快出答案」这一条，不能假装有回执。
+//
+// 策略在调度层执行（bots.js），能力在这里声明——与 outbound 同一纪律：
+// 加一个平台就必须明确写出它的中间态形状，而不是让调度层猜。
+export const ACK_MODES = ["typing", "edit", "placeholder", "passive-window", "none"];
+
+/** 某个 bot TYPE 的中间态能力。未知类型答 "none"（不能假装能回执）。 */
+export function ackCapabilityFor(type) {
+  const declared = getAdapter(type)?.ack;
+  if (!declared || !ACK_MODES.includes(declared.mode)) return { mode: "none" };
+  return { mode: declared.mode };
+}
+
+/** 同一答案按 bot ROW 取（generic `channel` 行看它绑定的平台）。 */
+export function ackCapabilityOfBot(bot) {
+  if (bot?.type === "channel") return ackCapabilityFor(bot.credentials?.platform);
+  return ackCapabilityFor(bot?.type);
+}
 
 /** The declared outbound capability of a bot TYPE. Unknown types answer "none". */
 export function outboundCapabilityFor(type) {

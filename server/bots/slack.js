@@ -115,6 +115,30 @@ export const registry = {
     // Slack answers 200 with {ok:false, error} for every failure mode,
     // including a revoked token — the body is the only signal.
     if (!res.ok) throw new Error(`slack send failed: ${res.error ?? "unknown_error"}`);
+    return res.ts ?? null;
+  },
+
+  // 中间态：先发占位，跑完后 chat.update 成答案（Slack 用 ts 定位消息，不是
+  // message_id）。失败返 false，调度层回落到另发一条——答案不能因为编辑失败丢。
+  ack: {
+    mode: "edit",
+    async placeholder(cred, chatKey, text) {
+      const { channel, threadTs } = splitChatKey(chatKey);
+      const payload = { channel, text };
+      if (threadTs) payload.thread_ts = threadTs;
+      const res = await postJson(`${API}/chat.postMessage`, payload, {
+        authorization: `Bearer ${cred.botToken}`,
+      });
+      if (!res.ok) throw new Error(`slack ack failed: ${res.error ?? "unknown_error"}`);
+      return res.ts ?? null;
+    },
+    async edit(cred, chatKey, messageId, text) {
+      const { channel } = splitChatKey(chatKey);
+      const res = await postJson(`${API}/chat.update`, { channel, ts: messageId, text }, {
+        authorization: `Bearer ${cred.botToken}`,
+      });
+      return Boolean(res.ok);
+    },
   },
 };
 

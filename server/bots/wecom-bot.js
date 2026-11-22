@@ -339,6 +339,18 @@ export const registry = {
       throw new Error(`wecom-bot send failed: ${res.status} ${j.errcode ?? ""} ${j.errmsg ?? ""}`.trim());
     }
   },
+
+  // 中间态：**只能是 none**，这是平台机制决定的，不是偷懒。
+  //
+  // response_code 一次性消费（见上面 ONE SHOT 的注释）：先发一句「正在处理」，
+  // 答案就再也发不出去了（第二个必 60140）。而这条消息又不可编辑（主动回复只
+  // 收 markdown / template_card，没有 update 接口）。所以唯一一次发送机会必须
+  // 留给答案本身。
+  //
+  // 用户感知的「黑洞」在这条车道上无法用回执消除——这正是「不同 IM 不同策略」
+  // 的具体形态：调度层看到 mode=none 就不发回执，改为**尽快产出答案**（并用
+  // 平台的已读/输入态，那是客户端行为，不是我们能写的）。
+  ack: { mode: "none" },
 };
 
 // Signature check delegating to the shared implementation — same sorted-join

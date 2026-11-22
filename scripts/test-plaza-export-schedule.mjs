@@ -187,9 +187,11 @@ test("the schedule's trigger debounces a burst into one run", async () => {
   assert.equal(calls.length, 1, `three triggers must collapse to one run, got ${calls.length}`);
 });
 
-test("seedFrontHall copies the page assets, never generated/ or deploy/", () => {
-  // 门厅首页是随镜像走的**代码**，不是导出产物。缺了它 facet 根路径落到 SPA
-  // 介绍页，「把 agent. 跳过来」就变成产品退步（2026-11-21 实撞）。
+test("seedFrontHall copies the page assets, never generated/ or deploy/, and owns NOT index.html", () => {
+  // 门厅的资产（css/js/icon/locales）随镜像走**代码**，不是导出产物。但根路径
+  // 自 merge-plaza-into-facet-entry D1（2026-11-21）归谦面 SPA：seedFrontHall
+  // **不再铺 index.html 且主动删残留**——否则 express.static 的 index 会把 `GET /`
+  // 吃掉，谦面八个 hash 视图全不可达。旧断言（必须铺 index.html）方向已反。
   const src = fs.mkdtempSync(path.join(os.tmpdir(), "hall-src-"));
   const dst = fs.mkdtempSync(path.join(os.tmpdir(), "hall-dst-"));
   for (const f of ["index.html", "style.css", "script.js", "favicon.svg"]) {
@@ -203,10 +205,13 @@ test("seedFrontHall copies the page assets, never generated/ or deploy/", () => 
   fs.mkdirSync(path.join(src, "deploy"));
   // 用明显的假内容，不用真实地址——本文件会进公开快照，泄漏门会（正确地）拦它。
   fs.writeFileSync(path.join(src, "deploy", "README.md"), "placeholder deploy notes");
+  // 上一版遗留在站点根的 index.html —— seedFrontHall 必须清掉它。
+  fs.writeFileSync(path.join(dst, "index.html"), "<stale>");
 
   const copied = seedFrontHall({ siteRoot: dst, from: src });
-  assert.ok(copied.includes("index.html"));
-  assert.equal(fs.readFileSync(path.join(dst, "index.html"), "utf8"), "<index.html>");
+  assert.equal(copied.includes("index.html"), false, "index.html is NOT seeded (shell owns /)");
+  assert.equal(fs.existsSync(path.join(dst, "index.html")), false, "a stale root index.html is removed");
+  assert.equal(fs.readFileSync(path.join(dst, "style.css"), "utf8"), "<style.css>", "the page assets still land");
   assert.equal(fs.existsSync(path.join(dst, "locales", "zh-CN.json")), true);
   assert.equal(fs.existsSync(path.join(dst, "generated")), false, "导出产物不搬");
   assert.equal(fs.existsSync(path.join(dst, "deploy")), false, "部署手册不搬");

@@ -119,6 +119,39 @@ export const registry = {
       res = await send();
     }
     if (res.code !== 0) throw new Error(`feishu send failed: ${res.code} ${res.msg}`);
+    return res.data?.message_id ?? null;
+  },
+
+  // 中间态：占位 + PUT /im/v1/messages/{id} 改写（飞书支持编辑自己发的消息）。
+  ack: {
+    mode: "edit",
+    async placeholder(cred, chatKey, text) {
+      const send = async () =>
+        postJson(
+          `${BASE}/open-apis/im/v1/messages?receive_id_type=chat_id`,
+          { receive_id: chatKey, msg_type: "text", content: JSON.stringify({ text }) },
+          { authorization: `Bearer ${await tokenFor(cred).get()}` },
+        );
+      let res = await send();
+      if (res.code === 99991663 || res.code === 99991661) {
+        tokenFor(cred).invalidate();
+        res = await send();
+      }
+      if (res.code !== 0) throw new Error(`feishu ack failed: ${res.code} ${res.msg}`);
+      return res.data?.message_id ?? null;
+    },
+    async edit(cred, chatKey, messageId, text) {
+      try {
+        const res = await postJson(
+          `${BASE}/open-apis/im/v1/messages/${encodeURIComponent(messageId)}`,
+          { msg_type: "text", content: JSON.stringify({ text }) },
+          { authorization: `Bearer ${await tokenFor(cred).get()}`, "content-type": "application/json" },
+        );
+        return res.code === 0;
+      } catch {
+        return false;
+      }
+    },
   },
 };
 

@@ -114,6 +114,10 @@ export const registry = {
     }
     if (j.errcode) throw new Error(`wechat-oa send failed: ${j.errcode} ${j.errmsg}`);
   },
+
+  // 中间态：客服消息（48 小时被动窗口内可主动发）没有编辑接口，
+  // 只能 placeholder——先回执后答案，两条消息换用户不再以为死机。
+  ack: { mode: "placeholder" },
 };
 
 // Self-check: the documented handshake + a real-shaped text message parse, and

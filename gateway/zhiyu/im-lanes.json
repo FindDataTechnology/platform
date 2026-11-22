@@ -23,8 +23,7 @@
       "all_passed",
       "pass",
       "reply_cap_hit",
-      "commander_none",
-      "commander_degraded"
+      "commander_none"
     ]
   },
   "copy": {
@@ -43,6 +42,7 @@
         "thinking": "已收到，正在确认由谁处理…",
         "dispatched": "已收到，正在处理{{seats}}…"
       },
+      "bot_ack": "已收到，正在处理…",
       "commander_none": "本轮无人作答——在场的席位都判断没有需要补充的内容。你可以 @ 某一位点名提问，或把问题说得更具体些。",
       "room_ended": "本次会话已结束。",
       "budget_exhausted": "今日额度已用完。",

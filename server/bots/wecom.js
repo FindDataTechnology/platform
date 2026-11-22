@@ -174,6 +174,11 @@ export const registry = {
     }
     if (j.errcode) throw new Error(`wecom send failed: ${j.errcode} ${j.errmsg}`);
   },
+
+  // 中间态：能主动发消息（企业可信 IP 内），但发出去的消息**没有编辑接口**
+  // ——WeCom 应用消息是一发即定的。所以只能 placeholder：先发一句短回执占位，
+  // 答案随后另发一条。代价是同一问话两条消息；收益是用户不再对着黑洞等。
+  ack: { mode: "placeholder" },
 };
 
 // Self-check: build an official-shaped signed+encrypted callback with the same
