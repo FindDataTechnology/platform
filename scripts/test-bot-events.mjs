@@ -175,8 +175,30 @@ test("a room-bound bot's envelope goes to the bridge instead of a chat session",
   }
 });
 
-test("a missing bindingId is a client error", async () => {
-  const res = await post({ chatKey: "c", text: "hi" });
+test("a retryable bridge failure answers 503 (fd-bot retries), not 200-drop", async () => {
+  const bot = makeBot({ name: "roomed-cold", bindingId: "b_cold" });
+  db.updateBot(bot.id, { zhiRoomId: "room-2" });
+  ctx.zhiyuImBridge = {
+    async handleInbound() {
+      const e = new Error("gateway unreachable for bot \"x\": ECONNREFUSED");
+      e.code = "bridge_unreachable";
+      e.retryable = true;
+      throw e;
+    },
+  };
+  turnCalls = [];
+  try {
+    const res = await post({ bindingId: "b_cold", chatKey: "grp", senderId: "u2", senderName: "Bob", text: "cold please" });
+    // 503 → fd-bot re-delivers once the cell is up. A 200 here would mark it
+    // delivered and lose it (the 2026-11-22 cold-start bug).
+    assert.equal(res.status, 503);
+    assert.equal(turnCalls.length, 0, "no per-chat turn fallback on a retryable bridge failure");
+  } finally {
+    ctx.zhiyuImBridge = undefined;
+  }
+});
+
+test("a missing bindingId is a client error", async () => {  const res = await post({ chatKey: "c", text: "hi" });
   assert.equal(res.status, 400);
 });
 

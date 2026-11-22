@@ -179,8 +179,16 @@ export function createZhiyuImBridge({ db, env = process.env, fetchImpl = null, l
       }
       return true;
     } catch (err) {
-      log.warn(`[zhiyu-im-bridge] gateway unreachable for bot "${bot.name}": ${err.message}`);
-      return false;
+      // TRANSIENT — do NOT return false. Returning false made the caller fall
+      // through to the legacy session path, which on a cold cell is a no-op, and
+      // the message was silently lost (fd-bot already got 200). A fetch failure
+      // here is "the gateway/cell is not reachable yet" (cold start, restart) —
+      // retryable. Surface it as a throwable with `.retryable` so the route
+      // answers 5xx and fd-bot re-delivers once the cell is up.
+      const e = new Error(`gateway unreachable for bot "${bot.name}": ${err.message}`);
+      e.code = "bridge_unreachable";
+      e.retryable = true;
+      throw e;
     }
   }
 

@@ -75,18 +75,27 @@ export function registerBotEventRoutes(ctx) {
     // starting a per-chat agent session.
     const bridge = ctx.zhiyuImBridge;
     if (bridge && (bot.zhiRoomId || bot.zhiAccountId)) {
-      const handled = await bridge
-        .handleInbound({
+      let handled;
+      try {
+        handled = await bridge.handleInbound({
           bot,
           chatKey: String(envelope.chatKey ?? ""),
           senderName: envelope.senderName ?? envelope.senderId ?? null,
           text: String(envelope.text ?? ""),
           imUserId: envelope.senderId ?? null,
-        })
-        .catch((err) => {
-          console.warn(`[bot-events] bridge failed for bot "${bot.name}": ${err.message}`);
-          return false;
         });
+      } catch (err) {
+        // A retryable bridge failure (gateway/cell not reachable yet — cold
+        // start, restart) MUST NOT 200: falling through to runTurn on a cold cell
+        // is a no-op and the message is lost, while fd-bot already marked it
+        // delivered. Answer 503 so fd-bot re-delivers once the cell is up.
+        if (err?.retryable) {
+          console.warn(`[bot-events] bot "${bot.name}" bridge temporarily unavailable, asking fd-bot to retry: ${err.message}`);
+          return res.status(503).json({ error: "bridge temporarily unavailable" });
+        }
+        console.warn(`[bot-events] bridge failed for bot "${bot.name}": ${err.message}`);
+        handled = false;
+      }
       if (handled) return res.status(200).json({ ok: true, via: "bridge" });
     }
 

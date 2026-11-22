@@ -175,9 +175,16 @@ test("4.x cell inbound: bound posts, gate-off legacy, unreachable degrades prope
   // Gate off → decline → legacy gets it.
   const bridgeB = createZhiyuImBridge({ db: mkDb(), env: { ...env, ZHIYU_IM_BRIDGE_ON: "0", CELL_GATEWAY_SECRET: SECRET }, fetchImpl: async () => new Response("{}", { status: 200 }) });
   assert.equal(await bridgeB.handleInbound({ bot, chatKey: "-1", senderName: "张三", text: "hi" }), false);
-  // Unreachable gateway → degrade (false), never swallow.
+  // Unreachable gateway → THROW retryable (never silent false). Returning false
+  // made the caller fall through to the legacy path, which on a cold cell is a
+  // no-op → the message was lost (2026-11-22). The route now answers 503 on
+  // this so fd-bot re-delivers once the cell is up.
   const bridgeC = createZhiyuImBridge({ db: mkDb(), env: { ...env, CELL_GATEWAY_SECRET: SECRET }, fetchImpl: async () => { throw new Error("ECONNREFUSED"); } });
-  assert.equal(await bridgeC.handleInbound({ bot, chatKey: "-1", senderName: "张三", text: "hi" }), false);
+  await assert.rejects(
+    () => bridgeC.handleInbound({ bot, chatKey: "-1", senderName: "张三", text: "hi" }),
+    (err) => err.retryable === true && /unreachable/i.test(err.message),
+    "an unreachable gateway must throw a retryable error, not return false",
+  );
 
   // A bot row whose owner_email is NULL must still carry a REAL actor: the
   // gateway answers "machine credential required" to an empty x-actor-email,
