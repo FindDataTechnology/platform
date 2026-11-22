@@ -10,6 +10,7 @@
 
 import { GATEWAY_SECRET_HEADER } from "./auth.js";
 import { adapterForBot as defaultAdapterForBot } from "./bots/adapter.js";
+import { sendThrough, fdBotConfigured } from "./fd-bot-client.js";
 import { fetchWithTimeout } from "../lib/fetch-with-timeout.js";
 import { createLaneConfig, copyForEvent } from "../gateway/zhiyu/lane-config.js";
 
@@ -331,8 +332,24 @@ export function createZhiyuImBridge({ db, env = process.env, fetchImpl = null, l
         continue;
       }
       try {
+        // Transport-aware send (unify-im-solution): a bot on fd-bot must send
+        // through fd-bot, NOT the legacy paas adapter. The bridge had its own
+        // adapter.sendText call that never learned about the transport switch, so
+        // a migrated bot's answers hit the legacy passive-window path and failed
+        // ("no live response_url"). Route by transport here so the room's answers
+        // go out the same leg the inbound came in on.
+        const viaFd = outboundBot.transport === "fd-bot" && outboundBot.fdBotBindingId && fdBotConfigured();
         for (const chunk of chunksFor(row.sender?.display, text)) {
-          await adapter.sendText(outboundBot.credentials, chatKey, chunk);
+          if (viaFd) {
+            const verdict = await sendThrough({ bindingId: outboundBot.fdBotBindingId, chatKey, text: chunk });
+            if (!verdict.ok) {
+              const e = new Error(verdict.detail || `send failed (${verdict.failure})`);
+              e.failure = verdict.failure;
+              throw e;
+            }
+          } else {
+            await adapter.sendText(outboundBot.credentials, chatKey, chunk);
+          }
         }
       } catch (err) {
         failed = err;
