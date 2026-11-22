@@ -5289,5 +5289,56 @@
     "allHint": "Open this species",
     "sourceAbsent": "This species has no configured data source in this deployment (which is not the same as \"nothing here\").",
     "openDetail": "View details"
+  },
+  "packPage": {
+    "back": "Back to the market",
+    "loading": "Loading…",
+    "missing": "No such agent",
+    "error": "Failed to load: {{message}}",
+    "outline": "Sections",
+    "official": "Official",
+    "loginToSubscribe": "Sign in to subscribe and install",
+    "signIn": "Sign in",
+    "subscribe": "Subscribe & install",
+    "installed": "Subscribed",
+    "free": "Free",
+    "price": "${{price}}",
+    "castTeam": "Cast as a team",
+    "sections": {
+      "overview": "Overview",
+      "roles": "Roles",
+      "skills": "Skills",
+      "mcp": "Tools",
+      "memory": "Memory",
+      "versions": "Version history",
+      "board": "Board",
+      "cluster": "Team members",
+      "facade": "Facade",
+      "deploy": "Deploy here",
+      "boundary": "Scope & disclosures"
+    },
+    "versions": {
+      "error": "Failed to load versions: {{message}}",
+      "empty": "No earlier versions yet",
+      "current": "current",
+      "compare": "Compare with current",
+      "hideCompare": "Hide comparison",
+      "compareNote": "Compared by manifest declaration — anything the manifest does not declare cannot be compared.",
+      "noDiff": "No structural change against current v{{version}}",
+      "field": "Field",
+      "fields": {
+        "name": "Name",
+        "description": "Description",
+        "roles": "Roles",
+        "skills": "Skills",
+        "mcpServers": "MCP refs",
+        "connectorBindings": "External systems",
+        "bots": "Bot units",
+        "hasMemory": "Memory",
+        "hasConsole": "Board",
+        "hasCluster": "Cluster",
+        "hasFacade": "Facade"
+      }
+    }
   }
 }

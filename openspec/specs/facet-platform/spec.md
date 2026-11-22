@@ -743,9 +743,10 @@ English, and the remaining target locales SHALL translate them rather than carry
 label SHALL NOT be reused for two different concepts (the viewer's published packs and 壹座's
 installed agents SHALL NOT share a name).
 
-The catalog's label SHALL name the **set of materials**, not one of its species: a label naming only
-MCP servers and skills described the two species the old view happened to carry, and became wrong
-the moment the view gained the other four.
+The `智能体` word SHALL NOT label a browsing list. Browsing lists name their species by the species'
+own name (`功能集`, `生态技能`, `MCP 服务`, `AI 分身`, `官方数据锚`); `智能体` names either the
+trading view (`智能体市场`) or a running instance, both of which are about obtaining or serving
+rather than finding.
 
 #### Scenario: no latin-only or jargon labels in a translated locale
 
@@ -771,6 +772,11 @@ the moment the view gained the other four.
 
 - **WHEN** the catalog entry label is rendered in any locale
 - **THEN** it names materials as a set rather than naming only MCP servers and skills
+
+#### Scenario: 智能体 labels trading or running, never a browsing list
+
+- **WHEN** a browsing list presents the pack species
+- **THEN** it is labelled `功能集`, and `智能体` appears only on the trading view's name or on a running instance
 
 ### Requirement: 谦面提供团队控制台分享页
 
@@ -948,3 +954,48 @@ them.
 
 - **WHEN** a visitor scrolls the entry view
 - **THEN** every narrative section is reachable within a bounded number of viewports, and none is pushed out of reach by an embedded list
+
+### Requirement: Browsing and trading are two views, and each names what it does
+
+The shell SHALL separate **finding a material** from **obtaining it**, and SHALL place them
+unambiguously:
+
+- The **catalog** (`#/catalog`) is the browsing view. It lists every species, and a material's card
+  SHALL open that material's **read-only detail in place** — its contents, its version history, its
+  provenance — without navigating the visitor out of the catalog. The catalog MUST NOT perform a
+  write: no subscribe, no install, no deployment.
+- The **packs market** (`#/packs`) is the trading view. Subscribe, install, installed-version
+  comparison and deployment bindings SHALL live there and nowhere else.
+
+The catalog's read-only detail SHALL name the trading view as the next step, so a visitor who
+decides to obtain a material is never left without a path to it.
+
+A material species SHALL NOT be named by two different labels in the two views when the labels imply
+different things. Specifically: the catalog's pack column SHALL be labelled `功能集` (the species'
+own name, matching the material narrative's card for that species), and `智能体` SHALL be reserved
+for the trading view and the serving plane's instances. One word SHALL mean one thing.
+
+#### Scenario: a pack opens in place, read-only
+
+- **WHEN** a visitor opens a pack's card from the catalog
+- **THEN** the pack's detail renders within the catalog, showing its contents and version history, and the catalog does not subscribe, install or deploy anything
+
+#### Scenario: the catalog offers the trading path
+
+- **WHEN** a visitor has a pack's detail open in the catalog and wants to obtain it
+- **THEN** the detail names the packs market as where subscribing and installing happen
+
+#### Scenario: the catalog never writes
+
+- **WHEN** any catalog view is used
+- **THEN** no request that creates, changes or removes a subscription, an install or a deployment is issued from it
+
+#### Scenario: the trading view keeps its whole job
+
+- **WHEN** a visitor opens the packs market
+- **THEN** subscribe, install, installed-version comparison and deployment bindings all work there as before
+
+#### Scenario: one word, one thing
+
+- **WHEN** the catalog and the packs market both present the same species
+- **THEN** the catalog labels it `功能集` and the market keeps its own `智能体市场` name — neither view calls the other's job by its own word

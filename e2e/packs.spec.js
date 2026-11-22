@@ -388,7 +388,7 @@ test("subscriber inspects, subscribes, and the pack materializes", async ({ page
   await card.click();
 
   // Full inspection BEFORE subscribing: the skill body is visible.
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail.getByTestId("pack-skill-sub-skill")).toContainText("五阶段");
   await expect(detail).toContainText("law-bench");
 
@@ -535,14 +535,14 @@ test("detail discloses declared, full-surface, and legacy tool faces", async ({ 
 
   const open = async (id) => {
     await page.getByTestId(`pack-card-${id}`).click();
-    const detail = page.getByTestId("pack-detail");
+    const detail = page.getByTestId("pack-page");
     await expect(detail).toBeVisible();
     return detail;
   };
 
   const declared = await open("pack-face-declared");
   await expect(declared.getByTestId("pack-mcp-tool-face-e2e-registry-mcp")).toContainText("声明 2 / 全量 5 工具");
-  await declared.getByTestId("pack-detail-close").click();
+  await declared.getByTestId("pack-page-back").click();
   await expect(declared).toBeHidden();
 
   const full = await open("pack-face-full");
@@ -550,7 +550,7 @@ test("detail discloses declared, full-surface, and legacy tool faces", async ({ 
   await expect(full.getByTestId("pack-mcp-full-surface-reason-e2e-registry-mcp")).toContainText(
     "工具经 tool_search 间接选择",
   );
-  await full.getByTestId("pack-detail-close").click();
+  await full.getByTestId("pack-page-back").click();
   await expect(full).toBeHidden();
 
   const legacy = await open("pack-face-legacy");
@@ -610,7 +610,7 @@ test("detail shows the external systems a pack needs, and nothing when it declar
 
   const open = async (id) => {
     await page.getByTestId(`pack-card-${id}`).click();
-    const detail = page.getByTestId("pack-detail");
+    const detail = page.getByTestId("pack-page");
     await expect(detail).toBeVisible();
     return detail;
   };
@@ -628,7 +628,7 @@ test("detail shows the external systems a pack needs, and nothing when it declar
   const wms = block.getByTestId("pack-binding-wms-snapshot");
   await expect(wms.getByTestId("pack-binding-optional-wms-snapshot")).toBeVisible();
   await expect(kingdee.getByTestId("pack-binding-optional-kingdee-cloud")).toHaveCount(0);
-  await declared.getByTestId("pack-detail-close").click();
+  await declared.getByTestId("pack-page-back").click();
 
   const bare = await open("pack-bindings-none");
   await expect(bare.getByTestId("pack-bindings")).toHaveCount(0);
@@ -703,7 +703,7 @@ test("version history disclosure is lazy, carries notes, and links each version"
 
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-ver").click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   const list = detail.getByTestId("pack-version-list");
   await expect(list).toBeVisible();
 
@@ -742,7 +742,7 @@ test("name collision with a user skill is skipped and reported, not overwritten"
 
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-clash").click();
-  await page.getByTestId("pack-detail").getByTestId("pack-subscribe").click();
+  await page.getByTestId("pack-page").getByTestId("pack-subscribe").click();
 
   const report = page.getByTestId("pack-install-report");
   await expect(report).toContainText("已跳过");
@@ -763,7 +763,7 @@ test("update badge appears and upgrade is explicit", async ({ page }) => {
   gw.install();
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-upgrade").click();
-  await page.getByTestId("pack-detail").getByTestId("pack-subscribe").click();
+  await page.getByTestId("pack-page").getByTestId("pack-subscribe").click();
   await page.getByTestId("pack-install-report").getByRole("button").last().click();
 
   // The author publishes v2 with a changed skill — both planes.
@@ -789,7 +789,7 @@ test("uninstall warns on modified skills and keeps MCP configs", async ({ page }
   gw.install();
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-uninstall").click();
-  await page.getByTestId("pack-detail").getByTestId("pack-subscribe").click();
+  await page.getByTestId("pack-page").getByTestId("pack-subscribe").click();
   await page.getByTestId("pack-install-report").getByRole("button").last().click();
 
   // The user edits the pack's skill after install.
@@ -829,7 +829,7 @@ test("registry MCP reference installs under the subscriber's own credential", as
 
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-cred").click();
-  await page.getByTestId("pack-detail").getByTestId("pack-subscribe").click();
+  await page.getByTestId("pack-page").getByTestId("pack-subscribe").click();
 
   const report = page.getByTestId("pack-install-report");
   await expect(report).toContainText("e2e-registry-mcp");
@@ -911,7 +911,7 @@ test("UI install posts only {packId, version}; the server fetches the manifest",
 
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-sf").click();
-  await page.getByTestId("pack-detail").getByTestId("pack-subscribe").click();
+  await page.getByTestId("pack-page").getByTestId("pack-subscribe").click();
   await expect(page.getByTestId("pack-install-report")).toContainText("serverfetch-skill");
   await page.getByTestId("pack-install-report").getByRole("button").last().click();
 
@@ -947,7 +947,7 @@ test("private pack visibility follows the caller; a stranger gets the market's n
 
   // Owner: the retrieval succeeds and the pack materializes.
   await page.getByTestId("pack-card-pack-priv-mine").click();
-  await page.getByTestId("pack-detail").getByTestId("pack-subscribe").click();
+  await page.getByTestId("pack-page").getByTestId("pack-subscribe").click();
   await expect(page.getByTestId("pack-install-report")).toContainText("private-mine");
   await page.getByTestId("pack-install-report").getByRole("button").last().click();
   await gotoPacksTab(page, "mine");
@@ -1117,7 +1117,7 @@ test("detail renders the manifest guide; example prompts are actionable", async 
   await gotoPacksTab(page, "market");
 
   await page.getByTestId("pack-card-pack-with-guide").click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail.getByTestId("pack-guide-card")).toContainText("创作者第一步");
   await expect(detail.getByTestId("pack-guide-examples")).toBeVisible();
 
@@ -1161,7 +1161,7 @@ test("subscribe report ends with the next-steps wizard", async ({ page }) => {
   gw.install();
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-wizard").click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await detail.getByTestId("pack-subscribe").click();
 
   const report = page.getByTestId("pack-install-report");
@@ -1269,7 +1269,7 @@ test("facade matters: the owner queue replies and closes through the detail dial
 
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-matters").click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail).toBeVisible();
 
   // The facade panel and the matter queue both render; the matter is open.

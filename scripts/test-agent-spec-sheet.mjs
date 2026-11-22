@@ -29,7 +29,9 @@ const root = path.resolve(here, "..");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
 
 const sheet = read("web/src/components/packs/AgentSpecSheet.tsx");
-const dialog = read("web/src/components/packs/PackDetailDialog.tsx");
+// The dialog retired (pack-detail-as-page): the full-variant consumer is
+// now the detail page, which mounts the same sheet with the same prefix.
+const detailPage = read("web/src/components/packs/PackDetailPage.tsx");
 const picker = read("web/src/components/AssistantPicker.tsx");
 
 test("sheet never imports packGuides (guide from document data only)", () => {
@@ -52,12 +54,12 @@ test("three buckets render unconditionally with explicit empty states", () => {
   // renders an `-empty` state marker chosen by count — sections never skip.
   const emptyMarkers = [...sheet.matchAll(/data-testid=\{`\$\{testId\}-empty`\}/g)].map(() => 1);
   assert.ok(emptyMarkers.length >= 1, "the bucket section carries an empty-state marker");
-  const bucketTestIds = [...sheet.matchAll(/testId=\{`\$\{testIdPrefix\}-(\w+)`\}/g)].map((m) => m[1]);
-  assert.deepEqual(
-    [...new Set(bucketTestIds)].sort(),
-    ["mcp", "persona", "skills"],
-    "all three buckets are wired through BucketSection",
-  );
+  const bucketTestIds = new Set([...sheet.matchAll(/testId=\{`\$\{testIdPrefix\}-(\w+)`\}/g)].map((m) => m[1]));
+  // 三桶必须在；pillar（memory/dashboard）与 roster 段也用同一前缀模板，
+  // 它们出现不代表桶坏了——这条断言是「三个都在」，不是「恰好只有三个」。
+  for (const bucket of ["persona", "skills", "mcp"]) {
+    assert.ok(bucketTestIds.has(bucket), `bucket "${bucket}" is wired through BucketSection`);
+  }
   // The empty state lives inside BucketSection, chosen by `count === 0` —
   // i.e. the section ALWAYS renders; only its inner content is conditional.
   assert.match(sheet, /count === 0 \?/, "bucket section switches content on count, never skips the section");
@@ -66,8 +68,8 @@ test("three buckets render unconditionally with explicit empty states", () => {
 });
 
 test("both consumer surfaces consume the SAME component", () => {
-  assert.match(dialog, /import \{ AgentSpecSheet \} from "\.\/AgentSpecSheet";/);
-  assert.match(dialog, /<AgentSpecSheet\s+variant="full"\s+testIdPrefix="pack"/, "dialog uses full variant, pack prefix");
+  assert.ok(detailPage.includes('from "@/components/packs/AgentSpecSheet"'), "detail page imports the sheet");
+  assert.match(detailPage, /<AgentSpecSheet[\s\S]{0,200}?variant="full"[\s\S]{0,120}?testIdPrefix="pack"/, "detail page uses full variant, pack prefix");
   assert.match(picker, /import \{ AgentSpecSheet \} from "@\/components\/packs\/AgentSpecSheet";/);
   assert.match(picker, /variant="compact"/, "picker uses the compact variant");
 });
@@ -75,26 +77,27 @@ test("both consumer surfaces consume the SAME component", () => {
 test("prefix 'pack' reproduces the legacy e2e anchors", () => {
   // The anchors e2e/packs.spec.js, e2e/onboarding.spec.js rely on, derived
   // from the sheet's own testid scheme with prefix "pack":
+  // 用正则而非字面量：要找的是「这份源码里以模板串写出的 testid 形状」，
+  // 正则同时避开 lint/suspicious/noTemplateCurlyInString（它把这种字面量当成
+  // 写错的模板串）。
   const anchors = [
-    ["`${testIdPrefix}-skill-${s.name}`", "pack-skill-<name>"],
-    ["`${testIdPrefix}-skill-download-${s.name}`", "pack-skill-download-<name>"],
-    ["`${testIdPrefix}-mcp-tool-face-${r.registryName}`", "pack-mcp-tool-face-<registry>"],
-    ["`${testIdPrefix}-guide-card`", "pack-guide-card"],
-    ["`${testIdPrefix}-agent-serving-${a.id}`", "pack-agent-serving-<id>"],
-    ["`${testIdPrefix}-agent-rhythm-default-${a.id}`", "pack-agent-rhythm-default-<id>"],
+    [/\$\{testIdPrefix\}-skill-\$\{s\.name\}/, "pack-skill-<name>"],
+    [/\$\{testIdPrefix\}-skill-download-\$\{s\.name\}/, "pack-skill-download-<name>"],
+    [/\$\{testIdPrefix\}-mcp-tool-face-\$\{r\.registryName\}/, "pack-mcp-tool-face-<registry>"],
+    [/\$\{testIdPrefix\}-guide-card/, "pack-guide-card"],
+    [/\$\{testIdPrefix\}-agent-serving-\$\{a\.id\}/, "pack-agent-serving-<id>"],
+    [/\$\{testIdPrefix\}-agent-rhythm-default-\$\{a\.id\}/, "pack-agent-rhythm-default-<id>"],
   ];
-  for (const [expr] of anchors) {
-    assert.ok(sheet.includes(expr), `sheet emits ${expr}`);
+  for (const [re, label] of anchors) {
+    assert.ok(re.test(sheet), `sheet emits the ${label} testid`);
   }
 });
 
-test("dialog keeps its legacy guide card (client fallback retires with move-pack-guides-to-manifest)", () => {
-  // Interim state, documented in the change: the dialog's own guide card
-  // (manifest.guide ?? guideFor) stays until the content migration lands;
-  // the sheet itself is passed no guide from the dialog.
-  assert.ok(!/guideFor\(packId\)/.test(dialog), "client-module fallback retired (move-pack-guides 3.3 终态) — manifest.guide is the only source");
-  const sheetCall = dialog.slice(dialog.indexOf("<AgentSpecSheet"), dialog.indexOf("/>", dialog.indexOf("<AgentSpecSheet")));
-  assert.ok(!sheetCall.includes("guide="), "dialog does not pass guide into the sheet");
+test("detail page keeps its own guide card (client fallback retires with move-pack-guides-to-manifest)", () => {
+  // manifest.guide is the only source; the sheet itself is passed no guide.
+  assert.ok(!/guideFor\(packId\)/.test(detailPage), "client-module fallback retired (move-pack-guides 3.3 终态) — manifest.guide is the only source");
+  const sheetCall = detailPage.slice(detailPage.indexOf("<AgentSpecSheet"), detailPage.indexOf("/>", detailPage.indexOf("<AgentSpecSheet")));
+  assert.ok(!sheetCall.includes("guide="), "detail page does not pass guide into the sheet");
 });
 
 test("i18n: packs.specSheet keys exist in all five locales", () => {

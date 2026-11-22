@@ -210,7 +210,7 @@ test.describe("pack guide card", () => {
     await page.goto("/packs");
     await expect(page.getByTestId(`pack-card-${UNCOVERED}`)).toBeVisible({ timeout: 15000 });
     await page.getByTestId(`pack-card-${UNCOVERED}`).click();
-    await expect(page.getByTestId("pack-detail")).toBeVisible();
+    await expect(page.getByTestId("pack-page")).toBeVisible();
     await expect(page.getByTestId("pack-guide-card")).toHaveCount(0);
   });
 });

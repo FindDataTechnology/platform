@@ -5289,5 +5289,56 @@
     "allHint": "点开看这一类",
     "sourceAbsent": "这一类的数据源还没有接入本部署（不是「没有内容」）。",
     "openDetail": "查看详情"
+  },
+  "packPage": {
+    "back": "返回智能体市场",
+    "loading": "读取中…",
+    "missing": "没有找到这个智能体",
+    "error": "读取失败：{{message}}",
+    "outline": "章节",
+    "official": "官方",
+    "loginToSubscribe": "登录后可订阅并安装",
+    "signIn": "登录",
+    "subscribe": "订阅并安装",
+    "installed": "已订阅",
+    "free": "免费",
+    "price": "${{price}}",
+    "castTeam": "一键装成团队",
+    "sections": {
+      "overview": "概览",
+      "roles": "角色",
+      "skills": "技能",
+      "mcp": "工具",
+      "memory": "记忆",
+      "versions": "版本历史",
+      "board": "看板",
+      "cluster": "团队成员",
+      "facade": "分身归属",
+      "deploy": "部署到本机",
+      "boundary": "边界与声明"
+    },
+    "versions": {
+      "error": "版本列表读取失败：{{message}}",
+      "empty": "这个包还没有历史版本",
+      "current": "当前",
+      "compare": "与当前版对比",
+      "hideCompare": "收起对比",
+      "compareNote": "按 manifest 声明对比——manifest 没声明的，两版之间比不出来。",
+      "noDiff": "与当前版 v{{version}} 相比没有结构变化",
+      "field": "字段",
+      "fields": {
+        "name": "名称",
+        "description": "描述",
+        "roles": "角色数",
+        "skills": "技能数",
+        "mcpServers": "工具引用数",
+        "connectorBindings": "外部系统数",
+        "bots": "机器人单元数",
+        "hasMemory": "记忆声明",
+        "hasConsole": "看板声明",
+        "hasCluster": "集群声明",
+        "hasFacade": "分身声明"
+      }
+    }
   }
 }

@@ -27,7 +27,6 @@ import { EmptyState } from "@/components/ui/states-kit";
 import { Button } from "@/components/ui/button";
 import { PageShell } from "@/components/ui/page-shell";
 import { Tabs } from "@/components/ui/tabs";
-import { useChatStore } from "@platform/core";
 import { useAppConfig } from "@/hooks/useAppConfig";
 import { hasBridgeHandoff } from "@/lib/pack-draft-bridge";
 import { PackMarketView } from "@/components/packs/PackMarketView";
@@ -65,7 +64,6 @@ export function AgentMarketPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const setComposerDraft = useChatStore((s) => s.setComposerDraft);
   const { packMarketplace, resolvedLayout } = useAppConfig();
 
   // The visible set comes from the server-resolved layout; an older server (no
@@ -199,13 +197,8 @@ export function AgentMarketPage() {
             </section>
             <PackMarketView
               initialDetailId={deployCastPack}
-              onSubscribed={() => tabs.includes("mine") && selectTab("mine")}
-              onUsePrompt={(prompt) => {
-                // Parked-draft channel (P2 3.5, same as DocumentsPage): the
-                // composer consumes it exactly once on the chat page.
-                setComposerDraft(prompt);
-                navigate("/chat");
-              }}
+              // The detail is a page now: the market lists, the page trades.
+              onOpenDetail={(id) => navigate(`/agents/${encodeURIComponent(id)}`)}
             />
           </div>
         )}

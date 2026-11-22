@@ -237,7 +237,7 @@ test("zip upload → preview → install → materialized tree; editor seed → 
   // ── Leg 3: market detail (inventory projection) → subscribe → confirm ─────
   await gotoPacksTab(page, "market");
   await page.getByTestId(`pack-card-${published.id}`).click();
-  await expect(page.getByTestId("pack-detail")).toBeVisible();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
   // The detail lists the file inventory (paths, not contents).
   await expect(page.getByTestId(`pack-skill-files-${PACK_SKILL}`)).toContainText("references/routing.md");
   await expect(page.getByTestId(`pack-skill-files-${PACK_SKILL}`)).not.toContainText("北线优先");

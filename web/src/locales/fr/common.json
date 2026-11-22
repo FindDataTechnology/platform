@@ -5289,5 +5289,56 @@
     "allHint": "Ouvrir cette espèce",
     "sourceAbsent": "Cette espèce n’a pas de source de données configurée dans ce déploiement (ce n’est pas « il n’y a rien »).",
     "openDetail": "Voir le détail"
+  },
+  "packPage": {
+    "back": "Retour au marché",
+    "loading": "Chargement…",
+    "missing": "Cet agent n’existe pas",
+    "error": "Échec du chargement : {{message}}",
+    "outline": "Sections",
+    "official": "Officiel",
+    "loginToSubscribe": "Connectez-vous pour vous abonner et installer",
+    "signIn": "Se connecter",
+    "subscribe": "S’abonner et installer",
+    "installed": "Abonné",
+    "free": "Gratuit",
+    "price": "{{price}} $",
+    "castTeam": "Créer une équipe",
+    "sections": {
+      "overview": "Aperçu",
+      "roles": "Rôles",
+      "skills": "Compétences",
+      "mcp": "Outils",
+      "memory": "Mémoire",
+      "versions": "Historique des versions",
+      "board": "Tableau",
+      "cluster": "Membres de l'équipe",
+      "facade": "Façade",
+      "deploy": "Déployer ici",
+      "boundary": "Périmètre et mentions"
+    },
+    "versions": {
+      "error": "Échec du chargement des versions : {{message}}",
+      "empty": "Pas encore de version antérieure",
+      "current": "actuelle",
+      "compare": "Comparer à l’actuelle",
+      "hideCompare": "Masquer la comparaison",
+      "compareNote": "Comparé sur ce que le manifeste déclare — ce qu’il ne déclare pas n’est pas comparable.",
+      "noDiff": "Aucun changement structurel par rapport à la v{{version}} actuelle",
+      "field": "Champ",
+      "fields": {
+        "name": "Nom",
+        "description": "Description",
+        "roles": "Rôles",
+        "skills": "Compétences",
+        "mcpServers": "Réf. MCP",
+        "connectorBindings": "Systèmes externes",
+        "bots": "Unités bot",
+        "hasMemory": "Mémoire",
+        "hasConsole": "Tableau",
+        "hasCluster": "Cluster",
+        "hasFacade": "Façade"
+      }
+    }
   }
 }

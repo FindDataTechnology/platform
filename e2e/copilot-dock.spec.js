@@ -229,7 +229,7 @@ test("market tab: the dock carries the facet line and the pack context flows int
 
   // Open the pack's detail → the inspected pack reaches the context bar.
   await page.getByTestId("pack-card-pack-market-1").click();
-  await expect(page.getByTestId("pack-detail")).toBeVisible();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
   await expect(frame.getByTestId("copilot-context-pack")).toContainText("市场走查包 v3", { timeout: 15000 });
 
   // Closing the detail clears the pack context again.

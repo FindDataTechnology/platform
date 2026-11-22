@@ -5,17 +5,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import * as api from "@/lib/packs-api";
 import { packRelation, installedVersionMap } from "@/lib/packRelation";
-import type { PackSummary, PackReport, PackConnectorReport, PackConnectorBindingReport } from "@/lib/packs-api";
+import type { PackSummary } from "@/lib/packs-api";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState } from "@/components/ui/states-kit";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/packs/Badge";
-import { PackDetailDialog } from "./PackDetailDialog";
 import { PackCard } from "./PackCard";
-import { publishPackInspection } from "@/lib/copilot-pack-context";
 import { STARTER_TEAMS } from "@/lib/packGuides";
 import { AgentSpecSheet } from "@/components/packs/AgentSpecSheet";
 
@@ -59,44 +56,25 @@ function MarketSkeleton({ tiled = false }: { tiled?: boolean }) {
 }
 
 export function PackMarketView({
-  onOpenChat,
-  onRequireLogin,
-  onGotoMine,
   studioOrigin,
-  onUsePrompt,
-  installSurface = true,
   initialDetailId,
+  onOpenDetail,
   layout = "row",
   filters = "top",
 }: {
-  onSubscribed?: () => void;
-  // The report footer's open-chat hook. Hosts without a conversation view
-  // (the facet shell) pass null to drop the footer entirely; the default
-  // navigates 壹座's chat route. See NextStepsFooter for why the routing
-  // call lives there and not here.
-  onOpenChat?: (() => void) | null;
-  // Signed-out signal forwarded to the detail dialog (polish-facet-
-  // interactions): hosts with anonymous viewers wire it, 壹座 omits it.
-  onRequireLogin?: () => void;
-  // Fork deep-link origin (add-agent-fork-lineage) — forwarded to the dialog.
+  // Fork deep-link origin (add-agent-fork-lineage): the gallery card's fork
+  // link stays on THIS view; the fork button itself moved to the detail page.
   studioOrigin?: string;
-  // Deep-link prefill: the pack id the dialog opens on (deployCastPack).
+  // Deep-link handoff (deployCastPack): the pack the host should open on
+  // arrival. The detail is a page now, so this view simply forwards it to
+  // `onOpenDetail` instead of mounting a dialog.
   initialDetailId?: string;
-  // Host-selected "go to my packs" affordance (polish-facet-interactions
-  // follow-up): forwarded to the dialog, which routes it through the login
-  // guidance when the host also wired onRequireLogin and the viewer is
-  // signed out.
-  onGotoMine?: () => void;
-  // Example prompts are actionable (overhaul-market-catalog-presentation P2
-  // 3.5): the 壹座 host parks the prompt in the chat store's composer-draft
-  // channel and navigates to /chat (DocumentsPage "start conversation"
-  // precedent); the facet shell omits it and the dialog copies to clipboard.
-  onUsePrompt?: (prompt: string) => void;
-  // Whether this host can install/deploy packs into a cell (overhaul-market-
-  // catalog-presentation P0). The facet shell cannot — the dialog skips its
-  // deployments/billing probes there instead of firing requests that can
-  // never carry data on that host. Defaults to true (壹座 mounts unchanged).
-  installSurface?: boolean;
+  /** Where "open this pack" leads. The host owns the address: 壹座 uses
+   *  react-router (`/agents/<id>`), facet uses `#/packs/<id>`. A hardcoded
+   *  hash here would blank 壹座's BrowserRouter route.
+   *  Trading state (login gate, fork, deploy, install report) lives on the
+   *  detail page — this view lists, filters and searches only. */
+  onOpenDetail?: (id: string) => void;
   /** Card shape (overhaul-facet-shell-ia-and-space D2). `row` is the original
    *  horizontal card and the default; `tile` stacks it for a multi-column
    *  grid, which is how the facet shell spends a wide viewport. */
@@ -148,18 +126,25 @@ export function PackMarketView({
   // deployCastPack handoff (add-supply-studio-migration 2.2): the supply
   // Studio's cross-domain deploy link opens the dialog straight on the cast
   // pack (install surface → from-template wizard → team page).
-  const [detailId, setDetailId] = useState<string | null>(
-    typeof initialDetailId === "string" && initialDetailId ? initialDetailId : null,
-  );
-  // Publish the inspected pack for the copilot dock (add-facet-copilot D2):
-  // opening/switching publishes the pack, closing publishes null. The packs
-  // array is the name/version source of truth (the id is all the dialog owns).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the dock context keys on the inspected pack's id — a name/version refresh mid-inspection must not re-fire it, so only the id (via detailId) is the trigger
+  // 卡片打开详情（pack-detail-as-page 5.1）：导航到详情页地址，不再开弹窗。
+  // 不带来源参数——交易可见性由登录态决定，不由来源决定。
+  // 宿主给了地址就交给宿主（壹座 是 BrowserRouter，写死 hash 会把路由打空）。
+  const openDetail = (id: string) => {
+    if (onOpenDetail) onOpenDetail(id);
+    else window.location.hash = `#/packs/${encodeURIComponent(id)}`;
+  };
+  // deployCastPack handoff: the supply Studio links here with the pack to open.
+  // The detail is a page now, so the handoff is one navigation, not a dialog
+  // state. Fired once per id; the list may still be loading, and the id is all
+  // the target address needs.
+  const seededRef = useRef(false);
   useEffect(() => {
-    const pack = detailId ? packs.find((p) => p.id === detailId) ?? null : null;
-    publishPackInspection(pack && { id: pack.id, name: pack.name, version: pack.version });
-  }, [detailId]);
-  useEffect(() => () => publishPackInspection(null), []);
+    if (seededRef.current) return;
+    if (typeof initialDetailId !== "string" || !initialDetailId) return;
+    seededRef.current = true;
+    openDetail(initialDetailId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDetailId]);
 
   // Agent-count filter state rides the URL (?agents=2-3) so a refresh keeps
   // it (spec: filter state persists across page refreshes). Deliberately NOT
@@ -260,7 +245,8 @@ export function PackMarketView({
 
   // Facets from the declared taxonomy (P1 2.5). Re-runs on language change so
   // the labels follow the request; the SET and its order never move.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `language` is the TRIGGER, not an input — getPackFacets stamps the current i18n.language itself
+  // `language` is the TRIGGER, not an input — getPackFacets stamps the current
+  // i18n.language itself.
   useEffect(() => {
     let live = true;
     api
@@ -278,9 +264,6 @@ export function PackMarketView({
     };
   }, [language]);
 
-  const [report, setReport] = useState<PackReport | null>(null);
-  const [reportPack, setReportPack] = useState<string>("");
-  const [reportPackId, setReportPackId] = useState<string>("");
   // Honest guide hint (add-facet-copilot): ask the existing focused-preset
   // endpoint whether the facet assistant is installed. Only the "resolves to
   // null" answer shows the hint; a failed/absent probe shows nothing (the
@@ -293,22 +276,6 @@ export function PackMarketView({
       .catch(() => setGuideUnfocused(false));
   }, []);
 
-  // Deep-link target (simplify-chat-and-agents-ia): a pack with a
-  // successfully installed role goes straight into a conversation with it
-  // (`?preset=`); a multi-role pack additionally carries its cluster id so the
-  // chat binds the whole group and switches to the roster's lead. A pack
-  // without roles (skill/tool-only) keeps the plain navigation — the
-  // conversation needs no switch.
-  const installedAgents = (report?.agents ?? []).filter(
-    (a) => a.status === "installed" || a.status === "reused" || a.status === "replaced",
-  );
-  const chatTarget =
-    report && installedAgents.length > 0
-      ? installedAgents.length >= 2 && reportPackId
-        ? `/chat?preset=${encodeURIComponent(installedAgents[0]!.id)}&cluster=${encodeURIComponent(reportPackId)}`
-        : `/chat?preset=${encodeURIComponent(installedAgents[0]!.id)}`
-      : "/chat";
-  const chatClusterMode = installedAgents.length >= 2;
   const tiled = layout === "tile";
   const rail = filters === "rail";
   const listGrid = tiled ? "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "grid gap-3";
@@ -462,7 +429,7 @@ export function PackMarketView({
               {visiblePacks
                 .filter((p) => p.featured)
                 .map((p, i) => (
-                  <PackCard key={p.id} pack={p} index={i} layout={layout} audienceLabels={domainLabels} tone="gallery" relation={relationFor(p)} testId={`pack-featured-card-${p.id}`} onOpen={() => setDetailId(p.id)} />
+                  <PackCard key={p.id} pack={p} index={i} layout={layout} audienceLabels={domainLabels} tone="gallery" relation={relationFor(p)} testId={`pack-featured-card-${p.id}`} onOpen={() => openDetail(p.id)} />
                 ))}
             </div>
           </div>
@@ -516,7 +483,7 @@ export function PackMarketView({
               relation={relationFor(pack)}
               tone="gallery"
               testId={`pack-gallery-card-${pack.id}`}
-              onOpen={() => setDetailId(pack.id)}
+              onOpen={() => openDetail(pack.id)}
             >
               {(() => {
                 const starter = STARTER_TEAMS.find((st) => st.packId === pack.id);
@@ -550,277 +517,12 @@ export function PackMarketView({
               }
             </PackCard>
           ) : (
-            <PackCard key={pack.id} pack={pack} index={i} layout={layout} audienceLabels={domainLabels} relation={relationFor(pack)} testId={`pack-card-${pack.id}`} onOpen={() => setDetailId(pack.id)} />
+            <PackCard key={pack.id} pack={pack} index={i} layout={layout} audienceLabels={domainLabels} relation={relationFor(pack)} testId={`pack-card-${pack.id}`} onOpen={() => openDetail(pack.id)} />
           )
         )}
       </div>
       </div>
 
-      <PackDetailDialog
-        studioOrigin={studioOrigin}
-        packId={detailId}
-        installSurface={installSurface}
-        onOpenChange={(open) => !open && setDetailId(null)}
-        onSubscribed={(r, name, packId) => {
-          setReport(r);
-          setReportPack(name);
-          setReportPackId(packId);
-          void refresh(search);
-          // The viewer just gained a snapshot: the card must say 已装 now.
-          void loadInstalled();
-        }}
-        onGotoMine={onGotoMine}
-        onRequireLogin={onRequireLogin}
-        onUsePrompt={onUsePrompt}
-      />
-
-      {/* Post-subscribe per-part report (spec: pack-installation). */}
-      {report && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          data-testid="pack-install-report"
-          onClick={() => setReport(null)}
-        >
-          <div
-            className="bg-background border border-border rounded-lg max-w-lg w-full max-h-[80vh] overflow-auto p-5"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold text-foreground mb-1">{t("packs.report.title", { name: reportPack })}</h3>
-            <p className="text-xs text-muted-foreground mb-3">{t("packs.report.hint")}</p>
-            <div className="space-y-1 text-sm">
-              {report.skills.map((s) => (
-                <div key={s.name} className="flex gap-2">
-                  <span className="text-muted-foreground w-20 shrink-0">{t("packs.report.skill")}</span>
-                  <span className="text-foreground">{s.name}</span>
-                  <span className="ml-auto">{statusLabel(t, s.status)}</span>
-                  {s.reason && <span className="text-xs text-destructive w-full">{s.reason}</span>}
-                  {/* Disclosure (add-packaged-skills 5.2): tree skills state
-                      their file count and name their script files. */}
-                  {s.fileCount != null && (
-                    <span className="text-xs text-muted-foreground w-full" data-testid={`pack-report-files-${s.name}`}>
-                      {s.scriptFiles?.length
-                        ? t("packs.report.filesWithScripts", {
-                            count: s.fileCount,
-                            scripts: s.scriptFiles.join("、"),
-                          })
-                        : t("packs.report.files", { count: s.fileCount })}
-                    </span>
-                  )}
-                </div>
-              ))}
-              {report.mcpServers.map((m) => (
-                <div key={m.name} className="flex gap-2">
-                  <span className="text-muted-foreground w-20 shrink-0">{t("packs.report.mcp")}</span>
-                  <span className="text-foreground">{m.name}</span>
-                  <span className="ml-auto">{statusLabel(t, m.status)}</span>
-                  {m.reason && <span className="text-xs text-destructive w-full">{m.reason}</span>}
-                </div>
-              ))}
-              {report.agents.map((a) => (
-                <div key={a.id} className="flex gap-2">
-                  <span className="text-muted-foreground w-20 shrink-0">{t("packs.report.agent")}</span>
-                  <span className="text-foreground">{a.name}</span>
-                  <span className="ml-auto">{statusLabel(t, a.status)}</span>
-                  {a.reason && <span className="text-xs text-destructive w-full">{a.reason}</span>}
-                </div>
-              ))}
-              {/* Bot units (pack-bot-units): mirror the agents rows; an
-                  awaiting-credential bot is information, not an error — the
-                  operator's channel setup is the explicit next step. */}
-              {(report.bots ?? []).map((b) => (
-                <div key={b.id} className="flex gap-2" data-testid={`pack-report-bot-${b.id}`}>
-                  <span className="text-muted-foreground w-20 shrink-0">{t("packs.report.bot")}</span>
-                  <span className="text-foreground">{b.name}</span>
-                  <span className="ml-auto">{statusLabel(t, b.status)}</span>
-                  {b.reason && (
-                    <span className="text-xs text-muted-foreground w-full">{b.reason}</span>
-                  )}
-                </div>
-              ))}
-              {/* Connector bindings (add-connector-bindings D7): install resolves
-                  the declared external systems per identity and the server's
-                  report carries one entry per unmet binding *so that the surface
-                  can render one row per binding with the right fix* — that
-                  surface did not exist until now, so a required binding left
-                  unconnected read as "installed, ready". A pack without
-                  declarations carries no `report.connector` and this block does
-                  not exist (byte-identical to before). */}
-              {report.connector && <ConnectorReportBlock connector={report.connector} />}
-            </div>
-            <div className="flex justify-end mt-4">
-              <Button size="sm" onClick={() => setReport(null)}>
-                {t("common.close")}
-              </Button>
-            </div>
-            {/* Next-steps wizard footer (add-pack-tutorials-and-wizard +
-                simplify-chat-and-agents-ia): the report ends by taking the
-                user straight into a conversation with what they just
-                installed — the CTA carries the installed role (and, for a
-                multi-role pack, the cluster bind intent), so no manual
-                re-selection step remains. The report itself is unchanged. */}
-            <NextStepsFooter
-              target={chatTarget}
-              clusterMode={chatClusterMode}
-              onOpenChat={onOpenChat}
-              onDismiss={() => setReport(null)}
-            />
-          </div>
-        </div>
-      )}
     </section>
-  );
-}
-
-// The report's next-steps footer — the only routing-dependent piece of this
-// view, and therefore its own component: useNavigate runs only when the
-// footer actually renders. Hosts that pass onOpenChat={null} never mount it,
-// so this view stays borrowable by router-less shells (facet-platform: the
-// facet shell adds no router dependency — a top-level useNavigate here is
-// exactly what blanked #/packs in production).
-function NextStepsFooter({
-  target,
-  clusterMode,
-  onOpenChat,
-  onDismiss,
-}: {
-  target: string;
-  clusterMode: boolean;
-  onOpenChat?: (() => void) | null;
-  onDismiss: () => void;
-}) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  if (onOpenChat === null) return null;
-  return (
-    <div
-      className="mt-3 flex items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2"
-      data-testid="pack-install-next"
-    >
-      <span className="text-xs text-muted-foreground">
-        {t(clusterMode ? "packs.report.nextHintCluster" : "packs.report.nextHint")}
-      </span>
-      <button
-        className="shrink-0 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
-        onClick={() => {
-          onDismiss();
-          onOpenChat ? onOpenChat() : navigate(target);
-        }}
-        data-testid="pack-install-open-chat"
-      >
-        {t(clusterMode ? "packs.report.openChatCluster" : "packs.report.openChat")}
-      </button>
-    </div>
-  );
-}
-
-function statusLabel(t: (k: string) => string, status: string) {
-  const key = `packs.report.status.${status}`;
-  const label = t(key);
-  return label === key ? status : label;
-}
-
-/** One rendered row of the install-time connector gate. `kind` is what the
- *  row means (not what the ledger says): a `pendingGrant` row is *satisfied*
- *  yet unusable until the one-click grant, so it must not borrow the
- *  "已连接" wording the settings panel reserves for usable bindings. */
-type ConnectorReportRow = {
-  kind: "unresolved" | "pendingGrant" | "optionalUnmet";
-  row: PackConnectorBindingReport;
-};
-
-function connectorReportRows(connector: PackConnectorReport): ConnectorReportRow[] {
-  const out: ConnectorReportRow[] = [];
-  const seen = new Set<string>();
-  // Order is the customer's order of business: required-and-missing first,
-  // then one click away, then the optional ones that only degrade.
-  for (const kind of ["unresolved", "pendingGrant", "optionalUnmet"] as const) {
-    for (const row of connector[kind] ?? []) {
-      if (!row?.bindingKey) continue;
-      const id = `${kind}\u0000${row.bindingKey}`;
-      if (seen.has(id)) continue;
-      seen.add(id);
-      out.push({ kind, row });
-    }
-  }
-  return out;
-}
-
-/**
- * The install report's connector block. Rendered only when the manifest
- * declared `connector_bindings` (the server then always sets
- * `report.connector` — including on a gate failure, where we say "unknown"
- * instead of claiming either state: the install succeeded, we just do not know).
- *
- * Exported for the render check (`scripts/render-check-connector-report.mjs`),
- * which mounts it through react-dom/server — the same proof style used for the
- * pre-install block, because "it type-checks" says nothing about what a
- * customer reads.
- */
-export function ConnectorReportBlock({ connector }: { connector: PackConnectorReport }) {
-  const { t } = useTranslation();
-  const rows = connectorReportRows(connector);
-  // Only non-optional rows block use; optional-unmet ones are degradations.
-  const open = rows.filter((r) => r.kind !== "optionalUnmet");
-  const required = connector.required ?? 0;
-  const headline = connector.error
-    ? t("packs.report.connector.unknown")
-    : open.length > 0
-      ? t("packs.report.connector.pending", { count: open.length })
-      : required > 0
-        ? t("packs.report.connector.ready")
-        : t("packs.report.connector.readyOptional");
-  return (
-    <div className="mt-3 space-y-1 border-t border-border pt-3" data-testid="pack-report-connector">
-      <div className="flex gap-2">
-        <span className="text-muted-foreground w-20 shrink-0">{t("packs.report.connector.title")}</span>
-        <span
-          className={connector.error || open.length > 0 ? "text-foreground" : "text-muted-foreground"}
-          data-testid="pack-report-connector-summary"
-          data-connected={String(connector.connected)}
-          data-open={String(open.length)}
-          // The raw gate error is for whoever debugs the install; the customer
-          // gets the honest "we could not tell".
-          title={connector.error || undefined}
-        >
-          {headline}
-        </span>
-      </div>
-      {rows.map(({ kind, row }) => (
-        <div
-          key={`${kind}-${row.bindingKey}`}
-          className="flex flex-wrap gap-x-2 gap-y-1"
-          data-testid={`pack-report-connector-${row.bindingKey}`}
-          data-kind={kind}
-          data-state={row.status ?? "satisfied"}
-        >
-          <span className="w-20 shrink-0" />
-          <span className="text-foreground">{row.provider || row.bindingKey}</span>
-          {row.provider && row.provider !== row.bindingKey && (
-            <span className="font-mono text-xs text-muted-foreground">{row.bindingKey}</span>
-          )}
-          {(row.operations ?? []).length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              {(row.operations ?? [])
-                .map((op) => t(`settings.connections.bindings.operations.${op}`, { defaultValue: op }))
-                .join("·")}
-            </span>
-          )}
-          {row.optional && kind === "optionalUnmet" && (
-            <span className="text-xs text-muted-foreground">{t("settings.connections.bindings.optional")}</span>
-          )}
-          <span className="ml-auto text-xs">
-            {kind === "pendingGrant"
-              ? t("packs.report.connector.needsGrant")
-              : t(`settings.connections.bindings.state.${row.status ?? "satisfied"}`, {
-                  defaultValue: row.status ?? "satisfied",
-                })}
-          </span>
-          {row.reason && <span className="w-full text-xs text-muted-foreground">{row.reason}</span>}
-        </div>
-      ))}
-      <p className="text-xs text-muted-foreground" data-testid="pack-report-connector-hint">
-        {t("packs.report.connector.hint")}
-      </p>
-    </div>
   );
 }

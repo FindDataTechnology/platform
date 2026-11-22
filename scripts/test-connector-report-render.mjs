@@ -34,7 +34,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "..");
 const webDir = path.join(root, "web");
 const read = (p) => fs.readFileSync(path.join(root, p), "utf8");
-const view = read("web/src/components/packs/PackMarketView.tsx");
+const view = read("web/src/components/packs/PackInstallReport.tsx");
 const api = read("web/src/lib/packs-api.ts");
 
 // ── 1. Source ────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ test("the block renders only when the gate reported something", () => {
   // this `&&`, not a length check inside the block.
   assert.match(
     view,
-    /\{report\.connector && <ConnectorReportBlock connector=\{report\.connector\} \/>\}/,
+    /\{connector && <ConnectorReportBlock connector=\{connector\} \/>\}/,
     "the install report must gate the connector block on report.connector",
   );
   // The four gate fields the block relies on exist on the wire type; without
@@ -152,7 +152,7 @@ import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
 import { renderToStaticMarkup } from "react-dom/server";
 import zhCN from "./src/locales/zh-CN/common.json";
-import { ConnectorReportBlock } from "./src/components/packs/PackMarketView";
+import { ConnectorReportBlock } from "./src/components/packs/PackInstallReport";
 
 const CASES = {
   mixed: {
@@ -235,7 +235,7 @@ test("mixed state: required-first rows, honest counts", { skip }, () => {
   assert.match(html, /pack-report-connector-oms\.stock"[^>]*data-kind="optionalUnmet"/);
   assert.ok(html.includes("可选"), "optional rows are marked as such");
   assert.ok(html.includes("连接器目录未覆盖该操作"), "the gate's reason reaches the customer");
-  assert.ok(html.includes("已装应用的连接器需求"), "the hint names the real menu path");
+  assert.ok(html.includes("连接器由设置"), "the hint names the real menu path");
   // Customer's order of business: blocking, then one-click, then optional.
   const i = html.indexOf("erp.orders");
   const j = html.indexOf("crm.contacts");
@@ -252,14 +252,14 @@ test("all required bindings usable: says so, lists nothing", { skip }, () => {
 
 test("all-optional pack: does not pretend something is connected", { skip }, () => {
   const html = render().optionalOnly;
-  assert.ok(html.includes("无需接通即可使用"), "a pack with no required system is usable as installed");
+  assert.ok(html.includes("无必需连接器"), "a pack with no required system is usable as installed");
   assert.ok(html.includes('data-kind="optionalUnmet"'), "…while still disclosing the optional gap");
   assert.ok(!html.includes("必需项已接通"), "there is nothing required to have connected");
 });
 
 test("gate threw: unknown, never 'connected'", { skip }, () => {
   const html = render().gateFailed;
-  assert.ok(html.includes("状态未判定（不影响安装）"), "an install that could not resolve bindings says so");
+  assert.ok(html.includes("无法确认连接状态"), "an install that could not resolve bindings says so");
   assert.ok(!html.includes("必需项已接通"), "and must not claim the pack is connected");
   // The raw error is for whoever debugs the install, not customer copy.
   assert.ok(html.includes('title="connector unreachable'), "the raw gate error rides the title attribute");

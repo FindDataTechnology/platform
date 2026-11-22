@@ -19,6 +19,7 @@ import { DocsView } from "./DocsView";
 import { FleetsView } from "./FleetsView";
 import { EntryView } from "./EntryView";
 import { CatalogView } from "./CatalogView";
+import { PackDetailPage } from "@/components/packs/PackDetailPage";
 import { MineView } from "./MineView";
 import { StudioView } from "./StudioView";
 import { TeamConsoleView, slugFromPath } from "./TeamConsoleView";
@@ -31,7 +32,7 @@ import { SiteMark } from "./SiteMark";
 // studio (add-supply-studio-migration 1.6): the supply-domain creation face —
 // signed-in only (documents are owner-scoped; anonymous deep links fall back
 // to the intro landing, same gate as #/mine).
-type View = "intro" | "packs" | "catalog" | "docs" | "mine" | "curate" | "studio" | "fleets";
+type View = "intro" | "packs" | "packDetail" | "catalog" | "docs" | "mine" | "curate" | "studio" | "fleets";
 
 /** Identity probe result, in THREE states, and the difference matters:
  *    undefined — the probe has not answered yet (paint nothing identity-gated)
@@ -47,6 +48,9 @@ type WhoamiUser = { email: string; groups: string[]; creator?: boolean; admin?: 
 const VIEW_HASH: Record<View, string> = {
   intro: "#/",
   packs: "#/packs",
+  // 详情页是 `<id>` 的地址，没有单一 hash；`go("packDetail")` 不该被调用
+  // （两个入口都直接写 `#/packs/<id>`）。放进表里只为满足 Record 的完备性。
+  packDetail: "#/packs",
   catalog: "#/catalog",
   docs: "#/docs",
   mine: "#/mine",
@@ -62,6 +66,15 @@ const VIEW_HASH: Record<View, string> = {
  *  part only. Comparing the whole hash dropped every deep link to intro: the
  *  fleet 来源蓝图 chip opened the market page instead of the document (live
  *  2026-11-08). */
+/** 详情页的 pack id：`#/packs/<id>` → `<id>`；不是详情地址则 null。 */
+function hashPackId(hash: string): string | null {
+  const path = hash.split("?")[0];
+  const prefix = "#/packs/";
+  if (!path.startsWith(prefix)) return null;
+  const id = path.slice(prefix.length);
+  return id ? decodeURIComponent(id) : null;
+}
+
 /** 目录页的物种预选：`#/catalog?species=mcp` 或旧地址 `#/mcp`。 */
 function hashSpecies(hash: string): string {
   const path = hash.split("?")[0];
@@ -73,6 +86,9 @@ function hashSpecies(hash: string): string {
 
 function viewFromHash(hash: string, user: WhoamiUser): View {
   const path = hash.split("?")[0];
+  // 详情页（pack-detail-as-page 1.1）：必须**先于** `#/packs` 匹配，
+  // 否则 `#/packs/<id>` 会落到列表。
+  if (path.startsWith("#/packs/") && path.length > "#/packs/".length) return "packDetail";
   if (path === "#/packs") return "packs";
   // #/mcp 退役（unify-material-catalog-page 2.2）：旧地址不断，落到目录页的 MCP 页签。
   if (path === "#/mcp") return "catalog";
@@ -282,6 +298,8 @@ export function App() {
   // 目录页的物种预选来自 hash 的 query（`#/catalog?species=mcp`；旧 `#/mcp`
   // 也靠这条走 MCP 页签）。跟着 hashchange 一起更新，否则从导航切进来会丢预选。
   const [catalogSpecies, setCatalogSpecies] = useState<string>(() => hashSpecies(window.location.hash));
+  // 详情页的 pack id 来自 hash 路径（`#/packs/<id>`），与视图一起更新。
+  const [packDetailId, setPackDetailId] = useState<string | null>(() => hashPackId(window.location.hash));
   // The scrolling element (`<main>`); view changes reset it to the top.
   const scrollerRef = useRef<HTMLElement | null>(null);
   // A failed OIDC return lands on /?auth_error=state|token. Without this the
@@ -309,6 +327,7 @@ export function App() {
     const onHash = () => {
       setView(viewFromHash(window.location.hash, user));
       setCatalogSpecies(hashSpecies(window.location.hash));
+      setPackDetailId(hashPackId(window.location.hash));
     };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
@@ -490,25 +509,14 @@ export function App() {
                   user's 壹座 cell after SSO. */}
               <PackMarketView
                 studioOrigin="https://platform.finddatatech.cloud"
-                onSubscribed={() => {}}
-                onOpenChat={null}
                 // A wide viewport gets tiles and a filter rail
                 // (overhaul-facet-shell-ia-and-space D2/D5); 壹座 keeps the
                 // row-card defaults it has always rendered.
                 layout="tile"
                 filters="rail"
-                // No install plane on this host (overhaul-market-catalog-
-                // presentation P0 1.7): the detail dialog skips its deployments/
-                // billing probes — requests that can never carry data here.
-                installSurface={false}
-                // Only a signed-out viewer gets the gated path: after login
-                // these must be undefined so the buttons fire for real (the
-                // earlier unconditional wiring sent signed-in users to login).
-                onRequireLogin={user ? undefined : goLogin}
-                // goto-mine: signed-out the dialog flips the guidance row
-                // itself; signed-in facet has no installed-packs surface, so
-                // the button is omitted entirely.
-                onGotoMine={user ? undefined : () => {}}
+                // 详情是独立地址（pack-detail-as-page 5.3）：市场只列表，
+                // 打开详情 = 写 hash，与目录页指向同一个地址、无来源参数。
+                onOpenDetail={(id) => { window.location.hash = `#/packs/${encodeURIComponent(id)}`; }}
               />
               <p className="text-xs text-muted-foreground">
                 {t("facetShell.packsFootnote")} <code className="font-mono">{FACET_HELP_COMMAND}</code>
@@ -526,6 +534,21 @@ export function App() {
               {/* 六物种一页（unify-material-catalog-page 1.x）；页签由 hash 的
                   ?species= 预选，#/mcp 重定向同样落在这里。 */}
               <CatalogView key={catalogSpecies} initialSpecies={catalogSpecies} />
+            </Container>
+          )}
+          {view === "packDetail" && (
+            <Container className="space-y-4">
+              {/* 详情页（pack-detail-as-page 1.2）：交易可见性由**登录态**决定，
+                  不由来源决定——两个入口指向同一个地址，无来源参数。 */}
+              <PackDetailPage
+                packId={packDetailId}
+                canTrade={Boolean(user)}
+                // facet 匿名壳没有安装面：部署/计费探测不在这里发。
+                installSurface={false}
+                studioOrigin="https://platform.finddatatech.cloud"
+                onBack={() => go("packs")}
+                onRequireLogin={() => { window.location.href = `/auth/login?rd=${encodeURIComponent(location.pathname + "#/packs/" + (packDetailId ?? ""))}`; }}
+              />
             </Container>
           )}
           {view === "docs" && <DocsView />}

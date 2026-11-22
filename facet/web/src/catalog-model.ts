@@ -57,7 +57,7 @@ export type CatalogItem = {
   href: string | null;
   /** 有深度视图的物种才有（mcp / skill）。 */
   depth: boolean;
-  /** 有就地只读详情的物种（pack）：目录页打开 `PackDetailDialog`，不跳走。 */
+  /** 有详情页可跳的物种（pack）：目录页链到 `#/packs/<id>`，与市场同一个地址。 */
   detail: boolean;
 };
 

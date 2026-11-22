@@ -112,7 +112,7 @@ async function openDeployForm(page) {
   // stale name here clicked a tab that cannot render.
   await page.getByTestId("agent-market-tab-agents").click(); // market tab, then the card
   await page.getByTestId(`pack-card-${PACK.id}`).click();
-  await expect(page.getByTestId("pack-detail")).toBeVisible();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
   await expect(page.getByTestId("pack-deploy-model-form-agent")).toBeVisible({ timeout: 15_000 });
 }
 
@@ -178,7 +178,7 @@ test("deploy form: a filled model rides the request and a lane refusal surfaces 
 
   // The refusal surfaces with its localized prefix and the server's reason
   // (which names the agent and the gate), and the form stays mounted.
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail).toContainText("Model choice refused", { timeout: 15_000 });
   await expect(detail).toContainText("billing lanes");
   await expect(page.getByTestId("pack-deploy-model-form-agent")).toBeVisible();
@@ -202,7 +202,7 @@ test("deploy form: the unlinked-billing-plane model refusal stays a form error, 
   // the serving-not-configured branch's /not configured/i — the narrow
   // model-lanes branch must win, or the whole form would be swapped for the
   // self-host guidance panel and bury the reason.
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail).toContainText("Model lanes cannot be validated", { timeout: 15_000 });
   await expect(page.getByTestId("pack-deploy-model-form-agent")).toBeVisible();
   await expect(page.getByTestId("pack-deploy-btn")).toBeVisible();

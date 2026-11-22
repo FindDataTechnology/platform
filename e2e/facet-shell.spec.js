@@ -35,7 +35,7 @@ test("all four shell views render without a routing provider", async ({ page }) 
   // anonymous face reaches the seeded pack's version list — the route serves
   // public packs without a credential, and the shared disclosure lazy-loads.
   await page.locator('[data-testid^="pack-card-"]').first().click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail.getByTestId("pack-version-list")).toBeVisible();
   await detail.getByTestId("pack-version-list-toggle").click();
   await expect(detail.getByTestId("pack-version-list-row-1")).toBeVisible();
@@ -490,51 +490,41 @@ test("the intro landing carries the full footer; tool views carry the filing-onl
   }
 });
 
-test("the pack dialog carries an always-visible action bar with close, and anonymous subscribe gets the login guidance", async ({ page }) => {
+test("the pack detail page is a real address; anonymous subscribe gets the login guidance, and the page survives a reload", async ({ page }) => {
   const pageErrors = [];
   page.on("pageerror", (e) => pageErrors.push(String(e)));
 
   await page.goto(`${base}/#/packs`);
   await page.locator('[data-testid^="pack-card-"]').first().click();
-  await expect(page.getByTestId("pack-detail")).toBeVisible();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
 
-  // The bar is visible without scrolling, with subscribe + close.
-  await expect(page.getByTestId("pack-action-bar")).toBeVisible();
-  await expect(page.getByTestId("pack-subscribe")).toBeVisible();
-  await expect(page.getByTestId("pack-detail-close")).toBeVisible();
+  // 详情是页面（pack-detail-as-page 1.1）：点卡片后地址变成 `#/packs/<id>`，
+  // 刷新仍在同一详情，而不是回到列表。
+  await expect(page).toHaveURL(/#\/packs\/.+/);
+  await page.reload();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
 
-  // No gap: the bar's bottom edge sits flush with the dialog's bottom edge
-  // (the earlier sticky + negative-margin approach left a see-through slit).
-  const dialogBox = await page.getByTestId("pack-detail").boundingBox();
-  const barBox = await page.getByTestId("pack-action-bar").boundingBox();
-  expect(Math.abs(dialogBox.y + dialogBox.height - (barBox.y + barBox.height))).toBeLessThanOrEqual(1);
-  // The facet shell omits the goto-mine affordance (no installed-packs surface).
-  await expect(page.getByRole("button", { name: /我的智能体|My agents/ })).toHaveCount(0);
-
-  // Anonymous subscribe: no raw error — the guidance row appears.
-  await page.getByTestId("pack-subscribe").click();
-  await expect(page.getByTestId("pack-login-guidance")).toBeVisible();
-  // The sign-in action inside the row carries the host navigation (asserted
-  // by presence — activating it would navigate away from this spec's scope).
+  // Anonymous：订阅卡是一句说明 + 登录入口，不是置灰按钮（D2）。
+  await expect(page.getByTestId("pack-page-login-required")).toBeVisible();
+  await expect(page.getByTestId("pack-subscribe")).toHaveCount(0);
   await expect(page.getByTestId("pack-login-go")).toBeVisible();
 
-  // Close control (top-right) dismisses the dialog in one step.
-  await page.getByTestId("pack-detail-close").click();
-  await expect(page.getByTestId("pack-detail")).toHaveCount(0);
+  // 章节导航没有死链：左栏每一项在内容里都有锚点。
+  const outline = await page.locator('[data-testid^="pack-section-link-"]').evaluateAll((els) =>
+    els.map((e) => e.getAttribute("data-testid").replace("pack-section-link-", "")),
+  );
+  for (const id of outline) {
+    await expect(page.locator(`[data-section="${id}"]`)).toHaveCount(1);
+  }
 
-  // Scrim click closes in one step (the two-step confirm was tried and
-  // reverted by the user's call — keep the plain dismissal).
-  await page.locator('[data-testid^="pack-card-"]').first().click();
-  await expect(page.getByTestId("pack-detail")).toBeVisible();
-  await page.locator(".bg-scrim").click({ position: { x: 5, y: 5 }, force: true });
-  await expect(page.getByTestId("pack-detail")).toHaveCount(0);
+  // 返回列表：按钮把地址带回 #/packs（页面没有 scrim，也没有右上角关闭）。
+  await page.getByTestId("pack-page-back").click();
+  await expect(page.getByTestId("pack-page")).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/packs$/);
 
-  // The goto-mine affordance for a signed-out viewer flips the guidance row
-  // (no silent no-op, no navigation).
+  // The facet shell omits the goto-mine affordance (no installed-packs surface).
   await page.locator('[data-testid^="pack-card-"]').first().click();
-  await expect(page.getByTestId("pack-action-bar")).toBeVisible();
-  await page.getByRole("button", { name: /查看我的智能体|View my agents|Ver mis agentes|Voir mes agents|マイエージェントを見る/ }).click();
-  await expect(page.getByTestId("pack-login-guidance")).toBeVisible();
+  await expect(page.getByRole("button", { name: /我的智能体|My agents|查看我的智能体|View my agents/ })).toHaveCount(0);
 
   expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
 });
@@ -594,7 +584,7 @@ test("market refetches when the locale switches, list and open dialog alike", as
   // The open detail dialog refetches on locale change without closing: back
   // to zh-CN while the dialog is open, the title returns to the zh name.
   await card.click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail).toBeVisible();
   await expect(detail).toContainText("Facet Shell Smoke Pack");
   // ⑥ 边界与诚实声明 sits at its fixed position (the version's note)
@@ -605,7 +595,7 @@ test("market refetches when the locale switches, list and open dialog alike", as
   await expect(detail.getByTestId("pack-version-list")).toBeVisible();
   await page.getByTestId("facet-locale-switcher").selectOption("zh-CN");
   await expect(detail).toContainText("谦面壳冒烟包");
-  await page.getByTestId("pack-detail-close").click();
+  await page.getByTestId("pack-page-back").click();
 
   expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
 });
@@ -753,7 +743,7 @@ test("example prompts copy to the clipboard on the router-less shell (P2 3.5)", 
   // Explicit id, not .first(): by this point in the file the curation test has
   // published a second, guide-less pack into the shared registry.
   await page.locator('[data-testid="pack-card-facet-shell-smoke"]').click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail.getByTestId("pack-guide-card")).toBeVisible();
   await expect(detail.getByTestId("pack-guide-example-0")).toBeVisible();
 
@@ -781,7 +771,7 @@ test("v2 display block rides the card and the detail (P3 4.5)", async ({ page, c
   await expect(card.getByTestId("pack-audience-facet-shell-v2")).toContainText("法务");
 
   await card.click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail.getByTestId("pack-detail-outcomes")).toContainText("风险清单");
   await expect(detail.getByTestId("pack-detail-outcomes")).toContainText("逐条定位到条款");
   // ④ examples ride the v2 channel even WITHOUT a guide — and stay actionable
@@ -799,7 +789,7 @@ test("coverage meter on the boundary face: 0/m declared gaps and full cover (P3 
 
   // v2 pack: declared org surface, NO en overlay → 0 covered + field paths.
   await page.getByTestId("pack-card-facet-shell-v2").click();
-  const detail = page.getByTestId("pack-detail");
+  const detail = page.getByTestId("pack-page");
   await expect(detail.getByTestId("pack-detail-coverage")).toContainText("0/");
   await expect(detail.getByTestId("pack-detail-coverage-missing")).toContainText("promise");
   await expect(detail.getByTestId("pack-detail-coverage-missing")).toContainText("outcomes[0].title");

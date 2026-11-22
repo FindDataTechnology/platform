@@ -16,7 +16,6 @@ import { useTranslation } from "react-i18next";
 
 import { SPECIES_SPECS, mapResponse, type CatalogItem, type Species } from "./catalog-model";
 import { ServerDepth } from "./McpCatalog";
-import { PackDetailDialog } from "@/components/packs/PackDetailDialog";
 
 type Tab = "all" | Species;
 
@@ -41,12 +40,27 @@ export function CatalogView({
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>(normalizeTab(initialSpecies));
   const [state, setState] = useState<LoadState>({ kind: "idle" });
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => new URLSearchParams((window.location.hash.split("?")[1] ?? "")).get("q") ?? "");
   const [page, setPage] = useState(1);
+  // 页签与搜索词进 URL（pack-detail-as-page D5）：从详情页返回时按地址还原，
+  // 不是回到空白首访。tab 由 initialSpecies（hash 的 ?species=）播种，
+  // 改动时写回 hash —— 这一层不引入 router（facet 壳没有 Router 祖先）。
+  const writeCatalogState = (nextTab: Tab, nextQuery: string) => {
+    const url = new URL(window.location.href);
+    const params = new URLSearchParams();
+    if (nextTab !== "all") params.set("species", nextTab);
+    if (nextQuery) params.set("q", nextQuery);
+    const qs = params.toString();
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${qs ? `#/catalog?${qs}` : "#/catalog"}`);
+  };
+  const pickTab = (next: Tab) => {
+    setTab(next);
+    setPage(1);
+    writeCatalogState(next, query);
+  };
   const [depth, setDepth] = useState<{ species: Species; id: string } | null>(null);
-  // 就地只读详情（catalog-owns-browse-market-owns-trade 1.2）：pack 卡片打开它，
-  // 不跳到 #/packs —— 跳走会丢掉访客的浏览位置与页签。
-  const [detailId, setDetailId] = useState<string | null>(null);
+  // 详情已是独立页（pack-detail-as-page 5.2）：pack 卡片链到同一个详情地址，
+  // 目录的页签与搜索词由 hash 的 ?species= 保留，往返回到原处。
 
   // 计数汇总（「全部」页签与页签上的数字）：一次轻量请求拿各类计数。
   // 它读的是导出产物 counts.json —— 只用于显示数字，不做列表数据源。
@@ -149,13 +163,13 @@ export function CatalogView({
       </header>
 
       <div className="flex flex-wrap gap-2" role="tablist" data-testid="catalog-tabs">
-        <TabButton id="all" current={tab} onPick={setTab} label={t("catalog.tabs.all")} />
+        <TabButton id="all" current={tab} onPick={pickTab} label={t("catalog.tabs.all")} />
         {SPECIES_SPECS.map((s) => (
           <TabButton
             key={s.species}
             id={s.species}
             current={tab}
-            onPick={setTab}
+            onPick={pickTab}
             label={t(`catalog.species.${s.species}`, s.species)}
             count={counts?.[s.species]}
           />
@@ -163,7 +177,7 @@ export function CatalogView({
       </div>
 
       {tab === "all" ? (
-        <AllSpecies counts={counts} onPick={setTab} />
+        <AllSpecies counts={counts} onPick={pickTab} />
       ) : (
         <>
           <input
@@ -171,7 +185,11 @@ export function CatalogView({
             className="w-full max-w-sm rounded-md border border-border bg-background px-3 py-2 text-sm"
             placeholder={t("catalog.searchPlaceholder")}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+              writeCatalogState(tab, e.target.value);
+            }}
             data-testid="catalog-search"
           />
 
@@ -208,7 +226,7 @@ export function CatalogView({
                     key={item.key}
                     item={item}
                     onOpenDepth={() => setDepth({ species: item.species, id: item.id })}
-                    onOpenDetail={() => setDetailId(item.id)}
+                    onOpenDetail={() => { window.location.hash = `#/packs/${encodeURIComponent(item.id)}`; }}
                   />
                 ))}
               </div>
@@ -227,16 +245,6 @@ export function CatalogView({
         </>
       )}
 
-      {/* 只读详情：installSurface={false} 让弹窗不渲染任何订阅/安装动作。
-          交易仍在 #/packs —— 一个动作只在一个地方发生。 */}
-      <PackDetailDialog
-        packId={detailId}
-        installSurface={false}
-        readOnly
-
-        onOpenChange={(open) => !open && setDetailId(null)}
-        onSubscribed={() => {}}
-      />
     </div>
   );
 }

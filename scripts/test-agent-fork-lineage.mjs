@@ -77,7 +77,8 @@ test("a lineage block never confers official status (roster-only)", () => {
 
 // ── surfaces: source contract ────────────────────────────────────────────────
 const page = read("web/src/pages/AgentStudioPage.tsx");
-const dialog = read("web/src/components/packs/PackDetailDialog.tsx");
+// 弹窗退役后 fork 按钮在详情页（pack-detail-as-page 6.0）。
+const detailPage = read("web/src/components/packs/PackDetailPage.tsx");
 const sheet = read("web/src/components/packs/AgentSpecSheet.tsx");
 const facetApp = read("facet/web/src/App.tsx");
 
@@ -93,10 +94,10 @@ test("studio seeds from the READ api and carries lineage into the draft emit", (
   assert.ok(!/\/api\/fork|fork.*POST/.test(page), "no fork write endpoint in the studio");
 });
 
-test("the dialog forks via deep link; availability follows read visibility by construction", () => {
-  assert.match(dialog, /pack-fork/, "fork button on the detail dialog");
-  assert.match(dialog, /\/studio\?fork=\$\{encodeURIComponent\(pack\.id\)\}/, "deep link carries the pack id");
-  assert.match(dialog, /studioOrigin \?\? ""/, "relative on 壹座, origin-parameterized for facet");
+test("the detail page forks via deep link; availability follows read visibility by construction", () => {
+  assert.match(detailPage, /pack-fork/, "fork button on the detail page");
+  assert.match(detailPage, /\/studio\?fork=\$\{encodeURIComponent\(id\)\}/, "deep link carries the pack id");
+  assert.match(detailPage, /studioOrigin \?\? ""/, "relative on 壹座, origin-parameterized for facet");
 });
 
 test("facet renders the affordance cross-domain and stays write-free", () => {
@@ -112,7 +113,7 @@ test("facet renders the affordance cross-domain and stays write-free", () => {
 test("the shared sheet renders lineage only when the document carries it", () => {
   assert.match(sheet, /lineage && \(/, "lineage line is data-gated");
   assert.match(sheet, /packs\.specSheet\.forkedFrom/, "rendered through the i18n key");
-  assert.match(dialog, /lineage=\{\(pack\.manifest\?\.provenance/, "dialog feeds lineage from the manifest");
+  assert.match(detailPage, /lineage=\{\(pack\.manifest\?\.provenance/, "detail page feeds lineage from the manifest");
 });
 
 test("i18n: fork chrome keys exist in all five locales", () => {

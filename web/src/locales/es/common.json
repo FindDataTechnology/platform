@@ -5289,5 +5289,56 @@
     "allHint": "Abrir esta especie",
     "sourceAbsent": "Esta especie no tiene fuente de datos configurada en este despliegue (no es lo mismo que «no hay nada»).",
     "openDetail": "Ver detalles"
+  },
+  "packPage": {
+    "back": "Volver al mercado",
+    "loading": "Cargando…",
+    "missing": "Este agente no existe",
+    "error": "Error al cargar: {{message}}",
+    "outline": "Secciones",
+    "official": "Oficial",
+    "loginToSubscribe": "Inicia sesión para suscribirte e instalar",
+    "signIn": "Iniciar sesión",
+    "subscribe": "Suscribirse e instalar",
+    "installed": "Suscrito",
+    "free": "Gratis",
+    "price": "${{price}}",
+    "castTeam": "Crear un equipo",
+    "sections": {
+      "overview": "Resumen",
+      "roles": "Roles",
+      "skills": "Habilidades",
+      "mcp": "Herramientas",
+      "memory": "Memoria",
+      "versions": "Historial de versiones",
+      "board": "Panel",
+      "cluster": "Miembros del equipo",
+      "facade": "Fachada",
+      "deploy": "Desplegar aquí",
+      "boundary": "Alcance y avisos"
+    },
+    "versions": {
+      "error": "Error al cargar versiones: {{message}}",
+      "empty": "Aún no hay versiones anteriores",
+      "current": "actual",
+      "compare": "Comparar con la actual",
+      "hideCompare": "Ocultar comparación",
+      "compareNote": "Comparado por lo declarado en el manifiesto: lo que el manifiesto no declara no se puede comparar.",
+      "noDiff": "Sin cambios estructurales frente a la v{{version}} actual",
+      "field": "Campo",
+      "fields": {
+        "name": "Nombre",
+        "description": "Descripción",
+        "roles": "Roles",
+        "skills": "Habilidades",
+        "mcpServers": "Refs MCP",
+        "connectorBindings": "Sistemas externos",
+        "bots": "Unidades bot",
+        "hasMemory": "Memoria",
+        "hasConsole": "Panel",
+        "hasCluster": "Clúster",
+        "hasFacade": "Fachada"
+      }
+    }
   }
 }

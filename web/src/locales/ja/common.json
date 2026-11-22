@@ -5289,5 +5289,56 @@
     "allHint": "この種類を開く",
     "sourceAbsent": "この種類はこの配備にデータ源が設定されていません（「何も無い」とは別の話です）。",
     "openDetail": "詳細を見る"
+  },
+  "packPage": {
+    "back": "マーケットに戻る",
+    "loading": "読み込み中…",
+    "missing": "このエージェントは存在しません",
+    "error": "読み込み失敗：{{message}}",
+    "outline": "セクション",
+    "official": "公式",
+    "loginToSubscribe": "ログインすると購読・インストールできます",
+    "signIn": "ログイン",
+    "subscribe": "購読してインストール",
+    "installed": "購読済み",
+    "free": "無料",
+    "price": "${{price}}",
+    "castTeam": "チームとして編成",
+    "sections": {
+      "overview": "概要",
+      "roles": "ロール",
+      "skills": "スキル",
+      "mcp": "ツール",
+      "memory": "メモリ",
+      "versions": "バージョン履歴",
+      "board": "ボード",
+      "cluster": "チームメンバー",
+      "facade": "ファサード",
+      "deploy": "ここに配備",
+      "boundary": "範囲と表明"
+    },
+    "versions": {
+      "error": "バージョンの読み込みに失敗：{{message}}",
+      "empty": "まだ過去バージョンはありません",
+      "current": "現行",
+      "compare": "現行と比較",
+      "hideCompare": "比較を閉じる",
+      "compareNote": "manifest の宣言に基づく比較です。宣言されていないものは比較できません。",
+      "noDiff": "現行 v{{version}} との構造差分はありません",
+      "field": "項目",
+      "fields": {
+        "name": "名称",
+        "description": "説明",
+        "roles": "ロール数",
+        "skills": "スキル数",
+        "mcpServers": "MCP 参照数",
+        "connectorBindings": "外部システム数",
+        "bots": "ボット数",
+        "hasMemory": "メモリ宣言",
+        "hasConsole": "ボード宣言",
+        "hasCluster": "クラスタ宣言",
+        "hasFacade": "ファサード宣言"
+      }
+    }
   }
 }

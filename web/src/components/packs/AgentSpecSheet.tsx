@@ -130,6 +130,10 @@ export interface AgentSpecSheetProps {
    *  传入——本组件只渲染，不二次派生。Absent ⇒ 记忆/看板段不渲染（调用方没有数据
    *  时保持沉默，而不是画一个空表让人以为「查过了是空的」）。 */
   pillars?: SpecPillars | null;
+  /** 给各桶打上详情页的章节锚点（pack-detail-as-page 2.2）。传了就按
+   *  `roles/skills/mcp/memory/board` 命名；不传则完全不加属性（市场卡片等
+   *  复用面保持原样）。 */
+  sectionAnchors?: boolean;
 }
 
 
@@ -144,14 +148,16 @@ export interface AgentSpecSheetProps {
 function PillarMemorySection({
   memory,
   testId,
+  anchor,
 }: {
   memory: SpecPillars["memory"];
   testId: string;
+  anchor?: string;
 }) {
   const { t } = useTranslation();
   if (memory.state === "undeclared") {
     return (
-      <section data-testid={testId}>
+      <section data-testid={testId} data-section={anchor}>
         <h4 className="mb-2 font-medium">{t("packs.specSheet.memoryTitle")}</h4>
         <p className="text-xs italic text-muted-foreground" data-testid={`${testId}-undeclared`}>
           {t("packs.specSheet.memoryUndeclared")}
@@ -161,7 +167,7 @@ function PillarMemorySection({
   }
   if (memory.state === "invalid") {
     return (
-      <section data-testid={testId}>
+      <section data-testid={testId} data-section={anchor}>
         <h4 className="mb-2 font-medium">{t("packs.specSheet.memoryTitle")}</h4>
         <ul className="space-y-1 text-xs text-destructive" data-testid={`${testId}-invalid`}>
           {(memory.errors ?? []).map((e) => <li key={e}>{e}</li>)}
@@ -171,7 +177,7 @@ function PillarMemorySection({
   }
   const rows = Object.entries(memory.rows ?? {});
   return (
-    <section data-testid={testId}>
+    <section data-testid={testId} data-section={anchor}>
       <h4 className="mb-2 font-medium">{t("packs.specSheet.memoryTitle")}</h4>
       {/* 声明值与生效值并排（pillar-surfaces：不一致必须是可见态，不能静默取一）。 */}
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs" data-testid={`${testId}-axes`}>
@@ -205,14 +211,16 @@ function PillarMemorySection({
 function PillarDashboardSection({
   dashboard,
   testId,
+  anchor,
 }: {
   dashboard: SpecPillars["dashboard"];
   testId: string;
+  anchor?: string;
 }) {
   const { t } = useTranslation();
   if (dashboard.state === "undeclared") {
     return (
-      <section data-testid={testId}>
+      <section data-testid={testId} data-section={anchor}>
         <h4 className="mb-2 font-medium">{t("packs.specSheet.dashboardTitle")}</h4>
         <p className="text-xs italic text-muted-foreground" data-testid={`${testId}-undeclared`}>
           {t("packs.specSheet.dashboardUndeclared")}
@@ -222,7 +230,7 @@ function PillarDashboardSection({
   }
   const blocks = dashboard.blocks ?? [];
   return (
-    <section data-testid={testId}>
+    <section data-testid={testId} data-section={anchor}>
       <h4 className="mb-2 font-medium">{t("packs.specSheet.dashboardTitle")}</h4>
       {dashboard.headline && (
         <p className="mb-1 text-sm" data-testid={`${testId}-headline`}>{dashboard.headline}</p>
@@ -335,15 +343,19 @@ function BucketSection({
   children,
   count,
   testId,
+  anchor,
 }: {
   title: string;
   empty: string;
   children: React.ReactNode;
   count: number;
   testId: string;
+  /** 详情页的章节锚点（pack-detail-as-page 2.2）：左栏列出哪几段，内容里就得
+   *  有对应的锚点，否则那几行是死链。只在详情页传（它才有章节导航）。 */
+  anchor?: string;
 }) {
   return (
-    <section data-testid={testId}>
+    <section data-testid={testId} data-section={anchor}>
       <h4 className="font-medium mb-2">{title}</h4>
       {count === 0 ? (
         <p className="text-xs text-muted-foreground italic" data-testid={`${testId}-empty`}>
@@ -377,6 +389,7 @@ export function AgentSpecSheet({
   personaPresent,
   team,
   pillars,
+  sectionAnchors = false,
 }: AgentSpecSheetProps) {
   const { t } = useTranslation();
 
@@ -470,6 +483,7 @@ export function AgentSpecSheet({
         empty={t("packs.specSheet.emptyPersona")}
         count={roleRows.length}
         testId={`${testIdPrefix}-persona`}
+        anchor={sectionAnchors ? "roles" : undefined}
       >
         <div className="space-y-2">
           {roleRows.map((a) => (
@@ -491,8 +505,7 @@ export function AgentSpecSheet({
               {!!a.rhythm?.length && (
                 <div className="flex flex-wrap gap-1 mt-1" data-testid={`${testIdPrefix}-agent-rhythm-default-${a.id}`}>
                   {a.rhythm.map((r, j) => (
-                    /* biome-ignore lint/suspicious/noArrayIndexKey: read-only chips from an immutable manifest snapshot — never reordered */
-                    <span key={j} className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                    <span key={`${r.daily ?? r.every}-${r.do ?? ""}-${j}`} className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
                       {r.daily ?? r.every}
                       {r.do ? ` · ${r.do.slice(0, 18)}${r.do.length > 18 ? "…" : ""}` : ""}
                     </span>
@@ -511,6 +524,7 @@ export function AgentSpecSheet({
         empty={t("packs.specSheet.emptySkills")}
         count={skillRows.length}
         testId={`${testIdPrefix}-skills`}
+        anchor={sectionAnchors ? "skills" : undefined}
       >
         <div className="space-y-2">
           {skillRows.map((s) => {
@@ -565,6 +579,7 @@ export function AgentSpecSheet({
         empty={t("packs.specSheet.emptyMcp")}
         count={mcpRows.length}
         testId={`${testIdPrefix}-mcp`}
+        anchor={sectionAnchors ? "mcp" : undefined}
       >
         <ul className="space-y-1">
           {mcpRows.map((r) => (
@@ -601,8 +616,8 @@ export function AgentSpecSheet({
           mcp 桶承担，这里只补两个读者在别处看不到的柱。段序与
           `PILLAR_ORDER`（memory / toolkit / dashboard）一致——工具面在前，
           记忆与看板依次在后。 */}
-      {pillars && <PillarMemorySection memory={pillars.memory} testId={`${testIdPrefix}-memory`} />}
-      {pillars && <PillarDashboardSection dashboard={pillars.dashboard} testId={`${testIdPrefix}-dashboard`} />}
+      {pillars && <PillarMemorySection memory={pillars.memory} testId={`${testIdPrefix}-memory`} anchor={sectionAnchors ? "memory" : undefined} />}
+      {pillars && <PillarDashboardSection dashboard={pillars.dashboard} testId={`${testIdPrefix}-dashboard`} anchor={sectionAnchors ? "board" : undefined} />}
 
       {/* 团队编制（openspec: team-derivation）。渲染服务端 `deriveTeam()` 的结果，
           不在这一层重新派生——「编制只在一处派生」是本模块存在的理由。 */}

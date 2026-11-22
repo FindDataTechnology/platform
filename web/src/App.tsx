@@ -42,6 +42,11 @@ const DocumentsPage = lazy(() =>
 // lazy import goes with it (the page module stays single-sourced for the facet
 // host, web/ tree alias `@`).
 const AgentMarketPage = lazy(() => import("@/pages/AgentMarketPage").then((m) => ({ default: m.AgentMarketPage })));
+// 智能体详情页（pack-detail-as-page）：pack-detail 从市场弹窗升为独立地址，
+// 交易面（订阅/安装/部署/版本对比）全在这一页。
+const AgentPackDetailPage = lazy(() =>
+  import("@/pages/AgentPackDetailPage").then((m) => ({ default: m.AgentPackDetailPage })),
+);
 // 渠道 (restructure-yizuo-ia): the social-bot management surface left the
 // Settings modal for primary navigation — answering on Telegram/飞书/企微/
 // 公众号 is an outbound-communication work surface, not configuration.
@@ -170,7 +175,8 @@ export default function App() {
   // clear it whenever the authenticated identity changes. window-focus
   // revalidation lives in the hook itself.
   const catalogVersion = useChatStore((s) => s.catalogVersion);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `identityKey` is the deliberate trigger — an identity switch invalidates everything cached for the previous one
+  // `identityKey` is the deliberate trigger — an identity switch invalidates
+  // everything cached for the previous one.
   useEffect(() => {
     listCacheClear();
   }, [identityKey]);
@@ -432,6 +438,9 @@ export default function App() {
             <Route path="/resources" element={<ResourcesPage send={send} />} />
             <Route path="/memory" element={<MemoryPage />} />
             <Route path="/agents" element={<AgentMarketPage />} />
+            {/* Must come after nothing and match longer than /agents: the
+                detail is a page address, shareable and reloadable. */}
+            <Route path="/agents/:packId" element={<AgentPackDetailPage />} />
             {/* 装包深链靶 (restructure-yizuo-ia): the pack surface merged INTO
                 /agents, so /packs redirects into the matching tab and keeps
                 every other query param (`deployCastPack=` handoff included). */}

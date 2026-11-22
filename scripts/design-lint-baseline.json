@@ -1,58 +1,4 @@
 {
-  "web/src/pages/AgentMarketPage.tsx": {
-    "tiny-control": 1
-  },
-  "web/src/pages/AgentStudioPage.tsx": {
-    "tiny-control": 3
-  },
-  "web/src/pages/AppCenterPage.tsx": {
-    "tiny-control": 2
-  },
-  "web/src/pages/BoardsPage.tsx": {
-    "tiny-control": 3
-  },
-  "web/src/pages/BotsPage.tsx": {
-    "tiny-control": 1
-  },
-  "web/src/pages/ChatPage.tsx": {
-    "tiny-control": 4
-  },
-  "web/src/pages/CustomPresetsPage.tsx": {
-    "tiny-control": 8
-  },
-  "web/src/pages/DocumentsPage.tsx": {
-    "tiny-control": 8
-  },
-  "web/src/pages/FleetPage.tsx": {
-    "tiny-control": 6
-  },
-  "web/src/pages/FleetsPage.tsx": {
-    "tiny-control": 36
-  },
-  "web/src/pages/InboxPage.tsx": {
-    "tiny-control": 3
-  },
-  "web/src/pages/MachinesPage.tsx": {
-    "tiny-control": 7
-  },
-  "web/src/pages/MemoryPage.tsx": {
-    "tiny-control": 9
-  },
-  "web/src/pages/ResourcesPage.tsx": {
-    "tiny-control": 4
-  },
-  "web/src/pages/TasksPage.tsx": {
-    "tiny-control": 4
-  },
-  "web/src/pages/TeamDirectoryPage.tsx": {
-    "tiny-control": 1
-  },
-  "web/src/pages/TracePage.tsx": {
-    "tiny-control": 2
-  },
-  "web/src/pages/ZhiyuRoomPage.tsx": {
-    "tiny-control": 4
-  },
   "web/src/components/ActionCard.tsx": {
     "side-tab-border": 1,
     "tiny-control": 1
@@ -240,8 +186,11 @@
   "web/src/components/packs/MyPacksView.tsx": {
     "tiny-control": 2
   },
-  "web/src/components/packs/PackDetailDialog.tsx": {
-    "tiny-control": 12
+  "web/src/components/packs/PackDeployPanel.tsx": {
+    "tiny-control": 5
+  },
+  "web/src/components/packs/PackDetailPage.tsx": {
+    "tiny-control": 5
   },
   "web/src/components/packs/PackDraftsView.tsx": {
     "tiny-control": 7
@@ -253,6 +202,9 @@
     "tiny-control": 1
   },
   "web/src/components/packs/PackVersionList.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/components/packs/PackVersionSection.tsx": {
     "tiny-control": 2
   },
   "web/src/components/packs/VendorEarningsPanel.tsx": {
@@ -303,5 +255,59 @@
   },
   "web/src/components/tuning/VerdictScorecard.tsx": {
     "tiny-control": 1
+  },
+  "web/src/pages/AgentMarketPage.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/pages/AgentStudioPage.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/pages/AppCenterPage.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/pages/BoardsPage.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/pages/BotsPage.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/pages/ChatPage.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/pages/CustomPresetsPage.tsx": {
+    "tiny-control": 8
+  },
+  "web/src/pages/DocumentsPage.tsx": {
+    "tiny-control": 8
+  },
+  "web/src/pages/FleetPage.tsx": {
+    "tiny-control": 6
+  },
+  "web/src/pages/FleetsPage.tsx": {
+    "tiny-control": 36
+  },
+  "web/src/pages/InboxPage.tsx": {
+    "tiny-control": 3
+  },
+  "web/src/pages/MachinesPage.tsx": {
+    "tiny-control": 7
+  },
+  "web/src/pages/MemoryPage.tsx": {
+    "tiny-control": 9
+  },
+  "web/src/pages/ResourcesPage.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/pages/TasksPage.tsx": {
+    "tiny-control": 4
+  },
+  "web/src/pages/TeamDirectoryPage.tsx": {
+    "tiny-control": 1
+  },
+  "web/src/pages/TracePage.tsx": {
+    "tiny-control": 2
+  },
+  "web/src/pages/ZhiyuRoomPage.tsx": {
+    "tiny-control": 4
   }
 }
