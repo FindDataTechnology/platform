@@ -96,10 +96,11 @@ test("卡片子元素锚不得以 pack-card- 开头（e2e 前缀计数纪律）"
   // ${testId} 插值锚是卡片自身/信号——信号锚必须用 pack-signals- 前缀
   const signalAnchors = anchors.filter((a) => a.includes("pack-") && a.includes("signals"));
   for (const a of signalAnchors) assert.ok(a.startsWith("pack-signals-"), `信号锚前缀违规: ${a}`);
-  // 四枚信号锚（技能/角色/工具/外部系统）。判据用**后缀集合**而不是个数：
-  // 只比个数时，把其中一枚写成另一枚的副本也照样绿（`pack-signals-<id>-skills` 出现两次 = 4 个锚却少一枚信号）。
+  // 五枚信号锚（技能/角色/工具/成员/外部系统）。判据用**后缀集合**而不是个数：
+  // 只比个数时，把其中一枚写成另一枚的副本也照样绿（`pack-signals-<id>-skills` 出现两次 = 5 个锚却少一枚信号）。
+  // 成员锚（members）2026-11-21 随舰队成员信号加入 PackCard —— 与四枚同形，故并入本集合。
   const signalKeys = signalAnchors.map((a) => a.replace(/^pack-signals-\$\{pack\.id\}-/, "")).sort();
-  assert.deepEqual(signalKeys, ["connectors", "roles", "skills", "tools"], "四枚信号锚: 技能/角色/工具/外部系统");
+  assert.deepEqual(signalKeys, ["connectors", "members", "roles", "skills", "tools"], "五枚信号锚: 技能/角色/工具/成员/外部系统");
 });
 
 test("五语 packs.specSheet.compactRoles 与 PackCard 信号消费一致", () => {

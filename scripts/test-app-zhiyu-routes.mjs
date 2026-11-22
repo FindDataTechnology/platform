@@ -95,12 +95,21 @@ test("4.1 the list pushes the exact pathname the router resolved", () => {
 test("4.1 zhiyu is registered in the tab layout and every tab has a translator key", () => {
   const layout = fs.readFileSync(path.join(ROUTES_DIR, "(tabs)", "_layout.tsx"), "utf8");
   const names = [...layout.matchAll(/<Tabs\.Screen\s+name="([^"]+)"/g)].map((m) => m[1]);
-  assert.deepEqual(names, ["index", "cron", "resources", "zhiyu"], `tab registration order, got ${names.join(", ")}`);
+  assert.deepEqual(names, ["index", "inbox", "cron", "resources", "zhiyu"], `tab registration order, got ${names.join(", ")}`);
 
   // Every string on these screens goes through i18n; both app locales must have
-  // the keys, or the tab renders as a raw key on one language.
+  // the keys, or the tab renders as a raw key on one language. Drive the check
+  // from the `title: t("…")` key each Tabs.Screen declares (a tab's name and its
+  // title key are not the same — index renders `tabs.chat`), so a tab added
+  // later (inbox, 2026-11-19) is covered without editing this test.
+  const titleKeys = [...layout.matchAll(/<Tabs\.Screen[\s\S]*?title:\s*t\("([^"]+)"\)/g)].map((m) => m[1]);
+  assert.equal(titleKeys.length, names.length, "every Tabs.Screen declares a translator title");
   for (const locale of ["zh-CN.json", "en.json"]) {
     const dict = JSON.parse(fs.readFileSync(path.join(APP_ROOT, "src", "i18n", locale), "utf8"));
+    const lookup = (key) => key.split(".").reduce((o, k) => o?.[k], dict);
+    for (const key of titleKeys) {
+      assert.ok(lookup(key), `${locale}: ${key} (a tab title has no translator key)`);
+    }
     assert.ok(dict.tabs?.zhiyu, `${locale}: tabs.zhiyu`);
     assert.ok(dict.zhiyu, `${locale}: zhiyu namespace`);
     for (const key of ["untitled", "emptyList", "loadEarlier", "placeholder", "send", "talk", "shortPoll", "handoffCopied"]) {

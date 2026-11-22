@@ -1,6 +1,7 @@
 {
   "tabs": {
     "chat": "对话",
+    "inbox": "待办",
     "cron": "定时任务",
     "resources": "资源库",
     "zhiyu": "智语"

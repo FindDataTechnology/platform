@@ -93,7 +93,17 @@ test("3.4 spine: a contract-shaped entry lands in the supply catalog with the pr
   }
   assert.equal(row.id, entry.slug, "identity comes from the contract's slug, never a re-derivation");
   assert.equal(row.status, "paused", "a declared status passes through unchanged");
-  assert.deepEqual(row.deployment, { packId: "law-bench", agentId: "assistant", deployedAt: 1 });
+  // The deployment join carries the bookkeeping AND the resolved state (unify-supply-
+  // spine-lineage D5 / 10d588314: `deployment.state` says whether anything is actually
+  // serving it, so a registered-but-undeployed agent is still findable). Assert the
+  // join passes through unchanged and that a state was resolved — not exact equality,
+  // which would pin the row to a pre-state shape the spine no longer promises.
+  assert.deepEqual(
+    { packId: row.deployment.packId, agentId: row.deployment.agentId, deployedAt: row.deployment.deployedAt },
+    { packId: "law-bench", agentId: "assistant", deployedAt: 1 },
+    "the deployment join passes the bookkeeping through unchanged",
+  );
+  assert.equal(typeof row.deployment.state, "string", "the join resolves a state");
 });
 
 test("3.4 owner cross-line: every byCaller field fleets.js aggregates is declared by the contract", () => {

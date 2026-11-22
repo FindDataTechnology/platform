@@ -1,6 +1,7 @@
 {
   "tabs": {
     "chat": "Chat",
+    "inbox": "Inbox",
     "cron": "Scheduled",
     "resources": "Library",
     "zhiyu": "Zhiyu"
