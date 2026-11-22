@@ -57,6 +57,10 @@ export type CatalogItem = {
   href: string | null;
   /** 有深度视图的物种才有（mcp / skill）。 */
   depth: boolean;
+  /** 该条目存在但尚未运行（facade 的 undeployed）：卡片要显式标出来，否则
+   *  它和「正在服务」长得一样，访客点开才发现聊不了。不影响它被列出——
+   *  supply-catalog 既有要求写明未部署的 agent 必须以 undeployed facade 出现。 */
+  notRunning?: boolean;
   /** 有详情页可跳的物种（pack）：目录页链到 `#/packs/<id>`，与市场同一个地址。 */
   detail: boolean;
 };
@@ -139,7 +143,11 @@ export function toCatalogItem(species: Species, raw: Record<string, unknown>): C
         title: firstStr(raw.name, id),
         summary: firstStr(raw.description),
         // 部署状态如实显示；未知就不给角标，不写「运行中」这种编造的乐观值。
-        badges: [firstStr(raw.runnable), state && state !== "undeployed" ? state : "未部署"].filter(Boolean),
+        // undeployed 不再混进徽标（那里原是中文硬编码，五语下也显示中文）——
+        // 它单独成 notRunning 标记，由 UI 用当前语言的标签显式呈现。
+        badges: [firstStr(raw.runnable), state && state !== "undeployed" ? state : ""].filter(Boolean),
+        // 无 deployment 记录也读作「未运行」——缺记录不等于正在服务。
+        notRunning: state !== "serving" && state !== "idle",
         href: null,
         depth: false,
         detail: false,
@@ -197,4 +205,34 @@ export function mapResponse(species: Species, body: unknown): MapOutcome {
     if (item) items.push(item);
   }
   return { items, error: null, sourceAbsent };
+}
+
+// ── 数据锚的分层（facet-catalog-species-curation D1 / 2.3）────────────────────
+//
+// 数据锚混合了两种东西：22 个数据源（「寻数有什么数据」的答案）与 461 个单项
+// 指标（SPY_ma5 这类，给机器挂靠用）。前者是逛点，后者不是。
+//
+// 这个函数只回答「默认该列哪些、折起哪些」，**不删任何条目**——端点与机器面
+// 仍返回全量；是否展开由调用方决定。纯函数，可在 node 下测。
+export type AnchorSplit = { sources: CatalogItem[]; indicators: CatalogItem[] };
+
+/** 按 kind 把数据锚切成「源」与「指标」两组。kind 落在 badges 里（见上面
+ *  data-anchor 分支）。非数据锚物种返回 null——分层只对这一个物种有意义。 */
+export function splitAnchors(species: Species | "all", items: CatalogItem[]): AnchorSplit | null {
+  if (species !== "data-anchor") return null;
+  const sources: CatalogItem[] = [];
+  const indicators: CatalogItem[] = [];
+  for (const i of items) {
+    // 未标 kind 的条目当作源：宁可多列一条，也不让一条真实数据在默认视图消失。
+    if (i.badges.includes("indicator")) indicators.push(i);
+    else sources.push(i);
+  }
+  return { sources, indicators };
+}
+
+/** 默认视图：数据锚只列源；其他物种原样返回；展开时也原样返回。 */
+export function defaultView(species: Species | "all", items: CatalogItem[], expanded = false): CatalogItem[] {
+  const split = splitAnchors(species, items);
+  if (!split || expanded) return items;
+  return split.sources;
 }

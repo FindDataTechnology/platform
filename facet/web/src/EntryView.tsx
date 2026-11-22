@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next";
 import { Container } from "./Container";
 import { ProductIntroSection } from "./EntrySections";
 
-const SPECIES = ["pack", "skill", "mcp", "facade", "official-data"] as const;
+const SPECIES = ["pack", "skill", "mcp", "facade", "data-anchor"] as const;
 
 export function EntryView({ signedIn = false }: { signedIn?: boolean } = {}) {
   const { t } = useTranslation();
@@ -62,12 +62,12 @@ export function EntryView({ signedIn = false }: { signedIn?: boolean } = {}) {
             {t("entryPlaza.catalogEntry.lead")}
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
-            {(["pack", "skill", "mcp", "facade", "official-data"] as const).map((s) => (
+            {SPECIES.map((s) => (
               <span
                 key={s}
                 className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"
               >
-                {t(`entryPlaza.materials.species.${s === "official-data" ? "official-data" : s}.title`, s)}
+                {t(`entryPlaza.materials.species.${s}.title`, s)}
               </span>
             ))}
           </div>

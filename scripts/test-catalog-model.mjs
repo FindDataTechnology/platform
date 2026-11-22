@@ -11,7 +11,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { SPECIES_SPECS, toCatalogItem, mapResponse } from "../facet/web/src/catalog-model.ts";
+import { SPECIES_SPECS, toCatalogItem, mapResponse, splitAnchors, defaultView } from "../facet/web/src/catalog-model.ts";
 
 const specs = SPECIES_SPECS;
 
@@ -57,16 +57,21 @@ test("skill falls back to displayName when unannotated", () => {
 });
 
 test("facade states an undeployed agent as such instead of inventing a status", () => {
+  // 契约变更（facet-catalog-species-curation 3.2）：未运行不再是徽标里的中文硬编码
+  // ——它单独成 notRunning 标记，由 UI 用当前语言呈现；五语下不会再冒出中文。
   const undeployed = toCatalogItem("facade", { id: "x", name: "X", deployment: { state: "undeployed" } });
-  assert.deepEqual(undeployed.badges, ["未部署"]);
+  assert.equal(undeployed.notRunning, true);
+  assert.ok(!undeployed.badges.includes("未部署"), "no hardcoded Chinese in the badges");
 
   const serving = toCatalogItem("facade", { id: "y", name: "Y", runnable: "reachable", deployment: { state: "serving" } });
   assert.ok(serving.badges.includes("serving"));
+  assert.notEqual(serving.notRunning, true, "a serving agent is not marked as not running");
 });
 
 test("facade with no deployment record does not claim a state", () => {
   const item = toCatalogItem("facade", { id: "z", name: "Z" });
-  assert.deepEqual(item.badges, ["未部署"], "absence of a record reads as not deployed, never as running");
+  // 缺记录读作「未运行」——不是「正在服务」。标记走结构化字段，不走中文徽标。
+  assert.equal(item.notRunning, true, "absence of a record reads as not running, never as serving");
 });
 
 test("data-anchor carries its kind as a badge", () => {
@@ -137,4 +142,46 @@ test("only pack declares an in-place detail", () => {
   ]) {
     assert.equal(toCatalogItem(species, raw).detail, false, `${species} has no pack-style detail`);
   }
+});
+
+
+// ── 数据锚的分层（facet-catalog-species-curation 2.3）───────────────────────
+//
+// 目录默认只列数据源，指标折起来。这里钉住三件事：
+//   1. 只有数据锚会被切；其他物种原样返回；
+//   2. 切分不丢条目（源 + 指标 == 全部），否则「折叠」就变成了「删数据」；
+//   3. 未标 kind 的条目算源——宁可多列一条，也不让真实数据在默认视图消失。
+const mk = (id, kind) => ({ key: `anchor:${id}`, species: "data-anchor", id, title: id, summary: "", badges: kind ? [kind] : [], href: null, depth: false, detail: false });
+
+test("splitAnchors: 只有数据锚会被切分", () => {
+  const packs = [{ key: "pack:x", species: "pack", id: "x", title: "x", summary: "", badges: [], href: null, depth: false, detail: true }];
+  assert.equal(splitAnchors("pack", packs), null);
+  assert.equal(splitAnchors("all", packs), null);
+  assert.ok(splitAnchors("data-anchor", packs));
+});
+
+test("splitAnchors: 源与指标分开，且一条都不丢", () => {
+  const items = [mk("a", "source"), mk("b", "indicator"), mk("c", "source"), mk("d", "indicator")];
+  const split = splitAnchors("data-anchor", items);
+  assert.equal(split.sources.length, 2);
+  assert.equal(split.indicators.length, 2);
+  // 切分是划分，不是过滤：总数必须守恒。
+  assert.equal(split.sources.length + split.indicators.length, items.length);
+});
+
+test("splitAnchors: 未标 kind 的条目算源，不在默认视图消失", () => {
+  const split = splitAnchors("data-anchor", [mk("nokind", null), mk("i", "indicator")]);
+  assert.deepEqual(split.sources.map((x) => x.id), ["nokind"]);
+  assert.deepEqual(split.indicators.map((x) => x.id), ["i"]);
+});
+
+test("defaultView: 默认只列源，展开后全量", () => {
+  const items = [mk("s", "source"), mk("i1", "indicator"), mk("i2", "indicator")];
+  assert.deepEqual(defaultView("data-anchor", items).map((x) => x.id), ["s"]);
+  assert.equal(defaultView("data-anchor", items, true).length, 3);
+});
+
+test("defaultView: 非数据锚物种原样返回（分层不外溢）", () => {
+  const skills = [{ key: "skill:a", species: "skill", id: "a", title: "a", summary: "", badges: [], href: null, depth: true, detail: false }];
+  assert.deepEqual(defaultView("skill", skills), skills);
 });

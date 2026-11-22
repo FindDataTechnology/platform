@@ -5184,10 +5184,10 @@
           "body": "Un personnage d'accueil figé avec son corpus : parlez à la façade pour connaître son principal ; ce qui n'est pas couvert est honnêtement décliné, jamais inventé. Déployable comme service de conversation permanent — visiteurs gratuits, le principal paie.",
           "example": "Exemple : la façade FindData — demandez-lui l'entreprise, les projets en cours et les capacités."
         },
-        "official-data": {
-          "title": "Ancre de données officielle",
-          "body": "Le rayon officiel ancré sur les MCP de données propres à FindData : sources réelles macro, finance et panels de villes, avec sources et périodes citées, composables en packs.",
-          "example": "Exemple : le panel de villes — 209 indicateurs × 297 villes × 2000–2024."
+        "data-anchor": {
+          "title": "Ancre de données officielles",
+          "body": "Points de données officielles citables : sources externes comme la Banque mondiale et les instituts nationaux de statistique, plus les indicateurs individuels qui en dérivent (par ex. SPY_ma5). Chaque lecture porte sa source et sa période, et les packs peuvent les référencer. Les sources sont listées d'abord ; les indicateurs se déploient.",
+          "example": "Exemple : données ouvertes de la Banque mondiale — plus de 1 400 indicateurs (PIB, population, commerce)."
         }
       }
     },
@@ -5275,6 +5275,14 @@
       "data-anchor": "Données officielles",
       "plugin": "Extensions"
     },
+    "speciesDesc": {
+      "pack": "Un pack installable : compétences, références d'outils et rôles, figés en une version immuable à la publication.",
+      "skill": "Une compétence revue de l'écosystème ouvert : installez-la seule, ou laissez un pack la référencer.",
+      "mcp": "Un service d'outils que le modèle peut appeler, avec un résumé humain et un brief machine.",
+      "facade": "Un agent déjà en marche : discutez-lui directement. Certains sont déployés depuis un pack du marché — le pack est ce que l'on installe, l'agent est ce qui tourne déjà.",
+      "data-anchor": "Points de données officielles citables : sources externes (instituts de statistique, Banque mondiale) et les indicateurs individuels qui en dérivent. Les sources d'abord ; les indicateurs se déploient.",
+      "plugin": "Un greffon qui étend les capacités du runtime."
+    },
     "searchPlaceholder": "Rechercher des matériaux…",
     "loading": "Chargement…",
     "error": "Impossible de lire {{species}} : {{message}} (ce n’est pas « il n’y en a pas », la requête a échoué)",
@@ -5288,7 +5296,10 @@
     },
     "allHint": "Ouvrir cette espèce",
     "sourceAbsent": "Cette espèce n’a pas de source de données configurée dans ce déploiement (ce n’est pas « il n’y a rien »).",
-    "openDetail": "Voir le détail"
+    "openDetail": "Voir le détail",
+    "facadeUndeployed": "Hors service",
+    "anchorFold": "Plus {{count}} indicateurs individuels",
+    "anchorFoldHide": "Masquer les indicateurs"
   },
   "packPage": {
     "back": "Retour au marché",

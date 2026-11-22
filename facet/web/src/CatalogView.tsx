@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { SPECIES_SPECS, mapResponse, type CatalogItem, type Species } from "./catalog-model";
+import { SPECIES_SPECS, mapResponse, splitAnchors, defaultView, type CatalogItem, type Species } from "./catalog-model";
 import { ServerDepth } from "./McpCatalog";
 
 type Tab = "all" | Species;
@@ -129,7 +129,16 @@ export function CatalogView({
     );
   }, [state, query]);
 
-  const shown = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
+  // 数据锚按浏览价值分层（facet-catalog-species-curation D1）：461 个 SPY_ma5
+  // 这类单项指标对逛广场的人零价值，22 个数据源才是「寻数有什么数据」的答案。
+  // 默认只列 source，指标折在「另有 N 个」后面——**不删数据**，端点与机器面
+  // 全量不变，这纯粹是呈现取舍。
+  const [anchorExpanded, setAnchorExpanded] = useState(false);
+  // 分层逻辑在 catalog-model 里（纯函数可测），这里只取结果。
+  const anchorSplit = useMemo(() => splitAnchors(tab, filtered), [tab, filtered]);
+  const visible = useMemo(() => defaultView(tab, filtered, anchorExpanded), [tab, filtered, anchorExpanded]);
+
+  const shown = useMemo(() => visible.slice(0, page * PAGE_SIZE), [visible, page]);
 
   const back = useCallback(() => setDepth(null), []);
 
@@ -180,6 +189,16 @@ export function CatalogView({
         <AllSpecies counts={counts} onPick={pickTab} />
       ) : (
         <>
+          {/* 每个物种一句可读说明（facet-catalog-species-curation 1.x）：
+              一个访客不认识的物种名（「官方数据锚」）如果只有标签没有解释，
+              等于让他自己猜。这一句也承担「讲清 pack 与 facade 的关系」——
+              facade 的说明里写明它是「已经在跑的」、pack 是「可装的」。 */}
+          <p
+            className="max-w-3xl text-sm leading-relaxed text-muted-foreground"
+            data-testid={`catalog-species-desc-${tab}`}
+          >
+            {t(`catalog.speciesDesc.${tab}`, "")}
+          </p>
           <input
             type="search"
             className="w-full max-w-sm rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -206,7 +225,7 @@ export function CatalogView({
             </p>
           )}
 
-          {state.kind === "ready" && filtered.length === 0 && (
+          {state.kind === "ready" && visible.length === 0 && !(anchorSplit && anchorSplit.indicators.length > 0) && (
             <p className="text-sm text-muted-foreground" data-testid={state.sourceAbsent ? "catalog-source-absent" : "catalog-empty"}>
               {/* 「源没接入」是部署缺配置，「0 条」是内容为空 —— 两句话不能混。 */}
               {state.sourceAbsent
@@ -230,14 +249,30 @@ export function CatalogView({
                   />
                 ))}
               </div>
-              {filtered.length > shown.length && (
+              {visible.length > shown.length && (
                 <button
                   type="button"
                   onClick={() => setPage((p) => p + 1)}
                   className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
                   data-testid="catalog-more"
                 >
-                  {t("catalog.loadMore", { shown: shown.length, total: filtered.length })}
+                  {t("catalog.loadMore", { shown: shown.length, total: visible.length })}
+                </button>
+              )}
+              {/* 数据锚的指标折叠（facet-catalog-species-curation 2.1）：
+                  默认视图只列数据源；指标折在这里，展开后全都在。总数写出来，
+                  否则「目录看起来变少了」会被读成「数据丢了」。 */}
+              {anchorSplit && anchorSplit.indicators.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAnchorExpanded((v) => !v)}
+                  className="rounded-md border border-border px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+                  data-testid="catalog-anchor-fold"
+                  data-expanded={anchorExpanded ? "true" : "false"}
+                >
+                  {anchorExpanded
+                    ? t("catalog.anchorFoldHide")
+                    : t("catalog.anchorFold", { count: anchorSplit.indicators.length })}
                 </button>
               )}
             </>
@@ -294,6 +329,17 @@ function Card({
   return (
     <article className="flex flex-col gap-2 rounded-lg border border-border bg-muted/30 p-4" data-testid={`catalog-card-${item.key}`}>
       <h3 className="text-sm font-medium leading-snug">{item.title}</h3>
+      {/* 未上线的分身显式标出来（facet-catalog-species-curation 3.2）：
+          它仍被列出（既有 spec 要求 undeployed 必须出现），但和「正在服务」
+          长得一样会让访客点开才发现聊不了。中性措辞，不是「故障」。 */}
+      {item.notRunning && (
+        <span
+          className="w-fit rounded border border-status-waiting/50 bg-status-waiting/10 px-1.5 py-0.5 text-[10px] text-status-waiting"
+          data-testid={`catalog-not-running-${item.id}`}
+        >
+          {t("catalog.facadeUndeployed")}
+        </span>
+      )}
       {item.badges.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {item.badges.map((b) => (

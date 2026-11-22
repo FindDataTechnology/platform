@@ -5184,10 +5184,10 @@
           "body": "Un personaje de recepción congelado con su corpus: habla con la fachada para conocer a su principal; lo no cubierto se declina con honestidad, nunca se inventa. Desplegable como servicio de conversación permanente: visitantes gratis, el principal paga.",
           "example": "Ejemplo: la fachada de FindData: pregúntale por la empresa, los proyectos y las capacidades."
         },
-        "official-data": {
-          "title": "Ancla de datos oficial",
-          "body": "El estante oficial anclado en los MCP de datos propios de FindData: fuentes reales de macro, finanzas y paneles de ciudades, con fuentes y periodos citados, componibles en packs.",
-          "example": "Ejemplo: el panel de ciudades: 209 indicadores × 297 ciudades × 2000–2024."
+        "data-anchor": {
+          "title": "Ancla de datos oficiales",
+          "body": "Puntos de datos oficiales citables: fuentes externas como el Banco Mundial y los institutos nacionales de estadística, más los indicadores individuales derivados de ellas (p. ej. SPY_ma5). Cada lectura lleva su fuente y periodo, y los packs pueden referenciarlas. Primero se listan las fuentes; los indicadores se despliegan.",
+          "example": "Ejemplo: datos abiertos del Banco Mundial — más de 1.400 indicadores de PIB, población y comercio."
         }
       }
     },
@@ -5275,6 +5275,14 @@
       "data-anchor": "Datos oficiales",
       "plugin": "Complementos"
     },
+    "speciesDesc": {
+      "pack": "Un paquete instalable: habilidades, referencias a herramientas y roles, congelados en una versión inmutable al publicarse.",
+      "skill": "Una habilidad revisada del ecosistema abierto: instálala sola o deja que un paquete la referencie.",
+      "mcp": "Un servicio de herramientas que el modelo puede invocar, con resumen humano y breve para máquinas.",
+      "facade": "Un agente que ya está en marcha: conversa con él directamente. Algunos se despliegan desde un paquete del mercado: el paquete es lo que puedes instalar, el agente es lo que ya corre.",
+      "data-anchor": "Puntos de datos oficiales citables: fuentes externas (institutos de estadística, el Banco Mundial) y los indicadores individuales derivados. Primero se listan las fuentes; los indicadores se despliegan.",
+      "plugin": "Un complemento que amplía las capacidades del entorno de ejecución."
+    },
     "searchPlaceholder": "Buscar materiales…",
     "loading": "Cargando…",
     "error": "No se puede leer {{species}}: {{message}} (no significa «no hay»: esta consulta falló)",
@@ -5288,7 +5296,10 @@
     },
     "allHint": "Abrir esta especie",
     "sourceAbsent": "Esta especie no tiene fuente de datos configurada en este despliegue (no es lo mismo que «no hay nada»).",
-    "openDetail": "Ver detalles"
+    "openDetail": "Ver detalles",
+    "facadeUndeployed": "Inactivo",
+    "anchorFold": "Además, {{count}} indicadores individuales",
+    "anchorFoldHide": "Ocultar indicadores"
   },
   "packPage": {
     "back": "Volver al mercado",

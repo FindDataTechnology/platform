@@ -5184,10 +5184,10 @@
           "body": "A reception persona frozen with its corpus: chat with the facade to learn about its principal; anything uncovered is honestly declined, never invented. Deployable as a standing conversation service — visitors free, the principal pays.",
           "example": "Example: the FindData facade — ask it about the company, running projects, and capabilities."
         },
-        "official-data": {
+        "data-anchor": {
           "title": "Official Data Anchor",
-          "body": "The official shelf anchored on FindData's own data MCPs: macro, financial, and city-panel sources with cited sources and periods, composable into packs.",
-          "example": "Example: the city panel — 209 indicators × 297 cities × 2000–2024."
+          "body": "Citable official data points: external sources such as the World Bank and national statistics offices, plus the individual indicators derived from them (e.g. SPY_ma5). Every reading carries its source and period, and packs can reference them. Sources are listed first; indicators expand.",
+          "example": "Example: World Bank Open Data — 1,400+ indicators across GDP, population and trade."
         }
       }
     },
@@ -5275,6 +5275,14 @@
       "data-anchor": "Official data",
       "plugin": "Plugins"
     },
+    "speciesDesc": {
+      "pack": "An installable pack: skills, tool references and roles, frozen into an immutable version on publish.",
+      "skill": "A reviewed skill from the open ecosystem — install on its own, or let a pack reference it.",
+      "mcp": "A tool service a model can call, each with a human summary and a machine brief.",
+      "facade": "An agent that is already running: chat with it directly. Some are deployed from a pack in the market — a pack is what you can install, a facade is what is already running.",
+      "data-anchor": "Citable official data points: external sources (statistics offices, the World Bank) and the individual indicators derived from them. Sources are listed first; indicators expand.",
+      "plugin": "A plugin that extends the runtime's capabilities."
+    },
     "searchPlaceholder": "Search materials…",
     "loading": "Loading…",
     "error": "Cannot read {{species}}: {{message}} (not \"there are none\" — this fetch failed)",
@@ -5288,7 +5296,10 @@
     },
     "allHint": "Open this species",
     "sourceAbsent": "This species has no configured data source in this deployment (which is not the same as \"nothing here\").",
-    "openDetail": "View details"
+    "openDetail": "View details",
+    "facadeUndeployed": "Not running",
+    "anchorFold": "Plus {{count}} individual indicators",
+    "anchorFoldHide": "Hide indicators"
   },
   "packPage": {
     "back": "Back to the market",
