@@ -5338,7 +5338,8 @@
         "hasConsole": "Panel",
         "hasCluster": "Clúster",
         "hasFacade": "Fachada"
-      }
+      },
+      "manifestJson": "JSON del manifiesto"
     }
   }
 }

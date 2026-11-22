@@ -27,6 +27,7 @@ import { PackInstallReport } from "./PackInstallReport";
 import { FacadeMattersPanel } from "./FacadeMattersPanel";
 import { FleetTemplateWizard } from "./FleetTemplateWizard";
 import { promptsFor, type PackGuide } from "@/lib/packGuides";
+import { useExtensionsStore } from "@/hooks/useExtensionsStore";
 
 export { sectionsFor } from "./pack-sections";
 export type { DetailSection } from "./pack-sections";
@@ -49,6 +50,7 @@ export function PackDetailPage({
   onUsePrompt,
   onGotoMine,
   onFork,
+  onOpenChat,
 }: {
   packId: string | null;
   /** 观众是否有身份，**或**这个部署本就不认证（AUTH_MODE=none 的 demo/e2e/自托管：
@@ -66,8 +68,23 @@ export function PackDetailPage({
   onGotoMine?: () => void;
   /** Fork crosses domains on facet; 壹座 navigates in place. Default = window. */
   onFork?: (packId: string) => void;
+  /** 装满后的下一步（pack-detail-as-page 6.0 迁移）：装好的角色深链到聊天
+   *  （多角色再带 cluster）。`null` = 本宿主没有会话面（facet 壳），不显示向导；
+   *  省略 = 默认按 `target` 走 react-router 不可用时的 window 跳转。 */
+  onOpenChat?: ((target: string) => void) | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // 语言变化触发**静默重取**（overhaul-market-catalog-presentation P0 1.3）：
+  // getPack 自己带 locale，切换语言后详情必须换成新语言的正文；重取期间保留
+  // 旧内容，不退回骨架屏（读者刚切个语言不该看见整页闪一下）。
+  const language = i18n.language;
+  // 工具面披露（pack-tool-declaration-gate D4）：包里声明的是「用了哪些工具」，
+  // 全量数来自 catalog 的 tool_list 快照（同一份数据源，不做实时探测）。迁移时
+  // 漏了这一项会让「声明 2 / 全量 5 工具」退化成只报声明数。
+  const { marketCatalog, refreshMarketCatalog } = useExtensionsStore();
+  useEffect(() => {
+    void refreshMarketCatalog();
+  }, [refreshMarketCatalog]);
   const [pack, setPack] = useState<PackDetail | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [err, setErr] = useState<string | null>(null);
@@ -81,13 +98,18 @@ export function PackDetailPage({
   // result must land on this page.
   const [report, setReport] = useState<PackReport | null>(null);
 
+  const packIdRef = useRef(packId);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `language` is the TRIGGER, not an input — getPack appends the locale itself
   useEffect(() => {
     if (!packId) {
       setState("missing");
       return;
     }
+    const switched = packIdRef.current === packId;
+    packIdRef.current = packId;
     let alive = true;
-    setState("loading");
+    // 同一包的换语言重取：保持当前内容，不闪骨架；换包才回到 loading。
+    if (!switched) setState("loading");
     api
       .getPack(packId)
       .then((p) => {
@@ -97,6 +119,7 @@ export function PackDetailPage({
       })
       .catch((e) => {
         if (!alive) return;
+        if (switched) return; // 静默重取失败：旧语言的正文留着，不砸成错误页
         // 404 与取数失败是两件事：前者是「这个包不在」，后者是「这次没取到」。
         const msg = String((e as Error)?.message ?? e);
         if (/404|not found/i.test(msg)) setState("missing");
@@ -108,7 +131,7 @@ export function PackDetailPage({
     return () => {
       alive = false;
     };
-  }, [packId]);
+  }, [packId, language]);
 
   const sections = useMemo(() => sectionsFor(pack, { installSurface }), [pack, installSurface]);
 
@@ -291,7 +314,10 @@ export function PackDetailPage({
               rhythm: a.serving?.rhythm,
             }))}
             skills={m.skills ?? []}
-            mcp={(m.mcpServers ?? []).map((r) => ({ ...r, totalTools: null }))}
+            mcp={(m.mcpServers ?? []).map((r) => ({
+              ...r,
+              totalTools: marketCatalog?.mcpServers?.find((s) => s.name === r.registryName)?.toolList?.length ?? null,
+            }))}
             bindings={m.connector_bindings ?? []}
             pillars={(pack as { pillars?: SpecPillars | null }).pillars ?? null}
             team={(pack as { team?: SpecTeam | null }).team ?? null}
@@ -400,7 +426,22 @@ export function PackDetailPage({
         </div>
       </aside>
 
-      {report && <PackInstallReport report={report} packName={pack.name} connector={report.connector ?? null} onClose={() => setReport(null)} />}
+      {report && (
+        <PackInstallReport
+          report={report}
+          packName={pack.name}
+          connector={report.connector ?? null}
+          onClose={() => setReport(null)}
+          footer={
+            <NextStepsFooter
+              report={report}
+              packId={pack.id}
+              onOpenChat={onOpenChat}
+              onDismiss={() => setReport(null)}
+            />
+          }
+        />
+      )}
     </div>
   );
 }
@@ -640,6 +681,56 @@ function SubscribeCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 报告末尾的下一步向导（add-pack-tutorials-and-wizard）：装完直接进对话，
+ *  CTA 带着刚装好的角色（多角色再带 cluster），不用再手动挑一次。
+ *  `onOpenChat === null` 的宿主（facet 匿名壳，没有会话面）整块不渲染。 */
+function NextStepsFooter({
+  report,
+  packId,
+  onOpenChat,
+  onDismiss,
+}: {
+  report: PackReport;
+  packId: string;
+  onOpenChat?: ((target: string) => void) | null;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  if (onOpenChat === null) return null;
+  const installed = (report.agents ?? []).filter(
+    (a) => a.status === "installed" || a.status === "reused" || a.status === "replaced",
+  );
+  const clusterMode = installed.length >= 2;
+  const target =
+    installed.length === 0
+      ? "/chat"
+      : clusterMode
+        ? `/chat?preset=${encodeURIComponent(installed[0]!.id)}&cluster=${encodeURIComponent(packId)}`
+        : `/chat?preset=${encodeURIComponent(installed[0]!.id)}`;
+  return (
+    <div
+      className="mt-3 flex items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2"
+      data-testid="pack-install-next"
+    >
+      <span className="text-xs text-muted-foreground">
+        {t(clusterMode ? "packs.report.nextHintCluster" : "packs.report.nextHint")}
+      </span>
+      <button
+        type="button"
+        className="shrink-0 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+        onClick={() => {
+          onDismiss();
+          if (onOpenChat) onOpenChat(target);
+          else window.location.assign(target);
+        }}
+        data-testid="pack-install-open-chat"
+      >
+        {t(clusterMode ? "packs.report.openChatCluster" : "packs.report.openChat")}
+      </button>
     </div>
   );
 }

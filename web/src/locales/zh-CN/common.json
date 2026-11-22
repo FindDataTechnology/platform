@@ -5338,7 +5338,8 @@
         "hasConsole": "看板声明",
         "hasCluster": "集群声明",
         "hasFacade": "分身声明"
-      }
+      },
+      "manifestJson": "清单 JSON"
     }
   }
 }

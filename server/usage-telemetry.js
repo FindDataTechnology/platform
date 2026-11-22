@@ -13,7 +13,9 @@
 // auto_vacuum=INCREMENTAL so pruned volume actually returns to the fs.
 
 import { getDb, isDbReady } from "../db.js";
+import * as dbModule from "../db.js";
 import { getChatAgentEntries } from "../catalog.js";
+import { attributionForSession } from "../lib/usage-attribution.js";
 
 const RETENTION_DAYS = Number(process.env.PACK_USAGE_RETENTION_DAYS) || 180;
 const PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -34,12 +36,40 @@ export function recordPackUsage({ userEmail, sessionId, agentId, outcome, durati
     const duration = Number.isFinite(startedAt)
       ? Math.max(0, Date.now() - startedAt)
       : Math.max(0, Number(durationMs) || 0);
+    // Channel-identity attribution (unify-im-solution 1.6): resolve which room/
+    // conversation this bot session's chat belongs to, under failure isolation.
+    // A non-bot or unmapped session yields nulls (plain 1:1 — pre-change shape).
+    let roomId = null;
+    let conversationId = null;
+    try {
+      const a = attributionForSession(
+        { getBot: dbModule.getBot, listBotChats: dbModule.listBotChats, rawDb: getDb() },
+        sessionId,
+      );
+      roomId = a.roomId ?? null;
+      conversationId = a.conversationId ?? null;
+    } catch {
+      /* attribution is advisory — never break the usage row */
+    }
+    // Channel-identity attribution (unify-im-solution 1.6): the resolvable归属
+    // this turn belongs to, or nulls for a plain 1:1 / non-bot turn. Written on
+    // the same row so a mapped chat's usage can be read by room/conversation.
     getDb()
       .prepare(
-        `INSERT INTO pack_usage_events (ts, user_email, session_id, agent_id, pack_id, outcome, duration_ms)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO pack_usage_events (ts, user_email, session_id, agent_id, pack_id, outcome, duration_ms, room_id, conversation_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(Date.now(), userEmail ?? null, String(sessionId ?? ""), String(agentId ?? "local"), packId, String(outcome ?? "ok"), duration);
+      .run(
+        Date.now(),
+        userEmail ?? null,
+        String(sessionId ?? ""),
+        String(agentId ?? "local"),
+        packId,
+        String(outcome ?? "ok"),
+        duration,
+        roomId ?? null,
+        conversationId ?? null,
+      );
   } catch (e) {
     console.warn(`[usage-telemetry] record failed (turn unaffected): ${e?.message || e}`);
   }

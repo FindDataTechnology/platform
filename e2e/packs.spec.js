@@ -677,7 +677,7 @@ test("draft saves without tools, the full-surface marker round-trips, publish re
   expect(published.manifest.mcpServers[0].fullSurfaceReason).toBe("工具经 tool_search 间接选择");
 });
 
-test("version history disclosure is lazy, carries notes, and links each version", async ({ page }) => {
+test("version history is a resident section: lists every version, links its manifest and skills, never installs", async ({ page }) => {
   const gw = seedableGateway(page);
   await seedPackBoth(
     gw,
@@ -696,6 +696,7 @@ test("version history disclosure is lazy, carries notes, and links each version"
   ];
   gw.install();
 
+  // 常驻（pack-detail-as-page 3.1）：不再有「展开披露」这一步，进页即取列表。
   const versionFetches = [];
   page.on("request", (req) => {
     if (/\/api\/packs\/pack-ver\/versions(\?|$)/.test(new URL(req.url()).pathname)) versionFetches.push(req.url());
@@ -704,27 +705,26 @@ test("version history disclosure is lazy, carries notes, and links each version"
   await gotoPacksTab(page, "market");
   await page.getByTestId("pack-card-pack-ver").click();
   const detail = page.getByTestId("pack-page");
-  const list = detail.getByTestId("pack-version-list");
-  await expect(list).toBeVisible();
+  await expect(detail.getByTestId("pack-version-section")).toBeVisible();
+  await expect(detail.getByTestId("pack-version-rows")).toBeVisible();
+  expect(versionFetches.length).toBeGreaterThan(0);
 
-  // Lazy by contract: the list has not fetched before the disclosure opens.
-  await expect(detail.getByTestId("pack-version-list-body")).toHaveCount(0);
-  expect(versionFetches.length).toBe(0);
+  // 每版都列出来，带日期/发布者/变更说明；当前版有标记。
+  await expect(detail.getByTestId("pack-version-compare-1")).toBeVisible();
+  await expect(detail.getByTestId("pack-version-section")).toContainText("v2");
+  await expect(detail.getByTestId("pack-version-section")).toContainText("v1");
 
-  await detail.getByTestId("pack-version-list-toggle").click();
-  await expect(detail.getByTestId("pack-version-list-row-2")).toBeVisible();
-  await expect(detail.getByTestId("pack-version-list-row-1")).toBeVisible();
-  await expect(detail.getByTestId("pack-version-list-notes-2")).toContainText("v2：新增检索示例。");
-  await expect(detail.getByTestId("pack-version-list-notes-1")).toContainText("初版：审查骨架。");
-  await expect(detail.getByTestId("pack-version-list-row-2")).toContainText("当前");
-
-  // Per-version inspect links (read-only; no install action in the list).
-  await expect(detail.getByTestId("pack-version-list-manifest-1")).toHaveAttribute(
+  // 逐版检视链接（只读）：清单 JSON 与技能正文。
+  await expect(detail.getByTestId("pack-version-manifest-1")).toHaveAttribute(
     "href",
     "/api/packs/pack-ver/versions/1",
   );
-  await detail.getByTestId("pack-version-list-skills-1").click();
-  await expect(detail.getByTestId("pack-version-list-skill-links-1")).toContainText("ver-skill.md");
+  // 选中历史版 → 快照对比，技能链接随之出现
+  await detail.getByTestId("pack-version-compare-1").click();
+  await expect(detail.getByTestId("pack-version-skill-links-1")).toContainText("ver-skill.md");
+
+  // 历史版本没有安装入口（inspect-only）。
+  await expect(detail.getByTestId("pack-version-section").getByTestId("pack-subscribe")).toHaveCount(0);
 });
 
 test("name collision with a user skill is skipped and reported, not overwritten", async ({ page }) => {

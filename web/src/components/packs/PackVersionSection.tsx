@@ -106,6 +106,19 @@ export function PackVersionSection({
                 )}
                 {r.authorEmail && <span className="text-xs text-muted-foreground">{r.authorEmail}</span>}
                 {r.notes && <span className="text-xs">{r.notes}</span>}
+                {/* 逐版的检视链接（迁移时漏掉的能力，pack-detail-as-page 6.0）：
+                    常驻版式取代了折叠披露，但**可检视**不能跟着丢——每一版都能
+                    直接取它的清单与技能正文，这正是「历史迭代详情」的物证。
+                    只读：历史版永远没有安装入口。 */}
+                <a
+                  href={`/api/packs/${packId}/versions/${r.version}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary hover:underline"
+                  data-testid={`pack-version-manifest-${r.version}`}
+                >
+                  {t("packPage.versions.manifestJson")}
+                </a>
                 {!isCurrent && (
                   <button
                     type="button"
@@ -128,6 +141,23 @@ export function PackVersionSection({
         <div className="rounded-md border border-border p-3" data-testid="pack-version-snapshot">
           {/* 边界必须写在界面上：「按 manifest 声明对比」。 */}
           <p className="mb-2 text-xs text-muted-foreground">{t("packPage.versions.compareNote")}</p>
+          {/* 该版的技能正文（只读下载）：与旧折叠披露里的 skill-links 等价。 */}
+          {((snapshot as unknown as { skills?: { name: string }[] }).skills ?? []).length > 0 && (
+            <ul className="mb-2 flex flex-wrap gap-x-3 gap-y-1" data-testid={`pack-version-skill-links-${selected}`}>
+              {((snapshot as unknown as { skills?: { name: string }[] }).skills ?? []).map((sk) => (
+                <li key={sk.name}>
+                  <a
+                    href={`/api/packs/${packId}/versions/${selected}/skills/${encodeURIComponent(sk.name)}.md`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-mono text-xs text-primary hover:underline"
+                  >
+                    {sk.name}.md
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
           {diff.length === 0 ? (
             <p className="text-xs text-muted-foreground" data-testid="pack-version-no-diff">
               {t("packPage.versions.noDiff", { version: selected ?? "" })}

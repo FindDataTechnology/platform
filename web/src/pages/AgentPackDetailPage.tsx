@@ -45,6 +45,8 @@ export function AgentPackDetailPage() {
         onUsePrompt={usePrompt}
         onGotoMine={() => navigate("/agents?tab=mine")}
         onFork={(id) => navigate(`/studio?fork=${encodeURIComponent(id)}`)}
+        // 报告末尾的下一步：带着刚装好的角色/集群去对话。
+        onOpenChat={(target) => navigate(target)}
       />
     </PageShell>
   );

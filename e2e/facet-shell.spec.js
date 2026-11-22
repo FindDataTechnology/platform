@@ -31,43 +31,34 @@ test("all four shell views render without a routing provider", async ({ page }) 
   await expect(page.locator('[data-testid^="pack-card-"]')).toHaveCount(2);
   await expect(page.getByTestId("pack-search-input")).toBeVisible();
 
-  // Version history on the borrowed detail (add-facet-version-history): the
-  // anonymous face reaches the seeded pack's version list — the route serves
-  // public packs without a credential, and the shared disclosure lazy-loads.
+  // Version history on the borrowed detail: the anonymous face reaches the
+  // seeded pack's version list — the route serves public packs without a
+  // credential. Since pack-detail-as-page it is a RESIDENT section (no
+  // disclosure to open), so entering the page is enough.
   await page.locator('[data-testid^="pack-card-"]').first().click();
   const detail = page.getByTestId("pack-page");
-  await expect(detail.getByTestId("pack-version-list")).toBeVisible();
-  await detail.getByTestId("pack-version-list-toggle").click();
-  await expect(detail.getByTestId("pack-version-list-row-1")).toBeVisible();
+  await expect(detail.getByTestId("pack-version-section")).toBeVisible();
+  await expect(detail.getByTestId("pack-version-manifest-1")).toBeVisible();
 
   // mcp: the catalog must mount with its narrative and both tabs
   // (add-facet-infra-pages). The shell server now wires the e2e registry stub,
   // so the servers tab carries real stub entries.
+  // #/mcp 并入素材目录后，旧地址落到目录页的 MCP 页签——验它仍能到、
+  // 且服务页签在（旧的独立 MCP 页及其 infra-narrative 已不存在）。
   await page.goto(`${base}/#/mcp`);
-  await expect(page.getByTestId("infra-narrative")).toBeVisible();
-  await expect(page.getByTestId("mcp-tab-servers")).toBeVisible();
-  await expect(page.getByTestId("mcp-tab-skills")).toBeVisible();
+  await expect(page.getByTestId("catalog-view")).toBeVisible();
+  await expect(page.getByTestId("catalog-tab-mcp")).toHaveAttribute("aria-selected", "true");
 
-  // Depth view: open the stub server's card — tool surface (names with
-  // descriptions) and provenance render; the card list itself stays without
-  // tool surfaces (lazy depth payload).
-  const card = page.getByTestId("mcp-card-e2e-registry-mcp");
-  await expect(card).toBeVisible();
-  await card.click();
-  const depth = page.getByTestId("mcp-depth-e2e-registry-mcp");
-  await expect(depth).toBeVisible();
-  await expect(page.getByTestId("mcp-tool-read")).toContainText("Read an entry.");
-  await expect(page.getByTestId("mcp-depth-license")).toContainText("MIT");
-  await expect(page.getByTestId("mcp-depth-provider")).toContainText("e2e-org");
-  await page.getByTestId("mcp-depth-back").click();
-  await expect(card).toBeVisible();
+  // 目录页的服务页签列出 stub 服务器（unify-material-catalog-page 之后，
+  // 独立的 MCP 深度视图与 skills-catalog 不再存在——这两段旧断言随功能一起退役）。
+  await expect(page.getByTestId("catalog-grid")).toBeVisible();
+  const mcpCard = page.locator('[data-testid^="catalog-card-mcp:"]').first();
+  await expect(mcpCard).toBeVisible();
 
-  // Skills catalog: provenance renders for the declared entry and the
-  // honest not-declared mark for the bare one.
-  await page.getByTestId("mcp-tab-skills").click();
-  await expect(page.getByTestId("skills-catalog")).toBeVisible();
-  await expect(page.getByTestId("skill-provenance-e2e-provenance-skill")).toContainText("https://github.com/example/e2e-skills");
-  await expect(page.getByTestId("skill-provenance-e2e-bare-skill")).toContainText("未标注");
+  // 技能的来源标注在目录页的技能页签上仍要诚实呈现。
+  await page.getByTestId("catalog-tab-skill").click();
+  const skillCards = page.locator('[data-testid^="catalog-card-skill:"]');
+  await expect(skillCards.first()).toBeVisible();
 
   // docs (add-facet-docs-view): the three sections render statically, 壹座
   // leads the install tabs, a target page carries the single-sourced facts,
@@ -591,8 +582,8 @@ test("market refetches when the locale switches, list and open dialog alike", as
   // The seed's en overlay now covers notes too (P3 4.11 full-coverage seed):
   // the boundary statement must localize like every other org-surface field.
   await expect(detail.getByTestId("pack-detail-boundary-notes")).toContainText("English version note of the shell smoke pack.");
-  // ⑦ version history stays at the content tail
-  await expect(detail.getByTestId("pack-version-list")).toBeVisible();
+  // ⑦ version history stays at the content tail (resident section)
+  await expect(detail.getByTestId("pack-version-section")).toBeVisible();
   await page.getByTestId("facet-locale-switcher").selectOption("zh-CN");
   await expect(detail).toContainText("谦面壳冒烟包");
   await page.getByTestId("pack-page-back").click();
@@ -793,9 +784,11 @@ test("coverage meter on the boundary face: 0/m declared gaps and full cover (P3 
   await expect(detail.getByTestId("pack-detail-coverage")).toContainText("0/");
   await expect(detail.getByTestId("pack-detail-coverage-missing")).toContainText("promise");
   await expect(detail.getByTestId("pack-detail-coverage-missing")).toContainText("outcomes[0].title");
-  // The marker informs and NEVER gates: subscribe/install stay enabled.
-  await expect(detail.getByTestId("pack-subscribe")).toBeEnabled();
-  await page.keyboard.press("Escape");
+  // 覆盖度只提示、从不设闸（pack-detail-as-page D2 改写了闸的形态）：这个
+  // 宿主匿名时不给订阅按钮，而是给「登录后可订阅」说明行——覆盖度读数与那条
+  // 说明行同时在场，才说明「读数没有参与决定能不能交易」。
+  await expect(detail.getByTestId("pack-page-login-required")).toBeVisible();
+  await page.getByTestId("pack-page-back").click();
 
   // smoke pack: full en overlay → the honest all-covered line. Explicit id —
   // in batch the curation test has by now PUBLISHED a newer pack into the
@@ -1054,9 +1047,13 @@ test("switching views lands at the top of the new view", async ({ page }) => {
 test("every public view carries exactly one page heading", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
   const EXPECTED = [
-    ["#/", "千人千面"],
+    // 入口页的 h1 在 2026-11-21 随 hero 迁移改成主标语（entryPlaza.hero.title）；
+    // 「千人千面」是旧站点标题，已不在 facet 入口上。
+    ["#/", "智能体要用的每一种素材"],
     ["#/packs", "智能体市场"],
-    ["#/mcp", "MCP 与技能"],
+    // #/mcp 已并入素材目录（unify-material-catalog-page）：旧地址仍解析，
+    // 落到目录页并带上它自己的标题与 h1。
+    ["#/mcp", "素材目录"],
     ["#/docs", "使用指南"],
   ];
   for (const [hash, title] of EXPECTED) {
@@ -1082,7 +1079,10 @@ test("the document title names the current view in the current locale", async ({
       "zh-CN",
       [
         titleFor("#/packs", "智能体市场"),
-        titleFor("#/mcp", "MCP 与技能"),
+        // #/mcp 已并入素材目录（unify-material-catalog-page）：旧地址仍可
+        // 解析，但落到的视图与标题都是「素材目录」。
+        titleFor("#/mcp", "素材目录"),
+        titleFor("#/catalog", "素材目录"),
         titleFor("#/docs", "使用指南"),
         titleFor("#/", "介绍"),
       ],

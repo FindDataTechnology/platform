@@ -5338,7 +5338,8 @@
         "hasConsole": "ボード宣言",
         "hasCluster": "クラスタ宣言",
         "hasFacade": "ファサード宣言"
-      }
+      },
+      "manifestJson": "マニフェスト JSON"
     }
   }
 }

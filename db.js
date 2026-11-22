@@ -1478,6 +1478,24 @@ const MIGRATIONS = [
       `CREATE INDEX IF NOT EXISTS outbound_ledger_by_audience ON outbound_ledger (audience, created_at)`,
     ],
   },
+  {
+    version: 129,
+    // Usage attribution via channel_identity (unify-im-solution 1.6). A bot
+    // turn's usage row gains the归属 it belongs to (room / conversation), so
+    // billing and "what did we say to X" follow the mapping rather than the raw
+    // address. Additive + nullable: an unmapped chat is plain 1:1 (both null),
+    // exactly the pre-change behavior. Table+column guarded like v111 so a cell
+    // predating pack_usage_events (or a re-run) doesn't fail the chain.
+    apply: (db) => {
+      if (!migrationTableExists(db, "pack_usage_events")) {
+        console.warn("[db] v129: skipped pack_usage_events attribution columns — table absent");
+        return;
+      }
+      const cols = new Set(db.prepare("PRAGMA table_info(pack_usage_events)").all().map((c) => c.name));
+      if (!cols.has("room_id")) db.exec("ALTER TABLE pack_usage_events ADD COLUMN room_id TEXT");
+      if (!cols.has("conversation_id")) db.exec("ALTER TABLE pack_usage_events ADD COLUMN conversation_id TEXT");
+    },
+  },
 ];
 
 function nowIso() {
@@ -4109,6 +4127,57 @@ export function listOutboundLedger({ principal = null, audience = null, limit = 
   params.limit = Math.min(Math.max(Number(limit) || 200, 1), 1000);
   const sql = `SELECT * FROM outbound_ledger ${where.length ? "WHERE " + where.join(" AND ") : ""} ORDER BY created_at DESC LIMIT @limit`;
   return stmt(sql).all(params);
+}
+
+// Unified audit timeline (unify-im-solution 4.3): ONE answer to "what did we do
+// and say about <subject>". outbound_ledger answers "said" (audience/principal),
+// action_audit answers "did" (target/line) — deliberately two tables (speech has
+// no proposal/action columns; actions have no digest-only content rule). This
+// read merges them into one ordered shape WITHOUT a schema join, so a caller
+// asking about a customer gets both sentences and executed actions in time order
+// from a single face, and the two never silently disagree.
+//
+// `subject` matches outbound_ledger.audience LIKE or action_audit.target LIKE
+// (substring) — the two tables key the customer differently (channel:address vs
+// target), substring is the honest common denominator; a caller that has both
+// exact keys can pass `audience` + `target` for exact matching.
+export function listAuditTimeline({ subject = null, principal = null, audience = null, target = null, limit = 200 } = {}) {
+  if (!dbReady) return [];
+  const lim = Math.min(Math.max(Number(limit) || 200, 1), 1000);
+  const speechWhere = [];
+  const speechParams = { lim };
+  if (principal) { speechWhere.push("principal = @principal"); speechParams.principal = principal; }
+  if (audience) { speechWhere.push("audience = @audience"); speechParams.audience = audience; }
+  if (subject) { speechWhere.push("audience LIKE @subj"); speechParams.subj = `%${subject}%`; }
+  const speech = stmt(
+    `SELECT 'said' AS kind, created_at AS ts, audience AS subject_line, principal AS actor,
+            disclose_level AS level, content_digest AS digest, NULL AS summary
+     FROM outbound_ledger ${speechWhere.length ? "WHERE " + speechWhere.join(" AND ") : ""}
+     ORDER BY created_at DESC LIMIT @lim`,
+  ).all(speechParams);
+
+  const actionWhere = [];
+  const actionParams = { lim };
+  if (target) { actionWhere.push("target = @target"); actionParams.target = target; }
+  if (subject) { actionWhere.push("target LIKE @subj"); actionParams.subj = `%${subject}%`; }
+  const actions = stmt(
+    `SELECT 'did' AS kind, created_at AS ts, target AS subject_line, line AS actor,
+            risk AS level, args_digest AS digest, result_summary AS summary
+     FROM action_audit ${actionWhere.length ? "WHERE " + actionWhere.join(" AND ") : ""}
+     ORDER BY created_at DESC LIMIT @lim`,
+  ).all(actionParams);
+
+  // Normalize ts to numbers for a stable merge: outbound_ledger is INTEGER ms,
+  // action_audit is TEXT ISO. Parse the ISO side; a parse failure sorts as 0.
+  const toMs = (ts) => {
+    if (typeof ts === "number") return ts;
+    const n = Date.parse(ts);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return [...speech, ...actions]
+    .map((r) => ({ ...r, ts: toMs(r.ts) }))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, lim);
 }
 
 // add-zhiyu-im-bridge: the output bridge's restart-safe cursor (room message

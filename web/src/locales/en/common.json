@@ -5338,7 +5338,8 @@
         "hasConsole": "Board",
         "hasCluster": "Cluster",
         "hasFacade": "Facade"
-      }
+      },
+      "manifestJson": "Manifest JSON"
     }
   }
 }

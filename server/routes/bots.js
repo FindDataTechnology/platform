@@ -133,6 +133,16 @@ export function registerBotRoutes(ctx) {
           console.warn(`[bots] "${row.name}" (${row.type}) is outbound-only; webhook refused`);
           return res.sendStatus(403);
         }
+        // fd-bot transport guard (unify-im-solution 3.2): a bot migrated to the
+        // fd-bot transport receives via /api/bots/events, never this per-bot
+        // webhook. If a stale legacy webhook URL still points here, refuse it —
+        // otherwise it would run through the paas adapter (verifyWebhook) a
+        // second time, a double-path the migration exists to remove. 410 (gone)
+        // not 404: the binding is real, this address is simply no longer its door.
+        if (row && row.transport === "fd-bot") {
+          console.warn(`[bots] "${row.name}" is on the fd-bot transport; legacy webhook is gone (use /api/bots/events)`);
+          return res.sendStatus(410);
+        }
       }
 
       // Boot window: registry not loaded yet and the bot is not in it. Accept

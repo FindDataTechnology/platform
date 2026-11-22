@@ -5338,7 +5338,8 @@
         "hasConsole": "Tableau",
         "hasCluster": "Cluster",
         "hasFacade": "Façade"
-      }
+      },
+      "manifestJson": "JSON du manifeste"
     }
   }
 }

@@ -567,6 +567,8 @@ export function App() {
                 // facet 匿名壳没有安装面：部署/计费探测不在这里发。
                 installSurface={false}
                 studioOrigin="https://platform.finddatatech.cloud"
+                // facet 壳没有对话面：装的下一步在壹座（onOpenChat=null 抑制向导）。
+                onOpenChat={null}
                 // 返回来处（pack-detail-as-page 5.2）：从目录进来的回目录，页签与
                 // 搜索词都在记下的那条 hash 里。深链直开（没记到来处）回市场。
                 onBack={() => {
