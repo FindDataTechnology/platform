@@ -278,9 +278,13 @@ export function scanCells({ cellsRoot, windowStart, windowEnd, thresholds = THRE
       continue;
     }
     // 每个 cell 一份副本（同一次运行时按顺序覆盖同一个目录会串味，所以一次一个）。
+    // 用完即删：不设目录的时限会更省事，但 62 片 cell × 单库最大 26MB，累积起来
+    // 会撞 emptyDir 的 sizeLimit（驱逐 pod ⇒ CRONJOB 自己变成事故）。
     let probePath = dbPath;
+    let probeDir = null;
     if (walCopyDir) {
       const dir = path.join(walCopyDir, `c${n++}`);
+      probeDir = dir;
       fs.mkdirSync(dir, { recursive: true });
       probePath = path.join(dir, "fleets.db");
       for (const suffix of ["", "-wal", "-shm"]) {
@@ -297,6 +301,7 @@ export function scanCells({ cellsRoot, windowStart, windowEnd, thresholds = THRE
         probe.close();
       }
     } catch (e) {
+      if (probeDir) fs.rmSync(probeDir, { recursive: true, force: true });
       undecidable.push({ cell: cellDir, reason: `fleets-read-failed:${e.message}` });
       continue;
     }
@@ -313,6 +318,7 @@ export function scanCells({ cellsRoot, windowStart, windowEnd, thresholds = THRE
       }
       fleets.push({ cell: cellDir, fleetId, readings: r.readings });
     }
+    if (probeDir) fs.rmSync(probeDir, { recursive: true, force: true });
   }
 
   const reds = fleets.flatMap((f) => f.readings.reds.map((red) => ({ ...red, fleetId: f.fleetId })));

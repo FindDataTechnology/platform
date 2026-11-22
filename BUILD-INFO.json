@@ -1,6 +1,6 @@
 {
   "baseRef": "github/main",
-  "baseCommit": "36d9aa54980ca449fc29154b8d61dfc68e947c58",
+  "baseCommit": "af48ff2462ee69de4db16efdd92d6e400c1c6674",
   "snapshotCommit": "filled in by the publish repo's own commit",
-  "builtAt": "2026-11-22T16:48:43.828Z"
+  "builtAt": "2026-11-22T16:53:37.750Z"
 }
