@@ -95,6 +95,13 @@
         "server/input-request-mcp.js"
       ],
       "_comment": "结构化输入面(add-input-request-cards):request_input 单工具,提卡→等人填→工具返回 {state,values};挂起在平台侧,任何能调 MCP 的 harness 都能用;owner 由 INPUT_REQUEST_OWNER_EMAIL 注入"
+    },
+    "handoff": {
+      "command": "node",
+      "args": [
+        "server/handoff-mcp.js"
+      ],
+      "_comment": "转人工出口(chatwoot-ai-handoff 4.1):handoff_to_human 单工具,让 agent 判断自己答不了/访客要人/越权时把人交给真人;bot 与 session 身份由 profile 注入,模型不能自报转给谁"
     }
   },
   "skills": [

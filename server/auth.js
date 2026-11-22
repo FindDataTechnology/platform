@@ -266,6 +266,16 @@ export const INTERNAL_BRIDGES = [
       (req.method === "GET" && /^\/api\/input-requests\/[^/]+(\/wait)?$/.test(req.path)),
     note: "create + read/wait only; owner comes from the child's profile env",
   },
+  {
+    // The handoff MCP child (chatwoot-ai-handoff 4.1): the agent's own出口 for
+    // "I can't answer this, hand it to a person". The child is launched with the
+    // bot id it serves, so this bridge trusts only that bot's own escalate path —
+    // never a caller naming someone else's bot.
+    email: "handoff-bridge@internal",
+    match: (req) =>
+      req.method === "POST" && /^\/api\/bots\/[^/]+\/escalate$/.test(req.path),
+    note: "escalate only; the bot id comes from the child's profile env",
+  },
 ];
 
 // The bridge identity for this request, or null when nothing bridges it.

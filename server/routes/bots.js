@@ -602,14 +602,53 @@ export function registerBotRoutes(ctx) {
   // cleared). Operator-triggered today; an agent tool that decides to escalate
   // reuses the same lib function (see tasks.md 4.1).
   app.post("/api/bots/:id/escalate", async (req, res) => {
-    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    // Two legitimate callers: an operator (admin identity, via requireAdmin) and
+    // the bot's OWN handoff MCP child (loopback, no forwarded email — auth.js
+    // stamps it as handoff-bridge@internal at the INTERNAL_BRIDGES table). The
+    // child knows only its bot id; the chat is resolved from the running turn.
+    const isHandoffChild = req.user?.email === "handoff-bridge@internal";
+    if (isHandoffChild) {
+      const owned = String(process.env.HANDOFF_BOT_ID || "").trim();
+      if (owned && owned !== String(req.params.id)) {
+        return res.status(403).json({ error: "handoff bridge may only escalate the bot it was launched for" });
+      }
+    } else if (!ctx.requireAdmin(req, res)) return;
+    if (!requireDb(res)) return;
     const bot = db.getBot(req.params.id);
     if (!bot) return res.status(404).json({ error: "Bot not found" });
     if (bot.type !== "chatwoot") return res.status(400).json({ error: "escalate is only supported for chatwoot bots" });
-    const { chatKey } = req.body || {};
-    if (!chatKey) return res.status(400).json({ error: "Missing chatKey" });
+    const { chatKey: rawChatKey, sessionId: rawSession } = req.body || {};
+    let chatKey = rawChatKey;
+    // The handoff MCP child has no DSH_SESSION_ID (one profile = one process), so
+    // it reports none. Resolve it the same way the input-request lane does: the
+    // single streaming turn in this cell IS the turn that called the tool. Then
+    // the chat (and its chatKey) comes from botChatForSession.
+    if (!chatKey) {
+      let sessionId = rawSession;
+      if (!sessionId) {
+        const streaming = [];
+        for (const [sid, turn] of ctx.turnStateBySession ?? []) {
+          if (sid && turn?.isStreaming === true) streaming.push(sid);
+        }
+        if (streaming.length === 1) sessionId = streaming[0];
+      }
+      if (sessionId) {
+        const found = bots.botChatForSession(sessionId);
+        if (found) chatKey = found.chatKey;
+      }
+    }
+    if (!chatKey) return res.status(400).json({ error: "Missing chatKey (or an unresolvable sessionId)" });
+    const { reason, note } = req.body || {};
     try {
-      const result = await escalateToHuman(bot, chatKey);
+      const result = await escalateToHuman(bot, chatKey, { reason, note });
+      // A platform verdict (ok:false) is a real outcome, not a server error — 200
+      // with the classified result, matching fd-bot's send discipline.
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+    try {
+      const result = await escalateToHuman(bot, chatKey, { reason, note });
       // A platform verdict (ok:false) is a real outcome, not a server error — 200
       // with the classified result, matching fd-bot's send discipline.
       res.json(result);

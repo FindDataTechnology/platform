@@ -555,7 +555,10 @@ async function deliverAskAttempt(entry, text) {
 // 靠 bot_chats 列表逐条哈希比对（这张表很小）。找不到就不用投递——一个没有
 // 聊天可投的行仍然可以在 web 上被答。
 
-function botChatForSession(sessionId) {
+// Exported for the handoff route (chatwoot-ai-handoff): the agent's handoff tool
+// knows only its dsh session id, so the route resolves the live chat from it.
+// Same reverse lookup the input-request lane uses — one implementation.
+export function botChatForSession(sessionId) {
   const text = String(sessionId ?? "");
   if (!text.startsWith("bot-")) return null;
   for (const row of state.ctx?.db?.listBotChats?.() ?? []) {
