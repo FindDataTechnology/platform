@@ -13,7 +13,7 @@
 import cronParser from "cron-parser";
 // Pure leaf module (zero imports of its own) — importing it here keeps this
 // file gateway-safe (no task-engine module graph rides along).
-import { validateOrchestration } from "./fleet-orchestration.js";
+import { validateOrchestration, CARRIERS } from "./fleet-orchestration.js";
 
 // Minimal cron check (the engine's own parser, applied standalone): this
 // module is also imported by the GATEWAY process (pack pre-validation), so it
@@ -51,6 +51,86 @@ const TARGET_KIND_TO_MEMBER_KIND = {
 // canonical module pulls chat-history along).
 const TOOL_TARGET_SHAPE_RE = /^([A-Za-z0-9][A-Za-z0-9._-]*)::([A-Za-z0-9][A-Za-z0-9._-]*)$/;
 export const TEMPLATE_MEMBER_LIMIT = 50;
+
+// ── Per-member runtime config (enrich-fleet-template-member-config) ──────────
+// The six fields a template member may declare that land on the member row's
+// runtime columns. Listed here so the parser accepts them, the provisioner
+// carries them, and the closure test can prove each has a createMember column
+// (see scripts/test-fleet-member-runtime-fields.mjs — a name on this list with
+// no INSERT column is silently dropped, which is the bug this change fixes).
+export const MEMBER_RUNTIME_FIELDS = Object.freeze([
+  "model",
+  "fallbackModel",
+  "effort",
+  "contextBudget",
+  "carrier",
+  "inputPolicy",
+]);
+
+// Every member key the parser knows: the structural fields handled inline
+// below plus the six runtime fields (and `note`, a pre-existing free-form
+// annotation the seed library already uses). Anything outside this set is
+// refused so a typo (`modle`) can never be read as "field absent".
+const MEMBER_KNOWN_FIELDS = new Set([
+  "ref",
+  "title",
+  "titleKey",
+  "target",
+  "parentRef",
+  "kpiSlots",
+  "cadence",
+  "note",
+  ...MEMBER_RUNTIME_FIELDS,
+]);
+
+// contextBudget range — mirrors server/fleet-model.js CONTEXT_BUDGET_FLOOR /
+// CONTEXT_BUDGET_CEILING (imported there, but this module must stay
+// gateway-pure, so the numbers are restated here). Kept honest by the drift
+// test in scripts/test-fleet-member-runtime-fields.mjs, which reads that file's
+// source and asserts the two pairs are equal.
+const CONTEXT_BUDGET_FLOOR = 1024;
+const CONTEXT_BUDGET_CEILING = 2_000_000;
+
+// Exported so the drift test can compare them against server/fleet-model.js's
+// same-named constants without importing that module here (purity).
+export { CONTEXT_BUDGET_FLOOR, CONTEXT_BUDGET_CEILING };
+
+const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
+const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+
+// Runtime-field shape gate (parse-time only). effort is checked as a shape
+// (non-empty string or null), NOT against a vocabulary — the legal levels are a
+// deployment-time fact (effortUnion from the live dshModels roster), so the
+// parser must not pretend to know them. The live write face
+// (validateConfigDims) owns the vocabulary gate. Returns an error string|null.
+function validateRuntimeField(key, value, ref) {
+  const where = `member '${ref}' ${key}`;
+  switch (key) {
+    case "model":
+    case "fallbackModel":
+      if (value !== null && !isNonEmptyString(value)) return `${where} must be a non-empty string or null`;
+      return null;
+    case "effort":
+      if (value !== null && !isNonEmptyString(value)) return `${where} must be a non-empty string or null`;
+      return null;
+    case "contextBudget":
+      if (
+        value !== null &&
+        (!Number.isInteger(value) || value < CONTEXT_BUDGET_FLOOR || value > CONTEXT_BUDGET_CEILING)
+      ) {
+        return `${where} must be an integer between ${CONTEXT_BUDGET_FLOOR} and ${CONTEXT_BUDGET_CEILING}, or null`;
+      }
+      return null;
+    case "carrier":
+      if (value !== null && !CARRIERS.includes(value)) return `${where} must be one of ${CARRIERS.join(", ")} (or null)`;
+      return null;
+    case "inputPolicy":
+      if (value !== null && !isPlainObject(value)) return `${where} must be a plain object or null`;
+      return null;
+    default:
+      return null;
+  }
+}
 
 // Display-locale overlay shape (add-pack-locale-tracks D5) — same locale-tag
 // rule as the pack manifest overlay (lib/pack-manifest.js LOCALE_KEY_RE).
@@ -224,6 +304,25 @@ export function parseFleetTemplate(manifest) {
     if (typeof ref !== "string" || !ref.trim()) return { ok: false, error: "each member needs a ref", code: "fleet_member_needs_ref" };
     if (seenRefs.has(ref)) return { ok: false, error: `duplicate member ref '${ref}'` };
     seenRefs.add(ref);
+    // Unknown-field gate: a key outside MEMBER_KNOWN_FIELDS is refused (a
+    // mistyped runtime field would otherwise read as "absent"). Runs before any
+    // per-field validation so the typo is named, not silently dropped.
+    for (const k of Object.keys(m)) {
+      if (!MEMBER_KNOWN_FIELDS.has(k)) {
+        return {
+          ok: false,
+          error: `member '${ref}' has unknown field '${k}'（已知：${[...MEMBER_KNOWN_FIELDS].join(", ")}）`,
+          code: "fleet_member_unknown_field",
+        };
+      }
+    }
+    // Runtime-field shape gate (six fields; vocabulary/range owned by the live
+    // write face for effort — see validateRuntimeField).
+    for (const k of MEMBER_RUNTIME_FIELDS) {
+      if (m[k] === undefined) continue;
+      const err = validateRuntimeField(k, m[k], ref);
+      if (err) return { ok: false, error: err, code: `fleet_member_${k}_invalid` };
+    }
     const title = m.title ?? m.titleKey;
     if (typeof title !== "string" || !title.trim()) {
       return { ok: false, error: `member '${ref}' needs a title (or titleKey)`, code: "fleet_member_needs_title" };
@@ -455,6 +554,15 @@ export function parseFleetTemplate(manifest) {
         target: m.target,
         kpiSlots: (m.kpiSlots ?? []).map((s) => ({ ...s, label: String(s.label ?? s.labelKey).trim() })),
         cadence: m.cadence ?? null,
+        // Runtime config (enrich-fleet-template-member-config): carried verbatim
+        // or null — NEVER a platform default. Null = inherit, exactly as the
+        // live write face treats an undeclared dimension.
+        model: m.model ?? null,
+        fallbackModel: m.fallbackModel ?? null,
+        effort: m.effort ?? null,
+        contextBudget: m.contextBudget ?? null,
+        carrier: m.carrier ?? null,
+        inputPolicy: m.inputPolicy ?? null,
       })),
       requires: (requires ?? []).map((r) => ({ kind: r.kind ?? "a2a", name: String(r.name).trim(), optional: r.optional === true })),
       ...(section.orchestration !== undefined ? { orchestration: section.orchestration } : {}),

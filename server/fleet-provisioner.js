@@ -195,6 +195,14 @@ export async function provisionFleetFromTemplate({
       kpiSlots: r.member.kpiSlots ?? [],
       // ALL PAUSED at birth (D3): the owner reviews then starts the fleet.
       cadence: r.member.cadence ? { ...r.member.cadence, enabled: false } : null,
+      // Runtime config (enrich-fleet-template-member-config): carried per
+      // field, undeclared = null (never a platform default).
+      model: r.member.model ?? null,
+      fallbackModel: r.member.fallbackModel ?? null,
+      effort: r.member.effort ?? null,
+      contextBudget: r.member.contextBudget ?? null,
+      carrier: r.member.carrier ?? null,
+      inputPolicy: r.member.inputPolicy ?? null,
     });
   }
 

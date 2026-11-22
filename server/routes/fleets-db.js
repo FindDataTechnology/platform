@@ -836,8 +836,8 @@ export function createFleetDatabase({ file } = {}) {
   function createMember(member) {
     const now = Date.now();
     db.prepare(`
-      INSERT INTO fleet_members (id, fleet_id, title, parent_id, target_kind, target_id, kpi_slots, cadence, model, fallback_model, effort, context_budget, carrier, pack_id, sort_key, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO fleet_members (id, fleet_id, title, parent_id, target_kind, target_id, kpi_slots, cadence, model, fallback_model, effort, context_budget, carrier, input_policy, pack_id, sort_key, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       member.id,
       member.fleetId,
@@ -852,6 +852,10 @@ export function createFleetDatabase({ file } = {}) {
       member.effort ?? null,
       Number.isFinite(member.contextBudget) ? member.contextBudget : null,
       member.carrier ?? null,
+      // 建岗时也要能带输入策略（enrich-fleet-template-member-config 2.1）：这一列
+      // 此前只被 updateMember 认，createMember 漏了它——模板搬过来的 inputPolicy
+      // 会在这里被静默丢掉，读面显示 null 而声明是有的。
+      member.inputPolicy ? JSON.stringify(member.inputPolicy) : null,
       member.packId ?? null,
       Number.isFinite(member.sortKey) ? member.sortKey : now,
       now,

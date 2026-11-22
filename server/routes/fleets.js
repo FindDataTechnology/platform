@@ -152,6 +152,25 @@ function memberId(_id) {
 // post can never be BUILT dangling — 待补岗 only ever comes from the target
 // being deleted afterwards (design: 对象模型).
 
+// 逐岗生效章程的唯一读取处（enrich-fleet-template-member-config 3.2）。
+//
+// 为什么必须与 `catalogEntryPersona` 读同一个来源：那个函数把 `entry.memory.guidance`
+// 拼进 persona 尾段（`dsh-profile.js`）。若这里另读一处（比如包的 `memory` 段），
+// 就会出现「读面显示有章程、persona 里没有」——那正是本变更要消灭的那一族
+// 「声明了但没生效」。同一个螺丝刀拧同一颗螺丝。
+export function memoryCharterForTest(member, view) {
+  return memoryCharterFor(member, view);
+}
+
+function memoryCharterFor(member, view) {
+  if (!isPersonaBackedTargetKind(member.targetKind)) return null;
+  const entries = view ? view.chatAgentEntries : catalog.getChatAgentEntries();
+  const entry = entries.find((e) => e.id === member.targetId) || null;
+  const g = entry && typeof entry.memory === "object" && entry.memory !== null ? entry.memory.guidance : null;
+  const text = typeof g === "string" ? g.trim() : "";
+  return text || null;
+}
+
 // `view` is a request-scoped catalog snapshot (catalog.mergedView): a roster
 // read resolves one target per member, and resolving against the LIVE catalog
 // re-merges it per member — 60 merges × ~30ms of blocked event loop on one
@@ -443,6 +462,12 @@ function memberView(db, fleet, member, tasks, { now = Date.now(), resolver = res
     // 舰队层逐字段合并后的结果）。两者并存，前端不必自己再算继承。
     inputPolicy: member.inputPolicy ?? null,
     effectiveInputPolicy: resolveInputPolicy({ member: member.inputPolicy, fleet: fleet?.inputPolicy }),
+    // 逐岗记忆章程（enrich-fleet-template-member-config 3.2）：**读的是真正生效的
+    // 那一份**——与 `catalogEntryPersona` 注入 persona 的是同一个 `memory.guidance`。
+    // 未声明时报 null（前端显示「未声明章程」），MUST NOT 用包根处理策略冒充：
+    // 包根策略描述「这个包怎么处理记忆」，不是「这个岗记什么」，两者混淆会让
+    // 一个没写章程的岗看起来像写了。
+    memoryCharter: memoryCharterFor(member, resolver.view ?? null),
     // Latest real turn's usage (fleet-ops-canvas): the config bar's context
     // budget histogram buckets by this over the declared budget. null = the
     // newest real round reported none (用量字段缺失 ≠ 未超预算).
@@ -654,7 +679,13 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
   // resolver ignores the second argument, so it passes straight through.
   const rosterResolver = () => {
     const view = targetResolver === resolveTarget ? catalog.mergedView() : null;
-    return (m) => targetResolver(m, view);
+    // The view is exposed on the resolver so `memberView` can read the same
+    // snapshot for the per-post memory charter WITHOUT a second merge (a
+    // per-member merge is exactly the cost this helper exists to avoid —
+    // 60 posts × ~30ms of blocked loop, measured).
+    const resolve = (m) => targetResolver(m, view);
+    resolve.view = view;
+    return resolve;
   };
 
   // Write gate, evaluated against the RESULTING row (not the patch alone):
