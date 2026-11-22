@@ -391,19 +391,12 @@ export function App() {
   }, [view, t]);
 
   // Signed-out viewers subscribing from the detail dialog land on the login
-  // entry with a same-origin return path (logto-auth's safeReturnPath keeps
-  // the hash) — back to the packs market, dialog state intentionally lost.
-  const goLogin = useCallback(() => {
-    window.location.href = `/auth/login?rd=${encodeURIComponent(window.location.href)}`;
-  }, []);
-
   /** A login the viewer asked for, as opposed to one an action forced.
    *
    *  The return path is the signed-in work surface, not "/". Landing an
    *  explicit sign-in back on the intro hands the viewer the page they were
    *  already looking at, which makes the one thing they chose to do feel like
-   *  it did nothing (facet-shell-entry-and-narrative). An action-driven login
-   *  keeps `goLogin` above: it must return to the action, never to the studio.
+   *  it did nothing (facet-shell-entry-and-narrative).
    *
    *  `safeReturnPath` (server) validates this: a hash fragment rides through
    *  because the value is a same-origin path, and the server reduces absolute

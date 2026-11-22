@@ -288,7 +288,7 @@ test("a refused sender cannot wake a fleet post or enter a room", async () => {
   const bridged = [];
   const prevWake = ctx.triggerFleetEventWake;
   const prevBridge = ctx.zhiyuImBridge;
-  ctx.triggerFleetEventWake = (botId, payload) => { woken.push(payload); return []; };
+  ctx.triggerFleetEventWake = (_botId, payload) => { woken.push(payload); return []; };
   ctx.zhiyuImBridge = {
     noteInboundChat() {},
     async handleInbound(payload) { bridged.push(payload); return true; },

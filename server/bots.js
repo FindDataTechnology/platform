@@ -1281,7 +1281,7 @@ async function beginAck(bot, adapter, chatKey) {
 
 // 回合结束：把答案交给中间态（编辑成答案），或者回落到另发一条。
 // 返回 true 表示答案已经送出去了，调用方不必再 deliverText。
-async function settleAck(bot, entry, binding, answer) {
+async function settleAck(bot, _entry, binding, answer) {
   if (!binding || binding.used) return false;
   // placeholder 模式：占位已经发出去了，答案另发一条（走正常的发送路径，
   // 因为答案要过披露闸）。

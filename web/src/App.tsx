@@ -177,6 +177,7 @@ export default function App() {
   const catalogVersion = useChatStore((s) => s.catalogVersion);
   // `identityKey` is the deliberate trigger — an identity switch invalidates
   // everything cached for the previous one.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: identityKey is the trigger, not an input; the hook reads nothing else.
   useEffect(() => {
     listCacheClear();
   }, [identityKey]);

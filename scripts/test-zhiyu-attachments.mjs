@@ -9,7 +9,7 @@
 // plus the path-containment rule (a hostile name never becomes a path).
 
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile, readdir, mkdir } from "node:fs/promises";
+import { mkdtemp, writeFile, readdir, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -120,7 +120,7 @@ test("no attachment ⇒ empty block (the byte-identical guard)", async () => {
 });
 
 test("retention purges bytes for ENDED rooms only, keeps the row", async () => {
-  const { store, lane, root, room } = await fresh();
+  const { store, lane, room } = await fresh();
   const row = store.messageAppend({ roomId: room.id, kind: "human", content: "发了 keep.md" });
   const got = await lane.accept({
     roomId: room.id, rowSeq: row.row.seq, name: "keep.md", mime: "text/markdown", buffer: Buffer.from("payload"),

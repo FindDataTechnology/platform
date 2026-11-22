@@ -77,6 +77,7 @@ test("④ 跨包引用豁免（presetId 在本包查不到也不报）", () => {
 
 test("⑤ 参数占位豁免", () => {
   const findings = memberClosureFindings(
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
     doc([{ ref: "chief", title: "首席", target: { kind: "pack-preset", packId: "{{PACK_ID}}", presetId: "${chiefAgent}" } }], []),
   );
   assert.deepEqual(findings, []);

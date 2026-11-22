@@ -39,7 +39,7 @@ async function boot(env = {}) {
   const REF = { referer: "https://x.io/page" };
   const visit = await fetch(`${base}/zhiyu/widget/${token}/visit`, { method: "POST", headers: { "content-type": "application/json", ...REF }, body: "{}" });
   const cookie = (visit.headers.getSetCookie?.() ?? [visit.headers.get("set-cookie")]).filter(Boolean)[0].split(";")[0];
-  const say = (bytes = "RIFF") =>
+  const _say = (bytes = "RIFF") =>
     fetch(`${base}/api/zhiyu/widget/${token}/transcriptions`, {
       method: "POST",
       headers: { ...REF, cookie, "content-type": "multipart/form-data; boundary=x" },
@@ -111,7 +111,7 @@ test("VOICE_CONFIG can disable the lane, and a broken block falls back to enable
 
 test("over the size ceiling refuses before any upstream call", async () => {
   let calls = 0;
-  const fwd = createVoiceForwarder({
+  const _fwd = createVoiceForwarder({
     env: { VOICE_API_KEY: "k" },
     fetchImpl: async () => {
       calls += 1;

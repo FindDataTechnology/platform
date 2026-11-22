@@ -505,6 +505,7 @@ export function AgentSpecSheet({
               {!!a.rhythm?.length && (
                 <div className="flex flex-wrap gap-1 mt-1" data-testid={`${testIdPrefix}-agent-rhythm-default-${a.id}`}>
                   {a.rhythm.map((r, j) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: a rhythm can repeat (same cadence twice a day), so the index is part of the identity, not a stand-in for one.
                     <span key={`${r.daily ?? r.every}-${r.do ?? ""}-${j}`} className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
                       {r.daily ?? r.every}
                       {r.do ? ` · ${r.do.slice(0, 18)}${r.do.length > 18 ? "…" : ""}` : ""}

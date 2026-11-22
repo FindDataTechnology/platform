@@ -23,7 +23,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -95,7 +95,7 @@ function removeDirEventually(dir, { attempts = 20, stepMs = 100 } = {}) {
   }
 }
 
-const waitFor = (fn, { timeoutMs = 20_000, stepMs = 100 } = {}) =>
+const _waitFor = (fn, { timeoutMs = 20_000, stepMs = 100 } = {}) =>
   new Promise((resolve, reject) => {
     const started = Date.now();
     const tick = () => {

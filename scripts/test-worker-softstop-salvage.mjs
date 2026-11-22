@@ -106,7 +106,7 @@ const waitFor = async (pred, tries = 120) => {
   return false;
 };
 
-async function runFleetTurn({ interrupted = false } = {}) {
+async function runFleetTurn({ interrupted: _interrupted = false } = {}) {
   fs.writeFileSync(path.join(tmpRoot, "jobs.json"), "[]");
   await engine.initTaskEngine({
     broadcast: () => {},

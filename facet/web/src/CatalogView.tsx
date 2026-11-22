@@ -116,6 +116,7 @@ export function CatalogView({
   }, [tab, base, fetchImpl]);
 
   // 换页签/换搜索时回到第一页。
+  // biome-ignore lint/correctness/useExhaustiveDependencies: tab/query are the reset triggers; the effect reads neither.
   useEffect(() => {
     setPage(1);
   }, [tab, query]);

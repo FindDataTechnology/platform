@@ -544,7 +544,7 @@ registerRevisionRoutes({
   app,
   getDb: () => getFleetDatabase(),
   requireOwner: () => (ctx.runtimeOwnerEmail ? { email: ctx.runtimeOwnerEmail } : { email: null, id: "local-owner" }),
-  fingerprintOf: async (deployment) => {
+  fingerprintOf: async (_deployment) => {
     try {
       const paths = targetPaths();
       const fp = fingerprintForCell({

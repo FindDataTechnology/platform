@@ -138,12 +138,12 @@ export function PackMarketView({
   // state. Fired once per id; the list may still be loading, and the id is all
   // the target address needs.
   const seededRef = useRef(false);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fires once per id (`seededRef` guard); openDetail is re-created each render and must not re-trigger it.
   useEffect(() => {
     if (seededRef.current) return;
     if (typeof initialDetailId !== "string" || !initialDetailId) return;
     seededRef.current = true;
     openDetail(initialDetailId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialDetailId]);
 
   // Agent-count filter state rides the URL (?agents=2-3) so a refresh keeps
@@ -247,6 +247,7 @@ export function PackMarketView({
   // the labels follow the request; the SET and its order never move.
   // `language` is the TRIGGER, not an input — getPackFacets stamps the current
   // i18n.language itself.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `language` is the trigger; the request stamps i18n.language itself.
   useEffect(() => {
     let live = true;
     api

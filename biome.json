@@ -35,7 +35,7 @@
 	"linter": {
 		"enabled": true,
 		"rules": {
-			"recommended": true,
+			"preset": "recommended",
 			"style": "off",
 			"complexity": "off",
 			"a11y": "off",

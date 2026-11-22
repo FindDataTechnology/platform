@@ -98,7 +98,9 @@ test("tasks/cancel addresses the session recorded at accept, not one re-derived 
   // What the fixed handler derives: the recorded session wins even though the
   // relay carried no context_id at all.
   const before = reg.get("t-1");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
   const derived = before?.session_id ?? "FALLBACK${entry.path}";
   assert.equal(derived, realSession, "the recorded session is what gets cancelled");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
   assert.notEqual(derived, "FALLBACK${entry.path}", "not the path-derived one");
 });

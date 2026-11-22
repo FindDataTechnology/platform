@@ -185,7 +185,7 @@ export const registry = {
       const created = await postJson(`${site}/api/v4/posts`, body, { authorization: `Bearer ${token}` });
       return created?.id ?? null;
     },
-    async edit(cred, chatKey, messageId, text) {
+    async edit(cred, _chatKey, messageId, text) {
       const site = siteOf(cred);
       const token = String(cred?.botToken ?? "").trim();
       if (!site || !token) return false;

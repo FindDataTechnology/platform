@@ -140,7 +140,7 @@ export const registry = {
       if (res.code !== 0) throw new Error(`feishu ack failed: ${res.code} ${res.msg}`);
       return res.data?.message_id ?? null;
     },
-    async edit(cred, chatKey, messageId, text) {
+    async edit(cred, _chatKey, messageId, text) {
       try {
         const res = await postJson(
           `${BASE}/open-apis/im/v1/messages/${encodeURIComponent(messageId)}`,

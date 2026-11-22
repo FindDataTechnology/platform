@@ -930,10 +930,14 @@ test("template: a member may target an auditor (round-trips through export)", as
     ],
     members: [
       { ref: "chief", title: "幕僚长", parentRef: null,
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
         target: { kind: "existing-persona", id: "${chiefPersona}" },
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
         cadence: { cron: "${chiefCron}", tz: "Asia/Shanghai", promptTemplate: "分诊" } },
       { ref: "auditor", title: "审计官", parentRef: "chief",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
         target: { kind: "auditor", id: "${auditorPersona}" },
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture IS a ${...} placeholder — that is the case under test
         cadence: { cron: "${auditorCron}", tz: "Asia/Shanghai", promptTemplate: "复核" } },
     ],
   };
