@@ -1,7 +1,7 @@
 // Extensions management API (MCP servers + custom skills).
 
 import { getFileSkills } from "../skills.js";
-import { getMarketEntries, fetchMarketSkillContent } from "../../registry-bridge.js";
+import { getMarketEntries, fetchMarketSkillContent, isMarketInstallableEntry } from "../../registry-bridge.js";
 import * as credentialRefs from "../../credential-refs.js";
 import { getPreflightStatus } from "../../mcp-preflight.js";
 import { createExternalSourceRegistry, requestedPageSize } from "../../external-sources.js";
@@ -11,6 +11,42 @@ import { previewUpload, performUpload, seedUpload } from "../../skill-package-up
 import { resolveLocale } from "../../lib/pack-locale.js";
 import { projectAnnotation } from "../../lib/supply-annotations.js";
 import { getRepoSkillAnnotation } from "../../lib/market-annotations.js";
+
+// Read-facing credential redaction (fix-facet-catalog-credential-parity D3/D4).
+//
+// MASK, DON'T MIGRATE. Rows written before the parity fix carry an inline
+// Authorization (measured 2026-11-22: 1 of 39 rows, `fd-quant`). Rewriting a
+// stored credential silently would turn "my token is set but the server 401s"
+// into an unfalsifiable bug — and an inline token may be the user's own
+// third-party PAT, which no platform ref can reproduce. So the read face hides
+// it and labels the shape; the user decides whether to re-install through the
+// connect flow.
+//
+// Kept at the route layer (not `extensionStore.listMcpServers`) on purpose:
+// the profile writer reads the same store and NEEDS the real value to inject.
+const AUTH_HEADER_KEYS = new Set(["authorization", "x-authorization"]);
+const MASK = "Bearer …";
+
+function redactMcpCredential(server) {
+  // `configJson` is the raw DB column for the same row `config` already carries
+  // parsed. It is not in the wire type, no client reads it, and it holds the
+  // token verbatim — masking `config` alone left the secret readable here (the
+  // e2e probe caught it 2026-11-22). Drop it rather than mask it: one less copy
+  // of the credential on the wire, and no future field can ride along unseen.
+  const { configJson: _rawColumn, ...row } = server;
+  const config = row.config;
+  if (!config || typeof config !== "object") return row;
+  const headers = config.headers;
+  const hasInline = headers && typeof headers === "object" &&
+    Object.keys(headers).some((k) => AUTH_HEADER_KEYS.has(String(k).toLowerCase()));
+  const credentialShape = config.credentialRef ? "ref" : hasInline ? "inline" : "none";
+  if (!hasInline) return { ...row, credentialShape };
+  const redacted = {};
+  for (const [k, v] of Object.entries(headers)) {
+    redacted[k] = AUTH_HEADER_KEYS.has(String(k).toLowerCase()) ? MASK : v;
+  }
+  return { ...row, config: { ...config, headers: redacted }, credentialShape };
+}
 
 export function registerExtensionRoutes(ctx) {
   const { app, db, extensionStore, skillMaterialize, broadcast } = ctx;
@@ -66,14 +102,14 @@ export function registerExtensionRoutes(ctx) {
       annotationsByName = null; // catalog unavailable → raw rendering
     }
     res.json({
-      servers: annotationsByName
+      servers: (annotationsByName
         ? servers.map((s) => {
             const raw = annotationsByName.get(s.name);
             if (!raw) return s;
             const projected = projectAnnotation(raw, locale);
             return projected ? { ...s, annotation: projected } : s;
           })
-        : servers,
+        : servers).map(redactMcpCredential),
     });
   });
 
@@ -124,7 +160,7 @@ export function registerExtensionRoutes(ctx) {
         return res.status(403).json({ error: `MCP server "${name}" requires one of groups: ${requiredGroups.join(", ")}` });
       }
     }
-    // Registry-origin installs are credential-shaped (registry-sso-credentials,
+    // Market installs are credential-shaped (registry-sso-credentials,
     // extended by add-facet-market-credentials D4 / add-paper-trading-credentials):
     // the record references the installer's stored credential for the ref the
     // registering line declared (metadata.credential_ref — "registry",
@@ -135,7 +171,14 @@ export function registerExtensionRoutes(ctx) {
     // liveness would wire one service's token into another. The UI routes the
     // user to the connect flow for the named ref and retries.
     let config = submitted;
-    if (entry?.origin === "registry") {
+    // Both market channels are credential-shaped, not just the legacy feed.
+    // `isMarketInstallableEntry` is the existing single judgment (registry-bridge
+    // comment: "Comparing against 'registry' by hand is what silently turned the
+    // whole chain off when the deployment moved to the facet projection") — and
+    // this route had done exactly that. A `facet-catalog` entry therefore fell
+    // through to the plaintext branch and stored the user's pasted
+    // Authorization verbatim. `pack-store.js` already uses this predicate.
+    if (isMarketInstallableEntry(entry)) {
       const refName = credentialRefs.credentialRefForEntry(entry);
       if (!credentialRefs.credentialConnected(refName, req.user?.email ?? null)) {
         return res.status(409).json({

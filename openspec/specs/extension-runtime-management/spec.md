@@ -183,3 +183,48 @@ The server SHALL expose an authenticated personal MCP availability endpoint that
 - **WHEN** an authenticated user attempts to disable a locked MCP server
 - **THEN** the server returns an error
 - **AND** the server remains enabled in the effective profile
+
+### Requirement: 市场来源的凭据不落明文
+
+系统 SHALL 把「来自市场」视为一个渠道事实，其对所有市场来源一视同仁（登记源
+`registry` 与 `facet-catalog` 同权，判定口径与 pack 安装路径一致）。对市场来源的
+MCP 安装，系统 MUST 只记录凭据引用（`credentialRef`），MUST NOT 把访问令牌写进
+扩展记录的配置。
+
+所需凭据未连接时，系统 MUST 拒绝安装并给出结构化的「需要连接」原因与连接入口，
+MUST NOT 落一个带占位符或空凭据的条目。
+
+#### Scenario: 市场来源装出的是引用而非令牌
+- **WHEN** 用户安装一条市场来源（`registry` 或 `facet-catalog`）的 MCP 条目
+- **THEN** 落库的记录带凭据引用，其配置中不含 `Authorization` 令牌
+
+#### Scenario: 两个市场来源判定一致
+- **WHEN** 同一服务分别经 `registry` 来源与 `facet-catalog` 来源被安装
+- **THEN** 两条安装路径产生同样形状的记录（都带凭据引用），不存在一条存引用、另一条存令牌
+
+#### Scenario: 缺凭据拒绝安装
+- **WHEN** 用户安装市场来源条目但尚未连接该条目所需的凭据
+- **THEN** 安装被拒绝，返回结构化的「需要连接」原因与连接入口，且不写入任何条目
+
+#### Scenario: 非市场来源保持原样
+- **WHEN** 安装的是运维在配置文件中声明的本地/手写条目
+- **THEN** 该条目按其声明原样生效，本要求不改变其行为
+
+### Requirement: 读取面不返回明文凭据
+
+扩展读取面 SHALL 对配置中的凭据字段做掩码，MUST NOT 原样返回令牌。响应 SHOULD
+标明该条目是「引用式」还是「内联式」凭据，使界面能引导用户改走连接入口。
+
+#### Scenario: 列表响应里看不到令牌
+- **WHEN** 客户端读取 MCP 扩展列表
+- **THEN** 任何条目的配置中都不出现完整令牌，令牌位置为掩码
+
+#### Scenario: 同一行的每一份副本都不得带出令牌
+- **WHEN** 客户端读取 MCP 扩展列表，且存储层为同一行保留了多种表示
+  （如解析后的配置对象与其原始序列化列）
+- **THEN** 响应中任何一处表示都不得含完整令牌；不构成对外契约的原始副本
+  不返回，而不是仅仅掩码
+
+#### Scenario: 条目区分凭据形态
+- **WHEN** 客户端读取一条 MCP 扩展
+- **THEN** 响应标明其凭据是引用式还是内联式，供界面决定是否提示用户改造

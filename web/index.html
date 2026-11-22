@@ -32,8 +32,9 @@
          不实现 identify()：本站身份是 forward_auth（代理头注入，浏览器无 ID token），
          与萬星 identify 契约不兼容；副驾的身份升级走萬星自己的 popup 登录，见 design D4。
          context() 递本站路径与 board line，由 main.tsx 注入（需要读 router 状态）。
-         data-open="0"：loader 的 OPEN 默认是开，不写这一行首屏就是一块 420x640 面板；
-         收起态只有一个 48px 圆钮，用户点了才展开（scope-copilot-dock-to-line-surfaces）。
+         data-open="0"：显式声明首屏收起（loader 自 2026-11-22 起缺省即收起，写不写都不展开；
+         留着它是为了让本页意图一眼可读）。收起态只有一个 48px 圆钮，用户点了才展开
+         （scope-copilot-dock-to-line-surfaces）。
 
          ⚠️ 访客车道（/zhiyu/join/*、/zhiyu/embed/*）不发这一段：它们是同一个
          index.html 由 SPA 路由推出的，访客没有壹座账号，也不该在分享链接上看到

@@ -30,10 +30,10 @@
         });
       })();
     </script>
-    <!-- data-open="0" 与壹座同款（paas/web/index.html:42）：不写它时 loader 把
-         「未写」当成展开（`getAttribute("data-open") !== "0"`），于是副驾以
-         420×640 常驻右下角，z-index 2147483000 盖住内容右列——在素材画廊这种
-         密集网格页上就是整列看不见。收起态是 80px 的小气泡，点开才展开。 -->
+    <!-- data-open="0" 与壹座同款（paas/web/index.html:42），作用已从「必须写」降为「声明意图」：
+         loader 自 2026-11-22 起缺省即收起（`getAttribute("data-open") === "1"` 才展开），
+         所以不写也不会再出现 420×640 常驻右下角盖住内容右列的那种事故。收起态是
+         80px 的小气泡，点开才展开。 -->
     <script src="https://wanxing.finddatatech.cloud/copilot.js" data-line="facet" data-open="0" defer></script>
   </body>
 </html>

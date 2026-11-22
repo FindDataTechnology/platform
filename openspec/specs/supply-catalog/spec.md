@@ -89,15 +89,34 @@ Facade entries in the catalog SHALL derive from deployment/instance records on t
 
 Data-anchor entries SHALL be ingested from the DAAS catalog face, with v1 scope limited to catalog classes (entities and indicators); observation series SHALL be excluded. Each entry's provenance SHALL name the DAAS catalog and its as-of date. The heuristic derivation of official-data entries from pack names, badges, or category strings SHALL be retired.
 
+A species whose entries cannot explain themselves to a reader SHALL NOT be presented as a bare label: every data-anchor entry's reader-facing name SHALL be its annotation's human name when present, and the species itself SHALL carry a one-sentence description explaining what a data anchor is.
+
+The catalog's **presentation** of data-anchor entries SHALL be layered by `kind`, while its **data face** stays complete: the directory SHALL list `source`-kind entries by default and SHALL fold `indicator`-kind entries behind an explicit affordance that states how many there are. The data-anchor read endpoint SHALL continue to return every ingested entry of both kinds — folding is a browsing decision, not a data cut, and the machine surfaces are unaffected.
+
 #### Scenario: Anchor provenance is traceable
 
 - **WHEN** a catalog consumer reads a data-anchor entry
 - **THEN** its provenance names the DAAS catalog and carries the as-of date of the ingestion
-
 #### Scenario: Heuristic anchors disappear
 
 - **WHEN** a pack whose name matches data-ish patterns has no DAAS catalog backing
 - **THEN** no data-anchor entry is derived from it
+
+#### Scenario: Sources lead, indicators fold
+
+- **WHEN** a reader opens the data-anchor species in the directory
+- **THEN** the `source`-kind entries are listed by default
+- **AND** the `indicator`-kind entries are folded behind an affordance that names their total count, not silently dropped
+
+#### Scenario: The data face is not cut by the presentation
+
+- **WHEN** a consumer reads the data-anchor catalog endpoint directly
+- **THEN** it returns every ingested entry of both kinds, regardless of how the directory chooses to present them
+
+#### Scenario: A species explains itself
+
+- **WHEN** a reader opens any species tab in the directory
+- **THEN** that species carries a readable one-sentence description, never an absent string
 
 ### Requirement: Offline catalog copies are generated artifacts
 
@@ -143,20 +162,33 @@ An agent that exists as a registry entry (an AgentCard: a name, a description, a
 
 An entry with no deployment record SHALL render as undeployed with provenance naming the registry as its only source. The catalog SHALL NOT invent an endpoint, a live status, or a running instance for an agent that no serving plane reports.
 
+Because a facade is a running stage of a material that may also exist as a pack, the directory SHALL state that relationship in one sentence next to the species, so a reader is never left to infer whether the two species duplicate each other. The directory SHALL NOT merge the two species into one: a facade carries runtime state a pack does not, and measured deployments show the two sets are largely disjoint.
+
+An undeployed facade SHALL remain **present** in the directory (retaining it is required, not optional) and SHALL be **visibly marked** as not yet running on its card, so a reader can tell at a glance which entries are conversational now and which are not. The marking SHALL be a reader-facing label, never a silent difference in styling alone.
+
 #### Scenario: A registered agent with no deployment appears as an undeployed facade
 
 - **WHEN** the registry holds an AgentCard for an agent that no serving plane has deployed
 - **THEN** the catalog carries exactly one `facade` entry for it, with `runnable: "reachable"`, `deployment.state` stating it is not deployed, and provenance naming the registry
-
 #### Scenario: A deployed agent carries its serving state
 
 - **WHEN** the same agent has also been deployed and the serving plane reports its public status
 - **THEN** its single facade entry carries that reported state and the serving plane as provenance, and no second entry appears for it
-
 #### Scenario: No seventh species is introduced
 
 - **WHEN** a client reads the species enumeration after this change
 - **THEN** it still reports the same six species with the same version, and registry agents are found under `facade`
+
+#### Scenario: An undeployed facade says so on its card
+
+- **WHEN** a reader browses the directory and encounters a facade whose deployment state is undeployed
+- **THEN** its card carries a reader-facing label stating it is not yet running
+- **AND** the entry is still listed (not hidden)
+
+#### Scenario: The pack-to-facade relationship is stated, not inferred
+
+- **WHEN** a reader opens the directory where both the pack and facade species are present
+- **THEN** the facade species carries a one-sentence statement that it is the running stage of a material, so the two species are not mistaken for duplicates
 
 ### Requirement: One catalog presentation across the supply domain
 

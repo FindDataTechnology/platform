@@ -899,40 +899,73 @@ The catalog SHALL keep three invariants the previous surfaces had:
 The retired `#/mcp` address SHALL redirect to `#/catalog`, and any address that used to open the MCP
 catalog SHALL keep resolving to a view that lists MCP servers.
 
+The species names used by the tabs SHALL be the same names the species' own descriptions and the
+intro view use. One species SHALL NOT carry two different words on two surfaces of the same shell.
+
+A species whose entries differ sharply in browsing value (a small set of sources beside a large set
+of individual data points) SHALL present the browse-worthy subset by default and fold the remainder
+behind an affordance that states its total. Folding SHALL NOT cut the data face: the species'
+endpoint continues to return every entry, and the machine surfaces are unaffected.
+
+Where two species stand in a **staged relationship** — the same material as something obtainable and
+as something already running — the catalog SHALL state that relationship in one sentence next to the
+species. It SHALL NOT leave a reader to infer whether the two are duplicates, and it SHALL NOT merge
+them: the running stage carries runtime state the obtainable stage does not.
+
+Every species tab SHALL carry a **readable one-sentence description** of what that species is. A
+species whose description is absent SHALL NOT be rendered as a bare label: a reader encountering an
+unfamiliar species name must be able to learn what it means without leaving the view.
+
 #### Scenario: one catalog carries every species
 
-- **WHEN** a visitor opens `#/catalog`
-- **THEN** the species tabs name every species in the supply enumeration, and each tab lists that species
-
+- **WHEN** a viewer opens `#/catalog`
+- **THEN** every species in the supply enumeration has a tab, and each tab lists that species' own entries
 #### Scenario: a species tab fetches only its own source
 
-- **WHEN** a visitor selects the MCP tab
-- **THEN** the catalog requests the MCP source and does not request the pack, facade or data-anchor sources
-
+- **WHEN** a viewer selects a species tab
+- **THEN** only that species' endpoint is fetched
 #### Scenario: the 全部 tab does not load the whole inventory
 
-- **WHEN** a visitor opens the 全部 tab
-- **THEN** the catalog presents per-species counts and a bounded preview, and does not render the full inventory of any species
-
+- **WHEN** a viewer opens the 全部 tab
+- **THEN** the catalog shows per-species counts and previews without fetching the full inventories
 #### Scenario: a depth-capable material reaches its depth
 
-- **WHEN** a visitor opens a material whose species exposes a depth view
-- **THEN** its card leads into that depth view (tool surface, licence, tier), and returning restores the catalog at the same species tab
-
+- **WHEN** a species that declares a depth view lists an entry
+- **THEN** the entry's card reaches that depth view
 #### Scenario: an invisible entry stays invisible
 
-- **WHEN** the catalog is served to a viewer who may not see a given entry
-- **THEN** that entry is absent from the catalog for that viewer, and the absence is not reported as an error
-
+- **WHEN** an entry is not visible to the requesting viewer
+- **THEN** the catalog does not list it
 #### Scenario: a failed fetch is an error, not an empty species
 
-- **WHEN** a species' source cannot be reached
-- **THEN** that tab renders an explicit failure state naming the species, and does not render an empty list
-
+- **WHEN** a species' source fails to answer
+- **THEN** the catalog renders an explicit error for that species, never a blank grid
 #### Scenario: the retired address still resolves
 
-- **WHEN** a client opens `#/mcp`
-- **THEN** it lands on the catalog with the MCP species selected
+- **WHEN** a viewer opens the retired `#/mcp` address
+- **THEN** it resolves to a view that lists MCP servers
+
+#### Scenario: every species explains itself
+
+- **WHEN** a viewer opens any species tab
+- **THEN** the tab carries a one-sentence description of that species, never an absent string
+
+#### Scenario: a staged relationship is stated, not inferred
+
+- **WHEN** the catalog presents a species that is the running stage of another species' material
+- **THEN** the catalog states that relationship in one sentence beside the species
+- **AND** the two species remain separate tabs, each keeping its own state
+
+#### Scenario: a low-value tail folds without cutting the data
+
+- **WHEN** a species mixes a small browse-worthy subset with a large tail of individual entries
+- **THEN** the catalog lists the subset by default and folds the tail behind an affordance naming its total
+- **AND** the species' endpoint still returns every entry
+
+#### Scenario: one species, one name
+
+- **WHEN** a species' name appears in the tab row, in its description, and in the intro view
+- **THEN** all three use the same word
 
 ### Requirement: The entry page's height is bounded
 
