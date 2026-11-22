@@ -305,6 +305,12 @@ export function App() {
   const [catalogSpecies, setCatalogSpecies] = useState<string>(() => hashSpecies(window.location.hash));
   // 详情页的 pack id 来自 hash 路径（`#/packs/<id>`），与视图一起更新。
   const [packDetailId, setPackDetailId] = useState<string | null>(() => hashPackId(window.location.hash));
+  // 详情页的「返回来处」（pack-detail-as-page 5.2）：进入详情时把**当时**的 hash
+  // 记下来，返回就回那一条——目录的 ?species=&q= 因此完整保留。
+  // 不用 history.length 判：ego/SPA 常从 >1 起（实测 2），会把直开深链退到空白页。
+  // 也不用「在 hashchange 里读 location.hash」——那时它已是新值；要记的是上一条。
+  const returnHashRef = useRef<string | null>(null);
+  const lastHashRef = useRef<string>(window.location.hash);
   // The scrolling element (`<main>`); view changes reset it to the top.
   const scrollerRef = useRef<HTMLElement | null>(null);
   // A failed OIDC return lands on /?auth_error=state|token. Without this the
@@ -330,7 +336,14 @@ export function App() {
 
   useEffect(() => {
     const onHash = () => {
-      setView(viewFromHash(window.location.hash, user));
+      const hash = window.location.hash;
+      // 刚离开的那一条若不是详情，它就是「来处」。从这里进详情时记下。
+      const prev = lastHashRef.current;
+      if (viewFromHash(hash, user) === "packDetail" && prev && viewFromHash(prev, user) !== "packDetail") {
+        returnHashRef.current = prev;
+      }
+      lastHashRef.current = hash;
+      setView(viewFromHash(hash, user));
       setCatalogSpecies(hashSpecies(window.location.hash));
       setPackDetailId(hashPackId(window.location.hash));
     };
@@ -554,7 +567,13 @@ export function App() {
                 // facet 匿名壳没有安装面：部署/计费探测不在这里发。
                 installSurface={false}
                 studioOrigin="https://platform.finddatatech.cloud"
-                onBack={() => go("packs")}
+                // 返回来处（pack-detail-as-page 5.2）：从目录进来的回目录，页签与
+                // 搜索词都在记下的那条 hash 里。深链直开（没记到来处）回市场。
+                onBack={() => {
+                  const back = returnHashRef.current;
+                  if (back && back.startsWith("#/") && !back.startsWith("#/packs/")) window.location.hash = back;
+                  else go("packs");
+                }}
                 onRequireLogin={() => { window.location.href = `/auth/login?rd=${encodeURIComponent(location.pathname + "#/packs/" + (packDetailId ?? ""))}`; }}
               />
             </Container>
