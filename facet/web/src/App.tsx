@@ -102,15 +102,20 @@ function viewFromHash(hash: string, user: WhoamiUser): View {
 }
 
 function Whoami({ onUser }: { onUser: (u: WhoamiUser, loginEnabled: boolean) => void }) {
+  // 回调走 ref，effect 空依赖：宿主传的是内联箭头（每次渲染新引用），把它放进
+  // 依赖数组会让「请求 → setState → 重渲染 → 新箭头 → 再请求」无限自激
+  // （2026-11-22 实测：打开详情页后 /api/whoami 被连打上百次）。身份只探一次。
+  const onUserRef = useRef(onUser);
+  onUserRef.current = onUser;
   useEffect(() => {
     fetch("/api/whoami")
       .then((r) => r.json())
-      .then((d) => onUser(d?.email ? d : null, d?.loginEnabled === true))
+      .then((d) => onUserRef.current(d?.email ? d : null, d?.loginEnabled === true))
       // A failed probe means "we do not know who you are" — the anonymous face
       // is the honest answer, and the login entry stays hidden (we also do not
       // know whether this deployment can log anyone in).
-      .catch(() => onUser(null, false));
-  }, [onUser]);
+      .catch(() => onUserRef.current(null, false));
+  }, []);
   return null;
 }
 
@@ -365,8 +370,11 @@ export function App() {
   // labels are the same task names the entry row and the account menu use, so a
   // view cannot end up with three names.
   useEffect(() => {
+    // 详情页没有自己的入口名（它不是导航项，而是市场里的一张卡打开的面），
+    // 沿用市场的名字，否则会拼出不存在的 key 并显示成裸串。
     const ns = view === "mine" || view === "curate" ? "account" : "entries";
-    document.title = `${t(`facetShell.${ns}.${view}`)} · 谦面 Facet`;
+    const label = view === "packDetail" ? t("facetShell.entries.packs") : t(`facetShell.${ns}.${view}`);
+    document.title = `${label} · 谦面 Facet`;
   }, [view, t]);
 
   // Signed-out viewers subscribing from the detail dialog land on the login
