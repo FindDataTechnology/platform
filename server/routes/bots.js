@@ -595,11 +595,12 @@ export function registerBotRoutes(ctx) {
     }
   });
 
-  // ── Escalate a chatwoot conversation to the human queue (unify-im-solution 1.4) ─
-  // The AI's other half of the human-handoff loop: the stop-guard makes the AI go
-  // silent once a conversation is `pending` or human-assigned; THIS puts it there.
-  // Operator-triggered today (a UI button / automation can call it); an agent tool
-  // that decides to escalate can reuse the same lib function.
+  // ── Escalate a chatwoot conversation to a human (chatwoot-ai-handoff) ──────
+  // The AI's other half of the human-handoff loop: the stop-guard makes the AI
+  // go silent once a conversation is ASSIGNED TO A HUMAN; THIS performs that
+  // assignment (Conversations::AssignmentService → status open, ai_assignee
+  // cleared). Operator-triggered today; an agent tool that decides to escalate
+  // reuses the same lib function (see tasks.md 4.1).
   app.post("/api/bots/:id/escalate", async (req, res) => {
     if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
     const bot = db.getBot(req.params.id);

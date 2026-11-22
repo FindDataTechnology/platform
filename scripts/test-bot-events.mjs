@@ -202,6 +202,69 @@ test("a missing bindingId is a client error", async () => {  const res = await p
   assert.equal(res.status, 400);
 });
 
+// ── The human-handoff stop guard (chatwoot-ai-handoff) ───────────────────────
+// The guard's whole job: the AI must answer while a BOT serves the conversation
+// and go silent once a HUMAN owns it. On a Chatwoot bot inbox every new
+// conversation is `pending` with an AgentBot assignee, and bot_handoff! only
+// fires FROM pending — so `pending` means "the AI is serving", NOT "waiting for
+// a human". Gating on `pending` silenced the AI on every first message (the bug
+// this pins). The real signal is the ASSIGNEE: "User" = human owns it.
+test("handoff guard: pending with an AgentBot assignee still runs the turn", async () => {
+  makeBot({ name: "guard-bot", bindingId: "b_g1" });
+  turnCalls = [];
+  const res = await post({
+    bindingId: "b_g1", chatKey: "c", text: "first message",
+    assignee: { id: 11, type: "AgentBot" }, conversationStatus: "pending",
+  });
+  assert.equal(res.status, 200);
+  assert.equal(turnCalls.length, 1, "the AI must answer while the bot serves the conversation");
+});
+
+test("handoff guard: pending with NO assignee still runs the turn", async () => {
+  makeBot({ name: "guard-none", bindingId: "b_g2" });
+  turnCalls = [];
+  const res = await post({
+    bindingId: "b_g2", chatKey: "c", text: "hi",
+    assignee: null, conversationStatus: "pending",
+  });
+  assert.equal(res.status, 200);
+  assert.equal(turnCalls.length, 1, "an unassigned conversation is the AI's to answer");
+});
+
+test("handoff guard: a message with no assignee fields at all runs the turn", async () => {
+  makeBot({ name: "guard-bare", bindingId: "b_g3" });
+  turnCalls = [];
+  const res = await post({ bindingId: "b_g3", chatKey: "c", text: "hi" });
+  assert.equal(res.status, 200);
+  assert.equal(turnCalls.length, 1, "a platform that sends neither field must be unaffected");
+});
+
+test("handoff guard: assigned to a User → silent, even while status is open", async () => {
+  makeBot({ name: "guard-human", bindingId: "b_g4" });
+  turnCalls = [];
+  const res = await post({
+    bindingId: "b_g4", chatKey: "c", text: "hi",
+    assignee: { id: 5, type: "User" }, conversationStatus: "open",
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.note, "handed-off");
+  assert.equal(turnCalls.length, 0, "a human owns this conversation");
+});
+
+test("handoff guard: assigned to a User while status is pending (resolved then reopened) stays silent", async () => {
+  makeBot({ name: "guard-reopen", bindingId: "b_g5" });
+  turnCalls = [];
+  const res = await post({
+    bindingId: "b_g5", chatKey: "c", text: "back again",
+    assignee: { id: 5, type: "User" }, conversationStatus: "pending",
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.note, "handed-off");
+  assert.equal(turnCalls.length, 0, "assignee_id survives resolve→reopen; the human still owns it");
+});
+
 test("the transport switch stores the pair together, and legacy clears both", () => {
   const bot = makeBot({ name: "switch", bindingId: "b_switch" });
   assert.equal(bot.transport, "fd-bot");

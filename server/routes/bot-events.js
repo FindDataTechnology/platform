@@ -110,19 +110,23 @@ export function registerBotEventRoutes(ctx) {
     }
     if (!text.trim() && !media.length) return res.status(200).json({ ok: true, note: "empty" });
 
-    // Human-in-the-loop guard: Chatwoot's bot_handoff! moves a conversation to the
-    // human queue ("pending", often still unassigned) and only later does a human
-    // assign themselves ("User" assignee). In BOTH states the AI must go silent —
-    // answering while a human waits to pick it up is the exact failure this stops.
-    // Unassigned, or an AgentBot owner, keeps today's behaviour; a platform that
-    // never sends these fields is unaffected.
+    // Human-in-the-loop guard: the AI must go silent exactly when a HUMAN owns
+    // the conversation. The ONLY trustworthy signal for that is the assignee:
+    // Chatwoot's `assignee_type` returns the AI when ai_assignee is set, and
+    // "User" when a person is assigned (conversation.rb:224). Once assigned,
+    // `assignee_id` stays set even across resolve→reopen, so this one condition
+    // also covers "a human took over, the conversation was resolved, the visitor
+    // came back" — where an AI must NOT grab the conversation again.
+    //
+    // It must NOT be `conversationStatus === "pending"` (the bug this change
+    // fixed): on a bot inbox Chatwoot writes `pending` on EVERY new conversation
+    // (set_active_bot_conversation) and bot_handoff! only fires FROM pending —
+    // pending means "the AI is serving", so gating on it silenced the AI on
+    // every first message. Verified 2026-11-23 against the live 4.19.0 source,
+    // the conversations table, and a replay through fd-bot's parseCallback.
     const assignee = envelope.assignee ?? null;
     if (assignee?.type === "User") {
       console.log(`[bot-events] bot "${bot.name}" skipped: conversation assigned to a human (${assignee.id})`);
-      return res.status(200).json({ ok: true, note: "handed-off" });
-    }
-    if (envelope.conversationStatus === "pending") {
-      console.log(`[bot-events] bot "${bot.name}" skipped: conversation pending in human queue`);
       return res.status(200).json({ ok: true, note: "handed-off" });
     }
 

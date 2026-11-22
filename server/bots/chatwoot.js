@@ -37,6 +37,13 @@ export const registry = {
     { key: "apiToken", label: "Agent Bot access token", secret: true, required: true },
     { key: "accountId", label: "Account id", required: true },
     { key: "webhookSecret", label: "Webhook secret（= Agent Bot 的 secret 列）", secret: true, required: true },
+    // Who receives escalations. The agent-bot token cannot list account users
+    // (users#index is not on Chatwoot's BOT_ACCESSIBLE_ENDPOINTS) and this lane
+    // has no admin token, so the target is declared once here. Required for
+    // escalateToHuman to do anything: a bot with no target throws rather than
+    // silently "escalating" into nothing (chatwoot-ai-handoff).
+    { key: "assigneeId", label: "转人工接待人的 Chatwoot 用户 ID", required: false,
+      validate: (v) => (/^\d+$/.test(String(v ?? "").trim()) ? null : "必须是数字用户 ID") },
   ],
 
   // No QR: a chatwoot bot is an Agent Bot created in the desk's own settings.
