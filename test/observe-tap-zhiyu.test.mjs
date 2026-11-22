@@ -170,7 +170,9 @@ test("passed：metadata.outcome=passed 照实区分（subOutcome 无独立通道
   const body = bodies[0];
   assert.equal(body.project, "room-r1");
   assert.equal(body.metadata.outcome, "passed", "passed 与普通 ok 区分（fd-memory metadata 自由标量）");
-  assert.equal(body.body, "「过」", "过=过程叙事；空 body 会被 fd-memory body_required 400 丢弃");
+  // PASS_TOKEN 是裸「过」而不是「过」——正常化(room-router:67-73)之后真实席位答的
+  // 就是裸过，加书名号反而会让这里和实现说的不是同一件事。非空才是本用例要守的。
+  assert.equal(body.body, "过", "过=过程叙事；空 body 会被 fd-memory body_required 400 丢弃");
   assert.equal(body.title, "大家随便聊聊");
   assert.ok(store.rows.some((r) => r.kind === "event" && r.meta?.event === "pass"), "pass 事件行照旧");
   assert.ok(!store.rows.some((r) => r.kind === "agent"), "过不落 agent 行（计费纪律不变）");

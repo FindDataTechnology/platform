@@ -139,6 +139,7 @@ const EXPECTED_ROUTES = [
   "GET /api/packs/internal/matters/:packId/:agentId",
   "GET /api/packs/internal/matters/:packId/:agentId/:mid",
   "POST /api/packs/internal/visitor-actor/:packId/:agentId",
+  "POST /api/packs/preview-pillars",
   "DELETE /api/packs/internal/visitor-actor/:packId/:agentId",
   "POST /api/packs/internal/connector-action/:packId/:agentId",
   "GET /api/packs/:id/deployments",
