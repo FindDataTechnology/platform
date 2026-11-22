@@ -15,6 +15,8 @@ import { fetchMarketManifest, fetchMarketDetail } from "../pack-manifest-source.
 import { projectPackList } from "../../lib/pack-locale.js";
 import { buildBundle, bundleFileName, fromBase64, readBundle, toBase64, zipPluginPackage } from "../offline-bundle.js";
 import { validatePackManifest } from "../../lib/pack-manifest.js";
+import { checkCapabilityRefs, describeRefFailures } from "../../lib/check-capability-refs.js";
+import { makeCatalogLoader } from "../../lib/capability-catalog-client.js";
 import { packIdFromName } from "../../lib/pack-identity.js";
 import {
   droppedSections,
@@ -75,7 +77,56 @@ export function registerPackRoutes(ctx) {
     };
   };
 
-  // Team plugin supply proof (add-fleet-plugin-declaration 1.2): the roster is
+  // Assembly-time capability check (change: wire-capability-catalog-into-pack-assembly).
+  // OFF by default: when CAPABILITY_CHECK_MODE is unset/off this returns null and
+  // install is byte-for-byte unchanged. Two active modes:
+  //   "warn"     — check runs, failures are logged, install proceeds (gray release)
+  //   "enforce"  — failures refuse the install (409), same contract as budget gate
+  // Resolves the governor's server_access when the caller supplies one; absent
+  // means admin/full view (existence check only, no range narrowing) — the
+  // docs' degraded-but-honest default.
+  const capabilityCheckRefusal = async (manifest, governorServerAccess) => {
+    const mode = (process.env.CAPABILITY_CHECK_MODE || "off").toLowerCase();
+    if (mode !== "warn" && mode !== "enforce") return null;
+    let result;
+    try {
+      const result2 = await checkCapabilityRefs(manifest, {
+        pack: manifest?.name,
+        failClosed: mode === "enforce",
+        loadCatalog: makeCatalogLoader({ governorServerAccess }),
+      });
+      result = result2;
+    } catch (e) {
+      // The check itself faulted (not a catalog-unavailable verdict — that is
+      // returned, not thrown). Never let a gate bug block install; leave a trace.
+      console.warn(`[packs] capability check degraded (${e?.message || e}); install proceeds`);
+      return null;
+    }
+    if (result.catalogUnavailable) {
+      console.warn(`[packs] capability catalog unavailable (${result.reason || ""}); mode=${mode}`);
+      if (result.ok) {
+        // degrade mode: allowed but explicitly unverified — never silent
+        console.warn("[packs] install proceeds WITHOUT capability verification");
+      }
+    }
+    if (result.ok) return null;
+    const detail = describeRefFailures(result);
+    if (mode === "warn") {
+      console.warn(`[packs] capability check (warn): ${detail}`);
+      return null;
+    }
+    return {
+      error: `Pack references capabilities you cannot use: ${detail}`,
+      code: "capability-unavailable",
+      details: {
+        missing: result.missing,
+        ungoverned: result.ungoverned,
+        unavailable: result.unavailable,
+      },
+    };
+  };
+
+
   // the runtime's own answer to "what is baked here", and the versions come from
   // the installed tree. Read per install — no caching, so a re-bake is visible
   // immediately. A runtime that cannot answer yields no roster, and installPack
@@ -401,6 +452,14 @@ export function registerPackRoutes(ctx) {
       }
       const refusal = mcpBudgetRefusal(manifest);
       if (refusal) return res.status(409).json(refusal);
+      // Assembly-time capability check (off by default). Governor range needs
+      // the assembler's server_access, which paas does NOT currently produce
+      // (`req.user` carries email+groups+roles only — verified in server/auth.js).
+      // So today this runs the existence check only (governor = null = full
+      // visibility). Range narrowing requires paas to inject server_access
+      // (resolve groups→scopes via registry) — a follow-up, not faked here.
+      const capRefusal = await capabilityCheckRefusal(manifest, null);
+      if (capRefusal) return res.status(409).json(capRefusal);
       const { report, installed } = await packStore.installPack({
         packId,
         version,
