@@ -530,6 +530,7 @@ export function TasksPage({ send }: TasksPageProps) {
   }, [jobs, projectFilter]);
   return (
     <PageShell
+      data-testid="cron-page"
       title={t("tasks.title")}
       titleTestId="cron-page-title"
       actions={

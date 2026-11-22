@@ -113,6 +113,7 @@ export function DocumentsPage({ send }: { send: (m: ClientMessage) => void }) {
 
   return (
     <PageShell
+      data-testid="documents-page"
       title={
         <span className="flex items-center gap-2">
           <Icon name="file-text" size={22} className="text-primary" />

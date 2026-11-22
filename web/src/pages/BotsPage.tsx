@@ -115,6 +115,7 @@ export function BotsPage() {
 
   return (
     <PageShell
+      data-testid="bots-page"
       title={t("botsPage.title")}
       titleTestId="bots-title"
       subtitle={t("botsPage.subtitle")}

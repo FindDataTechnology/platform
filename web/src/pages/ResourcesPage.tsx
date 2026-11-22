@@ -635,6 +635,7 @@ export function ResourcesPage({ send }: ResourcesPageProps) {
 
   return (
     <PageShell
+      data-testid="resources-page"
       title={t("resources.title")}
       titleTestId="resources-title"
       subtitle={t("resources.count", { count: total })}

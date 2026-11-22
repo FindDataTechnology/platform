@@ -234,6 +234,7 @@ export function MemoryPage() {
 
   return (
     <PageShell
+      data-testid="memory-page"
       title={t("memory.title")}
       titleTestId="memory-page-title"
       subtitle={t("memory.subtitle")}

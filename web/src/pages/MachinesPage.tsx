@@ -511,6 +511,7 @@ export function MachinesPage() {
 
   return (
     <PageShell
+      data-testid="machines-page"
       title={t("machines.title")}
       titleTestId="machines-page-title"
       actions={
