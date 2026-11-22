@@ -85,6 +85,29 @@ export function PackDetailPage({
   useEffect(() => {
     void refreshMarketCatalog();
   }, [refreshMarketCatalog]);
+  // facet 壳没有 /api/extensions/market（那是壹座的端点），但它有
+  // /api/mcp-catalog 且带每台服务器的 toolCount。两条路都接：壹座优先用
+  // marketCatalog（toolList 数组长度），拿不到时回落到 facet 的 toolCount。
+  // 都不通就是 null——未知不能编成 0。
+  const [facetToolCounts, setFacetToolCounts] = useState<Record<string, number> | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/mcp-catalog")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { servers?: { name: string; toolCount?: number | null }[] } | null) => {
+        if (!live || !d?.servers) return;
+        const m: Record<string, number> = {};
+        for (const sv of d.servers) {
+          if (typeof sv.toolCount === "number") m[sv.name] = sv.toolCount;
+        }
+        setFacetToolCounts(m);
+      })
+      // 目录读不到（旧服务/离线）就保持 null：工具面退回只报声明数。
+      .catch(() => live && setFacetToolCounts(null));
+    return () => {
+      live = false;
+    };
+  }, []);
   const [pack, setPack] = useState<PackDetail | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "missing" | "error">("loading");
   const [err, setErr] = useState<string | null>(null);
@@ -316,7 +339,10 @@ export function PackDetailPage({
             skills={m.skills ?? []}
             mcp={(m.mcpServers ?? []).map((r) => ({
               ...r,
-              totalTools: marketCatalog?.mcpServers?.find((s) => s.name === r.registryName)?.toolList?.length ?? null,
+              totalTools:
+                marketCatalog?.mcpServers?.find((s) => s.name === r.registryName)?.toolList?.length ??
+                facetToolCounts?.[r.registryName] ??
+                null,
             }))}
             bindings={m.connector_bindings ?? []}
             pillars={(pack as { pillars?: SpecPillars | null }).pillars ?? null}

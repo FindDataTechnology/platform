@@ -91,6 +91,10 @@ export function registerFacetMcpRoutes(app, {
           description: e.description || "",
           endpoint: e.configTemplate?.url ?? "",
           requiredGroups: Array.isArray(e.groups) ? e.groups : [],
+          // 工具面全量数（pack-tool-declaration-gate D4）：包详情要把「包声明了
+          // 几个工具」和「这台服务器一共有几个」并排给读者。注册表条目存的是
+          // tool_list 或历史字段 numTools，这里投影成总数；未知保持 null（不编 0）。
+          toolCount: e.numTools ?? (Array.isArray(e.toolList) ? e.toolList.length : null),
         };
         // converge-line-identity-and-keys 5.3/8.4: carry **which stored credential**
         // this server needs. Without it the per-line declaration chain dies here —
@@ -128,6 +132,11 @@ export function registerFacetMcpRoutes(app, {
           version: e.version ?? null,
           tags: Array.isArray(e.tags) ? e.tags : [],
           requiredGroups: Array.isArray(e.groups) ? e.groups : [],
+          // 工具面全量数（pack-tool-declaration-gate D4）：包详情要把「声明了
+          // 几个」和「这个服务器一共有几个」并排给读者看。注册表条目存的是
+          // tool_list（或历史字段 numTools），这里投影成一个数——列表页不需要
+          // 每个工具的名字，只需要总数。未知就保持 null（不编 0）。
+          toolCount: e.numTools ?? (Array.isArray(e.toolList) ? e.toolList.length : null),
         };
         const ann = projected(e.annotations, locale);
         if (ann) row.annotation = ann;
