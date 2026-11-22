@@ -96,6 +96,13 @@ const TOOLS = [
             "Optional one-line note for the human who picks this up (what the visitor needs). " +
             "Not shown to the visitor.",
         },
+        summary: {
+          type: "string",
+          description:
+            "Optional short summary of what the visitor has said so far, so the human does not " +
+            "have to ask them to repeat it. Keep it factual; do not include personal data the " +
+            "visitor did not volunteer.",
+        },
       },
     },
   },
@@ -103,13 +110,14 @@ const TOOLS = [
 
 export function httpDriver({ botId, sessionId }) {
   return {
-    async handoff({ reason, note } = {}) {
+    async handoff({ reason, note, summary } = {}) {
       if (!botId) throw new Error("handoff: no bot identity was injected");
       if (!sessionId) throw new Error("handoff: no session identity was injected");
       return call("POST", `/api/bots/${encodeURIComponent(botId)}/escalate`, {
         sessionId,
         reason: String(reason ?? ""),
         note: String(note ?? ""),
+        summary: String(summary ?? ""),
       });
     },
   };
@@ -151,7 +159,7 @@ export async function createServer({
     const driver = driverFactory({ botId, sessionId: who?.sessionId ?? null });
     let result;
     try {
-      result = await driver.handoff({ reason: args?.reason, note: args?.note });
+      result = await driver.handoff({ reason: args?.reason, note: args?.note, summary: args?.summary });
     } catch (err) {
       return { content: [{ type: "text", text: `handoff failed: ${err.message}` }], isError: true };
     }

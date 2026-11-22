@@ -638,9 +638,9 @@ export function registerBotRoutes(ctx) {
       }
     }
     if (!chatKey) return res.status(400).json({ error: "Missing chatKey (or an unresolvable sessionId)" });
-    const { reason, note } = req.body || {};
+    const { reason, note, summary } = req.body || {};
     try {
-      const result = await escalateToHuman(bot, chatKey, { reason, note });
+      const result = await escalateToHuman(bot, chatKey, { reason, note, summary });
       // A platform verdict (ok:false) is a real outcome, not a server error — 200
       // with the classified result, matching fd-bot's send discipline.
       res.json(result);
