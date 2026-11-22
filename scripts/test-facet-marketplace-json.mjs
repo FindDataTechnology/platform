@@ -46,7 +46,7 @@ async function seed(registry) {
   return { a, b, c };
 }
 
-test("marketplace.json：策展在列（category∨featured）、未策展缺席、缓存头 ≤1h", async () => {
+test("marketplace.json：公开非 unlisted 在列（可见性判据）、unlisted 缺席、缓存头 ≤1h", async () => {
   const { registry, base, cleanup } = await boot();
   try {
     const { a, c } = await seed(registry);
@@ -54,15 +54,17 @@ test("marketplace.json：策展在列（category∨featured）、未策展缺席
     assert.equal(r.status, 200);
     assert.match(r.headers.get("cache-control") || "", /max-age=(\d+)/);
     assert.ok(Number(r.headers.get("cache-control").match(/max-age=(\d+)/)[1]) <= 3600);
-    // 默认口径（wire-marketplace-json-curation / D5）：未策展公开包不进清单，
-    // 但插件树直链仍可取（清单管发现，不管可达）。
-    assert.deepEqual((await r.json()).plugins.map((p) => p.name), []);
+    // 入列判据是**可见性**，不是策展（7849cec9f，2026-11-20：策展只决定呈现，
+    // 不能决定一份材料是否进清单）。seed 里 A/B/C 都公开、B 被 setUnlisted，
+    // 所以默认清单 = A、C（顺序见下）；插件树直链照旧可取。
+    const doc0 = await r.json();
+    assert.deepEqual(doc0.plugins.map((p) => p.name).sort(), [a.id, c.id].sort());
     const tree = await fetch(`${base}/api/marketplace/packs/${a.id}/v1/.claude-plugin/plugin.json`);
     assert.equal(tree.status, 200);
-    // category 一档即收录。
+    // 加策展（category）不改变入列集合，只改呈现字段：category 归位到线词。
     registry.setCuration({ id: a.id, actor: { email: "op@finddata.cloud", admin: true }, category: "legal", featured: false });
     const doc1 = await (await fetch(`${base}/api/marketplace/marketplace.json`)).json();
-    assert.deepEqual(doc1.plugins.map((p) => p.name), [a.id]);
+    assert.deepEqual(doc1.plugins.map((p) => p.name).sort(), [a.id, c.id].sort());
     const e1 = doc1.plugins.find((p) => p.name === a.id);
     assert.equal(e1.source, `./packs/${a.id}/v1`);
     // 投影归位 (add-legacy-pack-rebrand 2.x): the plugin manifest's category rides
@@ -70,12 +72,10 @@ test("marketplace.json：策展在列（category∨featured）、未策展缺席
     // a deployment override (PACK_CATEGORY_LINES) keeps this honest.
     assert.equal(e1.category, lineOf("legal"));
     assert.equal(e1.featured, false);
-    // featured 单独为真也收录（category 空）。
+    // featured 单独为真同样只改呈现，不改入列。
     registry.setCuration({ id: c.id, actor: { email: "op@finddata.cloud", admin: true }, category: "", featured: true });
     const doc2 = await (await fetch(`${base}/api/marketplace/marketplace.json`)).json();
-    // DESC listing is newest-first; equal-second publishes fall to rowid DESC,
-  // so the order is deterministic regardless of clock precision.
-  assert.deepEqual(doc2.plugins.map((p) => p.name), [c.id, a.id]);
+    assert.deepEqual(doc2.plugins.map((p) => p.name).sort(), [a.id, c.id].sort());
     const e2 = doc2.plugins.find((p) => p.name === c.id);
     assert.equal(e2.category, "");
     assert.equal(e2.featured, true);

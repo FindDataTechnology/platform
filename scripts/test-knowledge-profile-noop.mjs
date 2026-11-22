@@ -28,10 +28,7 @@ function git(args) {
 
 /** Rebuild server/knowledge-profile.js as it stood before the four-axis work. */
 function baselineProfileModule() {
-  const introducedBy = git(["log", "-S", '"read", "collections"', "--format=%H", "--", "server/knowledge-profile.js"])
-    .split("\n")
-    .filter(Boolean)
-    .at(-1);
+  const introducedBy = baselineIntroducedBy();
   assert.ok(introducedBy, "could not find the commit that introduced the read spelling");
   const dir = mkdtempSync(join(tmpdir(), "kp-baseline-"));
   const archive = execFileSync("git", ["archive", `${introducedBy}^`, "server/knowledge-profile.js"], {
@@ -99,10 +96,32 @@ const injectionView = (resolved) => {
 // below need this — one of them had the check and the other three went red with
 // `git archive <head>^: not a valid object name`.
 const HISTORY_DEPTH = Number(git(["rev-list", "--count", "HEAD"]));
+// The pre-change baseline is `<the commit that introduced the spelling>^`. Two
+// different ways that caret names nothing in this checkout:
+//   · a squashed first release — depth 1, caught by HISTORY_DEPTH;
+//   · the stacked public snapshot — depth is now ~50 (each release stacks on the
+//     last), so the depth guard PASSES, yet the `-S` hit is the snapshot ROOT
+//     (the scrubbed export starts a fresh lineage) whose parent does not exist.
+//     `git archive <root>^` then throws ENOENT instead of skipping. Measured
+//     2026-11-22 on the public mirror: depth 52, one root, `5be789c1c^` invalid.
+// So also require that the `-S` hit actually has a parent here.
+function baselineIntroducedBy() {
+  return git(["log", "-S", '"read", "collections"', "--format=%H", "--", "server/knowledge-profile.js"])
+    .split("\n").filter(Boolean).at(-1);
+}
 function hasPreChangeBaseline(t) {
-  if (HISTORY_DEPTH >= 10) return true;
-  t.skip(`squashed history (${HISTORY_DEPTH} commits) — no pre-change baseline to compare against`);
-  return false;
+  if (HISTORY_DEPTH < 10) {
+    t.skip(`squashed history (${HISTORY_DEPTH} commits) — no pre-change baseline to compare against`);
+    return false;
+  }
+  const introducedBy = baselineIntroducedBy();
+  const parents = introducedBy ? git(["rev-list", "--parents", "-n1", introducedBy]).split(" ").filter(Boolean) : [];
+  if (parents.length < 2) {
+    // no parent ⇒ the hit is this export's root commit; there is nothing before it
+    t.skip("the introducing commit is this export's root (no parent) — nothing to compare against");
+    return false;
+  }
+  return true;
 }
 
 test("a knowledge.memory-only pack materializes the same injection input before and after", async (t) => {

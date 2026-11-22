@@ -132,8 +132,12 @@ test("identity: the frontend copy carries the SAME replacement chain (no third r
   const sites = {
     "facet/supply-catalog.js": replacementChain(readFileSync(path.join(ROOT, "facet", "supply-catalog.js"), "utf8"), "export function slugFor"),
     "agent-runner/fleet.js": replacementChain(readFileSync(path.join(ROOT, "agent-runner", "fleet.js"), "utf8"), "export const slugFor"),
-    "web/src/components/packs/PackDetailDialog.tsx": replacementChain(
-      readFileSync(path.join(ROOT, "web", "src", "components", "packs", "PackDetailDialog.tsx"), "utf8"), "const wanxingSlugFor"),
+    "web/src/components/packs/PackDeployPanel.tsx": replacementChain(
+      readFileSync(path.join(ROOT, "web", "src", "components", "packs", "PackDeployPanel.tsx"), "utf8"), "const wanxingSlugFor"),
+    // The frontend copy lived in PackDetailDialog.tsx until 926806da8 (详情从弹窗升为
+    // 独立页) deleted that file; `wanxingSlugFor` moved to PackDeployPanel.tsx. A test
+    // that pins the old path stays red forever — the same class as the three stale
+    // assertions fixed 2026-11-22.
     // Diagnostic probes carry their own copy too. Both omitted `.toLowerCase()`
     // until 2026-11-13 — which means an agentPath with any uppercase character
     // (the registry issues them: /packs/egaYyOaZVTf0FWlLvaGAQA/…) resolved to a

@@ -34,9 +34,15 @@ function makeBundle({ dropExport = null } = {}) {
   fs.cpSync(SITE, src, { recursive: true });
   if (dropExport) fs.rmSync(path.join(src, "generated", dropExport), { force: true });
   const tar = path.join(work, "site.tar.gz");
+  // The file list mirrors deploy-plaza.sh, but `deploy/` is an internal ops dir the
+  // public snapshot excludes — tar would die "Cannot stat: deploy". It is not part
+  // of what these tests assert (the four machine faces at the site root), so pack
+  // only the entries that exist here rather than failing on a legitimately absent one.
+  const members = ["index.html", "style.css", "script.js", "locales", "generated", "deploy"]
+    .filter((m) => fs.existsSync(path.join(src, m)));
   execFileSync(
     "tar",
-    ["--no-xattrs", "-czf", tar, "-C", src, "index.html", "style.css", "script.js", "locales", "generated", "deploy"],
+    ["--no-xattrs", "-czf", tar, "-C", src, ...members],
     { env: { ...process.env, COPYFILE_DISABLE: "1" } },
   );
   return { work, tar };

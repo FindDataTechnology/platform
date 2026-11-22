@@ -32,19 +32,31 @@ function git(args) {
 // "not a valid object name" there — a red that says nothing about the wiring.
 // Measured 2026-11-13 on the published snapshot: depth 1. Every test below needs
 // this, so it is one named question, not four copies of a magic number.
+// Added 2026-11-22: the snapshot now STACKS releases (depth ~52), so the depth
+// guard passes while the `-S` hit is still this export's ROOT (no parent) —
+// `archive <root>^` throws instead of skipping. Require the hit to have a parent.
 const HISTORY_DEPTH = Number(git(["rev-list", "--count", "HEAD"]));
+function baselineIntroducedBy() {
+  return git(["log", "-S", "validateMemoryBlock", "--format=%H", "--", "lib/pack-manifest.js"])
+    .split("\n").filter(Boolean).at(-1);
+}
 function hasPreChangeBaseline(t) {
-  if (HISTORY_DEPTH >= 10) return true;
-  t.skip(`squashed history (${HISTORY_DEPTH} commits) — no pre-change baseline to compare against`);
-  return false;
+  if (HISTORY_DEPTH < 10) {
+    t.skip(`squashed history (${HISTORY_DEPTH} commits) — no pre-change baseline to compare against`);
+    return false;
+  }
+  const introducedBy = baselineIntroducedBy();
+  const parents = introducedBy ? git(["rev-list", "--parents", "-n1", introducedBy]).split(" ").filter(Boolean) : [];
+  if (parents.length < 2) {
+    t.skip("the introducing commit is this export's root (no parent) — nothing to compare against");
+    return false;
+  }
+  return true;
 }
 
 /** Rebuild the validator as it stood before the memory wiring existed. */
 function baselineValidator() {
-  const introducedBy = git(["log", "-S", "validateMemoryBlock", "--format=%H", "--", "lib/pack-manifest.js"])
-    .split("\n")
-    .filter(Boolean)
-    .at(-1);
+  const introducedBy = baselineIntroducedBy();
   assert.ok(introducedBy, "could not find the commit that introduced the memory wiring");
   const dir = mkdtempSync(join(tmpdir(), "pm-baseline-"));
   const archive = execFileSync("git", ["archive", `${introducedBy}^`, "lib"], { cwd: PAAS, maxBuffer: 64 * 1024 * 1024 });
