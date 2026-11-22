@@ -61,3 +61,28 @@ test("既无 fleet 也无 members 的文件判不出（roles 包不是团队模�
   assert.throws(() => loadTemplate(f), /no fleet members/);
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+test("架构树也是边：supervisor 模式无 edges 但有 parentRef 树 ⇒ 不得判无读者（活舰队实测）", () => {
+  // 柏讯内容舰队的真实形状：orchestration 只有 {mode:"supervisor"}，三岗靠 parentRef 成树
+  const r = judgeStatic({
+    members: [
+      { ref: "a", title: "巡线岗", parentRef: "c", kpiSlots: [{ key: "n", label: "n" }] },
+      { ref: "b", title: "内容岗", parentRef: "c", kpiSlots: [{ key: "m", label: "m" }] },
+      { ref: "c", title: "源岗", parentRef: null, kpiSlots: [{ key: "k", label: "k" }] },
+    ],
+    orchestration: { mode: "supervisor" },
+  });
+  assert.equal(r.posts.every((p) => !p.findings.some((f) => f.code === "R1")), true, JSON.stringify(r.posts));
+  assert.equal(r.candidates.length, 0);
+});
+
+test("既无 edges 也无 parentRef 树 ⇒ 仍判无读者（别把修复做成放宽）", () => {
+  const r = judgeStatic({
+    members: [
+      { ref: "a", title: "孤立岗", parentRef: null, kpiSlots: [{ key: "n", label: "n" }] },
+      { ref: "b", title: "另一岗", parentRef: null, kpiSlots: [{ key: "m", label: "m" }] },
+    ],
+    orchestration: { edges: [] },
+  });
+  assert.equal(r.posts.every((p) => p.findings.some((f) => f.code === "R1")), true);
+});

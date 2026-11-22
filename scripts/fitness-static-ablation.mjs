@@ -50,6 +50,13 @@ export function judgeStatic({ members, orchestration, agents = [] }) {
     const ref = m?.ref ?? m?.id ?? null;
     const outbound = edges.filter((e) => DIRECTED.has(e?.kind) && e.from === ref);
     const inbound = edges.filter((e) => DIRECTED.has(e?.kind) && e.to === ref);
+    // **架构树也是边**（2026-11-23 活舰队实测抓到的误报）：supervisor 模式的舰队
+    // `orchestration` 可能只有 `{mode:"supervisor"}` 而没有 edges——它的编排就是
+    // parentRef 树本身（`fleet-orchestration.js`：report edges are DERIVED from
+    // the org tree）。只认 `edges` 会把这类舰队整支判成「无读者」。
+    const parentRef = m?.parentRef ?? null;
+    const hasParent = Boolean(parentRef);
+    const childCount = list.filter((x) => (x?.parentRef ?? null) === ref).length;
     const kpiSlots = Array.isArray(m?.kpiSlots) ? m.kpiSlots : [];
     // objective 只认显式声明（模板 members[] 或 persona 内联 agent）。两处都没有
     // ⇒ 这条判据这次没有证据，不是红。
@@ -58,7 +65,9 @@ export function judgeStatic({ members, orchestration, agents = [] }) {
     const objectiveProvenance = m?.objective ? "member" : agent?.objective ? "agent" : null;
 
     const findings = [];
-    if (outbound.length === 0 && inbound.length === 0) findings.push({ code: "R1", detail: "no-reader" });
+    if (outbound.length === 0 && inbound.length === 0 && !hasParent && childCount === 0) {
+      findings.push({ code: "R1", detail: "no-reader" });
+    }
     if (kpiSlots.length === 0) findings.push({ code: "R2", detail: "no-contribution" });
     if (!objectiveDeclared) findings.push({ code: "R3", detail: "no-objective" });
 
