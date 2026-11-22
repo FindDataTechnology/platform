@@ -350,15 +350,20 @@ test("6.2 an empty trail reads as zeros, not NaN", () => {
 
 test("6.1 the room page registers the routing events — otherwise the trail is write-only", () => {
   const page = fs.readFileSync(path.resolve(import.meta.dirname, "..", "web/src/pages/ZhiyuRoomPage.tsx"), "utf8");
-  // The page filters event rows through EVENT_LABEL_KEYS; a key missing from it
-  // means the row is written and then silently dropped. Assert against the SET
-  // BODY only: the same words appear in the render branch and in testids, so a
-  // whole-file match would pass even with the whitelist entry deleted (that is
-  // exactly the假绿 this assertion was written to avoid).
-  const setBody = /const EVENT_LABEL_KEYS = new Set\(\[([\s\S]*?)\]\);/.exec(page)?.[1] ?? "";
-  assert.notEqual(setBody, "", "EVENT_LABEL_KEYS literal not found");
+  // The whitelist moved OUT of the page into the shared event catalog
+  // (web/src/lib/zhiyu-events.ts) — the page now asks `nonChatLabelKey(row)`,
+  // and that catalog is shared with the visitor page so the two cannot drift
+  // (see its own comment). Assert on the catalog: a routing key missing there
+  // still means the row is written and then silently dropped, which is what
+  // this test exists to prevent.
+  const catalog = fs.readFileSync(
+    path.resolve(import.meta.dirname, "..", "web/src/lib/zhiyu-events.ts"),
+    "utf8",
+  );
+  const listBody = /export const NON_CHAT_EVENT_KEYS = \[([\s\S]*?)\];/.exec(catalog)?.[1] ?? "";
+  assert.notEqual(listBody, "", "the shared event catalog's key list was not found");
   for (const key of ["route_decision", "route_cancelled", "route_reassigned"]) {
-    assert.match(setBody, new RegExp(`"${key}"`), `${key} must be in EVENT_LABEL_KEYS`);
+    assert.match(listBody, new RegExp(`"${key}"`), `${key} must be in the shared event catalog`);
   }
   assert.match(page, /zy-route-cancel-/, "an undo entry exists");
   assert.match(page, /zy-route-reassign-/, "a reassign entry exists");

@@ -1981,13 +1981,13 @@ function DecisionsDrawer({
                         </span>
                       ) : null}
                       {item.revokedAt ? (
-                        <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs text-destructive" data-testid={`decision-revoked-${item.id}`}>
+                        <span className="rounded-full bg-destructive/15 px-2 py-1 text-xs text-destructive" data-testid={`decision-revoked-${item.id}`}>
                           {t("fleets.decisions.revoked")}
                         </span>
                       ) : item.revocableUntil && item.revocableUntil > Date.now() ? (
                         <button
                           type="button"
-                          className="rounded-full border border-destructive/40 px-2 py-0.5 text-xs text-destructive"
+                          className="rounded-full border border-destructive/40 px-2 py-1.5 text-xs text-destructive"
                           data-testid={`decision-revoke-${item.id}`}
                           onClick={() => void act(item, "revoke", { reason: "" })}
                         >

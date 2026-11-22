@@ -347,8 +347,11 @@ test("S2 mcp-catalog: 凭据声明只在声明过时随卡片出（converge-line
     assert.equal("credentialRef" in quant, false, "没声明就不该多出这个键");
     assert.deepEqual(
       Object.keys(quant).sort(),
-      ["description", "displayName", "endpoint", "name", "requiredGroups"],
-      "未声明的卡片仍是五字段形状（老键集断言不变）",
+      // toolCount 是 2026-11-23 加的展示字段（每张卡片都带，与凭据声明无关），
+      // 所以「没声明凭据」的卡片是六字段而不是老的五字段——凭据那一半的断言
+      // （credentialRef 不出现）才是本用例的判据。
+      ["description", "displayName", "endpoint", "name", "requiredGroups", "toolCount"],
+      "未声明凭据的卡片不带 credentialRef；toolCount 是通用字段",
     );
   } finally {
     await new Promise((r) => server.close(r));
@@ -441,7 +444,9 @@ test("mcp depth route carries tools/provenance on demand; visibility gated; card
     const list = await (await fetch(`${base}/api/mcp-catalog`)).json();
     assert.deepEqual(
       Object.keys(list.servers[0]).sort(),
-      ["description", "displayName", "endpoint", "name", "requiredGroups"].sort(),
+      // toolCount 是通用卡片字段（深度路由本来也返回它，见下面 depth.toolCount 的断言），
+      // 列表面带上它是同一份形状，不再有「列表少一个键」的分叉。
+      ["description", "displayName", "endpoint", "name", "requiredGroups", "toolCount"].sort(),
     );
     assert.equal(list.servers[0].tools, undefined);
 

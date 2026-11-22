@@ -1,7 +1,9 @@
 // Unit tests for registry-bridge.js + extension-store market merge
 // (registry-backed-market change, tasks 2.1/2.2/4.1):
 //   - server/skill/agent mapping from the pinned registry response shapes
-//   - disabled/URL-less entries dropped; agents without url dropped
+//   - disabled/URL-less entries dropped; agents without a PATH dropped
+//     (add-a2a-agent-serving 5.1: an a2a agent's url is the gateway's,
+//      so the entry needs a path, not a url)
 //   - last-good snapshot kept when the registry starts failing
 //   - market_changed broadcast on change, silence on unchanged refresh
 //   - single-flight: overlapping refreshes share one fetch round
@@ -223,7 +225,13 @@ test("mapping: servers/skills/agents → market + catalog shapes", async () => {
   assert.deepEqual(market.skills[0].tags, ["docs"]);
 
   const agents = bridge.getAgentEntries();
-  assert.equal(agents.length, 1, "url-less agent dropped");
+  // NoUrl carries a path but no url. An A2A agent's url is the gateway route
+  // derived from the path, so it is NOT url-less in any sense the consumer
+  // sees — dropping it would hide a chat-able service. The drop rule is a
+  // missing PATH (see mapAgent); a link-mode agent with no url is a separate
+  // case asserted below.
+  assert.equal(agents.length, 2, "the path-less rule keeps a2a agents without their own url");
+  assert.equal(agents[1].id, "registry-agents-nourl", "kept: it has a path");
   assert.equal(agents[0].id, "registry-agents-weather");
   assert.equal(agents[0].mode, "a2a", "supported_protocol a2a maps to a2a mode");
   assert.match(agents[0].url, /\/agent\/agents\/weather\/$/, "url is the gateway route, not the entry backend url");
