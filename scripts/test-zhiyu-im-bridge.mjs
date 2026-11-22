@@ -385,8 +385,14 @@ test("6.x-c a stale binding leaves a greppable tag; other failures do not", asyn
       env: { ZHIYU_IM_BRIDGE_ON: "1", CELL_GATEWAY_SECRET: "s" },
     });
     const bot = { id: "b9", name: "智语·WeCom", credentials: {}, type: "wecom", zhiRoomId: "zy_gone", enabled: true, zhiBridgeCursor: 0 };
-    const bridged = await bridge.handleInbound({ bot, chatKey: "k", senderName: "甲", text: "在吗" });
-    return { bridged, logs };
+    let bridged = null;
+    let threw = null;
+    try {
+      bridged = await bridge.handleInbound({ bot, chatKey: "k", senderName: "甲", text: "在吗" });
+    } catch (err) {
+      threw = err;
+    }
+    return { bridged, threw, logs };
   };
   const stale = await mk(404);
   assert.equal(stale.bridged, false, "a stale binding still falls back (messages must not vanish)");
@@ -394,7 +400,10 @@ test("6.x-c a stale binding leaves a greppable tag; other failures do not", asyn
   assert.ok(stale.logs.some((l) => l.includes("b9") && l.includes("zy_gone")), "…carrying bot id and room id");
 
   const other = await mk(503);
-  assert.equal(other.bridged, false);
+  // A 5xx is transient (cell booting) → handleInbound now throws retryable so the
+  // caller answers 503 and fd-bot re-delivers, instead of silently dropping on a
+  // 200. It must NOT carry the stale-binding tag (that is 404-only).
+  assert.ok(other.threw?.retryable === true, "5xx ⇒ retryable throw");
   assert.equal(other.logs.some((l) => l.includes("[binding-stale]")), false, "a 5xx is not a stale binding");
 });
 

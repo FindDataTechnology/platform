@@ -164,9 +164,18 @@ export function createZhiyuImBridge({ db, env = process.env, fetchImpl = null, l
         // what makes that greppable/alertable instead of a reworded warn.
         if (r.status === 404) {
           log.warn(`[zhiyu-im-bridge][binding-stale] bot "${bot.name}" (${bot.id}) is bound to ${bound.kind} ${bound.id}, which the gateway does not have; inbound falls back to the legacy session path`);
-        } else {
-          log.warn(`[zhiyu-im-bridge] gateway ${r.status} for bot "${bot.name}": ${body.slice(0, 160)}`);
+          return false;
         }
+        // 5xx = transient (cell booting/restarting behind the gateway) → retryable,
+        // so fd-bot re-delivers instead of the message being dropped on a 200.
+        // 4xx other than 404 = the request itself is refused → a real decline.
+        if (r.status >= 500) {
+          const e = new Error(`gateway ${r.status} for bot "${bot.name}": ${body.slice(0, 120)}`);
+          e.code = "bridge_unreachable";
+          e.retryable = true;
+          throw e;
+        }
+        log.warn(`[zhiyu-im-bridge] gateway ${r.status} for bot "${bot.name}": ${body.slice(0, 160)}`);
         return false;
       }
       // Account-bound bots: the gateway opened (or reused) a room for this
