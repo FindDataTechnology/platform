@@ -63,6 +63,7 @@ import { registerConnectorBindingRoutes } from "./server/routes/connector-bindin
 import { registerFacetMarketRoutes } from "./server/routes/facet-market.js";
 import { registerLineCredentialRoutes } from "./server/routes/line-credentials.js";
 import { registerChatwootCredentialRoutes } from "./server/routes/chatwoot-credentials.js";
+import { registerVisitorIdentityRoute } from "./server/routes/visitor-identity.js";
 import { registerDeskEmbedRoutes } from "./server/routes/desk-embed.js";
 import { registerPaperTradingRoutes } from "./server/routes/paper-trading.js";
 import { registerCiyuanAccountRoutes } from "./server/routes/ciyuan-account.js";
@@ -501,6 +502,7 @@ registerCredentialDegradationRoutes(ctx);
 registerFleetCredentialPackRoutes(ctx);
 // 商家 Chatwoot BYOK 凭据（add-crm-desk-pack-embed）：粘贴 token(+嵌入用登录对)。
 registerChatwootCredentialRoutes(ctx);
+registerVisitorIdentityRoute(ctx);
 // CRM 客服台嵌入反代（add-crm-desk-pack-embed 6.x）：go 铸发 + 同源代理。
 registerDeskEmbedRoutes(ctx);
 // 词元账号 (ciyuan-account-lane): zero-paste bind — server-side 词元 login →

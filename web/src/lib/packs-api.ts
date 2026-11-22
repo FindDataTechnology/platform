@@ -512,6 +512,13 @@ export interface PackDraft {
     // legacy values ride untouched (保存零静默改写) and are blocked at publish.
     domain?: string[];
     audience?: string[];
+    // 三支柱与编制（pillar-surfaces / team-derivation）：这三个一直是合法
+    // manifest 字段，compileDraftManifest 也已经搬运它们；类型漏了它们，
+    // 于是 typecheck 在搬运处报「Property does not exist」。照 PackManifest
+    // 的定义复用，避免两处形状各写一遍。
+    memory?: PackManifest["memory"];
+    console?: PackManifest["console"];
+    fleet?: PackManifest["fleet"];
   };
   publishedPackId: string | null;
   createdAt: string;
