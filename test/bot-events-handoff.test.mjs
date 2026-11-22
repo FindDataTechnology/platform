@@ -1,7 +1,11 @@
 // bot-events handoff guard (Chatwoot AI reception): the AI must go silent once a
-// conversation is escalated. Two independent stop conditions, both proven here:
-//   · assignee.type === "User"  — a human owns the conversation;
-//   · conversationStatus === "pending" — escalated, waiting in the human queue.
+// HUMAN owns the conversation. The only trustworthy signal is the assignee:
+//   · assignee.type === "User" — a human owns it.
+// `conversationStatus === "pending"` is deliberately NOT a stop condition: on a
+// bot inbox Chatwoot writes `pending` on every new conversation, so gating on it
+// silenced the AI on the very first message (fixed 2026-11-23; see the long
+// comment in server/routes/bot-events.js). The pending case is now a
+// MUST-RUN case, asserted below.
 // Unassigned / AgentBot-owned / fields-absent all keep today's behaviour.
 //
 // Runs a real express app on an ephemeral port with the injectable
@@ -61,12 +65,16 @@ test("assignee User → turn NOT run, note handed-off", async () => {
   assert.equal(turns.length, 0);
 });
 
-test("conversationStatus pending → turn NOT run, note handed-off", async () => {
+test("conversationStatus pending → the turn STILL runs (pending means the AI is serving)", async () => {
   const url = await start();
-  const res = await post(url, { conversationStatus: "pending" });
+  const res = await post(url, { conversationStatus: "pending", text: "在吗" });
   assert.equal(res.status, 200);
-  assert.deepEqual(await res.json(), { ok: true, note: "handed-off" });
-  assert.equal(turns.length, 0);
+  // Not handed off: pending is what a bot inbox writes on every new
+  // conversation, so treating it as "escalated" silenced the AI on the first
+  // message. The turn must run.
+  const body = await res.json();
+  assert.notEqual(body.note, "handed-off", "pending is not a handoff signal");
+  assert.equal(turns.length, 1, "the turn ran");
 });
 
 test("assignee null or absent → turn runs as today", async () => {

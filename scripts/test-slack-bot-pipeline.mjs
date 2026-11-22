@@ -156,17 +156,27 @@ test("bot echoes and edits start no turn", async () => {
 });
 
 test("a reply to a thread carries thread_ts on chat.postMessage", async () => {
+  const before = sends.length; // earlier cases share this array; judge only this one
   await postEvent(
     { type: "message", channel: "C2", user: "U3", text: "@智语 在吗", thread_ts: "222.1", event_ts: "222.2" },
     { eventId: "Ev-reply" },
   );
   await tick();
-  assert.ok(sends.length > 0, "an answer was posted back");
-  const last = sends.at(-1);
-  assert.ok(last.url.endsWith("/chat.postMessage"), last.url);
-  assert.equal(last.body.channel, "C2");
-  assert.equal(last.body.thread_ts, "222.1", "threaded chatKey → thread_ts set");
-  assert.ok(String(last.body.text).includes("收到"), "answer text delivered");
+  const mine = sends.slice(before);
+  assert.ok(mine.length > 0, "an answer was posted back");
+  // The ack lane posts a placeholder with chat.postMessage and then edits it in
+  // place with chat.update, so the last call is the edit — not the answer's
+  // first appearance. What this test protects is that a THREADED chatKey puts
+  // thread_ts on the message that opens the thread; assert on that call.
+  const posted = mine.find((s) => s.url.endsWith("/chat.postMessage"));
+  assert.ok(posted, `a chat.postMessage was sent (saw: ${mine.map((s) => s.url).join(", ")})`);
+  assert.equal(posted.body.channel, "C2");
+  assert.equal(posted.body.thread_ts, "222.1", "threaded chatKey → thread_ts set");
+  const answer = mine.at(-1);
+  assert.ok(
+    String(answer.body.text).includes("收到"),
+    `the answer text is delivered (last call ${answer.url})`,
+  );
 });
 
 test("a channel-level reply carries no thread_ts", async () => {

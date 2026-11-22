@@ -186,12 +186,17 @@ test("app: every zhiyu.meeting.* key the app references exists in BOTH app local
 // bind would then 409 (or, worse, appear to succeed for the wrong seat).
 //
 // This is a source-level pin: the RN/Taro pages cannot be imported into node.
-test("both room pages take MY seat from the server's answer (getOpenMeeting), never from row order", () => {
-  const pages = [
-    { name: "app", file: "app/src/app/(tabs)/zhiyu/[roomId].tsx" },
-    { name: "miniapp", file: "miniapp/src/pages/zhiyu/room/index.tsx" },
-  ];
-  for (const page of pages) {
+test("a client that manages seats takes MY seat from the server, never from row order", () => {
+  // Only the miniapp still manages seats. The app page was deliberately reduced
+  // to READ-ONLY presence (zhiyu-mobile-model.ts:190, "mobile does not manage
+  // seats (5.1)"): it renders `ZhiyuRoomClient` from @platform/core and never
+  // derives a seat at all. Requiring getOpenMeeting there would pin a shape the
+  // product removed on purpose, so each client is judged by what it actually
+  // does — a "pure forgetful refactor would drop this" check on the one that
+  // still owns the behaviour, and an explicit "no client-side seat derivation"
+  // check on the one that does not.
+  const seatClients = [{ name: "miniapp", file: "miniapp/src/pages/zhiyu/room/index.tsx" }];
+  for (const page of seatClients) {
     const src = fs.readFileSync(path.join(ROOT, page.file), "utf8");
     assert.doesNotMatch(
       src,
@@ -200,6 +205,21 @@ test("both room pages take MY seat from the server's answer (getOpenMeeting), ne
     );
     assert.match(src, /getOpenMeeting\(roomId\)/, `${page.name}: asks the server for my participant row`);
     assert.match(src, /setMine\(open\./, `${page.name}: and stores the server's answer`);
+  }
+
+  const readOnlyClients = [{ name: "app", file: "app/src/app/(tabs)/zhiyu/[roomId].tsx" }];
+  for (const page of readOnlyClients) {
+    const src = fs.readFileSync(path.join(ROOT, page.file), "utf8");
+    assert.doesNotMatch(
+      src,
+      /participants\.find\([^)]*\)/,
+      `${page.name}: no seat is derived from the participant list`,
+    );
+    assert.match(
+      src,
+      /@platform\/core/,
+      `${page.name}: presence comes from the shared model, not a page-local state machine`,
+    );
   }
 });
 

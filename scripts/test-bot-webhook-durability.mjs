@@ -59,6 +59,9 @@ before(async () => {
     credentials: { token: "SECRET" },
     secret: "durable-secret",
   });
+  // ack 车道会先发占位再 edit 成答案；只在 sendText 上挂钩等于把回复吞掉。
+  // 本套断言的是用户最终看到的文本，所以关掉 ack，让每条回复都走 sendText。
+  telegramRegistry.ack = undefined;
   telegramRegistry.sendText = async (_cred, chatKey, text) => { sent.push({ chatKey, text }); };
   telegramRegistry.start = undefined;
 

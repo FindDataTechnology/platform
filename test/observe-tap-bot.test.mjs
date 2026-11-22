@@ -24,6 +24,10 @@ const BOT_ID = "bot-tap-1";
 let dataDir = null;
 let posts = []; // memory 面收包（mint + observe）
 let tgSends = []; // telegram sendMessage 投递面
+// ack 车道会在回合开始先发一条占位、结束后编辑成答案，所以 send 序列里第一条
+// 不是答案。取「最后一条带文本的投递」才是用户真正看到的那句。
+const lastText = () => tgSends.filter((x) => typeof x.body?.text === "string").at(-1)?.body.text;
+
 
 function botRow(over = {}) {
   return {
@@ -138,10 +142,11 @@ test("成功回合：/observe 收 lane=bot 事件（agentId=botId、sessionId=ch
   await handleMessage(BOT_ID, { chatKey, senderName: "alice", text: "hello bot" });
   await flush();
 
-  // 投递链路不变：sendMessage 照常收到 final text
-  assert.equal(tgSends.length, 1);
-  assert.equal(tgSends[0].body.chat_id, chatKey);
-  assert.equal(tgSends[0].body.text, "final answer");
+  // 投递链路不变：最终文本照常到达（ack 先在 sendMessage 发占位，整轮跑完后
+  // 用 editMessageText 把它编辑成答案——同一问话始终只有一条消息）。
+  const delivered = tgSends.filter((x) => typeof x.body?.text === "string");
+  assert.equal(delivered.at(-1).body.text, "final answer", "final text delivered");
+  assert.equal(tgSends.find((x) => x.url.includes("sendMessage")).body.chat_id, chatKey);
 
   // 回合跑在派生 dsh 会话上（harness 自身健全性）
   assert.equal(promptSid, sessionIdFor(BOT_ID, chatKey));
@@ -177,8 +182,8 @@ test("prompt 抛错：outcome=error，用户仍收到 sorry 兜底回复，body 
   await handleMessage(BOT_ID, { chatKey, senderName: "a", text: "hi" });
   await flush();
 
-  assert.equal(tgSends.length, 1);
-  assert.equal(tgSends[0].body.text, "Sorry — I could not complete that request.");
+  assert.equal(tgSends.filter((x) => typeof x.body?.text === "string").at(-1).body.text,
+    "Sorry — I could not complete that request.");
   const body = JSON.parse(posts.find((p) => p.url.endsWith("/observe")).init.body);
   assert.equal(body.metadata.outcome, "error");
   assert.match(body.body, /回合收尾/, "无 final text → 缺省过程叙事（fd-memory body_required 的兜底）");
@@ -193,7 +198,7 @@ test("LLM 错误帧（platform/stream finish error）：result.error → outcome
   await handleMessage(BOT_ID, { chatKey, senderName: "a", text: "hi" });
   await flush();
 
-  assert.equal(tgSends[0].body.text, "Sorry — LLM down");
+  assert.equal(tgSends.filter((x) => typeof x.body?.text === "string").at(-1).body.text, "Sorry — LLM down");
   const body = JSON.parse(posts.find((p) => p.url.endsWith("/observe")).init.body);
   assert.equal(body.metadata.outcome, "error");
 });
@@ -207,7 +212,7 @@ test("硬超时（回合被截断、无 LLM 结论）：outcome=aborted", async 
   await handleMessage(BOT_ID, { chatKey, senderName: "a", text: "hi" });
   await flush(80);
 
-  assert.equal(tgSends[0].body.text, "Sorry — I could not complete that request.");
+  assert.equal(lastText(), "Sorry — I could not complete that request.");
   const body = JSON.parse(posts.find((p) => p.url.endsWith("/observe")).init.body);
   assert.equal(body.metadata.outcome, "aborted");
 });
@@ -221,7 +226,7 @@ test("回复门禁扣住（usedTools 且 no-tools 姿态）：outcome=ok（门�
   await handleMessage(BOT_ID, { chatKey, senderName: "a", text: "hi" });
   await flush();
 
-  assert.equal(tgSends[0].body.text, "Sorry — I cannot answer that from this channel.");
+  assert.equal(lastText(), "Sorry — I cannot answer that from this channel.");
   const body = JSON.parse(posts.find((p) => p.url.endsWith("/observe")).init.body);
   assert.equal(body.metadata.outcome, "ok", "被门禁扣住的回合同样落底，outcome 照实=回合本身完成");
 });
@@ -237,7 +242,7 @@ test("回滚杆 CELL_MEMORY_OBSERVE_TAP=0：零 mint 零 observe，投递不变"
   await flush();
 
   assert.equal(posts.length, 0, "零请求（连铸造都没有）");
-  assert.equal(tgSends[0].body.text, "answer", "投递链路逐字节不变");
+  assert.equal(lastText(), "answer", "投递链路逐字节不变");
 });
 
 test("legacy 行无 owner：tap 静默丢弃（fail-open），回合照常回复", async () => {
@@ -250,5 +255,5 @@ test("legacy 行无 owner：tap 静默丢弃（fail-open），回合照常回复
   await flush();
 
   assert.equal(posts.length, 0, "owner 缺失 → 零请求");
-  assert.equal(tgSends[0].body.text, "answer");
+  assert.equal(lastText(), "answer");
 });

@@ -142,9 +142,14 @@ async function makeBot(name = "tg") {
   const res = await postJson("/api/bots", { type: "telegram", name, credentials: { token: "SECRET-BOT-TOKEN" } });
   const bot = await res.json();
   const entry = bots.getEntry(bot.id);
+  // The ack lane posts a placeholder and then edits it into the answer, so a
+  // stub that only overrides sendText would swallow every reply. Route both
+  // paths into the same `sent` collector: what this suite asserts on is the
+  // text the user ends up seeing, not which platform call carried it.
   entry.adapter = {
     ...entry.adapter,
     start: undefined,
+    ack: undefined,
     async sendText(_cred, chatKey, text) { sent.push({ chatKey, text }); },
   };
   return bot;

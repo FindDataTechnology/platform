@@ -146,6 +146,7 @@ The table, as implemented (`INTERNAL_BRIDGES` in `server/auth.js` — every matc
 | `save-bridge@internal` | any verb on `/api/resources/save-declared` | session resolved server-side |
 | `actions-bridge@internal` | `POST /api/actions/propose` | one verb, pending proposals only; the proposer comes from the child's profile env |
 | `input-request-bridge@internal` | `POST /api/input-requests`; `GET /api/input-requests/:id` and `/api/input-requests/:id/wait` | create + read/wait only; the owner comes from the child's per-user profile env. Answering and cancelling never pass this door — they require a real signed-in identity, or everyone sharing a session could fill in someone else's card |
+| `handoff-bridge@internal` | `POST /api/bots/:id/escalate` | escalate only; the bot id comes from the child's profile env, so this door never accepts a caller naming someone else's bot |
 | `fleet-bridge@internal` | `POST` on `/api/fleets/report`, `/api/fleets/escalate`, `/api/fleets/dispatch`, `/api/fleets/deputy/queue`, `/api/fleets/deputy/resolve`, `/api/fleets/deputy/escalate-to-owner` | post attributed server-side; the deputy routes are additionally guarded by `deputyGuard` |
 
 The bridge table SHALL NOT be the only ledger. Every entry by which a request can acquire (or be denied) an identity SHALL be recorded in the same requirement, because a door that is not written down is a door nobody audits:
