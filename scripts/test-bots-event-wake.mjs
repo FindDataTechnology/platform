@@ -97,8 +97,22 @@ after(async () => {
   bots.stopAll();
   await engine.idle?.();
   server?.close();
-  await new Promise((r) => setTimeout(r, 200));
-  fs.rmSync(tmpRoot, { recursive: true, force: true });
+  // The before-hook wires a real bots lane that writes acceptance records
+  // asynchronously; a fixed 200ms was enough locally and not on a CI runner —
+  // the tail landed after the test ended, writing into tmpRoot while this hook
+  // was deleting it (ENOENT → unhandledRejection, 2026-11-23). Wait for the
+  // engine to actually go quiet, then give the last write a beat, and treat the
+  // cleanup as best-effort so a stray record can never fail the run.
+  for (let i = 0; i < 20; i += 1) {
+    await new Promise((r) => setTimeout(r, 100));
+    if (!engine.isBusy?.()) break;
+  }
+  await new Promise((r) => setTimeout(r, 400));
+  try {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  } catch {
+    /* a late writer already removed it, or still holds it — the temp dir is disposable */
+  }
 });
 
 const postJson = (p, body) =>

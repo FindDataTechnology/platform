@@ -12,7 +12,7 @@
 
 import assert from "node:assert/strict";
 import express from "express";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -21,6 +21,22 @@ const tmpRoot = mkdtempSync(path.join(tmpdir(), "task-flow-routes-"));
 process.env.CRON_STORAGE_PATH = tmpRoot;
 process.env.PLATFORM_DATA_DIR = path.join(tmpRoot, "data");
 process.env.DB_PATH = path.join(tmpRoot, "app.db");
+
+// A tool station resolves when the named MCP server is CONFIGURED. The resolver
+// reads the bundle manifest, then `mcp.json` — which is gitignored, so a clean
+// checkout (CI) has none and `library` would read as unconfigured. Pin a
+// fixture baseline instead of depending on the machine's operator file: the
+// point of the test is the resolution RULE, not whatever servers this box has.
+const MCP_FIXTURE = path.join(tmpRoot, "mcp.json");
+writeFileSync(
+  MCP_FIXTURE,
+  JSON.stringify({
+    mcpServers: {
+      library: { command: "node", args: ["server/library-mcp.js"] },
+    },
+  }),
+);
+process.env.MCP_CONFIG_PATH = MCP_FIXTURE;
 
 const engine = await import("../task-engine.js");
 const { registerFlowRoutes } = await import("../server/routes/flows.js");

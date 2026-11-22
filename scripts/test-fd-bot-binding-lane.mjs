@@ -10,9 +10,15 @@ import os from "node:os";
 import fs from "node:fs";
 import { test } from "node:test";
 import express from "express";
-import { proxyBufferedBody, readBodyBounded } from "../gateway/proxy.js";
 
 // ── 1. ensureFdBotBinding: the POST body, and the id flowing to the row ──────
+//
+// ORDER MATTERS (test-store-override-ordering): db.js binds DB_PATH at module
+// evaluation (db.js:20). A static `import ... from "../gateway/proxy.js"`
+// would be hoisted above the DB_PATH assignment and pull db.js in through the
+// import chain first, so the suite would run against the real data dir instead
+// of the temp one. Every module that can reach db.js is imported dynamically,
+// after the environment is set.
 
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "fd-bot-binding-"));
 process.env.DB_PATH = path.join(tmpRoot, "app.db");
@@ -20,6 +26,7 @@ process.env.FD_BOT_URL = "http://fd-bot.test";
 process.env.FD_BOT_SECRET = "mgmt-secret";
 process.env.BOTS_EVENTS_TOKEN = "events-token";
 
+const { proxyBufferedBody, readBodyBounded } = await import("../gateway/proxy.js");
 const db = await import("../db.js");
 const { ensureFdBotBinding } = await import("../lib/fd-bot-binding.js");
 await db.initDb();
