@@ -643,6 +643,85 @@ export function createFleetDatabase({ file } = {}) {
   )`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_fleet_credentials_kind ON fleet_credentials(kind)`);
 
+  // ── 判定与角色状态（establish-agent-role-and-fitness-plane 1.1）────────────
+  //
+  // 四张新表全部 additive：无数据时每个读面返回「未声明」，不返回零值
+  // （agent-role spec: 未取得与零必须可区分）。存量库零迁移。
+  //
+  // `fitness_runs` 是判定运行的账：输入（窗口/预算/判据/各臂）与产出（逐条读数/
+  // 裁决/证据引用）一起落一行，使「这一版当时承诺了什么」事后可复算。
+  // `verdict` 为 NULL 表示本次运行尚未判完 —— 不是 `inconclusive`，后者是判完但
+  // 判不出（附缺失清单）。两者混同会让「还在跑」读成「已判」。
+  db.exec(`CREATE TABLE IF NOT EXISTS fitness_runs (
+    id TEXT PRIMARY KEY,
+    fleet_id TEXT NOT NULL,
+    pack_id TEXT,
+    mode TEXT NOT NULL DEFAULT 'three-arm',
+    window_start INTEGER NOT NULL,
+    window_end INTEGER NOT NULL,
+    budget TEXT,
+    criteria TEXT NOT NULL DEFAULT '[]',
+    arms TEXT NOT NULL DEFAULT '[]',
+    readings TEXT NOT NULL DEFAULT '{}',
+    evidence TEXT NOT NULL DEFAULT '{}',
+    missing TEXT NOT NULL DEFAULT '[]',
+    verdict TEXT,
+    judged_by TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_fitness_runs_fleet ON fitness_runs(fleet_id, created_at)`);
+
+  // 角色与基因组分离（agent-role spec 第 1 条）：一行一个角色实例，
+  // `genome_pack_id`/`genome_version` 是**引用**，基因组升版不触碰这一行；
+  // 采纳/回滚是显式写这两列的动作，`genome_adopted_at` 是它的时间戳。
+  db.exec(`CREATE TABLE IF NOT EXISTS role_states (
+    id TEXT PRIMARY KEY,
+    fleet_id TEXT NOT NULL,
+    member_id TEXT NOT NULL,
+    genome_pack_id TEXT,
+    genome_version INTEGER,
+    genome_adopted_at INTEGER,
+    organs TEXT NOT NULL DEFAULT '{}',
+    status TEXT,
+    status_basis TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(fleet_id, member_id)
+  )`);
+
+  // 胜任力候选：与领域记忆同根（fd-memory 页面），这里只存「哪个页面、什么状态、
+  // 谁在质疑」，正文不复制 —— 复制的第二真源必然漂移。
+  db.exec(`CREATE TABLE IF NOT EXISTS competence_candidates (
+    id TEXT PRIMARY KEY,
+    fleet_id TEXT NOT NULL,
+    member_id TEXT NOT NULL,
+    page_ref TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'candidate',
+    disputed_by TEXT,
+    dispute_basis TEXT,
+    evidence TEXT NOT NULL DEFAULT '{}',
+    accepted_by TEXT,
+    accepted_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+
+  // 目标所有权：跨回合连续、带窗口的达成量。
+  db.exec(`CREATE TABLE IF NOT EXISTS role_objectives (
+    id TEXT PRIMARY KEY,
+    fleet_id TEXT NOT NULL,
+    member_id TEXT NOT NULL,
+    metric_key TEXT NOT NULL,
+    label TEXT NOT NULL,
+    window_kind TEXT NOT NULL DEFAULT 'month',
+    target_value REAL,
+    unit TEXT,
+    source_ref TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`);
+
   // ── fleets ────────────────────────────────────────────────────────────────
 
   function createFleet(fleet) {
@@ -2556,6 +2635,71 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       .run(...(sent ? [t, t, id] : [t, id]));
   }
 
+  // ── fitness runs（establish-agent-role-and-fitness-plane 1.1）──────────────
+  //
+  // 判定运行是 append-mostly：一行在开始时可只带输入，判完再写产出。
+  // `verdict` 留在 NULL 表示**还没判完**——与 `inconclusive`（判完但判不出）
+  // 必须可区分，否则「还在跑」会被读成「已判」。
+
+  function appendFitnessRun(run) {
+    const now = Date.now();
+    db.prepare(`
+      INSERT INTO fitness_runs (id, fleet_id, pack_id, mode, window_start, window_end, budget, criteria, arms, readings, evidence, missing, verdict, judged_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      run.id,
+      run.fleetId,
+      run.packId ?? null,
+      run.mode ?? "three-arm",
+      run.windowStart,
+      run.windowEnd,
+      run.budget ? JSON.stringify(run.budget) : null,
+      JSON.stringify(run.criteria ?? []),
+      JSON.stringify(run.arms ?? []),
+      JSON.stringify(run.readings ?? {}),
+      JSON.stringify(run.evidence ?? {}),
+      JSON.stringify(run.missing ?? []),
+      run.verdict ?? null,
+      run.judgedBy ?? null,
+      now,
+      now,
+    );
+    return getFitnessRun(run.id);
+  }
+
+  function getFitnessRun(id) {
+    const row = db.prepare("SELECT * FROM fitness_runs WHERE id = ?").get(id);
+    return row ? deserializeFitnessRun(row) : null;
+  }
+
+  function listFitnessRuns(fleetId, { limit = 20 } = {}) {
+    return db
+      .prepare("SELECT * FROM fitness_runs WHERE fleet_id = ? ORDER BY created_at DESC, id DESC LIMIT ?")
+      .all(fleetId, limit)
+      .map(deserializeFitnessRun);
+  }
+
+  // 写产出（读数/证据/缺失/裁决）。只更新这些列：输入是不可变的——判定输入一旦
+  // 落库就不许改写，否则「同一输入重算得同一裁决」这条判据失去意义。
+  function finishFitnessRun(id, { readings, evidence, missing, verdict, judgedBy }) {
+    const row = db.prepare("SELECT * FROM fitness_runs WHERE id = ?").get(id);
+    if (!row) return null;
+    db.prepare(`
+      UPDATE fitness_runs
+         SET readings = ?, evidence = ?, missing = ?, verdict = ?, judged_by = ?, updated_at = ?
+       WHERE id = ?
+    `).run(
+      JSON.stringify(readings ?? {}),
+      JSON.stringify(evidence ?? JSON.parse(row.evidence || "{}")),
+      JSON.stringify(missing ?? []),
+      verdict ?? null,
+      judgedBy ?? null,
+      Date.now(),
+      id,
+    );
+    return getFitnessRun(id);
+  }
+
   // ── fleet credentials ─────────────────────────────────────────────────────
   // One row per (fleet, kind). The token never leaves the cell except through
   // `getFleetCredential`, which the patch assembler calls; every list surface
@@ -2736,7 +2880,34 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     listFleetCredentials,
     listOrphanFleetCredentials,
     deleteFleetCredential,
+    appendFitnessRun,
+    getFitnessRun,
+    listFitnessRuns,
+    finishFitnessRun,
     close,
+  };
+}
+
+// 判定运行的行 → API 形状。`verdict: null` 与 `verdict: "inconclusive"` 的区分
+// 在这里保留：调用方靠它判断「还在跑」还是「判不出」。
+function deserializeFitnessRun(row) {
+  return {
+    id: row.id,
+    fleetId: row.fleet_id,
+    packId: row.pack_id ?? null,
+    mode: row.mode,
+    windowStart: row.window_start,
+    windowEnd: row.window_end,
+    budget: row.budget ? JSON.parse(row.budget) : null,
+    criteria: JSON.parse(row.criteria || "[]"),
+    arms: JSON.parse(row.arms || "[]"),
+    readings: JSON.parse(row.readings || "{}"),
+    evidence: JSON.parse(row.evidence || "{}"),
+    missing: JSON.parse(row.missing || "[]"),
+    verdict: row.verdict ?? null,
+    judgedBy: row.judged_by ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
