@@ -222,37 +222,6 @@ The enable/disable toggle SHALL control whether the skill is available to the ag
 - **THEN** the server SHALL register the skill with the agent
 - **AND** update the UI to show it as enabled
 
-### Requirement: MCP setup form is generated from config template
-When the user installs an MCP server from the market whose `requiresConfig` is `true`, the add-server form SHALL render in a setup mode generated from the entry's `configTemplate`, rather than pre-filling the raw manual-add fields with placeholder strings. The form SHALL be data-driven from the template — one labeled field per `configTemplate.env` key and one labeled field per placeholder argument — not hardcoded per server.
-
-#### Scenario: setup form renders a field per env key
-- **WHEN** the user clicks "Install" on a needs-config MCP server whose template has `env: { GITHUB_PERSONAL_ACCESS_TOKEN: "your_token_here" }`
-- **THEN** the form SHALL render a labeled text input whose label is the env key `GITHUB_PERSONAL_ACCESS_TOKEN`
-- **AND** the input SHALL be empty with the template's placeholder value as a hint
-- **AND** the template's `installInstructions` SHALL be shown as help text
-
-#### Scenario: setup form renders a field per placeholder argument
-- **WHEN** the user clicks "Install" on a needs-config MCP server whose template has `args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]`
-- **THEN** the form SHALL render a labeled text input for the `/path/to/allowed/directory` argument
-- **AND** the literal arguments `-y` and `@modelcontextprotocol/server-filesystem` SHALL be shown as read-only, non-editable values
-
-#### Scenario: Add is disabled until required fields are filled
-- **WHEN** the setup form is open and one or more placeholder fields are empty
-- **THEN** the Add button SHALL be disabled
-- **WHEN** the user fills every placeholder field with a non-empty value
-- **THEN** the Add button SHALL become enabled
-
-#### Scenario: submitted config is reconstructed from field values
-- **WHEN** the user fills the setup form fields and clicks Add
-- **THEN** the system SHALL reconstruct the server config by preserving template literal arguments in order and substituting the filled values into placeholder positions
-- **AND** the `env` object SHALL contain only the filled env-key values
-- **AND** the server SHALL be added with the reconstructed config and appear in the Installed tab
-
-#### Scenario: manual add and edit keep the raw form
-- **WHEN** the user clicks "Add MCP" without a market template, or clicks "Edit" on an existing server
-- **THEN** the form SHALL render the raw manual-add fields (command, args, env JSON, url, headers JSON) as before
-- **AND** the setup-mode fields SHALL NOT be rendered
-
 ### Requirement: Installed / Market tabs preserved
 
 The MCP and Skills management panes SHALL present two sub-tabs — **Installed（已启用）** and **Market（商店）** — preserving the existing add/edit/remove/toggle behavior on the Installed sub-tab, now inside the 工具 (`?tab=tools`) and 技能 (`?tab=skills`) tabs of the 素材市场 surface at `/agents`. The former third tab（外部源）SHALL remain merged into the Market sub-tab as its external zone (per `external-skill-sources`).
@@ -376,3 +345,70 @@ A toggle SHALL surface the dsh-plugin-supply apply semantics: a toggle refused w
 
 - **WHEN** a supplied bundle carries an activation error
 - **THEN** its row SHALL display the error metadata rather than hiding the row
+
+### Requirement: Market entries carry a provenance label that is not the channel name
+
+A market entry's card SHALL carry a reader-facing label stating that it comes from the market. The label SHALL NOT name a specific supply channel (a card SHALL NOT be labelled with the literal channel word `Registry`), because the market is fed by more than one channel and an entry's card must not claim otherwise.
+
+#### Scenario: every market entry's card is labelled
+
+- **WHEN** a card is rendered for an entry whose provenance is the market, from either channel
+- **THEN** it carries a market-provenance label
+
+#### Scenario: the label does not claim a channel
+
+- **WHEN** a card is rendered for an entry supplied through the catalog projection
+- **THEN** its label does not say `Registry`
+
+### Requirement: MCP setup form is generated from config template
+
+When the user installs an MCP server from the market whose `requiresConfig` is `true`, the add-server form SHALL render in a setup mode generated from the entry's `configTemplate`, rather than pre-filling the raw manual-add fields with placeholder strings. The form SHALL be data-driven from the template — one labeled field per `configTemplate.env` key and one labeled field per placeholder argument — not hardcoded per server.
+
+For an entry whose provenance is the market (either channel), the form SHALL NOT ask the user for a credential. Such an entry authenticates through the installer's stored credential, resolved server-side at profile-write time; the server discards any submitted headers and records a credential reference instead, and refuses the install when no live credential exists. The form SHALL therefore withhold placeholder-value inputs for market entries and SHALL present the credential-connection state and path instead — asking for a value the server will discard is a false instruction, and the template's `Bearer <your_token>` hint is one a user will act on.
+
+Entries that are not market provenance (hand-entered configurations and the app-shipped bundled starters) keep the template-driven placeholder inputs unchanged: those genuinely take user-supplied values.
+
+#### Scenario: setup form renders a field per env key
+
+- **WHEN** the user clicks "Install" on a needs-config MCP server whose template has `env: { GITHUB_PERSONAL_ACCESS_TOKEN: "your_token_here" }` that is not market provenance
+- **THEN** the form SHALL render a labeled text input whose label is the env key `GITHUB_PERSONAL_ACCESS_TOKEN`
+- **AND** the input SHALL be empty with the template's placeholder value as a hint
+- **AND** the template's `installInstructions` SHALL be shown as help text
+
+#### Scenario: setup form renders a field per placeholder argument
+
+- **WHEN** the user clicks "Install" on a needs-config MCP server whose template has `args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/directory"]`
+- **THEN** the form SHALL render a labeled text input for the `/path/to/allowed/directory` argument
+- **AND** the literal arguments `-y` and `@modelcontextprotocol/server-filesystem` SHALL be shown as read-only, non-editable values
+
+#### Scenario: Add is disabled until required fields are filled
+
+- **WHEN** the setup form is open for a non-market entry and one or more placeholder fields are empty
+- **THEN** the Add button SHALL be disabled
+- **WHEN** the user fills every placeholder field with a non-empty value
+- **THEN** the Add button SHALL become enabled
+
+#### Scenario: submitted config is reconstructed from field values
+
+- **WHEN** the user fills the setup form fields of a non-market entry and clicks Add
+- **THEN** the system SHALL reconstruct the server config by preserving template literal arguments in order and substituting the filled values into placeholder positions
+- **AND** the `env` object SHALL contain only the filled env-key values
+- **AND** the server SHALL be added with the reconstructed config and appear in the Installed tab
+
+#### Scenario: manual add and edit keep the raw form
+
+- **WHEN** the user clicks "Add MCP" without a market template, or clicks "Edit" on an existing server
+- **THEN** the form SHALL render the raw manual-add fields (command, args, env JSON, url, headers JSON) as before
+- **AND** the setup-mode fields SHALL NOT be rendered
+
+#### Scenario: a market entry never asks for a credential
+
+- **WHEN** the user clicks "Install" on an entry whose provenance is the market, from either channel
+- **THEN** the form SHALL NOT render a placeholder-value or header input for the user to fill
+- **AND** it SHALL present the credential-connection state and the connection path for the entry's credential reference
+- **AND** the Add action SHALL be gated on that credential being live, not on user-typed values
+
+#### Scenario: a bundled starter still asks for what it needs
+
+- **WHEN** the user installs an app-shipped bundled starter whose template carries a placeholder value
+- **THEN** the form SHALL render the placeholder input, because a bundled starter is not market provenance and does take a user-supplied value

@@ -24,19 +24,21 @@ Ships **off**. Turn on `warn` first and watch the log line
 
 ## Read contract
 
-paas is Node, the catalog is Python; the check reaches the catalog through a
-subprocess to the `capability-catalog` CLI:
+The catalog is a **service** consumed over MCP, like every other capability
+(fd-open-data-mcp, text-core …). The check does not read its SQLite file or spawn
+its CLI; it calls the catalog's MCP tools through the same StreamableHTTP client
+paas already uses for other MCP servers.
 
 | env | meaning |
 |---|---|
-| `CAPABILITY_CATALOG_CMD` | the CLI command (default `capability-catalog`) |
-| `CAPABILITY_CATALOG_DB` | the catalog SQLite path |
+| `CAPABILITY_CATALOG_MCP_URL` | the catalog MCP endpoint (default `{REGISTRY_URL}/capability-catalog/mcp`) |
+| `CAPABILITY_CATALOG_BEARER` | optional bearer for that endpoint |
 
-It reads two things: `serving` (capability → `[[server, tool], ...]`, for the
-reference hit test) and, when a governor is supplied, `resolve` (the governor's
-effective capability set, for the range test). A catalog that cannot be reached
-is **fail-closed** in `enforce` mode (refuse) and a visible degrade in `warn`
-(logged, never silent).
+It calls two tools: `serving_edges` (capability → `[[server, tool], ...]`, for the
+reference hit test) and, when a governor is supplied, `resolve_for` (the
+governor's effective capability set, for the range test). A catalog that cannot be
+reached is **fail-closed** in `enforce` mode (refuse) and a visible degrade in
+`warn` (logged, never silent).
 
 ## Failure semantics
 

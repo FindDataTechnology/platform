@@ -192,3 +192,34 @@ Installing a market entry that carries groups SHALL require the requesting user'
 - **WHEN** authentication is off and a market entry carries groups
 - **THEN** the install SHALL succeed
 - **AND** the installed record SHALL carry the entry's groups as `requiredGroups`
+
+### Requirement: Market provenance is one judgment
+
+Whether a catalog entry comes from the market SHALL be answered by a single shared predicate, and every surface that asks the question SHALL use it. The market is fed by two channels — the legacy registry feed (`registry`) and the unified catalog projection (`facet-catalog`) — and both SHALL be market provenance under that predicate.
+
+The app-shipped bundled starters (`bundled`) are NOT market provenance.
+
+#### Scenario: both market channels are equal everywhere
+
+- **WHEN** an entry originates from either `registry` or `facet-catalog`
+- **THEN** every surface that gates on market provenance treats it as a market entry
+- **AND** no surface distinguishes the two channels when deciding that
+
+#### Scenario: bundled starters are not market provenance
+
+- **WHEN** the shared predicate is asked about an entry whose origin is `bundled`
+- **THEN** it answers that the entry is not market provenance
+
+### Requirement: No surface compares an origin against a channel name by hand
+
+A filter or branch written as `origin === "registry"` SHALL NOT exist. Each such comparison is a place the judgment drifts when the channel set changes — hand-written comparisons are exactly how the whole market chain silently stopped recognizing entries after the deployment moved to the catalog projection. A consumer that legitimately wants "entries an author may reference" SHALL compose that need explicitly as market provenance plus bundled, rather than widening the market predicate.
+
+#### Scenario: a hand-written origin comparison is absent
+
+- **WHEN** the codebase is inspected for `origin === "registry"` style comparisons
+- **THEN** none exists; every such judgment routes through the shared predicate
+
+#### Scenario: author-referenceable servers include both channels
+
+- **WHEN** an author opens the tool picker to reference market tools in a pack
+- **THEN** entries from `registry`, from `facet-catalog`, and the bundled starters are all offered
