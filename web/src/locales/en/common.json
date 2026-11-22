@@ -757,7 +757,8 @@
       "installSuccess": "Installed {{name}}",
       "installFailed": "Failed to install {{name}}: {{error}}",
       "readyToUse": "Ready to use",
-      "needsConfig": "Needs config"
+      "needsConfig": "Needs config",
+      "provenanceBadge": "Market"
     },
     "registry": {
       "title": "Facet · Tool Market",

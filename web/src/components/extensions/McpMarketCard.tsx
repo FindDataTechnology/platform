@@ -2,6 +2,7 @@
 // Card component for displaying a market MCP server.
 
 import { useTranslation } from "react-i18next";
+import { isMarketOrigin } from "@platform/core";
 import type { MarketMcpServer } from "@platform/core";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -35,12 +36,15 @@ export function McpMarketCard({ server, onInstall }: McpMarketCardProps) {
                 ? t("extensions.market.needsConfig")
                 : t("extensions.market.readyToUse")}
             </span>
-            {server.origin === "registry" && (
+            {/* 市场来源标签：两个供货通道（registry / facet-catalog）同等对待。
+                不再写死 "Registry"——谦面目录供货的条目不是 registry，那样标是
+                在说一件不成立的事。 */}
+            {isMarketOrigin(server.origin) && (
               <span
-                data-testid="mcp-registry-badge"
+                data-testid="mcp-market-badge"
                 className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
               >
-                Registry
+                {t("extensions.market.provenanceBadge")}
               </span>
             )}
           </div>

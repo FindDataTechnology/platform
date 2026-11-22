@@ -757,7 +757,8 @@
       "installSuccess": "已安装 {{name}}",
       "installFailed": "安装 {{name}} 失败：{{error}}",
       "readyToUse": "可直接使用",
-      "needsConfig": "需要配置"
+      "needsConfig": "需要配置",
+      "provenanceBadge": "市场"
     },
     "registry": {
       "title": "谦面·工具市场",

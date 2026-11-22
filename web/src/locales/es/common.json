@@ -757,7 +757,8 @@
       "installSuccess": "{{name}} instalado",
       "installFailed": "Error al instalar {{name}}: {{error}}",
       "readyToUse": "Listo para usar",
-      "needsConfig": "Requiere configuración"
+      "needsConfig": "Requiere configuración",
+      "provenanceBadge": "Mercado"
     },
     "registry": {
       "title": "Facet · Mercado de herramientas",

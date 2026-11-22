@@ -17,7 +17,7 @@ import type { BridgeReport } from "@/lib/pack-draft-bridge";
 import { RhythmEditor } from "./RhythmEditor";
 import type { RhythmEntry } from "./RhythmEditor";
 import { useExtensionsStore } from "@/hooks/useExtensionsStore";
-import { seedSkillPackage } from "@platform/core";
+import { seedSkillPackage, isMarketOrigin } from "@platform/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -381,9 +381,12 @@ function PackDraftEditor({
     void api.getPackFacets().then((f) => setVocabulary(f.vocabulary ?? [])).catch(() => {});
   }, [refreshMarketCatalog]);
 
-  // The picker lists registry-sourced market entries only (spec:
-  // pack-authoring — no free-form endpoint or command entry exists).
-  const registryMcp = (marketCatalog?.mcpServers ?? []).filter((s) => s.origin === "registry");
+  // 作者可引用的工具 = 市场来源（registry 与 facet-catalog，判据在 core）
+  // ∪ 应用自带的起步件。此前只认 registry，谦面目录供货的条目全被漏掉。
+  // 自由填 endpoint/command 仍然不允许（spec: pack-authoring）。
+  const referencableMcp = (marketCatalog?.mcpServers ?? []).filter(
+    (s) => isMarketOrigin(s.origin) || s.origin === "bundled",
+  );
 
   // 4.7 save-side assembly (不写翻译不产生空 i18n 键): managed keys rebuild from
   // workbench state through the one pure rule (assembleEnOverlay: scalars
@@ -959,11 +962,11 @@ function PackDraftEditor({
       <section>
         <h3 className="font-medium text-foreground mb-2">{t("packs.editor.mcp")}</h3>
         <p className="text-xs text-muted-foreground mb-2">{t("packs.editor.mcpHint")}</p>
-        {registryMcp.length === 0 ? (
+        {referencableMcp.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("packs.editor.mcpEmpty")}</p>
         ) : (
           <div className="flex flex-wrap gap-2" data-testid="pack-mcp-picker">
-            {registryMcp.map((s) => {
+            {referencableMcp.map((s) => {
               const on = mcpPicked.includes(s.name);
               return (
                 <button
@@ -988,7 +991,7 @@ function PackDraftEditor({
         {mcpPicked.length > 0 && (
           <div className="space-y-2 mt-3" data-testid="pack-mcp-tools">
             {mcpPicked.map((name) => {
-              const entry = registryMcp.find((s) => s.name === name);
+              const entry = referencableMcp.find((s) => s.name === name);
               const toolList = entry?.toolList ?? [];
               const selected = mcpTools[name] ?? [];
               const open = toolsOpenFor === name;

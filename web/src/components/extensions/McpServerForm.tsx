@@ -13,6 +13,7 @@ import type { McpServer, MarketMcpServer } from "@platform/core";
 import { useExtensionsStore } from "@/hooks/useExtensionsStore";
 import { RegistryConnectPanel } from "./RegistryConnectPanel";
 import { ConnectorConnectPanel } from "./ConnectorConnectPanel";
+import { isMarketOrigin } from "@platform/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,7 +66,11 @@ export function McpServerForm({ open, onOpenChange, server, initialConfig, setup
   // credential, resolved at profile-write time — so the form never asks for a
   // secret. Without a live credential the install is refused server-side, and
   // the form routes to connect/paste first (registry-sso-credentials).
-  const isRegistrySetup = isSetup && setupServer?.origin === "registry";
+  // 市场来源的条目（registry 与 facet-catalog 两个通道）用安装者存储的凭据，
+  // 由服务端在写 profile 时解析；服务端会丢弃提交的 headers 并改存 credentialRef，
+  // 未连凭据则回 409。所以表单**不能**让用户填占位值——那提示是
+  // `Bearer <your_token>`，用户会真的粘一个 JWT，然后被服务端静默丢弃。
+  const isMarketSetup = isSetup && isMarketOrigin(setupServer?.origin);
   const registryLive = Boolean(registryConnection?.connected);
 
   const [name, setName] = useState("");
@@ -120,7 +125,7 @@ export function McpServerForm({ open, onOpenChange, server, initialConfig, setup
       });
       setSetupArgs(initArgs);
       const initHeaders: Record<string, string> = {};
-      if (setupServer.origin !== "registry") {
+      if (!isMarketOrigin(setupServer?.origin)) {
         Object.entries(tmpl.headers || {}).forEach(([k, v]) => {
           if (hasPlaceholder(v)) initHeaders[k] = "";
         });
@@ -155,7 +160,7 @@ export function McpServerForm({ open, onOpenChange, server, initialConfig, setup
   const setupValid =
     Object.values(setupEnv).every((v) => v.trim().length > 0) &&
     Object.values(setupArgs).every((v) => v.trim().length > 0) &&
-    (isRegistrySetup ? registryLive : Object.values(setupHeaders).every((v) => v.trim().length > 0));
+    (isMarketSetup ? registryLive : Object.values(setupHeaders).every((v) => v.trim().length > 0));
 
   const handleSetupSubmit = async () => {
     setError("");
@@ -177,7 +182,7 @@ export function McpServerForm({ open, onOpenChange, server, initialConfig, setup
         envObj[k] = (setupEnv[k] || "").trim();
       });
       if (Object.keys(envObj).length > 0) config.env = envObj;
-    } else if (isRegistrySetup) {
+    } else if (isMarketSetup) {
       // Registry install: the backend stamps credentialRef and resolves the
       // Authorization header per request, so no header travels from here.
       config = { url: tmpl.url };
@@ -374,7 +379,7 @@ export function McpServerForm({ open, onOpenChange, server, initialConfig, setup
 
               {/* Registry entries: the credential comes from the connect flow
                   (or the paste fallback), never from a field here. */}
-              {isRegistrySetup && (
+              {isMarketSetup && (
                 <RegistryConnectPanel compact className="rounded-md border border-border p-3" />
               )}
 
@@ -385,7 +390,7 @@ export function McpServerForm({ open, onOpenChange, server, initialConfig, setup
 
               {/* Placeholder headers: one labeled field per fillable header. */}
               {Object.entries(setupServer!.configTemplate.headers || {}).map(([k, v]) =>
-                !isRegistrySetup && hasPlaceholder(v) ? (
+                !isMarketSetup && hasPlaceholder(v) ? (
                   <div key={`header-${k}`} className="space-y-2">
                     <Label htmlFor={`header-${k}`}>{k}</Label>
                     <Input

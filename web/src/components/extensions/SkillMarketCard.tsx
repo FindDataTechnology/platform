@@ -2,6 +2,7 @@
 // Card component for displaying a market skill.
 
 import { useTranslation } from "react-i18next";
+import { isMarketOrigin } from "@platform/core";
 import type { MarketSkill } from "@platform/core";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
@@ -34,12 +35,12 @@ export function SkillMarketCard({ skill, onInstall, installing }: SkillMarketCar
             <span className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground">
               {skill.category}
             </span>
-            {skill.origin === "registry" && (
+            {isMarketOrigin(skill.origin) && (
               <span
-                data-testid="skill-registry-badge"
+                data-testid="skill-market-badge"
                 className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary"
               >
-                Registry
+                {t("extensions.market.provenanceBadge")}
               </span>
             )}
           </div>

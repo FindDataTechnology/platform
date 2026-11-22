@@ -14,6 +14,7 @@
 import { Router } from "express";
 import * as packStore from "../pack-store.js";
 import { validatePackManifest } from "../lib/pack-manifest.js";
+import { isMarketOrigin } from "../packages/core/src/api/market-origin.ts";
 
 // manifest → draft entries projection: the editor's shape, field-for-field.
 // The manifest stays the compositional truth (the author wrote it); the draft
@@ -72,8 +73,12 @@ export function registerPackAuthorRoutes(app, ctx = null) {
       const store = ctx?.extensionStore ?? null;
       if (!store?.getMarketCatalog) return res.json({ servers: [] });
       const catalog = await store.getMarketCatalog(null);
+      // 作者可引用的工具 = 市场来源（registry 与 facet-catalog 两个通道）
+      // ∪ 应用自带的起步件。「是不是市场来源」与「作者能不能引用」是两个问题：
+      // 后者显式叠加 bundled，而不是把 bundled 塞进市场判据——那会让安装表单
+      // 把自带工具当成市场条目去要凭据。
       const servers = (catalog?.mcpServers ?? [])
-        .filter((s) => s.origin === "registry" || s.origin === "bundled")
+        .filter((s) => isMarketOrigin(s.origin) || s.origin === "bundled")
         .map((s) => ({ name: s.name, description: s.description ?? "", origin: s.origin }));
       res.json({ servers });
     } catch (err) {

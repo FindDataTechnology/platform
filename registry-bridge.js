@@ -24,6 +24,9 @@ import { bundledJson } from "./paths.js";
 import { readJsonOr } from "./lib/persistence.js";
 import { mergeAnnotations } from "./lib/supply-annotations.js";
 import { getRepoAnnotation, getRepoSkillAnnotation, loadRepoAnnotations } from "./lib/market-annotations.js";
+// 市场来源的判据只有一处定义（packages/core）——前端与后端共用同一份。
+// 放在任何一侧，另一侧就只能手写，而手写比较正是 2026-11-22 那次漂移的机制。
+import { isMarketOrigin } from "./packages/core/src/api/market-origin.ts";
 
 const REGISTRY_URL = (
   process.env.MARKET_REGISTRY_URL ||
@@ -64,10 +67,8 @@ export function getCatalogSource() {
 // whole chain off when the deployment moved to the facet projection.
 // `bundled` (installer-shipped stdio starters) is deliberately NOT a market
 // entry — a pack reference to one keeps the local-binding rule.
-const MARKET_ORIGINS = new Set(["registry", "facet-catalog"]);
-
 export function isMarketInstallableEntry(entry) {
-  return Boolean(entry) && MARKET_ORIGINS.has(entry.origin);
+  return Boolean(entry) && isMarketOrigin(entry.origin);
 }
 
 // Optional visibility mapping: {servers:{<name>:[groups]}, skills:{...},

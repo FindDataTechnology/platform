@@ -3,6 +3,8 @@ import { http, type HttpResponse } from "./http";
 // extensions-api.ts
 // API client for extensions management (MCP servers + custom skills)
 
+export { MARKET_ORIGINS, isMarketOrigin, type MarketOrigin } from "./market-origin";
+
 const BASE_URL = "/api/extensions";
 
 export interface McpServer {

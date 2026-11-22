@@ -757,7 +757,8 @@
       "installSuccess": "{{name}}をインストールしました",
       "installFailed": "{{name}}のインストールに失敗しました: {{error}}",
       "readyToUse": "すぐに使える",
-      "needsConfig": "設定が必要"
+      "needsConfig": "設定が必要",
+      "provenanceBadge": "マーケット"
     },
     "registry": {
       "title": "謙面・ツール市場",
