@@ -960,15 +960,19 @@ them.
 The shell SHALL separate **finding a material** from **obtaining it**, and SHALL place them
 unambiguously:
 
-- The **catalog** (`#/catalog`) is the browsing view. It lists every species, and a material's card
-  SHALL open that material's **read-only detail in place** — its contents, its version history, its
-  provenance — without navigating the visitor out of the catalog. The catalog MUST NOT perform a
-  write: no subscribe, no install, no deployment.
+- The **catalog** (`#/catalog`) is the browsing view. It lists every species. Opening a material
+  from the catalog SHALL take the viewer to that material's **detail address** within the same
+  shell, and the catalog's own state (species tab, search term, page) SHALL survive the round trip
+  so the viewer returns where they left. The catalog MUST NOT perform a write: no subscribe, no
+  install, no deployment.
 - The **packs market** (`#/packs`) is the trading view. Subscribe, install, installed-version
   comparison and deployment bindings SHALL live there and nowhere else.
 
-The catalog's read-only detail SHALL name the trading view as the next step, so a visitor who
-decides to obtain a material is never left without a path to it.
+A pack's detail SHALL be a **single address** shared by both views (`#/packs/<id>`), carrying no
+origin parameter. Whether that address offers trading actions SHALL follow **the viewer's session**,
+not the view it was reached from: a signed-in viewer gets subscribe and install; a visitor without a
+session reads the same detail and is told that signing in enables them. Read-only is therefore a
+property of being anonymous, not a property of arriving from the catalog.
 
 A material species SHALL NOT be named by two different labels in the two views when the labels imply
 different things. Specifically: the catalog's pack column SHALL be labelled `功能集` (the species'
@@ -977,13 +981,13 @@ for the trading view and the serving plane's instances. One word SHALL mean one 
 
 #### Scenario: a pack opens in place, read-only
 
-- **WHEN** a visitor opens a pack's card from the catalog
-- **THEN** the pack's detail renders within the catalog, showing its contents and version history, and the catalog does not subscribe, install or deploy anything
+- **WHEN** an anonymous visitor opens a pack's card from the catalog
+- **THEN** the pack's detail renders at its own address within the shell, showing its contents and version history read-only, and no subscribe, install or deploy request is issued
 
 #### Scenario: the catalog offers the trading path
 
-- **WHEN** a visitor has a pack's detail open in the catalog and wants to obtain it
-- **THEN** the detail names the packs market as where subscribing and installing happen
+- **WHEN** an anonymous visitor is reading a pack's detail reached from the catalog and wants to obtain it
+- **THEN** the detail says that signing in enables subscribing and installing, and names the packs market as where those happen
 
 #### Scenario: the catalog never writes
 
@@ -999,3 +1003,13 @@ for the trading view and the serving plane's instances. One word SHALL mean one 
 
 - **WHEN** the catalog and the packs market both present the same species
 - **THEN** the catalog labels it `功能集` and the market keeps its own `智能体市场` name — neither view calls the other's job by its own word
+
+#### Scenario: the catalog's place survives the round trip
+
+- **WHEN** a visitor narrows the catalog to a species and a search term, opens a material, and comes back
+- **THEN** the catalog returns to that species tab and search term, not to an empty first visit
+
+#### Scenario: one address, two states
+
+- **WHEN** a signed-in user and an anonymous visitor open the same pack detail address
+- **THEN** both see the same contents, the signed-in one additionally sees subscribe and install, and neither address carries an origin parameter

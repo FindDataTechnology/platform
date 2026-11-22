@@ -315,22 +315,49 @@ export function createRoomRouter({
     overlay.emit(room.id, { type: "agent_start", roomId: room.id, memberId: target.id, display, visibility });
     const startedAt = Date.now();
     try {
-      const { text } = await callAgent(target, {
-        text: await promptWithMemory({ room, target, sender, message, mode }),
-        // The memory boundary (zhiyu-room-session-scope): a per-sender room
-        // draws one context per speaker; a shared room keeps the single string
-        // it has always used.
-        contextId: roomContextId(room.id, target, speakerFor(room, sender)),
-        // The asking party's visitor scope (design D-C): matters a facade
-        // opens from this turn bind to (room, asker).
-        scopeSeed: `room:${room.id}:${sender.ref}`,
-        onDelta: (delta, thinking) =>
-          // Thinking heartbeat: pulse only, never the model's draft. The guest
-          // surfaces render it as "还在思考" instead of a frozen "…".
-          thinking
-            ? overlay.emit(room.id, { type: "agent_thinking", roomId: room.id, memberId: target.id, display, visibility })
-            : overlay.emit(room.id, { type: "agent_delta", roomId: room.id, memberId: target.id, display, delta, visibility }),
-      });
+      // Cold-start compensation (2026-11-22): when the cell is still booting, the
+      // first callAgent hits ECONNREFUSED/5xx; with no retry the room appended an
+      // agent_failed and the ingested IM message went unanswered (fd-bot already
+      // got 200 and never re-sends). Retry the SAME turn a few times with short
+      // backoff — enough to cover the ~10-16s cell wake — but ONLY while no delta
+      // has streamed (a partial answer must not be doubled). The inFlight guard is
+      // held throughout, so this is still one logical turn and cannot double-answer.
+      const RETRYABLE_RE = /(^|\D)429(\D|$)|(^|\D)5\d\d(\D|$)|ECONNRESET|ECONNREFUSED|ETIMEDOUT|socket hang up|Connection error|timed? ?out|aborted/i;
+      const RETRY_MAX = Number(process.env.ZHIYU_TURN_COLD_RETRIES || 4);
+      const RETRY_BACKOFF_MS = Number(process.env.ZHIYU_TURN_COLD_BACKOFF_MS || 4000);
+      let sawOutput = false;
+      let lastErr = null;
+      let text = null;
+      for (let attempt = 0; attempt <= RETRY_MAX; attempt += 1) {
+        sawOutput = false;
+        try {
+          const res = await callAgent(target, {
+            text: await promptWithMemory({ room, target, sender, message, mode }),
+            contextId: roomContextId(room.id, target, speakerFor(room, sender)),
+            scopeSeed: `room:${room.id}:${sender.ref}`,
+            onDelta: (delta, thinking) => {
+              if (!thinking) sawOutput = true;
+              thinking
+                ? overlay.emit(room.id, { type: "agent_thinking", roomId: room.id, memberId: target.id, display, visibility })
+                : overlay.emit(room.id, { type: "agent_delta", roomId: room.id, memberId: target.id, display, delta, visibility });
+            },
+          });
+          text = res?.text;
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+          const msg = String(err?.message ?? "");
+          const retryable = RETRYABLE_RE.test(msg);
+          // Never retry once output streamed (would double it), after the last
+          // attempt, or on a non-retryable verdict (auth/quota/validation).
+          if (!retryable || sawOutput || attempt === RETRY_MAX) throw err;
+          const backoff = RETRY_BACKOFF_MS * (attempt + 1);
+          console.warn(`[zhiyu:room-turn] cold retry ${attempt + 1}/${RETRY_MAX} for ${target.ref} in ${room.id} after "${msg.slice(0, 80)}" (waiting ${backoff}ms)`);
+          await new Promise((r) => setTimeout(r, backoff));
+        }
+      }
+      if (lastErr) throw lastErr;
       const trimmed = String(text ?? "").trim();
       if (!trimmed || isPass(trimmed)) {
         store.messageAppend({
