@@ -153,3 +153,9 @@ trace.db-wal
 # "graphify-out/" in scripts/make-public-snapshot.mjs EXCLUDE_PATHS, verified by
 # scripts/verify-snapshot-exclusions.mjs.
 graphify-out/
+
+# 本地草稿：本仓 issue tracker 是 GitHub issues（docs/agents/issue-tracker.md），
+# 工作区根惯例的 .scratch/（含 UI 审计截图）不属于本仓；reports/ 是结项报告产物。
+# 2026-11-23：两者从未被追踪（git ls-files = 0），一直以未跟踪形式污染 git status。
+.scratch/
+reports/

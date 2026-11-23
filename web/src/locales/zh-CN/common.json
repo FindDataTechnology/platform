@@ -227,7 +227,12 @@
     "modelFallbackToast": "默认模型 {{from}} 当前不可用，已自动切换到 {{to}}",
     "localPresets": "本机推理服务：",
     "localAuthHint": "本机服务无需密钥",
-    "keyNotNeeded": "本机推理服务不需要 API key。"
+    "keyNotNeeded": "本机推理服务不需要 API key。",
+    "discoveryAge": "上次探测",
+    "discoveryNever": "从未探测",
+    "discoveryUnavailable": "不可用",
+    "discoveryStale": "可能已过期",
+    "discoveryStaleHint": "判定会过期：超过 7 天的状态不代表现在还能调用"
   },
   "status": {
     "connected": "已连接",
@@ -1473,7 +1478,12 @@
       "revokeHint": "本地凭据已删除。词元侧的调用键仍有效，可到 token.finddatatech.cloud 吊销。",
       "pasteInstead": "已有调用键？直接粘贴",
       "probe": "探测",
-      "footnote": "调用键 401 时标记为需重连，重新绑定即铸新键；绑定的账号优先于手动粘贴的键。"
+      "footnote": "调用键 401 时标记为需重连，重新绑定即铸新键；绑定的账号优先于手动粘贴的键。",
+      "pricing": "峰谷价",
+      "pricingOffpeak": "当前处于低谷",
+      "pricingPeak": "当前为高峰",
+      "until": "直到",
+      "capacity": "观测吞吐"
     },
     "delegation": {
       "hint": "把部分拍板项委托给智能体团队的常务岗裁决；其余仍由你处理。高风险类别（配置改动/人事/花费）默认仍由你裁决——你可以逐个解锁，解锁后代理的裁决会有一段可撤销的窗口。",

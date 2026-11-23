@@ -143,7 +143,10 @@ test.describe("MCP market credential", () => {
       await gotoStore(page);
       const card = page.locator(`[data-testid="mcp-market-card"][data-market-name="${REGISTRY_MCP}"]`);
       await expect(card).toBeVisible();
-      await expect(card.getByTestId("mcp-registry-badge")).toBeVisible();
+      // The badge testid is `mcp-market-badge` (the component renamed it when
+      // the card gained its second badge, mcp-config-badge). Same meaning:
+      // "this server came from the market", which is the registry origin.
+      await expect(card.getByTestId("mcp-market-badge")).toBeVisible();
 
       await card.getByRole("button", { name: /install/i }).click();
       const dialog = page.getByRole("heading", { name: /add mcp/i });

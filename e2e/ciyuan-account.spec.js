@@ -110,7 +110,12 @@ test("paste fallback: a pasted sk- binds through the retired caller route, label
   await page.getByTestId("ciyuan-account-paste-input").fill(["sk","e2e-pasted-by-hand"].join("-"));
   await page.getByTestId("ciyuan-account-paste").click();
   await expect(page.getByTestId("ciyuan-account-state")).toHaveAttribute("data-state", "connected", { timeout: 15000 });
-  await expect(page.getByTestId("ciyuan-account-details")).toContainText("pasted");
+  // The point of this case is that the panel SAYS which kind of source this is —
+  // the three sources are different promises to the customer, not one
+  // "connected". Assert on the machine-readable label, not on one word of copy:
+  // the copy is translation, the label is the contract (English says "your own
+  // key", which never contains the word "pasted").
+  await expect(page.getByTestId("ciyuan-account-source")).toHaveAttribute("data-source", "pasted-key");
   expect((await aggregation(request)).byId["ciyuan-account"].state).toBe("connected");
   await page.getByTestId("ciyuan-account-disconnect").click();
   await expect(page.getByTestId("ciyuan-account-state")).toHaveAttribute("data-state", "disconnected", { timeout: 15000 });

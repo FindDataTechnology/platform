@@ -227,7 +227,12 @@
     "modelFallbackToast": "Default model {{from}} is dark; switched to {{to}}",
     "localPresets": "Local model servers:",
     "localAuthHint": "no key needed for local servers",
-    "keyNotNeeded": "Local model servers need no API key."
+    "keyNotNeeded": "Local model servers need no API key.",
+    "discoveryAge": "Last probed",
+    "discoveryNever": "Never probed",
+    "discoveryUnavailable": "unavailable",
+    "discoveryStale": "possibly stale",
+    "discoveryStaleHint": "Status expires: older than 7 days does not mean it still answers"
   },
   "status": {
     "connected": "Connected",
@@ -1486,7 +1491,12 @@
       "revokeHint": "Local credential removed. The key still exists in 词元 — revoke it at token.finddatatech.cloud.",
       "pasteInstead": "Already have a key? Paste it",
       "probe": "Probe",
-      "footnote": "A 401 marks the key as needing re-connect; re-binding mints a fresh key. A bound account takes precedence over a pasted key."
+      "footnote": "A 401 marks the key as needing re-connect; re-binding mints a fresh key. A bound account takes precedence over a pasted key.",
+      "pricing": "Off-peak",
+      "pricingOffpeak": "Off-peak now",
+      "pricingPeak": "Peak now",
+      "until": "until",
+      "capacity": "Observed throughput"
     },
     "delegation": {
       "hint": "Delegate some decisions to the team's deputy. High-impact categories (config change / HR / spend) stay with you by default — you can unlock each one, and rulings it makes carry a revoke window.",

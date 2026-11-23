@@ -227,7 +227,12 @@
     "modelFallbackToast": "El modelo por defecto {{from}} no responde; cambiado a {{to}}",
     "localPresets": "Servidores locales:",
     "localAuthHint": "los servidores locales no necesitan clave",
-    "keyNotNeeded": "Los servidores locales no necesitan clave API."
+    "keyNotNeeded": "Los servidores locales no necesitan clave API.",
+    "discoveryAge": "Última prueba",
+    "discoveryNever": "Nunca probado",
+    "discoveryUnavailable": "no disponible",
+    "discoveryStale": "posiblemente obsoleto",
+    "discoveryStaleHint": "El estado caduca: más de 7 días no significa que siga respondiendo"
   },
   "status": {
     "connected": "Conectado",
@@ -1473,7 +1478,12 @@
       "revokeHint": "Credencial local eliminada. La clave sigue existiendo en 词元: revócala en token.finddatatech.cloud.",
       "pasteInstead": "¿Ya tienes una clave? Pégala",
       "probe": "Sonda",
-      "footnote": "Un 401 marca la clave como pendiente de reconexión; volver a vincular emite una clave nueva. La cuenta vinculada tiene prioridad sobre una clave pegada."
+      "footnote": "Un 401 marca la clave como pendiente de reconexión; volver a vincular emite una clave nueva. La cuenta vinculada tiene prioridad sobre una clave pegada.",
+      "pricing": "Precio valle/punta",
+      "pricingOffpeak": "Ahora en valle",
+      "pricingPeak": "Ahora en punta",
+      "until": "hasta",
+      "capacity": "Rendimiento observado"
     },
     "delegation": {
       "hint": "Delegue algunas decisiones al diputado del equipo. Las categorías de alto impacto (cambios de configuración / RR. HH. / gasto) siguen siendo suyas por defecto: puede desbloquear cada una, y sus dictámenes tendrán una ventana de revocación.",

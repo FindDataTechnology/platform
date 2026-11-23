@@ -80,8 +80,19 @@ const MEMBER_KNOWN_FIELDS = new Set([
   "kpiSlots",
   "cadence",
   "note",
+  // 逐岗记忆章程（enrich-fleet-template-member-config 3.1）：它不是成员表的列，
+  // 而是装台时写进该岗 agent 文档的 `memory.guidance`（再由 catalog 透传到
+  // catalogEntryPersona 的「【记忆章程】」段）。所以它不进 MEMBER_RUNTIME_FIELDS
+  // ——那个清单的语义是「能对上 createMember 的 INSERT 列」，混进一个没有列的
+  // 名字会让闭包测试变成假绿。
+  "memory",
   ...MEMBER_RUNTIME_FIELDS,
 ]);
+
+// 章程字数上限。与 `lib/pack-memory.js` 的「≤600 字散文」同源（agent 级
+// `memory.guidance` 的历史约定）。超限**拒收而不是截断**：截断会让作者以为
+// 写进去了，而读面显示的是一段被砍掉的话。
+export const MEMBER_CHARTER_MAX_CHARS = 600;
 
 // contextBudget range — mirrors server/fleet-model.js CONTEXT_BUDGET_FLOOR /
 // CONTEXT_BUDGET_CEILING (imported there, but this module must stay
@@ -103,6 +114,26 @@ const isPlainObject = (v) => !!v && typeof v === "object" && !Array.isArray(v);
 // deployment-time fact (effortUnion from the live dshModels roster), so the
 // parser must not pretend to know them. The live write face
 // (validateConfigDims) owns the vocabulary gate. Returns an error string|null.
+// 逐岗章程的形状与上限（3.1 / 3.3）。只认 `memory.guidance` 的**字符串**形态：
+// 团队模板成员不是 agent 文档，四轴（store/read/write/process）是包级声明，
+// 成员的记忆块只有「这个岗记什么」这一件事。
+function validateMemberMemory(value, ref) {
+  if (value === null) return null;
+  if (!isPlainObject(value)) return `member '${ref}' memory must be a plain object or null`;
+  const extra = Object.keys(value).filter((k) => k !== "guidance");
+  if (extra.length) {
+    return `member '${ref}' memory may only carry 'guidance' (got ${extra.join(", ")}) — 四轴不是成员级声明，是包级`;
+  }
+  if (!Object.hasOwn(value, "guidance")) return null;
+  const g = value.guidance;
+  if (g === null) return null;
+  if (typeof g !== "string" || !g.trim()) return `member '${ref}' memory.guidance must be a non-empty string or null`;
+  if (g.length > MEMBER_CHARTER_MAX_CHARS) {
+    return `member '${ref}' memory.guidance is ${g.length} chars; at most ${MEMBER_CHARTER_MAX_CHARS} (拒收而不是截断——截断会让你以为写进去了)`;
+  }
+  return null;
+}
+
 function validateRuntimeField(key, value, ref) {
   const where = `member '${ref}' ${key}`;
   switch (key) {
@@ -322,6 +353,11 @@ export function parseFleetTemplate(manifest) {
       if (m[k] === undefined) continue;
       const err = validateRuntimeField(k, m[k], ref);
       if (err) return { ok: false, error: err, code: `fleet_member_${k}_invalid` };
+    }
+    // 逐岗记忆章程（3.1 / 3.3）：形状 + 600 字上限，超限拒收不截断。
+    if (m.memory !== undefined) {
+      const err = validateMemberMemory(m.memory, ref);
+      if (err) return { ok: false, error: err, code: "fleet_member_memory_invalid" };
     }
     const title = m.title ?? m.titleKey;
     if (typeof title !== "string" || !title.trim()) {
@@ -563,6 +599,9 @@ export function parseFleetTemplate(manifest) {
         contextBudget: m.contextBudget ?? null,
         carrier: m.carrier ?? null,
         inputPolicy: m.inputPolicy ?? null,
+        // 逐岗章程：原样带过（未声明 = null，不填默认）。装台器把它写进该岗
+        // agent 文档的 memory.guidance，读面与 persona 从那里取同一份。
+        memory: m.memory ?? null,
       })),
       requires: (requires ?? []).map((r) => ({ kind: r.kind ?? "a2a", name: String(r.name).trim(), optional: r.optional === true })),
       ...(section.orchestration !== undefined ? { orchestration: section.orchestration } : {}),

@@ -54,8 +54,25 @@ test.describe("official starter teams", () => {
 
     const section = page.getByTestId("help-starter-teams");
     await expect(section).toBeVisible();
-    // Five teams, preferred first, every entry carries a one-line positioning.
-    await expect(section.locator("li")).toHaveCount(5);
+    // The sequence must stay complete and ordered: the preferred team first,
+    // then one entry per declared role, each carrying a one-line positioning.
+    // Pinning a literal count made this red the day `builder` was added
+    // (2026-11-21) without saying anything about what broke — so assert the
+    // SHAPE (roles present, preferred is first) and that every row has prose.
+    const rows = section.locator("li");
+    const roles = await rows.evaluateAll((els) =>
+      els.map((el) => el.getAttribute("data-testid")?.replace("help-starter-", "")),
+    );
+    expect(roles[0], "the preferred team leads the sequence").toBe("preferred");
+    for (const role of ["preferred", "builder", "secondary", "advanced"]) {
+      expect(roles, `the ${role} role is represented`).toContain(role);
+    }
+    // Every row carries a positioning line (the <span> beside the name).
+    for (let i = 0; i < roles.length; i += 1) {
+      // The positioning line is the muted span INSIDE the text block, not the
+      // role chip (which is also a span, and also muted for two of the roles).
+      await expect(rows.nth(i).locator("span.min-w-0 > span.text-muted-foreground")).not.toBeEmpty();
+    }
     const first = section.locator("li").first();
     await expect(first).toHaveAttribute("data-testid", "help-starter-preferred");
     await expect(first).toContainText("客服班组");

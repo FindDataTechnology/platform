@@ -335,6 +335,31 @@ export function assembleManifest(content, { name } = {}) {
   };
   if (Array.isArray(content?.tags)) manifest.tags = content.tags;
   if (content?.agents !== undefined) manifest.agents = content.agents;
+  // 模板成员的逐岗章程落到 agent 文档（enrich-fleet-template-member-config 3.1）：
+  // `fleet.members[].memory.guidance` 与 `agents[].id` 通过 `target.presetId` 对齐
+  // （实测：erp-invoice-fleet 的 members.ref=watcher 对应 presetId=
+  // erp-invoice-fleet-watcher=agents[0].id）。不合并的话，作者在成员段写的章程
+  // 会停在模板里——读者在 persona 里看不到它，而读面会报「未声明章程」。
+  //
+  // 只在目标 agent **尚未声明** guidance 时写入：agent 文档自己的 `memory.guidance`
+  // 是更具体的那一份，不该被模板层覆盖。
+  if (kind === "team" && Array.isArray(content?.agents) && Array.isArray(content?.fleet?.members)) {
+    const charterByPreset = new Map();
+    for (const m of content.fleet.members) {
+      const preset = m?.target?.presetId;
+      const g = m?.memory?.guidance;
+      if (typeof preset === "string" && typeof g === "string" && g.trim()) charterByPreset.set(preset, g);
+    }
+    if (charterByPreset.size) {
+      manifest.agents = content.agents.map((a) => {
+        const g = a?.id ? charterByPreset.get(a.id) : undefined;
+        if (!g) return a;
+        const mem = a.memory && typeof a.memory === "object" && !Array.isArray(a.memory) ? a.memory : {};
+        if (typeof mem.guidance === "string" && mem.guidance.trim()) return a; // agent 自己声明优先
+        return { ...a, memory: { ...mem, guidance: g } };
+      });
+    }
+  }
   if (content?.mcpServers !== undefined) manifest.mcpServers = content.mcpServers;
   // 4.3: skills 进蓝图 content——清单段照搬（validatePackManifest 技能段同
   // 函数），铸造/发射产物不再静默丢技能桶（批 1 的假绿缺口就此闭合）。

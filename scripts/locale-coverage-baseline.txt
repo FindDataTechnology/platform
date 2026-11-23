@@ -48,11 +48,6 @@ memory.declaration.degraded  # 记忆声明抽屉（在途车道 MemoryDrawer）
 memory.declaration.hint  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
 memory.declaration.title  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
 memory.declaration.unexecutedList  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
-modelsPage.discoveryAge  # 模型发现状态（在途车道 ProviderCard） · components/llm/ProviderCard.tsx · 2026-11-18 存量
-modelsPage.discoveryNever  # 模型发现状态（在途车道 ProviderCard） · components/llm/ProviderCard.tsx · 2026-11-18 存量
-modelsPage.discoveryStale  # 模型发现状态（在途车道 ProviderCard） · components/llm/ProviderCard.tsx · 2026-11-18 存量
-modelsPage.discoveryStaleHint  # 模型发现状态（在途车道 ProviderCard） · components/llm/ProviderCard.tsx · 2026-11-18 存量
-modelsPage.discoveryUnavailable  # 模型发现状态（在途车道 ProviderCard） · components/llm/ProviderCard.tsx · 2026-11-18 存量
 packs.detail.bindings  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/AgentSpecSheet.tsx · 2026-11-18 存量
 packs.detail.bindingsHint  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/AgentSpecSheet.tsx · 2026-11-18 存量
 packs.editor.mcpDescription  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackDraftsView.tsx · 2026-11-18 存量
@@ -72,11 +67,6 @@ packs.editor.pillars.storeHome  # pack 编辑器/市场（在途车道 PackPilla
 packs.editor.pillars.title  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
 packs.editor.pillars.undeclared  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
 packs.editor.pillars.writeAuthority  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
-settings.ciyuanAccount.capacity  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
-settings.ciyuanAccount.pricing  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
-settings.ciyuanAccount.pricingOffpeak  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
-settings.ciyuanAccount.pricingPeak  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
-settings.ciyuanAccount.until  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
 studio.acceptance.add  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
 studio.acceptance.anyPost  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
 studio.acceptance.expect  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量

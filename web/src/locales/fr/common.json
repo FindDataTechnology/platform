@@ -227,7 +227,12 @@
     "modelFallbackToast": "Le modèle par défaut {{from}} est éteint ; basculé sur {{to}}",
     "localPresets": "Serveurs locaux :",
     "localAuthHint": "les serveurs locaux n'ont pas besoin de clé",
-    "keyNotNeeded": "Les serveurs locaux n'ont pas besoin de clé API."
+    "keyNotNeeded": "Les serveurs locaux n'ont pas besoin de clé API.",
+    "discoveryAge": "Dernière sonde",
+    "discoveryNever": "Jamais sondé",
+    "discoveryUnavailable": "indisponible",
+    "discoveryStale": "peut-être obsolète",
+    "discoveryStaleHint": "L'état expire : plus de 7 jours ne signifie pas qu'il répond encore"
   },
   "status": {
     "connected": "Connecté",
@@ -1473,7 +1478,12 @@
       "revokeHint": "Identifiant local supprimé. La clé existe toujours dans 词元 : révoquez-la sur token.finddatatech.cloud.",
       "pasteInstead": "Vous avez déjà une clé ? Collez-la",
       "probe": "Sonde",
-      "footnote": "Un 401 marque la clé comme à reconnecter ; relier émet une nouvelle clé. Le compte lié prime sur une clé collée."
+      "footnote": "Un 401 marque la clé comme à reconnecter ; relier émet une nouvelle clé. Le compte lié prime sur une clé collée.",
+      "pricing": "Tarif heure creuse/pleine",
+      "pricingOffpeak": "Heure creuse actuelle",
+      "pricingPeak": "Heure pleine actuelle",
+      "until": "jusqu'au",
+      "capacity": "Débit observé"
     },
     "delegation": {
       "hint": "Déléguez certaines décisions au délégué de l'équipe. Les catégories à fort impact (changement de config / RH / dépense) restent les vôtres par défaut — vous pouvez déverrouiller chacune, et ses décisions portent une fenêtre de révocation.",
