@@ -128,6 +128,7 @@ export function createBotWebhookRouter({ dataRoot, openDb }) {
   // for the other.
   const byBotId = new Map(); // botId → { email, userId, at } (email null = miss)
   const byBinding = new Map(); // fd_bot_binding_id → same shape
+  const byWebsite = new Map(); // website token → same shape
 
   return {
     resolve: (botId) => scan(byBotId, botId, "SELECT id, owner_email FROM bots WHERE id = ?"),
@@ -135,5 +136,12 @@ export function createBotWebhookRouter({ dataRoot, openDb }) {
     // created on fd-bot's side; we store what it returns on the row).
     resolveByBinding: (bindingId) =>
       scan(byBinding, bindingId, "SELECT id, owner_email FROM bots WHERE fd_bot_binding_id = ?"),
+    // The visitor-identity door (chatwoot-ai-handoff 5.x) is addressed by the
+    // widget's website token, because that is the only id the anonymous
+    // browser knows. It is stored in the bot's credentials JSON, so the SQL
+    // matches on that column rather than a dedicated one.
+    resolveByWebsiteToken: (websiteToken) =>
+      scan(byWebsite, websiteToken,
+        "SELECT id, owner_email FROM bots WHERE type = 'chatwoot' AND json_extract(credentials, '$.websiteToken') = ?"),
   };
 }

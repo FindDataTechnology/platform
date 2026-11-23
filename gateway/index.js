@@ -1292,6 +1292,54 @@ app.all("/api/bots/events", async (req, res) => {
   }
 });
 
+// ── Visitor identity door (chatwoot-ai-handoff 5.x) ─────────────────────────
+// The official site's browser is anonymous: it holds no Logto session, so the
+// cell-proxy catch-all below would 401 it before the cell's own
+// AUTH_EXEMPT_PREFIXES could ever run (the same trap the mandate door and the
+// bot webhooks document). This door routes the request to the OWNER cell of the
+// bot that serves the website token, and lets the endpoint — which mints or
+// re-signs only ids it already minted — decide everything else.
+//
+// Why routing by website token is safe: it is public by design (it ships in
+// every page's HTML), so it is a routing key, not a credential. The SECRET (the
+// inbox's hmac_token) stays in the cell and never passes through here.
+app.post("/api/widget/visitor-identity", async (req, res) => {
+  // Read the body ONCE here (we must parse it to route), then hand the same
+  // bytes to the cell — proxyHttp would try to stream an already-consumed
+  // request and the cell would see an empty payload.
+  let body;
+  try {
+    body = await readBodyBounded(req);
+  } catch (err) {
+    return res.status(err.code === "TOO_LARGE" ? 413 : 400).json({ error: "Malformed request body" });
+  }
+  let websiteToken = "";
+  try {
+    websiteToken = String(JSON.parse(body.toString("utf8"))?.websiteToken ?? "").trim();
+  } catch {
+    return res.status(400).json({ error: "Malformed request body" });
+  }
+  const target = websiteToken ? botWebhookRouter.resolveByWebsiteToken(websiteToken) : { email: null };
+  if (!target.email) {
+    // A token the gateway cannot attribute is a typo'd embed or a page from a
+    // differently-pinned deployment; a bare 404 would look like "the platform
+    // is down". Log it by token, which is public anyway.
+    console.warn(`[gateway] visitor-identity for unknown website token ${websiteToken || "(none)"} from ${req.ip}`);
+    return res.status(404).json({ error: "unknown website token" });
+  }
+  try {
+    const cell = await registry.ensure({ email: target.email, groups: [] });
+    proxyBufferedBody(req, res, body, {
+      host: "127.0.0.1",
+      port: cell.port,
+      headers: machineHeaders(req, SECRET),
+    });
+  } catch (err) {
+    console.error(`[gateway] visitor-identity cell start failed for ${target.email}: ${err.message}`);
+    res.status(503).json({ error: "Your workspace failed to start" });
+  }
+});
+
 // ── Bot relay: machine callers reach the bots owner's cell ──────────────────
 // The relay route authenticates by deployment token INSIDE the cell (bot-relay
 // spec: exempt from interactive identity), but the catch-all below would 401 a

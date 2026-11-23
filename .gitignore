@@ -21,6 +21,10 @@ data/
 
 # React frontend workspace
 web/node_modules/
+# 素材广场导出产物：scripts/plaza-export.mjs 每次 deploy-plaza.sh / CI 都重新生成
+# （deploy-plaza.sh 第 ① 步就是 export）。追踪它 = 每次导出制造几百个 diff 噪声
+# （2026-11-23 实测 794 个脏文件）。CI 用 upload-artifact 留审计快照，不靠 git。
+site-plaza/generated/
 web/dist/
 
 # Shared core: `packages/core/node_modules` is a symlink onto web/node_modules
