@@ -25,25 +25,30 @@ import Database from "better-sqlite3";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+// The diagnostic reads the PLATFORM-level store via storeDir("data"), which —
+// with PLATFORM_DATA_DIR unset — pins to the REPO ROOT (<repo>/data), not the
+// temp cells root this test builds. On a developer box that directory exists
+// (running the server creates it), so `platform` reads as a real source and the
+// exit-code assertions hold; on a clean CI checkout it does NOT exist, the
+// platform source comes back `missing`, `readable` hits 0, and the script exits
+// 1 instead of 2 — the failure this suite reported (2026-11-23). Pin the store
+// into the temp root so the suite's own fixtures are the only state in play.
+const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "diag-platform-data-"));
+process.env.PLATFORM_DATA_DIR = dataRoot;
+fs.mkdirSync(path.join(dataRoot, "data"), { recursive: true });
+test.after(() => fs.rmSync(dataRoot, { recursive: true, force: true }));
+
 function makeCellDb(cellRoot) {
   const dbDir = path.join(cellRoot, "data", "data");
   fs.mkdirSync(dbDir, { recursive: true });
   const dbPath = path.join(dbDir, "app.db");
   const db = new Database(dbPath);
-  // WAL keeps a real fd on app.db (plus -wal/-shm) for as long as this handle is
-  // open, which is what the diagnostic's liveness probe looks for. The default
-  // rollback journal does not, so on a CI runner the "held" cell read as orphan
-  // and the live-vs-orphan assertion flipped (2026-11-23). Checkpoint after the
-  // writes so a SECOND process still sees the rows (WAL frames are otherwise
-  // private to this handle until checkpointed).
-  db.pragma("journal_mode = WAL");
   db.exec(`CREATE TABLE user_registry_credentials (
     email TEXT PRIMARY KEY, token TEXT, expires_at TEXT, stale INTEGER, source TEXT, updated_at TEXT)`);
   db.prepare("INSERT INTO user_registry_credentials VALUES (?,?,?,?,?,?)").run(
     "aloadtree@gmail.com", "sk-SECRETTOKENVALUE-XYZ", "2099-01-01T00:00:00Z", 0, "sso", "2026-11-17T00:00:00Z");
   db.prepare("INSERT INTO user_registry_credentials VALUES (?,?,?,?,?,?)").run(
     "stale-owner@example.com", "sk-OLD-2", "2020-01-01T00:00:00Z", 0, "sso", "2020-01-01T00:00:00Z");
-  db.pragma("wal_checkpoint(TRUNCATE)");
   return { db, dbPath };
 }
 
