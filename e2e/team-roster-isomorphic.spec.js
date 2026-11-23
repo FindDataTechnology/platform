@@ -62,6 +62,64 @@ test.beforeEach(async ({ request }) => {
   await seed(request, "plain-probe-002", PLAIN);
 });
 
+// The market SHELF is the gateway plane (`/api/packs`), and the fast lane has no
+// gateway — playwright.config.js says "the gateway plane (/api/packs...) is
+// route-mocked per spec", and e2e/packs.spec.js does exactly that. This suite
+// never did, so `/agents?tab=market` rendered "No agents in the market yet" and
+// every card anchor was absent.
+//
+// The DETAIL page also needs `pack.team`: PackDetailPage passes
+// `(pack as {team}).team ?? null` and a null team renders no roster at all, so
+// the mock hands back the projection deriveTeam() would produce.
+const SHELF = [
+  { id: "team-probe-0001", name: "同构探针团队", description: "roster probe", version: 1, category: "fleet", agentCount: 2, tags: [] },
+  { id: "plain-probe-002", name: "无编制探针", description: "plain probe", version: 1, category: "ops", agentCount: 0, tags: [] },
+];
+const TEAM_SPEC = {
+  state: "present",
+  roster: [
+    {
+      ref: "monitor",
+      title: "监视位",
+      parentRef: "chief",
+      target: { kind: "pack-preset", presetId: "monitor", packId: "P" },
+      cadence: { declared: true, cron: "5 9 * * *", tz: "Asia/Shanghai" },
+      kpiSlots: [{ key: "scanned", label: "已扫", unit: "条" }],
+    },
+    {
+      ref: "chief",
+      title: "合成位",
+      parentRef: null,
+      target: { kind: "pack-preset", presetId: "chief", packId: "P" },
+      cadence: { declared: false },
+      kpiSlots: [],
+    },
+  ],
+  edges: [{ kind: "reports-to", from: "monitor", to: "chief" }],
+};
+const PLAIN_SPEC = { state: "undeclared" };
+const manifestFor = (id) => (id === "team-probe-0001" ? TEAM : PLAIN);
+const teamFor = (id) => (id === "team-probe-0001" ? TEAM_SPEC : PLAIN_SPEC);
+
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/packs**", (route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    const json = (b) => route.fulfill({ json: b });
+    if (path === "/api/packs") {
+      return json({ packs: SHELF, total: SHELF.length, page: 1, pageSize: 100 });
+    }
+    if (path === "/api/packs/facets") return json({ categories: [], domains: [], tags: [] });
+    const detail = SHELF.find((p) => path === `/api/packs/${p.id}`);
+    if (detail) {
+      return json({ ...detail, manifest: manifestFor(detail.id), team: teamFor(detail.id) });
+    }
+    const ver = SHELF.find((p) => path === `/api/packs/${p.id}/versions/1`);
+    if (ver) return json({ manifest: manifestFor(ver.id), version: 1 });
+    return route.continue();
+  });
+});
+
 // 编制段的五个可观察锚点。两处断言共用这一份，**两处各自读同一组 testid**——
 // 如果哪个域名少渲染一段或多渲染一段，这组断言会立刻说出是哪一段。
 const ROSTER_ANCHORS = [
@@ -104,7 +162,9 @@ test("编制段：与三支柱段共存，段序固定（角色→技能→工�
 
   // 段序：用 bounding box 的 y 坐标比，而不是 DOM 顺序——DOM 顺序会被
   // flex/grid 重排，视觉顺序才是读者看到的顺序。
-  const order = ["spec-sheet", "pack-roster"];
+  // The detail page passes testIdPrefix="pack" (PackDetailPage:327), so the
+  // spec sheet's root is `pack`, not the component's default `spec-sheet`.
+  const order = ["pack", "pack-roster"];
   const boxes = [];
   for (const id of order) {
     const el = page.getByTestId(id).first();
