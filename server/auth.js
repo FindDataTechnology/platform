@@ -53,6 +53,10 @@ export const AUTH_EXEMPT_PREFIXES = [
   // subscriber itself supplied when creating the binding. Rotating that token
   // rotates this access.
   "/api/bots/events",
+  // 跨入口访客身份（chatwoot-ai-handoff 5.x）：匿名访客要拿一个可被 Chatwoot 校验的
+  // identifier，必须不登录也能到。安全靠**服务端只给自铸的 id 签名**（路由里证明：
+  // 叫得出 id 但拿不出 hash 就 403），不靠这道门。
+  "/api/widget/visitor-identity",
   "/api/mp/login",
   "/api/mp/login-bindcode",
   "/api/app/pair",

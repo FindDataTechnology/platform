@@ -502,6 +502,8 @@ registerCredentialDegradationRoutes(ctx);
 registerFleetCredentialPackRoutes(ctx);
 // 商家 Chatwoot BYOK 凭据（add-crm-desk-pack-embed）：粘贴 token(+嵌入用登录对)。
 registerChatwootCredentialRoutes(ctx);
+// 跨入口访客身份（chatwoot-ai-handoff 5.x）：把匿名 id 换成 widget 可验证的
+// { identifier, identifier_hash }。哈希用的 hmac_token 是服务端密钥，从不下发。
 registerVisitorIdentityRoute(ctx);
 // CRM 客服台嵌入反代（add-crm-desk-pack-embed 6.x）：go 铸发 + 同源代理。
 registerDeskEmbedRoutes(ctx);

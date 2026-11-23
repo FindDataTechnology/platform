@@ -1,60 +1,77 @@
 // Visitor identity for the outward entries (chatwoot-ai-handoff 5.x).
 //
-// `POST /api/bots/:id/visitor-identity` — given an opaque visitor id the browser
-// already holds (or none, in which case one is minted), returns what the
-// Chatwoot widget needs to bind to it: `{ identifier, identifier_hash }`.
+// `POST /api/widget/visitor-identity` — the official site's browser holds an
+// opaque visitor id and needs what Chatwoot's widget requires to bind to it:
+// `{ identifier, identifier_hash }`.
 //
-// Why this endpoint exists rather than the browser doing it: the hash is
-// HMAC-SHA256(widget_hmac_token, identifier), and that token is a server-side
-// secret. A browser that could compute the hash itself could also forge any
-// identifier — so the token never leaves the server.
+// Two properties shape this endpoint, and they pull in opposite directions:
 //
-// Why the hash at all: Chatwoot's widget accepts a bare identifier when the
-// inbox is not hmac_mandatory, which would let anyone who learns an id read that
-// visitor's history. The hash is what separates "know the id" from "be the
-// visitor" (see lib/visitor-identity.js and the capability's 5.4 scenario).
+//   1. It must be reachable WITHOUT a login. The visitor is anonymous; a 401
+//      here means no shared identity at all. So it is on the auth exemption
+//      list, and that is safe ONLY because of property 2.
 //
-// Which token: the bot's own credentials carry `widgetHmacToken` (the Chatwoot
-// inbox's hmac_token). Falling back to the apiToken would be wrong — different
-// secret, and Chatwoot would reject the hash.
+//   2. It must not be an oracle that signs arbitrary ids. If a caller could
+//      name any identifier and get a valid hash, the hash would be worthless —
+//      anyone could forge any visitor. So the id is MINTED SERVER-SIDE, never
+//      taken from the request. A caller may present an id it already holds, and
+//      the server SIGNS IT ONLY IF IT IS ONE IT MINTED EARLIER (proven by the
+//      caller echoing the matching signature — it cannot, without having
+//      received it from us). In practice: the caller passes back the id and the
+//      hash it was given; we re-derive the hash from our own token and compare.
+//
+// Which visitor token: the widget's own `website_token` (public by design, it
+// ships in every page's HTML) selects the bot. That is a routing key, not a
+// credential — the SECRET is the inbox's hmac_token, which never leaves here.
+//
+// TTL: an identifier signed today is valid forever on Chatwoot's side (it is
+// just an HMAC), so "re-signing the same id" is not an escalation — the caller
+// already holds a working signature. That is why the echo check is enough.
 
 import { mintVisitorId, isValidVisitorId, identityForWidget } from "../../lib/visitor-identity.js";
 
 export function registerVisitorIdentityRoute(ctx) {
   const { app } = ctx;
 
-  app.post("/api/bots/:id/visitor-identity", (req, res) => {
-    if (!ctx.requireAdmin(req, res)) return;
-    const bot = ctx.db?.getBot(req.params.id);
-    if (!bot) return res.status(404).json({ error: "Bot not found" });
-    if (bot.type !== "chatwoot") return res.status(400).json({ error: "visitor identity is only supported for chatwoot bots" });
+  app.post("/api/widget/visitor-identity", (req, res) => {
+    const websiteToken = String(req.body?.websiteToken ?? "").trim();
+    if (!websiteToken) return res.status(400).json({ error: "websiteToken is required" });
 
-    const token = String(bot.credentials?.widgetHmacToken ?? "").trim();
-    if (!token) {
+    // The website token routes to a bot; it is not a secret (it is in the page
+    // HTML). Find the bot whose credentials carry it.
+    const bot = (ctx.db?.listBots?.() ?? []).find(
+      (b) => b.type === "chatwoot" && String(b.credentials?.websiteToken ?? "").trim() === websiteToken,
+    );
+    if (!bot) return res.status(404).json({ error: "no bot serves this website token" });
+
+    const hmacToken = String(bot.credentials?.widgetHmacToken ?? "").trim();
+    if (!hmacToken) {
       // Refuse rather than hand out an unsigned identity: an id the widget
       // cannot verify is an id anyone can claim.
-      return res.status(409).json({ error: "this chatwoot bot has no widgetHmacToken configured (identities would be forgeable)" });
+      return res.status(409).json({ error: "this bot has no widgetHmacToken configured (identities would be forgeable)" });
     }
 
-    const asked = req.body?.visitorId;
-    let visitorId = null;
-    if (asked != null && String(asked).trim() !== "") {
-      // A caller-supplied id is only honoured if it is well-formed; anything
-      // else is refused, never silently replaced (a silent replace would give
-      // the visitor a NEW identity on every typo and split their history).
-      const s = String(asked).trim();
-      if (!isValidVisitorId(s)) return res.status(400).json({ error: "malformed visitorId" });
-      visitorId = s;
+    const askedId = String(req.body?.visitorId ?? "").trim();
+    const askedHash = String(req.body?.identifierHash ?? "").trim();
+
+    let visitorId;
+    if (askedId) {
+      if (!isValidVisitorId(askedId)) return res.status(400).json({ error: "malformed visitorId" });
+      // Signing an arbitrary id would defeat the hash. Only re-sign one we can
+      // prove we minted: the caller must present the hash we gave it, and it
+      // must be the hash OUR token produces for this id.
+      const expected = identityForWidget(askedId, hmacToken).identifier_hash;
+      if (!askedHash || askedHash !== expected) {
+        // Same shape whether the id is unknown or the hash is wrong — never tell
+        // a prober which ids exist.
+        return res.status(403).json({ error: "unknown visitor id" });
+      }
+      visitorId = askedId;
     } else {
+      // First contact: mint. This is the only path that creates a new identity.
       visitorId = mintVisitorId();
     }
 
-    try {
-      const identity = identityForWidget(visitorId, token);
-      res.json({ ...identity, visitorId });
-    } catch (err) {
-      // A programmer/config error, not a platform verdict.
-      res.status(500).json({ error: err.message });
-    }
+    const identity = identityForWidget(visitorId, hmacToken);
+    res.json({ ...identity, visitorId, minted: !askedId });
   });
 }
