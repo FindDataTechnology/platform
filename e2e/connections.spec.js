@@ -126,8 +126,10 @@ test.describe("connections section", () => {
       await expect(card.getByRole("heading", { name: door })).toBeVisible();
     }
     // 词元那把钥在门 K 里只出现一次——多条线吃同一把钥不等于多把钥。
+    // 连接条目名是服务器给的（"萬星·词元"，server/routes/misc.js 的 ciyuan-account
+    // 那行）；它曾叫 "词元 account"，改名后这条断言没跟，红了一段时间。
     const customerKeySection = card.locator("section").filter({ hasText: "Customer key" });
-    await expect(customerKeySection.getByText("词元 account")).toHaveCount(1);
+    await expect(customerKeySection.getByText("萬星·词元")).toHaveCount(1);
 
     // 门 A 默认关：如实说"还没有线声明代做"，而不是画成一个可点的入口。
     const memberSection = card.locator("section").filter({ hasText: "Member delegation" });

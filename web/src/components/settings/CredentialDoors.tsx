@@ -87,7 +87,7 @@ function DoorRow({
   return (
     <li
       className={cn(
-        "flex items-center gap-3 border-t border-border/60 px-1 py-2 first:border-t-0",
+        "flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-border/60 px-1 py-2 first:border-t-0",
         disabled && "opacity-60",
       )}
     >
@@ -95,16 +95,24 @@ function DoorRow({
         <div className="truncate text-sm text-foreground">{name}</div>
         {detail ? <div className="truncate text-xs text-muted-foreground">{detail}</div> : null}
       </div>
-      <StatusPill status={STATE_STATUS[state]} label={t(`settings.connections.doors.state.${state}`)} />
-      {panel ? (
-        <a
-          href={`${settingsPath("connections")}?panel=${encodeURIComponent(panel)}`}
-          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Link2 className="h-3 w-3" aria-hidden="true" />
-          {t("settings.connections.doors.goConnect")}
-        </a>
-      ) : null}
+      {/* The three doors sit in a 3-column grid, so a row has ~185px. Status +
+          "Connect" side by side overflowed that and spilled over the NEXT
+          column's row — the neighbour's <li> then swallowed the click (caught by
+          e2e/connections.spec.js, measured 2026-11-23: section scrollWidth 374
+          in a 185px cell). Wrapping the action group keeps every row inside its
+          own column at any width. */}
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <StatusPill status={STATE_STATUS[state]} label={t(`settings.connections.doors.state.${state}`)} />
+        {panel ? (
+          <a
+            href={`${settingsPath("connections")}?panel=${encodeURIComponent(panel)}`}
+            className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Link2 className="h-3 w-3" aria-hidden="true" />
+            {t("settings.connections.doors.goConnect")}
+          </a>
+        ) : null}
+      </div>
     </li>
   );
 }

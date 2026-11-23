@@ -1407,7 +1407,13 @@
         "refresh": "Actualiser",
         "footnote": "Une porte non prête échoue en fermeture : la requête est refusée plutôt qu'exécutée sous une autre identité.",
         "loadFailed": "Impossible de charger les portes : {{detail}}",
-        "unreadableManifests": "{{count}} manifeste(s) illisible(s)"
+        "unreadableManifests": "{{count}} manifeste(s) illisible(s)",
+        "state": {
+          "connected": "connecté",
+          "stale": "expiré",
+          "missing": "pas prêt",
+          "unknown": "inconnu"
+        }
       }
     },
     "lines": {
@@ -3725,6 +3731,12 @@
       "noMatch": "Aucune exécution de ce poste sur cette page"
     },
     "inspector": {
+    "roleTitle": "Rôle",
+    "roleCharter": "Charte mémoire",
+    "roleObjective": "Objectif",
+    "roleStatus": "Statut",
+    "roleGenome": "Génome",
+    "roleUnset": "non déclaré",
       "open": "Détails",
       "statusBasis": "Base du statut",
       "modelChain": "Chaîne de modèles",

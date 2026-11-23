@@ -61,8 +61,19 @@ test("a sessions broadcast between switch and load does not strand the skeleton"
   await page.goto(`/chat/${SID}`);
   await waitConnected(page);
 
-  // The switch is in flight (the real server will also answer it). Push the
-  // cron-round frame the bug needs: same list, a DIFFERENT current.
+  // A deep link no longer ARMS an optimistic switch by itself: since
+  // `add-session-ownership` the client sends switch_session and waits for the
+  // server's `session_loaded` (the id has to pass accessSession() first, so a
+  // literal id could not even be assumed to exist). The store method that DOES
+  // arm one is activateSession — the click-a-sidebar-row path — and that is
+  // exactly the state this test is about (`scripts/test-chat-store-cold-open.mjs`
+  // drives it the same way). Arm it explicitly instead of inferring it from the
+  // URL.
+  // Let the deep link's own load land first: arming on top of an in-flight
+    // load makes the two loads race, and the test would occasionally see the
+    // deep link's resolve clear OUR arm instead of its own.
+    await expect.poll(async () => (await store(page))?.pendingSession, { timeout: 15000 }).toBe(null);
+    await page.evaluate((id) => window.__chatStore.getState().activateSession(id), SID);
   await expect.poll(async () => (await store(page))?.pendingSession, { timeout: 10000 }).toBe(SID);
   sock.send({ type: "sessions", sessions: [{ id: SID, title: "target" }, { id: "live-session-x", title: "x" }], current: "live-session-x" });
 
@@ -70,7 +81,10 @@ test("a sessions broadcast between switch and load does not strand the skeleton"
   expect(after.currentSessionId, "the settling view is not stolen").toBe(SID);
   expect(after.pendingSession, "the switch stays armed").toBe(SID);
 
-  // The real server's answer resolves it. No permanent skeleton.
+  // The resolving frame is the server's `session_loaded` for this id. The arm
+  // above was a direct store call (no switch_session went out), so push that
+  // frame ourselves — the point under test is that it RESOLVES, not who sent it.
+  sock.send({ type: "session_loaded", id: SID, title: "target", messages: [] });
   await expect.poll(async () => (await store(page))?.pendingSession, { timeout: 15000 }).toBe(null);
   await expect(page.getByTestId("session-pending-skeleton")).toHaveCount(0);
 });
@@ -79,6 +93,11 @@ test("an unrelated session_loaded cannot outrank the switch target", async ({ pa
   const sock = await tapSocket(page);
   await page.goto(`/chat/${SID}`);
   await waitConnected(page);
+  // Let the deep link's own load land first: arming on top of an in-flight
+    // load makes the two loads race, and the test would occasionally see the
+    // deep link's resolve clear OUR arm instead of its own.
+    await expect.poll(async () => (await store(page))?.pendingSession, { timeout: 15000 }).toBe(null);
+    await page.evaluate((id) => window.__chatStore.getState().activateSession(id), SID);
   await expect.poll(async () => (await store(page))?.pendingSession, { timeout: 10000 }).toBe(SID);
 
   // A stray load for another session arrives first.
@@ -87,6 +106,9 @@ test("an unrelated session_loaded cannot outrank the switch target", async ({ pa
   expect(mid.currentSessionId, "Z does not replace the view").toBe(SID);
   expect(mid.pendingSession, "the switch is still armed").toBe(SID);
 
+  // ...and the real target's load is what resolves it (the stray above must
+  // have changed nothing, which is why it is still armed here).
+  sock.send({ type: "session_loaded", id: SID, title: "target", messages: [] });
   await expect.poll(async () => (await store(page))?.pendingSession, { timeout: 15000 }).toBe(null);
   expect((await store(page)).currentSessionId).toBe(SID);
 });

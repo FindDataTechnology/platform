@@ -1407,7 +1407,13 @@
         "refresh": "更新",
         "footnote": "準備できていないゲートはフェイルクローズします。他の誰かとして実行されるのではなく、リクエストは拒否されます。",
         "loadFailed": "ゲートを読み込めませんでした: {{detail}}",
-        "unreadableManifests": "{{count}} 件のマニフェストを読めません"
+        "unreadableManifests": "{{count}} 件のマニフェストを読めません",
+        "state": {
+          "connected": "接続済み",
+          "stale": "期限切れ",
+          "missing": "未準備",
+          "unknown": "不明"
+        }
       }
     },
     "lines": {
@@ -3725,6 +3731,12 @@
       "noMatch": "このページに該当ポストの実行なし"
     },
     "inspector": {
+    "roleTitle": "ロール",
+    "roleCharter": "記憶憲章",
+    "roleObjective": "目標",
+    "roleStatus": "状態",
+    "roleGenome": "ゲノム",
+    "roleUnset": "未宣言",
       "open": "詳細",
       "statusBasis": "状態の根拠",
       "modelChain": "モデル解決チェーン",

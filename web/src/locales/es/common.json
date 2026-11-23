@@ -1407,7 +1407,13 @@
         "refresh": "Actualizar",
         "footnote": "Una puerta que no está lista falla cerrada: la solicitud se rechaza en lugar de ejecutarse como otra persona.",
         "loadFailed": "No se pudieron cargar las puertas: {{detail}}",
-        "unreadableManifests": "{{count}} manifiesto(s) ilegible(s)"
+        "unreadableManifests": "{{count}} manifiesto(s) ilegible(s)",
+        "state": {
+          "connected": "conectado",
+          "stale": "caducado",
+          "missing": "no listo",
+          "unknown": "desconocido"
+        }
       }
     },
     "lines": {
@@ -3725,6 +3731,12 @@
       "noMatch": "Ninguna ejecución de este puesto en esta página"
     },
     "inspector": {
+    "roleTitle": "Rol",
+    "roleCharter": "Carta de memoria",
+    "roleObjective": "Objetivo",
+    "roleStatus": "Estado",
+    "roleGenome": "Genoma",
+    "roleUnset": "sin declarar",
       "open": "Detalles",
       "statusBasis": "Base del estado",
       "modelChain": "Cadena de modelos",

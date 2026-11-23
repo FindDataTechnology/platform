@@ -20,7 +20,10 @@ const LOCALES = ["en", "zh-CN", "es", "fr", "ja"];
 const VIEWS = [
   ["#/", "intro-cta-packs", "intro"],
   ["#/packs", "pack-search-input", "packs"],
-  ["#/mcp", "mcp-catalog", "mcp"],
+  // `#/mcp` 退役（unify-material-catalog-page 2.2）：旧地址仍可用，但落到目录页
+  // 的 MCP 页签，渲染的是 CatalogView（`catalog-view`），不再是旧的 McpCatalog
+  // 组件（`mcp-catalog`）。锚点跟着产品走，旧地址本身仍在测。
+  ["#/mcp", "catalog-view", "mcp"],
   ["#/docs", "docs-install", "docs"],
 ];
 const WIDTHS = [1920, 1280, 1024, 900, 768, 390];

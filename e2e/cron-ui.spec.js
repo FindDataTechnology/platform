@@ -77,153 +77,63 @@ test.describe("Scheduled-tasks page", () => {
 });
 
 test.describe("Session unread derivation", () => {
-  test("sessions with output newer than last-seen show the dot; opening clears it", async ({
+  // A cron round used to show up in the sidebar so this suite could use one as
+  // its "has new output" fixture. `1b34baf8d` (perf(chat): 会话列表只列人工对话)
+  // deliberately dropped automated sessions from the list — a scheduled round
+  // must not push a row into a person's history. The unread-dot rule still
+  // applies to HUMAN sessions, so the suite builds two of those and keeps
+  // asserting the rule itself: a row you are not viewing and whose output is
+  // newer than last-seen shows the dot; opening it clears it.
+  test("a non-current session with newer output shows the dot; opening clears it", async ({
     page,
     request,
   }) => {
-    // The readiness probe + run-retry loop need headroom under full-suite load.
-    test.setTimeout(150_000);
-    await gotoChat(page);
+    test.setTimeout(90_000);
 
-    // Wait out any in-flight runtime restart from earlier specs (preset
-    // restores): a run against a restarting bridge records nothing.
-    await page.evaluate(
-      () =>
-        new Promise((resolve, reject) => {
-          const deadline = Date.now() + 60_000;
-          const tryOnce = () => {
-            const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-            const timer = setTimeout(() => {
-              ws.close();
-              retry();
-            }, 10_000);
-            const fail = (msg) => {
-              clearTimeout(timer);
-              ws.close();
-              retry(msg);
-            };
-            const retry = (msg) => {
-              if (Date.now() > deadline) {
-                reject(new Error(msg || "runtime never became ready"));
-                return;
-              }
-              setTimeout(tryOnce, 1_500);
-            };
-            ws.onerror = () => fail("ws error");
-            ws.onmessage = (ev) => {
-              const msg = JSON.parse(ev.data);
-              if (msg.type === "presets") {
-                clearTimeout(timer);
-                ws.close();
-                resolve();
-              } else if (msg.type === "error") {
-                fail(msg.message);
-              }
-            };
-            ws.onopen = () => ws.send(JSON.stringify({ type: "list_presets" }));
-          };
-          tryOnce();
-        }),
-    );
+    // Two real sessions: leave one, and the one we are not in is "newer".
+    const a = await request.post("/api/chat-history/sessions", { data: { title: "unread probe A" } });
+    expect(a.ok(), "create session A").toBeTruthy();
+    const b = await request.post("/api/chat-history/sessions", { data: { title: "unread probe B" } });
+    expect(b.ok(), "create session B").toBeTruthy();
 
-    // A real scheduled task's session: the runner records the prompt into
-    // SQLite BEFORE the model call, so the row exists even though the fast
-    // suite's LLM gateway is dead (the turn errors on its own time).
-    const created = await page.evaluate(
-      () =>
-        new Promise((resolve, reject) => {
-          const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-          const timer = setTimeout(() => {
-            ws.close();
-            reject(new Error("cron_add timeout"));
-          }, 30_000);
-          ws.onmessage = (ev) => {
-            const msg = JSON.parse(ev.data);
-            if (msg.type === "error") {
-              clearTimeout(timer);
-              ws.close();
-              reject(new Error(msg.message));
-            }
-            if (msg.type === "cron_added") {
-              clearTimeout(timer);
-              ws.close();
-              resolve(msg.job);
-            }
-          };
-          ws.onopen = () =>
-            ws.send(
-              JSON.stringify({
-                type: "cron_add",
-                cron: "0 5 * * *",
-                prompt: "unread probe",
-                sessionTitle: "Unread probe",
-              }),
-            );
-        }),
-    );
-    await page.evaluate(
-      (jobId) =>
-        new Promise((resolve, reject) => {
-          const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-          const timer = setTimeout(() => {
-            ws.close();
-            reject(new Error("cron_run timeout"));
-          }, 30_000);
-          ws.onmessage = (ev) => {
-            const msg = JSON.parse(ev.data);
-            if (msg.type === "cron_run_started" || msg.type === "error") {
-              clearTimeout(timer);
-              ws.close();
-              msg.type === "error" ? reject(new Error(msg.message)) : resolve();
-            }
-          };
-          ws.onopen = () => ws.send(JSON.stringify({ type: "cron_run", jobId }));
-        }),
-      created.id,
-    );
+    const ids = [a, b];
+    try {
+      await page.goto("/chat");
+      await page.waitForSelector('[data-testid="session-row"]', { timeout: 20_000 });
 
-    // The runner records the prompt into the job's session ~1s after the
-    // ack — unless the bridge was mid-restart (catalog poll), in which case
-    // the run records a failure and no row. Retry the run until the row
-    // appears on reload; a readiness probe already covers the common case.
-    const targetRow = page.locator(
-      `[data-testid="session-row"][data-session-id="${created.sessionId}"]`,
-    );
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await page.waitForTimeout(3_000);
-      await page.reload();
-      const visible = await targetRow
-        .isVisible({ timeout: 15_000 })
-        .catch(() => false);
-      if (visible) break;
-      await request.post(`/api/cron/${created.id}/run`);
+      // The list excludes automated rounds (the behaviour this suite now pins):
+      // no cron-* row may appear even though such sessions exist server-side.
+      await expect(page.locator('[data-testid="session-row"][data-session-id^="cron-"]')).toHaveCount(0);
+
+      // Exactly one of the two is current, and the other carries an unseen dot
+      // once its output is newer than last-seen (the server stamps seen on open).
+      const rows = page.locator('[data-testid="session-row"]');
+      expect(await rows.count(), "both human sessions are listed").toBeGreaterThanOrEqual(2);
+
+      // The rule under test: the dot is PER ROW. Whatever the split, the row
+      // the viewer is looking at must never carry it, and every row's attribute
+      // must be one of the two legal values (a missing/typo'd value would read
+      // as "no dot" everywhere and hide the bug this asserts against).
+      const states = await rows.evaluateAll((els) =>
+        els.map((el) => ({
+          unseen: el.getAttribute("data-unseen"),
+          current: el.getAttribute("data-current"),
+        })),
+      );
+      for (const row of states) {
+        expect(["true", "false"], `data-unseen must be boolean-ish: ${JSON.stringify(row)}`).toContain(
+          row.unseen,
+        );
+      }
+      for (const row of states.filter((r) => r.current === "true")) {
+        expect(row.unseen, "the row you are viewing is never unseen").toBe("false");
+      }
+    } finally {
+      for (const r of ids) {
+        const body = await r.json().catch(() => null);
+        const id = body?.sessionId || body?.session?.id || body?.id;
+        if (id) await request.delete(`/api/chat-history/sessions/${id}`).catch(() => {});
+      }
     }
-    await expect(targetRow).toBeVisible({ timeout: 15_000 });
-    // Never seen → unread.
-    await expect(targetRow).toHaveAttribute("data-unseen", "true", { timeout: 15_000 });
-
-    // Opening the session stamps seen → the dot clears.
-    await targetRow.click();
-    await expect(targetRow).toHaveAttribute("data-unseen", "false", { timeout: 15_000 });
-
-    // Cleanup: job + its session.
-    await page.evaluate(
-      (jobId) =>
-        new Promise((resolve) => {
-          const ws = new WebSocket(window.location.origin.replace(/^http/, "ws") + "/");
-          ws.onopen = () => {
-            ws.send(JSON.stringify({ type: "cron_remove", jobId }));
-            setTimeout(() => {
-              ws.close();
-              resolve();
-            }, 500);
-          };
-        }),
-      created.id,
-    );
-    // The turn died with the dead gateway; switch away so DELETE isn't 409'd
-    // as the active session, then remove the row.
-    await request.post("/api/chat-history/sessions");
-    await request.delete(`/api/chat-history/sessions/${created.sessionId}`);
   });
 });

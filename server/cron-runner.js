@@ -27,6 +27,27 @@ import { getFleetDatabase, isPersonaBackedTargetKind } from "./routes/fleets-db.
 import { turnTokens } from "./model-budget.js";
 import { retryFastWindowMs, shouldRetryFastFailure, shouldRetryZeroOutput, shouldDegradeOverBudget } from "./cron-decisions.js";
 
+export function renderCompetenceDisputes(rows) {
+  const list = Array.isArray(rows) ? rows.filter((r) => r && r.state === "disputed") : [];
+  if (!list.length) return null;
+  const lines = ["【正在被质疑的结论】以下结论仍可读到，但在质疑解除前不要当作定论："];
+  for (const r of list.slice(0, 5)) {
+    const by = r.disputedBy ? `质疑者 ${r.disputedBy}` : "质疑者未记录";
+    const why = r.disputeBasis ? `；依据：${r.disputeBasis}` : "";
+    lines.push(`- ${r.pageRef}（${by}${why}）`);
+  }
+  if (list.length > 5) lines.push(`…（另有 ${list.length - 5} 条未列出）`);
+  return lines.join("\n");
+}
+
+function clusterDisputesFor(clusterId) {
+  const db = getFleetDatabase();
+  const fleet = typeof db.findFleetByCluster === "function" ? db.findFleetByCluster(clusterId) : null;
+  if (!fleet) return null;
+  return renderCompetenceDisputes(db.listCompetenceCandidates(fleet.id, { state: "disputed" }));
+}
+
+
 // ── Turn carrier (add-fleet-carrier) ─────────────────────────────────────────
 //
 // The placement dimension, resolved per turn: member.carrier → fleet
@@ -2037,7 +2058,14 @@ async function runClusterTurn(ctx, job, { turnTimeoutMs, activeTurns, startedAt 
   const originalPreset = ctx.currentPreset || null;
   const originalModel = ctx.session?.model?.id ?? null;
 
-  // ── memory hook ① (add-memory-scopes-and-cluster-sharing; digest upgrade
+  /**
+ * 把「正在被质疑」的胜任力候选渲染成一段读面提示（6.2）。
+ *
+ * 只读本地表：正文在 fd-memory（note 页），这里只需要 id / 谁质疑 / 依据。
+ * 返回 null 表示没有需要提示的——绝不返回空段落占位。
+ */
+
+// ── memory hook ① (add-memory-scopes-and-cluster-sharing; digest upgrade
   // add-cluster-digest-injection) ────────────────────────────────────────────
   // After member resolution, inject the cluster's shared memory into every
   // member's task prompt through the three-rung ladder (SDK digestLadder):
@@ -2047,6 +2075,16 @@ async function runClusterTurn(ctx, job, { turnTimeoutMs, activeTurns, startedAt 
   const clusterMemory = await clusterMemoryFor(process.env, ctx.runtimeOwnerEmail ?? null);
   if (clusterMemory) {
     taskPrompt = (await memoryInjectionFor(clusterMemory, cluster.id, job.prompt)).prompt;
+  }
+  // 胜任力质疑提示（establish-agent-role-and-fitness-plane 6.2）：**读面提示，
+  // 不是写面拦截**。候选页照样可读，这里只是把它「正在被质疑（谁、凭什么）」
+  // 补在注入之后——agent 才会在决定前校准；只拦写面它只会反复撞墙。
+  // 记忆缺席（clusterMemory=null）时这段不出现，与既有 degrade-open 一致。
+  if (clusterMemory) {
+    try {
+      const disputed = clusterDisputesFor(cluster.id);
+      if (disputed) taskPrompt = `${taskPrompt}\n\n${disputed}`;
+    } catch { /* 提示失败绝不影响任务 */ }
   }
   chatHistory.recordMessage(boundSessionId, "user", taskPrompt);
   if (job.sessionTitle) {

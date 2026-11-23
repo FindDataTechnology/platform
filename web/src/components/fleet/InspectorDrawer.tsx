@@ -68,6 +68,25 @@ export interface InspectorMember {
   /** Bot sidecar (fleet-ops-canvas): bot-kind posts carry their channel's
       runtime story read-only; absent columns surface as null. */
   bot?: { type: string; enabled: boolean; lastInboundAt: string | null; lastOutboundAt: string | null; lastError: string | null } | null;
+  /**
+   * 逐岗记忆章程（establish-agent-role-and-fitness-plane 3.2）：**真正生效的
+   * 那一份**（与 catalogEntryPersona 注入 persona 的同源）。null = 未声明，
+   * 不是空章程——两者在界面上必须分开显示。
+   */
+  memoryCharter?: string | null;
+  /** 输入策略（既有字段，此前未在此抽屉展示）。 */
+  inputPolicy?: Record<string, unknown> | null;
+  effectiveInputPolicy?: Record<string, unknown> | null;
+  /** 角色行（5.1）：null = 这个岗还没建过角色（不是「角色器官为空」）。 */
+  role?: InspectorRole | null;
+}
+
+/** 角色四件事（9.1）：章程 / 记忆层 / 胜任力 / 目标。 */
+export interface InspectorRole {
+  genome: { packId: string; version: number | null } | null;
+  organs: { charter?: string | null; memory?: unknown; senses?: unknown[]; objective?: { metricKey?: string; label?: string } | null; hands?: unknown } | null;
+  status: string | null;
+  statusBasis: string | null;
 }
 
 export interface InspectorDecision {
@@ -299,6 +318,29 @@ export function MemberInspector({
       <div className="flex-1 overflow-y-auto p-3 text-xs">
         {tab === "overview" ? (
           <div className="flex flex-col gap-3" data-testid="inspector-overview">
+            {/* 角色四件事（establish-agent-role-and-fitness-plane 9.1）：章程 /
+                记忆层 / 胜任力 / 目标。每一项缺失都显示「未声明」而不是空——
+                「没写」与「写了但为空」对 owner 是两个不同的事实。 */}
+            <div data-testid="inspector-role">
+              <p className="font-medium">{t("fleets.inspector.roleTitle")}</p>
+              <p className="mt-1 text-muted-foreground" data-testid="inspector-role-charter">
+                {t("fleets.inspector.roleCharter")}: {member.memoryCharter ?? t("fleets.inspector.roleUnset")}
+              </p>
+              <p className="text-muted-foreground" data-testid="inspector-role-objective">
+                {t("fleets.inspector.roleObjective")}:{" "}
+                {member.role?.organs?.objective?.label ?? member.role?.organs?.objective?.metricKey ?? t("fleets.inspector.roleUnset")}
+              </p>
+              <p className="text-muted-foreground" data-testid="inspector-role-status">
+                {t("fleets.inspector.roleStatus")}: {member.role?.status ?? t("fleets.inspector.roleUnset")}
+                {member.role?.statusBasis ? ` · ${member.role.statusBasis}` : ""}
+              </p>
+              {member.role?.genome ? (
+                <p className="text-muted-foreground">
+                  {t("fleets.inspector.roleGenome")}: {member.role.genome.packId}
+                  {member.role.genome.version != null ? ` @ v${member.role.genome.version}` : ""}
+                </p>
+              ) : null}
+            </div>
             <div>
               <p className="font-medium">{t("fleets.inspector.statusBasis")}</p>
               <p className="mt-1 text-muted-foreground">{member.statusReason || "—"}</p>

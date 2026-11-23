@@ -344,10 +344,21 @@ export interface PackManifest {
     [axis: string]: unknown;
   };
   // 看板声明（pillar-surfaces）。同上：字段一直合法，类型缺失让丢失无声。
+  // 块的形状由 `lib/console-blocks-spec.js` 定义：`{ block, params?, surfaces? }`，
+  // `block` 是闭集 id —— 详情页按它取 `console.block.<id>` 的显示名。
   console?: {
     headline?: string;
-    blocks?: { id?: string; kind?: string; [k: string]: unknown }[];
+    blocks?: { block: string; params?: Record<string, unknown>; surfaces?: string[] }[];
     [k: string]: unknown;
+  };
+  // 产物卡声明（enrich-fleet-template-member-config）。与 `console` 是两件事：
+  // board 说「这支队产出什么」，console 说「主人怎么看它」，两者闭集互斥。
+  board?: { artifact: "doc" | "dashboard" | "form" | "record-view"; title: string; discipline: string }[];
+  // 监控声明（enrich-fleet-template-member-config）：什么算异常、何时升级、通知走哪。
+  monitoring?: {
+    anomaly_criteria: string[];
+    escalate: { threshold: string; severity_default: "low" | "normal" | "high" };
+    notify?: string;
   };
   // 验收断言（fleet-team-release）：与 deriveTeam 的 acceptance 投影同源。
   acceptance?: { id?: string; kind?: string; target?: string; expect?: number; rubric?: string }[];
@@ -400,6 +411,60 @@ export interface PackDetail extends PackSummary {
   coverage?: PackLocaleCoverage;
   /** Market revenue share: 登录调用者对当前版本的购买权益(付费条目才有键)。 */
   purchased?: boolean;
+  /** 三支柱派生（server `derivePillars()` 的唯一派生点）。缺省 = 这次响应没带，
+   *  不是「三支柱都未声明」——消费面据此决定渲染与否。 */
+  pillars?: SpecPillars | null;
+  /** 团队编制派生（server `deriveTeam()`）。同上：缺省 ≠ undeclared。 */
+  team?: SpecTeam | null;
+  /**
+   * 判定段（establish-agent-role-and-fitness-plane 8.3）。
+   *
+   * **三态，且缺省与 null 不可混同**：
+   *   · 缺省（键不存在）  = 这个部署/这份响应不提供判定面 → 界面不渲染这一栏
+   *   · null              = 服务端明确说「未判定」 → 渲染「未判定」
+   *   · 有值              = 判过，按 verdict 渲染（裁撤/判不出有各自的措辞）
+   *
+   * 把缺省当成 null 会让一个老服务端看起来像「所有包都未判定」；
+   * 把 null 当成缺省会让「确实没判过」这件事从界面上消失。
+   */
+  fitness?: PackFitness | null;
+}
+
+/** 判定段的呈现形态（裁决闭集与 paas/lib/fitness-verdict.js 同源）。 */
+export interface PackFitness {
+  ref: string;
+  verdict: "retain" | "merge" | "retire" | "redesign" | "inconclusive";
+  judgedAt: string;
+  installable?: boolean;
+  missing?: string[];
+  /** 判定方（平台判定 vs 作者自测）——两种结论不得合并成一条。 */
+  judgedBy?: "platform" | "author";
+}
+
+/**
+ * 判定段的三态判词（8.3 的唯一呈现入口）。
+ *
+ * 返回 `null` = **不渲染这一栏**（响应里根本没有 fitness 键）；
+ * 返回对象 = 渲染，`label` 已是用户面终词（不是 retain/retire 这些原语）。
+ */
+export function fitnessBadge(fitness: PackFitness | null | undefined): { label: string; tone: "muted" | "ok" | "warn" | "danger" } | null {
+  if (fitness === undefined) return null; // 服务端不提供 → 这一栏不存在
+  if (fitness === null) return { label: "未判定", tone: "muted" };
+  switch (fitness.verdict) {
+    case "retain":
+      return { label: `已判定 · 保留（${fitness.judgedAt}）`, tone: "ok" };
+    case "merge":
+      return { label: `已判定 · 建议合并岗位（${fitness.judgedAt}）`, tone: "warn" };
+    case "redesign":
+      return { label: `已判定 · 改设计后重判（${fitness.judgedAt}）`, tone: "warn" };
+    case "retire":
+      return { label: `已裁撤 · 默认不可新装（${fitness.judgedAt}）`, tone: "danger" };
+    case "inconclusive":
+      // 判不出 ≠ 已验证更优。措辞必须明确站在这边。
+      return { label: `判不出（${fitness.judgedAt}）`, tone: "muted" };
+    default:
+      return { label: "未判定", tone: "muted" };
+  }
 }
 
 export type PackPartStatus =
@@ -784,28 +849,58 @@ export interface SpecTeam {
     kpiSlots: { key: string | null; label: string | null; unit: string | null }[];
   }[];
   edges?: { kind: string | null; from: string | null; to: string | null }[];
+  /** 验收断言（fleet-team-release）：`deriveAcceptance()` 只投影 kind/target/expect，
+   *  rubric 正文留在 release 面之后，绝不下发。 */
+  acceptance?: { id: string; kind: string; target: string | null; expect: number | null }[];
   errors?: string[];
 }
 /** Mirror of `derivePillars()` 的输出（server: lib/pack-pillars.js）。
  *  与 SpecTeam 同一条理由保持结构化而不 import：web bundle 不该拉 Node 模块，
- *  而这些是契约级事实、没有行为。 */
+ *  而这些是契约级事实、没有行为。
+ *
+ *  这个镜像必须真的镜像：`dashboard.blocks` 曾写成 `{id, kind}` 而服务端发的是
+ *  `{block, params, surfaces}`，于是「块名」在类型上不存在，渲染层就只能报个数
+ *  （overhaul-pack-detail-presentation D8）。`scripts/test-pack-pillars-type-mirror.mjs`
+ *  钉住两边键集。 */
 export interface SpecPillars {
   memory: {
     state: string;
-    rows?: Record<string, { declared: unknown; inherited_from?: string; effective: unknown; executed?: boolean }>;
-    guidance?: string | null;
+    /** The four declared axes, verbatim (machine-face shape). */
+    axes?: Record<string, Record<string, unknown>>;
+    /** One row per sub-key: declared vs effective, with the inheritance source. */
+    rows?: Record<string, { declared: unknown; inherited_from?: string | null; effective: unknown; executed?: boolean }>;
+    /** Per-role chains — only when a role carries its own declaration. */
+    roles?: { agentId: string | null; rows: SpecPillars["memory"]["rows"] }[];
+    /** Which level carried the block (pack vs role). */
+    declaredAt?: { pack: boolean; agent: boolean };
+    /** Per-role charters (`agents[].memory.guidance`), each one already scoped
+     *  to a role. An array, not a string — the derivation has always returned
+     *  one entry per declaring role. */
+    guidance?: { agentId: string | null; text: string }[];
     errors?: string[];
   };
   toolkit: {
     state: string;
-    servers?: { registryName: string; allowTools?: string[]; fullSurface?: boolean; totalTools?: number | null }[];
-    roles?: unknown[];
+    servers?: {
+      registryName: string;
+      allowTools?: string[] | null;
+      fullSurface?: boolean;
+      fullSurfaceReason?: string;
+      totalTools?: number | null;
+    }[];
+    roles?: {
+      agentId: string | null;
+      declared: Record<string, string[]> | null;
+      effective: Record<string, string[]>;
+      effectiveServers: string[];
+      narrowed: boolean;
+    }[];
     errors?: string[];
   };
   dashboard: {
     state: string;
     headline?: string | null;
-    blocks?: { id?: string; kind?: string }[];
+    blocks?: { block: string; params?: Record<string, unknown>; surfaces?: string[] }[];
     errors?: string[];
   };
 }

@@ -1405,8 +1405,8 @@
         "memberAssertion": {
           "title": "Member delegation",
           "subtitle": "A member acts on the customer's behalf",
-          "offSubtitle": "Delegation is off for this customer",
-          "empty": "No line delegates yet"
+          "offSubtitle": "Off by default",
+          "empty": "No line declares delegation yet."
         },
         "thirdParty": {
           "title": "Third-party credentials",
@@ -1416,11 +1416,17 @@
         "missingCount": "{{count}} door(s) not ready",
         "ownTrack": "Own track",
         "noOwnTrack": "No own track",
-        "goConnect": "Go connect",
+        "goConnect": "Connect",
         "refresh": "Refresh",
         "footnote": "A door that is not ready fails closed: the request is refused rather than run as someone else.",
         "loadFailed": "Could not load the doors: {{detail}}",
-        "unreadableManifests": "{{count}} manifest(s) could not be read"
+        "unreadableManifests": "{{count}} manifest(s) could not be read",
+        "state": {
+          "connected": "connected",
+          "stale": "stale",
+          "missing": "not ready",
+          "unknown": "unknown"
+        }
       }
     },
     "lines": {
@@ -3725,6 +3731,12 @@
       "noMatch": "No runs match this post on this page"
     },
     "inspector": {
+    "roleTitle": "Role",
+    "roleCharter": "Memory charter",
+    "roleObjective": "Objective",
+    "roleStatus": "Status",
+    "roleGenome": "Genome",
+    "roleUnset": "not declared",
       "open": "Details",
       "statusBasis": "Status basis",
       "modelChain": "Model chain",

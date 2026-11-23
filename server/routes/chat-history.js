@@ -33,7 +33,17 @@ export function registerChatHistoryRoutes(ctx) {
       // Same feed semantics as the WS `sessions` event (slim-session-list-feed):
       // automation rounds are execution records, not conversations. The current
       // session stays listed so its row/title resolves.
-      const rows = await chatHistory.listSessions({ ...scope, excludeAutomated: true });
+      //
+      // `?includeAutomated=1` is the ONE way back in, for verification only:
+      // a test (or an operator) asking "did the cron round actually record its
+      // session?" has no other read surface once both the sidebar and this feed
+      // drop automated rows — asserting "it lands" through the filtered feed
+      // would pass for the wrong reason (it can never land there).
+      const includeAutomated = String(req.query.includeAutomated ?? "") === "1";
+      const rows = await chatHistory.listSessions({
+        ...scope,
+        excludeAutomated: !includeAutomated,
+      });
       const listed = chatHistory.ensureSessionInList(rows, chatHistory.currentSessionId(), scope);
       res.json({
         sessions: ctx.withTurnStatus(listed),

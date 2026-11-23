@@ -166,7 +166,7 @@ test.describe("Cron firing binds to (preset, session)", () => {
       await expect
         .poll(
           async () => {
-            const list = await (await request.get("/api/chat-history/sessions")).json();
+            const list = await (await request.get("/api/chat-history/sessions?includeAutomated=1")).json();
             return (list.sessions || []).some((s) => s.id === sessionId);
           },
           { timeout: 90_000, message: `job's dedicated session ${sessionId} lands` },
@@ -175,7 +175,7 @@ test.describe("Cron firing binds to (preset, session)", () => {
 
       // (b) The dedicated session exists in chat history (the runner records
       // the user prompt under the bound session BEFORE prompting).
-      const list = await (await request.get("/api/chat-history/sessions")).json();
+      const list = await (await request.get("/api/chat-history/sessions?includeAutomated=1")).json();
       const row = (list.sessions || []).find((s) => s.id === sessionId);
       expect(row, "job's dedicated session row exists").toBeTruthy();
       expect(row.title).toBe("Binding probe");

@@ -1407,7 +1407,13 @@
         "refresh": "刷新",
         "footnote": "未就绪的门按失败关闭处理：请求会被拒绝，而不是以别人的身份跑。",
         "loadFailed": "门总览加载失败：{{detail}}",
-        "unreadableManifests": "{{count}} 份清单读不出来"
+        "unreadableManifests": "{{count}} 份清单读不出来",
+        "state": {
+          "connected": "已连接",
+          "stale": "已过期",
+          "missing": "未就绪",
+          "unknown": "未知"
+        }
       }
     },
     "lines": {
@@ -3725,6 +3731,12 @@
       "noMatch": "本页无该岗位的 run"
     },
     "inspector": {
+    "roleTitle": "角色",
+    "roleCharter": "记忆章程",
+    "roleObjective": "目标",
+    "roleStatus": "状态",
+    "roleGenome": "基因组",
+    "roleUnset": "未声明",
       "open": "详情",
       "statusBasis": "状态判定依据",
       "modelChain": "模型解析链",

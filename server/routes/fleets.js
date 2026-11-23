@@ -4113,7 +4113,13 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
       const tasks = taskIndexFor(owned.fleet.id);
       const resolveMember = rosterResolver();
       const model = modelCtx();
-      const views = members.map((m) => memberView(db, owned.fleet, m, tasks, { resolver: resolveMember, model }));
+      // 角色行按 memberId 索引后挂到每个岗的视图上（9.1）：前端不必自己做 join，
+      // 也避免「列表里有 roleStates、面板上却读不到」这种两处不一致。
+      const roleByMember = new Map(db.listRoleStates(owned.fleet.id).map((r) => [r.memberId, r]));
+      const views = members.map((m) => ({
+        ...memberView(db, owned.fleet, m, tasks, { resolver: resolveMember, model }),
+        role: roleByMember.get(m.id) ?? null,
+      }));
       const statusCounts = {};
       for (const v of views) statusCounts[v.status] = (statusCounts[v.status] ?? 0) + 1;
       db.expireOpenDecisions(owned.fleet.id);

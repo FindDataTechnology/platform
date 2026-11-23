@@ -2639,6 +2639,107 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       .run(...(sent ? [t, t, id] : [t, id]));
   }
 
+  // ── 胜任力候选（establish-agent-role-and-fitness-plane 6.1 / 6.3）──────────
+  //
+  // 页面正文在 fd-memory（note 页 + metadata kind=competence），这里只存「哪个
+  // 页面、什么状态、谁在质疑」——正文不复制，复制的第二真源必然漂移。
+  //
+  // 6.3 的硬要求落在这里：**候选生效是一次显式动作**（`accept()`），且必须带
+  // 验收者身份。证据不足的候选永远停在 candidate，不会因为「时间到了」自动生效。
+
+  function upsertCompetenceCandidate({ id, fleetId, memberId, pageRef, evidence, state }) {
+    const now = Date.now();
+    const existing = id
+      ? db.prepare("SELECT * FROM competence_candidates WHERE id = ?").get(id)
+      : db
+          .prepare("SELECT * FROM competence_candidates WHERE fleet_id = ? AND member_id = ? AND page_ref = ?")
+          .get(fleetId, memberId, pageRef);
+    if (existing) {
+      db.prepare("UPDATE competence_candidates SET evidence = ?, state = ?, updated_at = ? WHERE id = ?").run(
+        JSON.stringify(evidence ?? JSON.parse(existing.evidence || "{}")),
+        state ?? existing.state,
+        now,
+        existing.id,
+      );
+      return getCompetenceCandidate(existing.id);
+    }
+    // id 缺省由 pageRef 派生：同一页面不会被记两次（幂等键就是它自己）。
+    const rowId = id ?? `comp_${now}_${Math.random().toString(36).slice(2, 10)}`;
+    db.prepare(`
+      INSERT INTO competence_candidates (id, fleet_id, member_id, page_ref, state, evidence, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(rowId, fleetId, memberId, pageRef, state ?? "candidate", JSON.stringify(evidence ?? {}), now, now);
+    return getCompetenceCandidate(rowId);
+  }
+
+  function getCompetenceCandidate(id) {
+    const row = db.prepare("SELECT * FROM competence_candidates WHERE id = ?").get(id);
+    return row ? deserializeCompetence(row) : null;
+  }
+
+  function listCompetenceCandidates(fleetId, { memberId = null, state = null } = {}) {
+    const where = ["fleet_id = ?"];
+    const args = [fleetId];
+    if (memberId) {
+      where.push("member_id = ?");
+      args.push(memberId);
+    }
+    if (state) {
+      where.push("state = ?");
+      args.push(state);
+    }
+    return db
+      .prepare(`SELECT * FROM competence_candidates WHERE ${where.join(" AND ")} ORDER BY created_at DESC`)
+      .all(...args)
+      .map(deserializeCompetence);
+  }
+
+  /**
+   * 标记一条候选「正在被质疑」（6.2）：**读面提示，不是写面拦截**。
+   * 候选页照样可读，注入面在正文里标「谁在质疑、凭什么」——
+   * 拦住写面只会让 agent 反复撞墙；写在读面它才会在决定前校准。
+   */
+  function disputeCompetenceCandidate(id, { by, basis }) {
+    const row = db.prepare("SELECT * FROM competence_candidates WHERE id = ?").get(id);
+    if (!row) return null;
+    if (row.state === "active") {
+      // 已生效的结论可以被质疑，但不会因此消失——状态标 disputed，读面照常召回。
+      db.prepare("UPDATE competence_candidates SET state = 'disputed', disputed_by = ?, dispute_basis = ?, updated_at = ? WHERE id = ?").run(
+        by ?? null,
+        basis ?? null,
+        Date.now(),
+        id,
+      );
+    } else {
+      db.prepare("UPDATE competence_candidates SET state = 'disputed', disputed_by = ?, dispute_basis = ?, updated_at = ? WHERE id = ?").run(
+        by ?? null,
+        basis ?? null,
+        Date.now(),
+        id,
+      );
+    }
+    return getCompetenceCandidate(id);
+  }
+
+  /**
+   * 候选生效（6.3）：**必须是显式动作且带验收者**。
+   * 没有 acceptedBy 就拒绝——这是「非执行者验收」这条纪律的唯一落点。
+   */
+  function acceptCompetenceCandidate(id, { acceptedBy }) {
+    if (!acceptedBy || !String(acceptedBy).trim()) {
+      return { ok: false, error: "accepted_by_required" };
+    }
+    const row = db.prepare("SELECT * FROM competence_candidates WHERE id = ?").get(id);
+    if (!row) return { ok: false, error: "not_found" };
+    db.prepare("UPDATE competence_candidates SET state = 'active', accepted_by = ?, accepted_at = ?, updated_at = ? WHERE id = ?").run(
+      String(acceptedBy).trim(),
+      Date.now(),
+      Date.now(),
+      id,
+    );
+    return { ok: true, candidate: getCompetenceCandidate(id) };
+  }
+
   // ── 角色状态（establish-agent-role-and-fitness-plane 5.1 / 5.2）─────────────
   //
   // 表在 1.1 就建了，但**没有任何读写入口**——这正是本仓反复踩的那一类
@@ -2956,11 +3057,34 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     getFitnessRun,
     listFitnessRuns,
     finishFitnessRun,
+    upsertCompetenceCandidate,
+    getCompetenceCandidate,
+    listCompetenceCandidates,
+    disputeCompetenceCandidate,
+    acceptCompetenceCandidate,
     getRoleState,
     listRoleStates,
     upsertRoleState,
     deleteRoleState,
     close,
+  };
+}
+
+// 胜任力候选的行 → API 形状。`state` 三值：candidate / active / disputed。
+function deserializeCompetence(row) {
+  return {
+    id: row.id,
+    fleetId: row.fleet_id,
+    memberId: row.member_id,
+    pageRef: row.page_ref,
+    state: row.state,
+    disputedBy: row.disputed_by ?? null,
+    disputeBasis: row.dispute_basis ?? null,
+    evidence: JSON.parse(row.evidence || "{}"),
+    acceptedBy: row.accepted_by ?? null,
+    acceptedAt: row.accepted_at ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 
