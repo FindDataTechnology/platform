@@ -211,8 +211,8 @@ test("summon plan (positive): a2a posts join real deployments on servingPath; un
     assert.equal(r.status, 200);
     assert.deepEqual(
       r.body.plan.summonable,
-      [{ ref: "p1:mp", title: "萬星机群席", targetId: "registry-packs-p1-mp", onBehalfOf: OWNER }],
-      "the aligned deployment becomes the seat ref packId:agentId with the deployer as onBehalfOf",
+      [{ ref: "p1:mp", title: "萬星机群席", targetId: "registry-packs-p1-mp", onBehalfOf: OWNER, voice: null }],
+      "the aligned deployment becomes the seat ref packId:agentId with the deployer as onBehalfOf; no declared voice reads null",
     );
     assert.deepEqual(r.body.plan.cockpitOnly, ["萬星机群席", "质检员"], "persona posts named cockpit-only, stream verbatim");
     assert.equal(r.body.plan.fleetName, "客服班组");
@@ -234,9 +234,53 @@ test("summon execution: invites carry ref/onBehalfOf from the ledger; subscripti
     assert.equal(inv.kind, "agent");
     assert.equal(inv.ref, "p1:mp", "seat ref is packId:agentId — what the agent lane resolves");
     assert.equal(inv.onBehalfOf, OWNER, "onBehalfOf is the ledger deployer (seat lane matches on it)");
+    assert.equal(inv.voice, null, "a post with no declared voice carries none onto the invite");
     assert.ok(store.fleetSubsOf(summonRoom.id).some((s) => s.fleetId === "fleet_ok"), "subscription rides along");
   } finally {
     server2.close();
+  }
+});
+
+test("summon carries the post's declared voice onto the invite", async () => {
+  // A formation member that declares a voice (add-room-voice-and-catalog).
+  sample = overview([
+    fleetShape("fleet_v", "有声班组", {
+      formation: {
+        members: [
+          { id: "m-v", title: "有声席", targetKind: "a2a", status: "on_duty", targetId: "registry-packs-p2-v", servingPath: "/packs/p2/v", voice: { model: "tencent-tts", voice: "101013" } },
+          { id: "m-nv", title: "无声席", targetKind: "a2a", status: "on_duty", targetId: "registry-packs-p3/nv", servingPath: "/packs/p3/nv" },
+        ],
+        edges: [],
+        truncated: false,
+      },
+      stream: [],
+    }),
+  ]);
+  const summonRoom = store.roomCreate({ title: "有声召唤房", ownerEmail: OWNER });
+  const { server2, call2 } = startSummonBridge({
+    servingDeployments: async () => [
+      { packId: "p2", agentId: "v", agentPath: "/packs/p2/v", deployedBy: OWNER },
+      { packId: "p3", agentId: "nv", agentPath: "/packs/p3/nv", deployedBy: OWNER },
+    ],
+  });
+  try {
+    const r = await call2("POST", `/api/zhiyu/rooms/${summonRoom.id}/fleet-summon`, { fleetId: "fleet_v" });
+    assert.equal(r.status, 200);
+    const invV = store.invitesForRoom(summonRoom.id).find((v) => v.ref === "p2:v");
+    const invNv = store.invitesForRoom(summonRoom.id).find((v) => v.ref === "p3:nv");
+    assert.deepEqual(invV.voice, { model: "tencent-tts", voice: "101013" }, "the declared voice rides the invite");
+    assert.equal(invNv.voice, null, "an undeclared post carries none");
+  } finally {
+    server2.close();
+    // Later tests sample `fleet_ok` and expect its original stream members.
+    sample = overview([
+      fleetShape("fleet_ok", "客服班组", {
+        stream: [
+          { title: "萬星机群席", at: 1, summarySnip: "", metrics: {} },
+          { title: "质检员", at: 1, summarySnip: "", metrics: {} },
+        ],
+      }),
+    ]);
   }
 });
 

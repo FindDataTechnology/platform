@@ -2,21 +2,21 @@
 // (voice-lane, design D6).
 //
 // Status first (available / disabled / no key, and whose account bills), then
-// the five fields of the `voice` block for administrators: enabled, the ASR
-// and TTS model names, the voice, the container format. Blank model fields
-// mean "the 词元 side's default" — the platform never names upstream channels
-// (design D1), so there is nothing to pick from here, only to override.
-// Non-administrators see the status read-only.
+// the fields of the `voice` block for administrators. The voice is no longer
+// two free-text boxes (add-room-voice-and-catalog): `ttsModel` and `ttsVoice`
+// are two halves of ONE selection drawn from the voice catalog, so this card
+// renders a single entry picker plus a "preview" button. Blank = the upstream
+// default, exactly as before. Non-administrators see the status read-only.
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Mic } from "lucide-react";
+import { Mic, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { showToast } from "@/components/ui/toast";
 import { refreshVoiceStatus, useVoice } from "@/hooks/useVoice";
-import { updateVoiceConfig, VoiceError, type VoiceConfig } from "@/lib/voice";
+import { fetchVoiceCatalog, previewVoice, speechPlayer, updateVoiceConfig, VoiceError, type VoiceCatalog, type VoiceConfig } from "@/lib/voice";
 
 const FORMATS = ["mp3", "wav", "opus", "aac", "flac"];
 
@@ -26,6 +26,8 @@ export function VoiceCard({ isAdmin }: { isAdmin: boolean }) {
   const { t } = useTranslation();
   const { status, loaded } = useVoice();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [catalog, setCatalog] = useState<VoiceCatalog | null>(null);
+  const [previewing, setPreviewing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,10 +35,21 @@ export function VoiceCard({ isAdmin }: { isAdmin: boolean }) {
   // another tab) and seed the draft from the resolved config.
   useEffect(() => {
     void refreshVoiceStatus();
+    void fetchVoiceCatalog()
+      .then(setCatalog)
+      .catch(() => setCatalog(null)); // an unreadable catalog just hides the picker
   }, []);
   useEffect(() => {
     if (status && draft === null) setDraft({ ...status.config });
   }, [status, draft]);
+
+  // The selected catalog entry, or null when the pair is blank (upstream
+  // default) or names something the catalog no longer carries.
+  const selected =
+    draft && draft.ttsModel && draft.ttsVoice
+      ? catalog?.entries.find((e) => e.model === draft.ttsModel && e.voice === draft.ttsVoice) ?? null
+      : null;
+  const selectionIsStale = Boolean(draft?.ttsModel || draft?.ttsVoice) && catalog !== null && selected === null;
 
   const dirty =
     draft !== null &&
@@ -58,6 +71,22 @@ export function VoiceCard({ isAdmin }: { isAdmin: boolean }) {
       setSaving(false);
     }
   }, [draft, t]);
+
+  // Preview goes through the same lane as real synthesis, which is the point:
+  // it is the only place an entry the upstream has dropped will fail visibly.
+  const preview = useCallback(async () => {
+    const entry = selected ?? catalog?.default ?? null;
+    if (!entry) return;
+    setPreviewing(true);
+    try {
+      const blob = await previewVoice(entry);
+      await speechPlayer.play(`preview:${entry.model}:${entry.voice}`, blob);
+    } catch (e) {
+      showToast({ severity: "error", title: e instanceof VoiceError ? e.message : t("voiceCard.previewFailed") });
+    } finally {
+      setPreviewing(false);
+    }
+  }, [selected, catalog, t]);
 
   const statusKey = !status
     ? loaded
@@ -136,8 +165,50 @@ export function VoiceCard({ isAdmin }: { isAdmin: boolean }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {field("asrModel", "voice-card-asr-model")}
-            {field("ttsModel", "voice-card-tts-model")}
-            {field("ttsVoice", "voice-card-tts-voice")}
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              <Label htmlFor="voice-tts-entry">{t("voiceCard.ttsVoice")}</Label>
+              {isAdmin ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    id="voice-tts-entry"
+                    data-testid="voice-card-tts-voice"
+                    value={selected ? `${selected.model}|${selected.voice}` : ""}
+                    disabled={saving || !draft || catalog === null}
+                    onChange={(e) => {
+                      const [m, v] = e.target.value.split("|");
+                      setDraft((d) => (d ? { ...d, ttsModel: m ?? "", ttsVoice: v ?? "" } : d));
+                    }}
+                    className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+                  >
+                    <option value="">{t("voiceCard.blankHint")}</option>
+                    {(catalog?.entries ?? []).map((e) => (
+                      <option key={`${e.model}|${e.voice}`} value={`${e.model}|${e.voice}`}>
+                        {e.label} · {e.protocol}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    data-testid="voice-card-preview"
+                    disabled={previewing || (!selected && !catalog?.default)}
+                    onClick={() => void preview()}
+                  >
+                    <Play className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                    {t("voiceCard.preview")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-sm text-foreground" data-testid="voice-card-tts-voice">
+                  {selected?.label ?? <span className="text-muted-foreground">{t("voiceCard.blankHint")}</span>}
+                </div>
+              )}
+              {selectionIsStale && (
+                <p className="text-xs text-destructive" data-testid="voice-card-voice-stale">
+                  {t("voiceCard.staleSelection")}
+                </p>
+              )}
+            </div>
             <div className="flex flex-col gap-1">
               <Label htmlFor="voice-ttsFormat">{t("voiceCard.ttsFormat")}</Label>
               <select
@@ -170,8 +241,12 @@ export function VoiceCard({ isAdmin }: { isAdmin: boolean }) {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {field("asrModel", "voice-card-asr-model")}
-          {field("ttsModel", "voice-card-tts-model")}
-          {field("ttsVoice", "voice-card-tts-voice")}
+          <div className="flex flex-col gap-1">
+            <Label>{t("voiceCard.ttsVoice")}</Label>
+            <div className="text-sm text-foreground" data-testid="voice-card-tts-voice">
+              {selected?.label ?? <span className="text-muted-foreground">{t("voiceCard.blankHint")}</span>}
+            </div>
+          </div>
           <div className="flex flex-col gap-1">
             <Label>{t("voiceCard.ttsFormat")}</Label>
             <div className="text-sm text-foreground" data-testid="voice-card-tts-format">

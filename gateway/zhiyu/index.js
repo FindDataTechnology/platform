@@ -27,6 +27,7 @@ import { newWidgetToken, newSiteSecret, verifyWidgetToken, hostAllowed, signGues
 import { mintDeeplink, redeemDeeplink, verifyDeeplink, isDeeplinkPurpose, DEEPLINK_PURPOSES } from "./deeplink.js";
 import { registerZhiyuImBridge } from "./im-bridge.js";
 import { registerZhiyuCaptureIngest } from "./capture-ingest.js";
+import { createRoomSpeech, registerZhiyuRoomSpeech } from "./room-speech.js";
 
 export function registerZhiyuRoutes(app, {
   dataRoot,
@@ -525,8 +526,14 @@ export function registerZhiyuRoutes(app, {
       display: invite.display,
       historyGrant: invite.historyGrant,
       invitedBy: invite.invitedBy,
+      // 音色随邀请落到座席（add-room-voice-and-catalog）：召唤时从岗位声明带来。
+      voice: invite.voice ?? null,
     });
     if (member.state !== "active") store.memberSetState(member.id, "active");
+    // A seat that already existed before the invite (re-invite of a former
+    // member) keeps its own row; stamp the summon's voice only when the seat has
+    // none of its own — a per-seat override set in the room always wins.
+    if (invite.voice && !member.voice) store.memberSetVoice(member.id, invite.voice);
     if (invite.kind === "facade") {
       store.memberEnsure({
         roomId: invite.roomId,
@@ -2348,6 +2355,14 @@ export function registerZhiyuRoutes(app, {
     // team's seats in it or it is an address nobody answers at.
     seeder: accountRoomSeeder,
   });
+
+  // ── Room speech (add-room-voice-and-catalog) ──────────────────────────────
+  // A seat's message spoken aloud, on demand or queued behind "voice on". The
+  // credential is the DEPLOYMENT's (a room has no member cell and a guest has
+  // none at all); voice resolution is seat → post → deployment, and a stale
+  // catalog entry is skipped rather than failing.
+  const roomSpeech = createRoomSpeech({ store, voiceForward, dataRoot, env });
+  registerZhiyuRoomSpeech(app, { store, authorize, speech: roomSpeech, express });
 
   // ── Capture ingest (add-speaker-attribution D9's transport) ───────────────
   // A finished meeting recording's per-speaker messages carry their own

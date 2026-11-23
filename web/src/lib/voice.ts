@@ -77,15 +77,58 @@ export function isCredentialFailure(err: unknown): boolean {
   return status === 401 || status === 503;
 }
 
-export async function synthesizeSpeech(input: string): Promise<{ blob: Blob; truncated: boolean }> {
+export interface VoiceEntry {
+  protocol: "tencent" | "doubao";
+  model: string;
+  voice: string;
+  label: string;
+}
+
+export interface VoiceCatalog {
+  entries: VoiceEntry[];
+  default: VoiceEntry | null;
+  source: string;
+}
+
+export async function fetchVoiceCatalog(): Promise<VoiceCatalog> {
+  const res = await fetch("/api/voice/catalog", { credentials: "same-origin" });
+  if (!res.ok) return fail(res, "Failed to read the voice catalog");
+  return res.json();
+}
+
+// Preview one catalog entry (add-room-voice-and-catalog). Admin-only on the
+// server because it spends the deployment's audio budget. This is the only
+// honest check that an entry still works: the 词元 lane answers 200 with its own
+// default voice for a voice it does not know.
+export async function previewVoice(entry: Pick<VoiceEntry, "model" | "voice">): Promise<Blob> {
+  const res = await fetch("/api/voice/catalog/preview", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: entry.model, voice: entry.voice }),
+  });
+  if (!res.ok) return fail(res, "Voice preview failed");
+  return res.blob();
+}
+
+export async function synthesizeSpeech(
+  input: string,
+  voice?: { model: string; voice: string } | null,
+): Promise<{ blob: Blob; truncated: boolean; voiceUsed: string | null }> {
   const res = await fetch("/api/voice/speech", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input }),
+    // A per-request voice override names a catalog entry; omitted, the
+    // deployment block decides (add-room-voice-and-catalog).
+    body: JSON.stringify(voice ? { input, model: voice.model, voice: voice.voice } : { input }),
   });
   if (!res.ok) return fail(res, "Speech synthesis failed");
-  return { blob: await res.blob(), truncated: res.headers.get("x-voice-truncated") === "1" };
+  return {
+    blob: await res.blob(),
+    truncated: res.headers.get("x-voice-truncated") === "1",
+    voiceUsed: res.headers.get("x-voice-used"),
+  };
 }
 
 // ── recording ───────────────────────────────────────────────────────────────
@@ -110,6 +153,10 @@ type PlayerListener = () => void;
 let audioEl: HTMLAudioElement | null = null;
 let objectUrl: string | null = null;
 let playingId: string | null = null;
+// A single FIFO for the "voice on" auto-read queue (zhiyu-room): starting a new
+// item stops the current one, and turning voice off clears everything pending.
+let queue: { id: string; blob: Blob }[] = [];
+let draining = false;
 const listeners = new Set<PlayerListener>();
 
 function release() {
@@ -165,4 +212,49 @@ export const speechPlayer = {
     release();
     if (playingId !== null) setPlaying(null);
   },
+  // Queue an item for back-to-back playback (auto-read). Drains one at a time;
+  // `stop()` mid-queue leaves the rest pending, `clear()` discards them.
+  enqueue(id: string, blob: Blob) {
+    queue.push({ id, blob });
+    void drain();
+  },
+  clear() {
+    queue = [];
+    this.stop();
+  },
+  queued(): number {
+    return queue.length;
+  },
 };
+
+async function drain() {
+  if (draining) return;
+  draining = true;
+  try {
+    while (queue.length) {
+      const next = queue.shift()!;
+      try {
+        await speechPlayer.play(next.id, next.blob);
+        // Wait for playback to end before starting the next item, but never
+        // block forever on an element that fails silently.
+        await finished(next.id);
+      } catch {
+        /* an autoplay refusal or a bad blob drops that item; the queue continues */
+      }
+    }
+  } finally {
+    draining = false;
+  }
+}
+
+function finished(id: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (playingId !== id) return resolve();
+    const off = speechPlayer.subscribe(() => {
+      if (playingId !== id) {
+        off();
+        resolve();
+      }
+    });
+  });
+}

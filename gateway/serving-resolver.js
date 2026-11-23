@@ -50,7 +50,15 @@ export function createServingResolver({ sampleFleets, servingDeployments }) {
       serving = candidates.flatMap((m) => {
         const d = byPath.get(m.servingPath);
         return d
-          ? [{ ref: `${d.packId}:${d.agentId}`, title: m.title, targetId: m.targetId ?? null, onBehalfOf: d.deployedBy }]
+          ? [{
+              ref: `${d.packId}:${d.agentId}`,
+              title: m.title,
+              targetId: m.targetId ?? null,
+              onBehalfOf: d.deployedBy,
+              // 播报音色（add-room-voice-and-catalog）：岗位声明随席位携带，召唤时
+              // 写进座席；未声明为 null，召唤侧据此不写该字段。
+              voice: m.voice ?? null,
+            }]
           : [];
       });
     }

@@ -311,6 +311,9 @@ export function registerFleetRoomBridge(app, {
           state: "pending",
           idemKey,
           createdAt: Date.now(),
+          // 岗位音色随邀请带进座席（add-room-voice-and-catalog）：声明过的岗位
+          // 召唤后即以自己的音色播报；未声明的为 null，接受时就不写该字段。
+          voice: member.voice ?? null,
         });
         results.push({ ref: member.ref, ok: true, inviteId: inv.invite?.id ?? inv.id ?? inv.inviteId ?? null });
       } catch (err) {

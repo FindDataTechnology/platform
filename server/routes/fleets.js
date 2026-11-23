@@ -35,6 +35,7 @@ import { splitToolTarget } from "../tool-turn.js";
 import { resolveServerEndpoint, resolveStdioServerConfig } from "../../lib/action-executor.js";
 import { classifyProvenance, classifyRuling, deriveOwnerGrade, isAgentRuling, agentCoord } from "../../lib/precedent-grade.js";
 import { auditorAllowedFor, validateAuditorToolFace, AUDITOR_VERDICTS, isVerdict } from "../../lib/auditor-tool-face.js";
+import { voiceCatalog } from "../voice-catalog.js";
 import { domainFor } from "../../lib/personal-domain-map.js";
 import { validateRule } from "../../lib/precedent-candidate.js";
 import { agentMayHandle, NON_DOWNGRADABLE } from "../../lib/personal-mandate.js";
@@ -462,6 +463,9 @@ function memberView(db, fleet, member, tasks, { now = Date.now(), resolver = res
     // 舰队层逐字段合并后的结果）。两者并存，前端不必自己再算继承。
     inputPolicy: member.inputPolicy ?? null,
     effectiveInputPolicy: resolveInputPolicy({ member: member.inputPolicy, fleet: fleet?.inputPolicy }),
+    // 播报音色（add-room-voice-and-catalog）：本岗位声明的 `{model, voice}` 原文，
+    // null = 未声明。房间侧据此把音色带进座席，无需直连岗位库。
+    voice: member.voice ?? null,
     // 逐岗记忆章程（enrich-fleet-template-member-config 3.2）：**读的是真正生效的
     // 那一份**——与 `catalogEntryPersona` 注入 persona 的是同一个 `memory.guidance`。
     // 未声明时报 null（前端显示「未声明章程」），MUST NOT 用包根处理策略冒充：
@@ -1573,6 +1577,9 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
                 // same visibility as member pages' target.id.
                 targetId: m.target?.kind === "a2a" ? m.target.id ?? null : null,
                 servingPath: m.target?.servingPath ?? null,
+                // 播报音色（add-room-voice-and-catalog）：岗位声明的 `{model, voice}`
+                // 随编队流到房间的召唤计划，召唤时写进座席。未声明为 null。
+                voice: m.voice ?? null,
               })),
               edges: (fleet.orchestration
                 ? expandedEdges({ members, orchestration: fleet.orchestration })
@@ -1948,9 +1955,14 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
       const resolveMember = rosterResolver();
       const tasks = taskIndexFor(owned.fleet.id);
       const model = modelCtx();
-      const members = db.listMembers(owned.fleet.id).map((m) =>
-        memberView(db, owned.fleet, m, tasks, { resolver: resolveMember, model }),
-      );
+      // 角色行挂到每个岗位视图上（9.1）。**这个路由才是驾驶舱读的那个**
+      // （前端 `loadDetail` 打的是 /cockpit，不是 /:id）——我第一次只挂在了
+      // /:id 上，于是 API 有数据、界面永远显示「未声明」，浏览器验收才抓到。
+      const roleByMember = new Map(db.listRoleStates(owned.fleet.id).map((r) => [r.memberId, r]));
+      const members = db.listMembers(owned.fleet.id).map((m) => ({
+        ...memberView(db, owned.fleet, m, tasks, { resolver: resolveMember, model }),
+        role: roleByMember.get(m.id) ?? null,
+      }));
       const statusCounts = {};
       for (const v of members) statusCounts[v.status] = (statusCounts[v.status] ?? 0) + 1;
       // Failure dimension: derived from the STATUS now (fix-fleet-failure-
@@ -4445,6 +4457,25 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
       // 输入策略（add-input-request-cards D8）：岗位层覆盖舰队层；null 清空。
       if (req.body?.inputPolicy !== undefined) {
         updates.inputPolicy = req.body.inputPolicy;
+      }
+
+      // 播报音色（add-room-voice-and-catalog）：`{model, voice}` 目录条目引用；
+      // null 清空 = 沿用部署默认。写面以目录校验——录一个目录外的音色，上游会
+      // 静默换回默认音还回 200，那正是这条闸要挡的形状。
+      if (req.body?.voice !== undefined) {
+        const voice = req.body.voice;
+        if (voice === null) {
+          updates.voice = null;
+        } else {
+          const model = typeof voice?.model === "string" ? voice.model.trim() : "";
+          const name = typeof voice?.voice === "string" ? voice.voice.trim() : "";
+          const entry = voiceCatalog.entryFor({ model, voice: name });
+          if (!entry) {
+            const opts = voiceCatalog.get().entries.map((e) => `${e.model}/${e.voice} (${e.label})`).join(", ");
+            return res.status(400).json({ error: `unknown voice pair "${model}/${name}"; select one of: ${opts}`, code: "voice_not_in_catalog" });
+          }
+          updates.voice = { model: entry.model, voice: entry.voice };
+        }
       }
 
       const updated = db.updateMember(member.id, updates);

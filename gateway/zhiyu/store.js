@@ -278,6 +278,18 @@ export function createZhiyuStore({ file }) {
     db.exec(`ALTER TABLE zy_fleet_subs ADD COLUMN watermark TEXT`);
   }
 
+  // 座席音色（add-room-voice-and-catalog）：本场空间对这一席的播报音色指定，
+  // `{model, voice}` 的 JSON 文本或 NULL（未指定 → 按岗位/部署回落）。它与
+  // display/alias 同级——都是「这个座席在本场怎么被呈现」，属房间自己的事实。
+  if (!db.prepare(`SELECT 1 FROM pragma_table_info('zy_room_members') WHERE name = 'voice'`).get()) {
+    db.exec(`ALTER TABLE zy_room_members ADD COLUMN voice TEXT`);
+  }
+  // 邀请也要带音色（add-room-voice-and-catalog）：召唤创建的是 PENDING 邀请，
+  // 座席到「接受」那一步才落库；音色若只在邀请对象的内存里，一过重启就丢了。
+  if (!db.prepare(`SELECT 1 FROM pragma_table_info('zy_room_invites') WHERE name = 'voice'`).get()) {
+    db.exec(`ALTER TABLE zy_room_invites ADD COLUMN voice TEXT`);
+  }
+
   db.exec(`CREATE TABLE IF NOT EXISTS zy_room_messages (
     room_id TEXT NOT NULL,
     seq INTEGER NOT NULL,
@@ -394,6 +406,8 @@ export function createZhiyuStore({ file }) {
       invitedBy: m.invited_by,
       joinedAt: m.joined_at,
       state: m.state,
+      // 座席音色（add-room-voice-and-catalog）：本场对该席的指定，null = 未指定。
+      voice: m.voice ? JSON.parse(m.voice) : null,
     };
 
   const meetingPublic = (m) =>
@@ -460,14 +474,16 @@ export function createZhiyuStore({ file }) {
       idemKey: v.idem_key,
       createdAt: v.created_at,
       resolvedAt: v.resolved_at,
+      // 音色（add-room-voice-and-catalog）：召唤时从岗位声明带过来，接受时落到座席。
+      voice: v.voice ? JSON.parse(v.voice) : null,
     };
 
   const createInviteTx = db.transaction((inv) => {
     const rowId = id("inv");
     db.prepare(
       `INSERT INTO zy_room_invites
-        (id, room_id, kind, ref, on_behalf_of, display, history_grant, invited_by, state, idem_key, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)`,
+        (id, room_id, kind, ref, on_behalf_of, display, history_grant, invited_by, state, idem_key, created_at, voice)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)`,
     ).run(
       rowId,
       inv.roomId,
@@ -479,6 +495,7 @@ export function createZhiyuStore({ file }) {
       inv.invitedBy ?? "",
       inv.idemKey,
       now(),
+      inv.voice ? JSON.stringify(inv.voice) : null,
     );
     return q.inviteById.get(rowId);
   });
@@ -720,14 +737,14 @@ export function createZhiyuStore({ file }) {
     },
 
     // ── Members ──────────────────────────────────────────────────────────────
-    memberAdd({ roomId, kind, ref, onBehalfOf = null, display = "", alias = "", historyGrant = "join_from", invitedBy = "", presence = null }) {
+    memberAdd({ roomId, kind, ref, onBehalfOf = null, display = "", alias = "", historyGrant = "join_from", invitedBy = "", presence = null, voice = null }) {
       const memberId = id("mem");
       const pres = presence ?? (kind === "facade" ? "on_duty" : "active");
       db.prepare(
         `INSERT INTO zy_room_members
-          (id, room_id, kind, ref, on_behalf_of, display, alias, history_grant, presence, invited_by, joined_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(memberId, roomId, kind, ref, onBehalfOf, display, alias, historyGrant, pres, invitedBy, now());
+          (id, room_id, kind, ref, on_behalf_of, display, alias, history_grant, presence, invited_by, joined_at, voice)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(memberId, roomId, kind, ref, onBehalfOf, display, alias, historyGrant, pres, invitedBy, now(), voice ? JSON.stringify(voice) : null);
       return memberPublic(q.memberById.get(memberId));
     },
     memberFor(roomId, kind, ref) {
@@ -841,6 +858,11 @@ export function createZhiyuStore({ file }) {
     },
     memberSetPresence(memberId, presence) {
       db.prepare(`UPDATE zy_room_members SET presence = ? WHERE id = ?`).run(presence, memberId);
+      return memberPublic(q.memberById.get(memberId));
+    },
+    // 座席音色（add-room-voice-and-catalog）：null 清除 = 回落到岗位/部署默认。
+    memberSetVoice(memberId, voice) {
+      db.prepare(`UPDATE zy_room_members SET voice = ? WHERE id = ?`).run(voice ? JSON.stringify(voice) : null, memberId);
       return memberPublic(q.memberById.get(memberId));
     },
 

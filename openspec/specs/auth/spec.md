@@ -159,6 +159,7 @@ The bridge table SHALL NOT be the only ledger. Every entry by which a request ca
 | `/api/bots/webhook/` | per-bot path secret + the chat platform's signature/decryption | identical refusal for unknown/disabled/bad secret |
 | `/api/bots/relay/` | bearer (`BOT` relay token) | 401 |
 | `/api/bots/events` | bearer (`BOTS_EVENTS_TOKEN`, constant-time) — the token the subscriber itself gave fd-bot when creating the binding | 404 unconfigured (inert, never a weaker form), 401 wrong |
+| `/api/widget/visitor-identity` | 无自身凭据，但**不读不返数据**：服务端对自铸的 visitor id 签名，路由内证明「叫得出 id 却拿不出 hash ⇒ 403」 | 403（id 与签名不符）；门在这里不承担安全职责 |
 | `/api/mp/login`, `/api/mp/login-bindcode` | the platform's own `wx.login` code2session exchange (+ bind code) | 503 when MP credentials absent |
 | `/api/app/pair`, `/api/app/challenge`, `/api/app/login` | device pairing bind code / device-key challenge signature | 503 when no token secret |
 | `/api/ops/` | bearer (`PACK_USAGE_TOKEN`) | 503 unconfigured, 401 wrong |

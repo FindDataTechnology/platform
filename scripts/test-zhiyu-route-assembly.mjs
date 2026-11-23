@@ -219,8 +219,8 @@ test("production assembly: summon plan joins a2a posts to the deployment ledger"
   assert.equal(plan.status, 200, JSON.stringify(plan.body));
   assert.deepEqual(
     plan.body.plan.summonable,
-    [{ ref: "p1:mp", title: "萬星机群席", targetId: "registry-packs-p1-mp", onBehalfOf: "owner@test" }],
-    "seat ref = packId:agentId, onBehalfOf = ledger deployer",
+    [{ ref: "p1:mp", title: "萬星机群席", targetId: "registry-packs-p1-mp", onBehalfOf: "owner@test", voice: null }],
+    "seat ref = packId:agentId, onBehalfOf = ledger deployer, voice null (undeclared)",
   );
   assert.deepEqual(plan.body.plan.cockpitOnly, ["萬星机群席"]);
 });

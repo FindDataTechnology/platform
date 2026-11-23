@@ -22,6 +22,7 @@ import { MeetingPanel } from "@/components/zhiyu/MeetingPanel";
 import { CaptureSession } from "@/components/voice/CaptureSession";
 import { createEventSourceTransport, type EventSourceLike } from "@/lib/zhiyu-room-transport";
 import { isNonChatRow, nonChatLabelKey, nonChatLabelParams, nonChatVisible } from "@/lib/zhiyu-events";
+import { fetchVoiceCatalog, speechPlayer, VoiceError, type VoiceCatalog } from "@/lib/voice";
 import { RoomComposer, RoomMessageBody, AttachmentRowCard } from "@/components/zhiyu/RoomComposer";
 
 interface MemberRow {
@@ -36,6 +37,9 @@ interface MemberRow {
   display: string;
   presence: "active" | "away" | "on_duty" | "listening";
   state: string;
+  // 座席音色（add-room-voice-and-catalog）：本场对这一席的指定，null = 未指定
+  // （按岗位/部署回落）。与 display/presence 同级，属房间自己的事实。
+  voice?: { model: string; voice: string } | null;
 }
 
 interface RoomDetail {
@@ -102,6 +106,19 @@ export function ZhiyuRoomPage() {
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [myMemberId, setMyMemberId] = useState<string | null>(null);
   const [rows, setRows] = useState<StreamRow[]>([]);
+  // 房间播报（add-room-voice-and-catalog）：默认只点播；「开语音」后对会话启用
+  // 自动朗读。自动朗读必须先有一次显式点击——这是浏览器的播放许可要求，不是偏好。
+  const VOICE_ON_KEY = `zhiyu:voice-on:${roomId}`;
+  const [voiceOn, setVoiceOn] = useState<boolean>(() => {
+    try { return localStorage.getItem(VOICE_ON_KEY) === "1"; } catch { return false; }
+  });
+  const [speakBusy, setSpeakBusy] = useState<number | null>(null);
+  const autoSeenRef = useRef<number>(0);
+  const voiceOnRef = useRef(voiceOn);
+  voiceOnRef.current = voiceOn;
+  // 座席音色（add-room-voice-and-catalog）：只有主办会渲染这个选择器，所以目录
+  // 只在需要时拉一次；读不到就隐藏，不阻断房间其余部分。
+  const [seatCatalog, setSeatCatalog] = useState<VoiceCatalog | null>(null);
   // Paging state (spec: 消息流与发送者归因 — the first screen is the TAIL window;
   // earlier history is fetched on demand). olderCursor is the smallest seq we
   // hold; hasOlder says whether one more `before` window exists.
@@ -504,6 +521,78 @@ export function ZhiyuRoomPage() {
     return t("zhiyu.room.systemLabel");
   };
 
+  // 播报一条座席消息：走房间专用的合成端点，用该席解析出的音色。
+  const speakRow = useCallback(async (row: StreamRow) => {
+    setSpeakBusy(row.seq);
+    try {
+      const res = await fetch(`/api/zhiyu/rooms/${roomId}/messages/${row.seq}/speech`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "on_demand", senderMemberId: row.senderMemberId ?? null }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new VoiceError(body.error || `speak failed (${res.status})`, res.status, null, null);
+      }
+      const blob = await res.blob();
+      await speechPlayer.play(`room:${roomId}:${row.seq}`, blob);
+    } catch (e) {
+      setError(e instanceof VoiceError ? e.message : ((e as Error).message || "播报失败"));
+    } finally {
+      setSpeakBusy(null);
+    }
+  }, [roomId]);
+
+  // 自动朗读：voiceOn 打开后，新到的座席消息依次进入播放队列；人类与系统行
+  // 永不朗读。`autoSeenRef` 记住已经排过的 seq，避免历史回填时一次性把整段
+  // 旧消息都念一遍。
+  useEffect(() => {
+    if (!isOwner || seatCatalog) return;
+    void fetchVoiceCatalog().then(setSeatCatalog).catch(() => setSeatCatalog(null));
+  }, [isOwner, seatCatalog]);
+
+  useEffect(() => {
+    if (!voiceOn) {
+      autoSeenRef.current = rows.length ? rows[rows.length - 1]!.seq : 0;
+      return;
+    }
+    if (autoSeenRef.current === 0) {
+      // First render with voice on: start from the current tail, do not replay
+      // the whole window.
+      autoSeenRef.current = rows.length ? rows[rows.length - 1]!.seq : 0;
+      return;
+    }
+    const fresh = rows.filter((r) => r.seq > autoSeenRef.current && r.kind === "agent" && String(r.content ?? "").trim());
+    if (!fresh.length) return;
+    autoSeenRef.current = rows[rows.length - 1]!.seq;
+    for (const r of fresh) {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/zhiyu/rooms/${roomId}/messages/${r.seq}/speech`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "auto", senderMemberId: r.senderMemberId ?? null }),
+          });
+          if (!res.ok) return; // quota / upstream: stay silent, never interrupt the reader
+          speechPlayer.enqueue(`room:${roomId}:${r.seq}`, await res.blob());
+        } catch {
+          /* a failed auto-read must not surface as an error banner */
+        }
+      })();
+    }
+  }, [rows, voiceOn, roomId]);
+
+  const toggleVoiceOn = useCallback(() => {
+    setVoiceOn((v) => {
+      const next = !v;
+      try { localStorage.setItem(VOICE_ON_KEY, next ? "1" : "0"); } catch { /* storage may be blocked */ }
+      if (!next) speechPlayer.clear();
+      return next;
+    });
+  }, [VOICE_ON_KEY]);
+
   // One file → the room attachment endpoint. This is the only thing the web
   // composer injects into the shared upload machine.
   const uploadOne = async (file: File, signal: AbortSignal) => {
@@ -626,6 +715,15 @@ export function ZhiyuRoomPage() {
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <Button
+              size="sm"
+              variant={voiceOn ? "default" : "outline"}
+              onClick={toggleVoiceOn}
+              data-testid="zhiyu-voice-toggle"
+              data-state={voiceOn ? "on" : "off"}
+            >
+              {voiceOn ? t("zhiyu.room.voiceOn") : t("zhiyu.room.voiceOff")}
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setPrivateOpen((v) => !v)} data-testid="zhiyu-private-toggle">
               {t("zhiyu.room.privateWindow")}{privateRows.length ? ` (${privateRows.length})` : ""}
             </Button>
@@ -789,6 +887,20 @@ export function ZhiyuRoomPage() {
                   {/* Markdown, not pre-wrap: agents answer in Markdown and the
                       room used to show its raw syntax (zhiyu-room-attachments). */}
                   <RoomMessageBody text={row.content} />
+                  {row.kind === "agent" && String(row.content ?? "").trim() ? (
+                    <div className="mt-1 flex justify-start">
+                      <button
+                        type="button"
+                        data-testid={`zy-speak-${row.seq}`}
+                        data-state={speakBusy === row.seq ? "loading" : "idle"}
+                        onClick={() => void speakRow(row)}
+                        disabled={speakBusy !== null}
+                        className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+                      >
+                        {speakBusy === row.seq ? t("zhiyu.room.speaking") : t("zhiyu.room.speak")}
+                      </button>
+                    </div>
+                  ) : null}
                   {row.meta?.attachment ? (
                     <AttachmentRowCard
                       roomId={roomId}
@@ -929,6 +1041,27 @@ export function ZhiyuRoomPage() {
                         {t("zhiyu.room.handBack")}
                       </button>
                     )
+                  )}
+                  {(m.kind === "agent" || m.kind === "facade") && isOwner && seatCatalog && active && (
+                    <select
+                      className="h-6 max-w-[7rem] rounded border border-input bg-background px-1 text-xs"
+                      data-testid={`zy-seat-voice-${m.id}`}
+                      value={m.voice ? `${m.voice.model}|${m.voice.voice}` : ""}
+                      onChange={(e) => {
+                        const [model, voice] = e.target.value.split("|");
+                        void act(`/api/zhiyu/rooms/${roomId}/seat-voice`, {
+                          memberId: m.id,
+                          voice: e.target.value ? { model, voice } : null,
+                        });
+                      }}
+                    >
+                      <option value="">{t("zhiyu.room.voiceSeatInherit")}</option>
+                      {(seatCatalog.entries ?? []).map((e) => (
+                        <option key={`${e.model}|${e.voice}`} value={`${e.model}|${e.voice}`}>
+                          {e.label}
+                        </option>
+                      ))}
+                    </select>
                   )}
                   {isOwner && m.id !== myMemberId && active && (
                     <button type="button" className="inline-action text-destructive" onClick={() => void act(`/api/zhiyu/rooms/${roomId}/remove`, { memberId: m.id })}>

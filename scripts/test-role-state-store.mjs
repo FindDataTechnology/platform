@@ -105,3 +105,13 @@ test("多岗位按 memberId 稳定排序（读面要可复算）", () => {
   assert.deepEqual(db.listRoleStates("f1").map((r) => r.memberId), ["mA", "mB", "mC"]);
   db.close();
 });
+
+test("两个舰队读面都必须带 role：/:id 与 /:id/cockpit（我曾在只挂一个，界面永远读不到）", () => {
+  const src = fs.readFileSync(new URL("../server/routes/fleets.js", import.meta.url), "utf8");
+  const roleByMemberSites = (src.match(/roleByMember/g) ?? []).length;
+  // 两处构造 + 两处使用 = 4 次
+  assert.ok(roleByMemberSites >= 4, `roleByMember 只出现 ${roleByMemberSites} 次——两个读面必须都挂 role`);
+  // 驾驶舱那条（前端 loadDetail 打的是 /cockpit）
+  const cockpitBlock = src.slice(src.indexOf('"/:id/cockpit"'), src.indexOf('"/:id/cockpit"') + 3000);
+  assert.match(cockpitBlock, /role: roleByMember\.get/, "cockpit 路由必须给每个岗位挂 role");
+});

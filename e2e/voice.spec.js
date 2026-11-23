@@ -193,7 +193,9 @@ test("the Models-section voice card saves a voice that the next synthesis carrie
   await expect(card).toBeVisible();
   await expect(page.getByTestId("voice-card-status")).toHaveAttribute("data-state", "available", { timeout: 15000 });
   await expect(page.getByTestId("voice-card-key-source")).toBeVisible();
-  await page.getByTestId("voice-card-tts-voice").fill("alloy");
+  // add-room-voice-and-catalog: the voice is a catalog ENTRY picker, not a free
+  // text field. Select a shipped entry; the value is `model|voice`.
+  await page.getByTestId("voice-card-tts-voice").selectOption("tencent-tts|101001");
   await page.getByTestId("voice-card-save").click();
   await expect(page.getByTestId("voice-card-save")).toBeDisabled({ timeout: 10000 });
 
@@ -205,7 +207,7 @@ test("the Models-section voice card saves a voice that the next synthesis carrie
   await turn.getByTestId("turn-speak").click();
   await expect(turn.getByTestId("turn-speak")).toHaveAttribute("data-state", "playing", { timeout: 15000 });
   const seen = await voiceSeen();
-  expect(seen[0].body).toMatchObject({ input: "带音色朗读", voice: "alloy" });
+  expect(seen[0].body).toMatchObject({ input: "带音色朗读", voice: "101001", model: "tencent-tts" });
 });
 
 test("upstream failure on 朗读 surfaces as a toast, nothing plays", async ({ page }) => {

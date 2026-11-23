@@ -75,26 +75,43 @@ function insideExemptLocaleBlock(file, lineNo) {
   return false;
 }
 
-/** 只看会渲染给人看的字符串，不看注释与代码标识符。 */
-function userFacingLines(file) {
+/**
+ * 只看**会渲染给人看的字符串**：注释、属性访问、类型名都不算。
+ *
+ * 这条区分是本判据第一版最大的毛病：它把 `member.role?.organs?.objective`
+ * 这种**字段访问**也当成「原语出现在用户面」，于是唯一能让它变绿的写法就是
+ * 扭曲代码（把字段名也改掉，结果 API 原样透传、界面读不到数据）。
+ * 判据逼人写坏代码时就该改判据。
+ *
+ * 现在的口径：把每一行里的**字符串字面量**与 **JSX 文本节点**提取出来判；
+ * 标识符、属性名、类型注解一律不看。
+ */
+function userFacingText(file) {
   const src = fs.readFileSync(file, "utf8");
-  return src
-    .split("\n")
-    .map((line, i) => ({ line, no: i + 1 }))
-    .filter(({ line }) => {
-      const t = line.trim();
-      if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return false; // 注释
-      return true;
-    });
+  const out = [];
+  const lines = src.split("\n");
+  lines.forEach((line, i) => {
+    const t = line.trim();
+    if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) return; // 注释
+    // 单/双引号字符串（跳过属性访问里的标识符）
+    for (const m of line.matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)) {
+      // 模板字符串里的 `${...}` 是**表达式**不是文案：剥掉后再判，
+      // 否则 `@ v${member.role.genome.version}` 会被当成「文案里有 genome」。
+      out.push({ text: m[2].replace(/\$\{[^}]*\}/g, " "), no: i + 1 });
+    }
+    // JSX 文本节点：>文字<
+    for (const m of line.matchAll(/>([^<>{}\n]{2,})</g)) out.push({ text: m[1], no: i + 1 });
+  });
+  return out;
 }
 
 test("web/src 不出现内部原语 genome / organs / competence", () => {
   const hits = [];
   for (const f of walk(WEB)) {
-    for (const { line, no } of userFacingLines(f)) {
+    for (const { text, no } of userFacingText(f)) {
       for (const w of INTERNAL) {
-        if (new RegExp(`\\b${w}\\b`, "i").test(line)) {
-          hits.push(`${path.relative(WEB, f)}:${no} [${w}] ${line.trim().slice(0, 80)}`);
+        if (new RegExp(`\\b${w}\\b`, "i").test(text)) {
+          hits.push(`${path.relative(WEB, f)}:${no} [${w}] ${text.trim().slice(0, 80)}`);
         }
       }
     }
@@ -107,13 +124,13 @@ test("裁决值只以终词出现在文案里（retain/merge/redesign/inconclusi
   const hits = [];
   for (const f of walk(WEB)) {
     if (isExempt(f)) continue;
-    for (const { line, no } of userFacingLines(f)) {
+    for (const { text, no } of userFacingText(f)) {
       // `retire` 有正当的动词用法（retired route / retirer），故不在此列；
       // 其余四个没有自然语言歧义，出现即为泄露。
       for (const w of VERDICTS) {
-        if (new RegExp(`\\b${w}\\b`, "i").test(line)) {
+        if (new RegExp(`\\b${w}\\b`, "i").test(text)) {
           if (insideExemptLocaleBlock(f, no)) continue;
-          hits.push(`${path.relative(WEB, f)}:${no} [${w}] ${line.trim().slice(0, 80)}`);
+          hits.push(`${path.relative(WEB, f)}:${no} [${w}] ${text.trim().slice(0, 80)}`);
         }
       }
     }

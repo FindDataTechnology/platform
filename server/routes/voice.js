@@ -51,6 +51,7 @@ import {
 } from "../voice-capture.js";
 import { captureRoomMessages } from "../capture-room-messages.js";
 import { ACCEPTED_AUDIO_LABEL, describeContainer, isRejectedContainer, sniffAudioContainer } from "../voice-containers.js";
+import { voiceCatalog } from "../voice-catalog.js";
 
 const DEFAULT_API_BASE = "https://token.finddatatech.cloud";
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -79,7 +80,25 @@ export function apiBase() {
 // Partial merge onto `base`: a present field replaces, an absent one keeps the
 // base value, a blank string resets to the default. Unknown keys are rejected
 // rather than ignored so a typo cannot silently do nothing.
-export function validateVoiceConfig(value, base = VOICE_DEFAULTS) {
+//
+// Pair rule (add-room-voice-and-catalog D2): `ttsModel` and `ttsVoice` are two
+// halves of ONE selection. Both blank = "the upstream default" (unchanged);
+// both present = must name a catalog entry (else the 词元 lane silently swaps in
+// its own default voice and still answers 200); exactly one present = refused
+// outright, because that is the shape that provably cannot work.
+function voicePairError(out, catalog) {
+  const model = String(out.ttsModel ?? "").trim();
+  const voice = String(out.ttsVoice ?? "").trim();
+  if (!model && !voice) return null;
+  if (!model || !voice) return "ttsModel and ttsVoice must be set together (or both left blank for the upstream default)";
+  if (!catalog.isAllowed({ model, voice })) {
+    const opts = catalog.get().entries.map((e) => `${e.model}/${e.voice} (${e.label})`).join(", ");
+    return `unknown voice pair "${model}/${voice}"; select one of: ${opts}`;
+  }
+  return null;
+}
+
+export function validateVoiceConfig(value, base = VOICE_DEFAULTS, catalog = voiceCatalog) {
   const fail = (error) => ({ ok: false, error });
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return fail("voice config must be an object");
@@ -103,12 +122,23 @@ export function validateVoiceConfig(value, base = VOICE_DEFAULTS) {
     }
     out[k] = s;
   }
+  const pairError = voicePairError(out, catalog);
+  if (pairError) return fail(pairError);
   return { ok: true, normalized: out };
 }
 
 // Stored → env → defaults. A bad layer degrades to the next one with a
 // warning: a hand-written VOICE_CONFIG must never take the composer down.
-export function resolveVoiceConfig() {
+// Stored → env → defaults. A bad layer degrades to the next one with a
+// warning: a hand-written VOICE_CONFIG must never take the composer down.
+//
+// Read-side leniency (add-room-voice-and-catalog D2): a `ttsModel`/`ttsVoice`
+// value the catalog does not know, or a half pair, degrades THIS LAYER to the
+// next one with a warning rather than taking the lane down. Refusing to resolve
+// at all would turn one stale stored value into a deployment-wide voice outage —
+// strictly worse than falling back. The WRITE side stays strict: that is where
+// the operator is present and can be told which entries exist.
+export function resolveVoiceConfig(catalog = voiceCatalog) {
   const stored = db.isDbReady() ? db.getDeploymentConfig("voice") : null;
   const layers = [
     ["stored", stored],
@@ -123,7 +153,7 @@ export function resolveVoiceConfig() {
       console.warn(`[voice] ${source} config is not valid JSON; ignoring`);
       continue;
     }
-    const r = validateVoiceConfig(parsed);
+    const r = validateVoiceConfig(parsed, VOICE_DEFAULTS, catalog);
     if (!r.ok) {
       console.warn(`[voice] ${source} config failed validation (${r.error}); ignoring`);
       continue;
@@ -509,11 +539,32 @@ export function registerVoiceRoutes(ctx) {
     const keyInfo = resolveVoiceKey(ctx, req);
     if (!keyInfo.key) return res.status(503).json({ error: "语音服务未配置凭据", code: "voice_not_configured" });
 
+    // Per-request voice override (add-room-voice-and-catalog): a caller naming a
+    // specific seat/post synthesises in THAT entry's voice. Accepted only when it
+    // is a catalog entry — an override that missed the catalog would be silently
+    // replaced upstream, which is the failure this catalog exists to remove.
+    const ovModel = typeof req.body?.model === "string" ? req.body.model.trim() : "";
+    const ovVoice = typeof req.body?.voice === "string" ? req.body.voice.trim() : "";
+    let model = config.ttsModel;
+    let voice = config.ttsVoice;
+    if (ovModel || ovVoice) {
+      const entry = voiceCatalog.entryFor({ model: ovModel, voice: ovVoice });
+      if (!entry) {
+        const opts = voiceCatalog.get().entries.map((e) => `${e.model}/${e.voice} (${e.label})`).join(", ");
+        return res.status(400).json({
+          error: `unknown voice pair "${ovModel}/${ovVoice}"; select one of: ${opts}`,
+          code: "voice_not_in_catalog",
+        });
+      }
+      model = entry.model;
+      voice = entry.voice;
+    }
+
     const truncated = input.length > TTS_MAX_INPUT_CHARS;
     const format = config.ttsFormat || VOICE_DEFAULTS.ttsFormat;
     const body = { input: truncated ? input.slice(0, TTS_MAX_INPUT_CHARS) : input, response_format: format };
-    if (config.ttsModel) body.model = config.ttsModel;
-    if (config.ttsVoice) body.voice = config.ttsVoice;
+    if (model) body.model = model;
+    if (voice) body.voice = voice;
 
     let upstream;
     try {
@@ -535,10 +586,75 @@ export function registerVoiceRoutes(ctx) {
       return res.status(f.status).json(f.body);
     }
     const audio = Buffer.from(await upstream.arrayBuffer());
+    // Name the voice that PRODUCED the audio. A header, not a body field: this
+    // endpoint returns raw audio bytes and the body shape is the upstream's.
+    res.setHeader("x-voice-used", model && voice ? `${model}:${voice}` : "upstream-default");
     res.setHeader("content-type", upstream.headers.get("content-type") || TTS_MIME[format] || "application/octet-stream");
     res.setHeader("cache-control", "no-store");
     res.setHeader("x-voice-key-source", keyInfo.source);
     if (truncated) res.setHeader("x-voice-truncated", "1");
+    res.send(audio);
+  });
+
+  // ── voice catalog: which voices exist, and hear one for real ──────────────
+  //
+  // The catalog is a file (server/voice-catalog.json, mount-overlay-able), so a
+  // read face is enough for every client to render a picker. The preview is the
+  // only honest check that an entry still WORKS: the 词元 lane answers 200 with
+  // its own default voice for a voice it does not know, so a catalog that
+  // recorded a de-listed voice fails silently everywhere except here.
+
+  app.get("/api/voice/catalog", (req, res) => {
+    if (!requireUser(req, res, ctx)) return;
+    const { entries, default: fallback } = voiceCatalog.get();
+    res.json({ entries, default: fallback, source: voiceCatalog.source() });
+  });
+
+  app.post("/api/voice/catalog/preview", async (req, res) => {
+    if (!requireUser(req, res, ctx)) return;
+    // Preview spends the deployment's audio budget, so it is an admin action
+    // (open when auth is off — the machine owner).
+    if (ctx.authEnabled && !ctx.isAdminUser?.(req.user)) {
+      return res.status(403).json({ error: "Admin group required" });
+    }
+    const model = typeof req.body?.model === "string" ? req.body.model.trim() : "";
+    const voice = typeof req.body?.voice === "string" ? req.body.voice.trim() : "";
+    const entry = voiceCatalog.entryFor({ model, voice });
+    if (!entry) {
+      const opts = voiceCatalog.get().entries.map((e) => `${e.model}/${e.voice} (${e.label})`).join(", ");
+      return res.status(400).json({ error: `unknown voice pair "${model}/${voice}"; select one of: ${opts}`, code: "voice_not_in_catalog" });
+    }
+    const config = resolveVoiceConfig();
+    if (!config.enabled) return res.status(503).json({ error: "语音功能已停用", code: "voice_disabled" });
+    const keyInfo = resolveVoiceKey(ctx, req);
+    if (!keyInfo.key) return res.status(503).json({ error: "语音服务未配置凭据", code: "voice_not_configured" });
+
+    const format = config.ttsFormat || VOICE_DEFAULTS.ttsFormat;
+    const body = {
+      input: `音色试听：${entry.label}。`,
+      response_format: format,
+      model: entry.model,
+      voice: entry.voice,
+    };
+    let upstream;
+    try {
+      upstream = await forward(
+        `${apiBase()}/v1/audio/speech`,
+        { method: "POST", headers: { authorization: `Bearer ${keyInfo.key}`, "content-type": "application/json" }, body: JSON.stringify(body) },
+        TTS_TIMEOUT_MS,
+      );
+    } catch (e) {
+      const f = failUnreachableResult("preview", e);
+      return res.status(f.status).json(f.body);
+    }
+    if (!upstream.ok) {
+      const f = await failUpstreamResult(ctx, upstream, keyInfo, "preview");
+      return res.status(f.status).json(f.body);
+    }
+    const audio = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader("content-type", upstream.headers.get("content-type") || TTS_MIME[format] || "application/octet-stream");
+    res.setHeader("cache-control", "no-store");
+    res.setHeader("x-voice-used", `${entry.model}:${entry.voice}`);
     res.send(audio);
   });
 

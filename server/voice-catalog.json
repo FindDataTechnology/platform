@@ -1,0 +1,30 @@
+{
+  "$comment": [
+    "音色目录（openspec: add-room-voice-and-catalog, voice-catalog D1）。",
+    "",
+    "这份文件随镜像发布，是「有哪些音色可选」的事实；部署可以用整目录挂载",
+    "（VOICE_CATALOG_DIR，缺省 /etc/voice-catalog）覆盖它，改音色不出片、不重启。",
+    "",
+    "条目是 {protocol, model, voice} 三元组，三者不可拆：protocol 决定上游协议",
+    "（tencent=整数 VoiceType，doubao=*_uranus_bigtts 字符串），model+voice 必须同属",
+    "一个 protocol。写成别的形状会让上游静默回落到默认音还回 200，那正是本目录要",
+    "消灭的失败形态。",
+    "",
+    "新增条目必须过试听（POST /api/voice/catalog/preview）：上游对已下线的音色同样",
+    "回 200 + 默认音，只有真人听一句才能识破。未试听过的音色不得进默认位。",
+    "",
+    "label 只用于界面显示，不参与任何校验。"
+  ],
+  "version": 1,
+  "default": { "protocol": "tencent", "model": "tencent-tts", "voice": "101001" },
+  "entries": [
+    { "protocol": "tencent", "model": "tencent-tts", "voice": "101001", "label": "智瑜（情感女）" },
+    { "protocol": "tencent", "model": "tencent-tts", "voice": "101013", "label": "智辉" },
+    {
+      "protocol": "doubao",
+      "model": "doubao-speech",
+      "voice": "zh_female_shuangkuaisisi_uranus_bigtts",
+      "label": "爽快思思（豆包大模型）"
+    }
+  ]
+}

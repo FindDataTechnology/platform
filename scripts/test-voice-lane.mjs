@@ -154,7 +154,11 @@ const tts = (ctx, input, headers = AS_OWNER) => request(ctx.app, "POST", "/api/v
 
 test("config: defaults → env seed → stored, each layer winning over the previous; bad layers degrade", async () => {
   assert.deepEqual(voice.resolveVoiceConfig(), { ...voice.VOICE_DEFAULTS });
+  // add-room-voice-and-catalog: ttsModel/ttsVoice must be a catalog pair or both
+  // blank, so an env seed with only a voice is now a BAD layer and degrades.
   process.env.VOICE_CONFIG = JSON.stringify({ asrModel: "env-asr", ttsVoice: "env-voice" });
+  assert.deepEqual(voice.resolveVoiceConfig(), { ...voice.VOICE_DEFAULTS }, "a half voice pair is refused, the layer degrades");
+  process.env.VOICE_CONFIG = JSON.stringify({ asrModel: "env-asr" });
   assert.equal(voice.resolveVoiceConfig().asrModel, "env-asr");
   assert.equal(voice.resolveVoiceConfig().ttsFormat, "mp3", "unset fields keep defaults");
   db.setDeploymentConfig("voice", JSON.stringify({ ...voice.VOICE_DEFAULTS, asrModel: "stored-asr" }));
@@ -172,16 +176,25 @@ test("config: defaults → env seed → stored, each layer winning over the prev
 
 test("validateVoiceConfig: partial merge, blank resets, unknown key and bad format refused", () => {
   const base = { ...voice.VOICE_DEFAULTS, asrModel: "keep-me", ttsFormat: "wav" };
-  const ok = voice.validateVoiceConfig({ ttsVoice: " alloy ", ttsFormat: "" }, base);
+  const ok = voice.validateVoiceConfig({ ttsFormat: "" }, base);
   assert.equal(ok.ok, true);
   assert.equal(ok.normalized.asrModel, "keep-me", "absent field keeps the base");
-  assert.equal(ok.normalized.ttsVoice, "alloy", "trimmed");
   assert.equal(ok.normalized.ttsFormat, "mp3", "blank format resets to the default");
   assert.equal(voice.validateVoiceConfig({ enabled: "yes" }).ok, false);
   assert.equal(voice.validateVoiceConfig({ ttsFormat: "midi" }).ok, false);
   assert.equal(voice.validateVoiceConfig({ bogus: 1 }).ok, false);
   assert.equal(voice.validateVoiceConfig({ asrModel: "x".repeat(121) }).ok, false);
   assert.equal(voice.validateVoiceConfig([]).ok, false);
+});
+
+test("validateVoiceConfig: the voice pair is all-or-nothing and must name a catalog entry", () => {
+  assert.equal(voice.validateVoiceConfig({ ttsVoice: "101001" }).ok, false, "voice without model is refused");
+  assert.equal(voice.validateVoiceConfig({ ttsModel: "tencent-tts" }).ok, false, "model without voice is refused");
+  const paired = voice.validateVoiceConfig({ ttsModel: "tencent-tts", ttsVoice: "101001" });
+  assert.equal(paired.ok, true, "a shipped catalog pair is accepted");
+  assert.equal(voice.validateVoiceConfig({ ttsModel: "tencent-tts", ttsVoice: "101007" }).ok, false, "a de-listed voice is refused");
+  assert.equal(voice.validateVoiceConfig({ ttsModel: "doubao-speech", ttsVoice: "101001" }).ok, false, "a voice cannot borrow another model");
+  assert.equal(voice.validateVoiceConfig({ ttsModel: "", ttsVoice: "" }).ok, true, "both blank = the upstream default");
 });
 
 test("PUT /api/config/voice: admin-gated, validated, merges onto the resolved block", async () => {
@@ -191,12 +204,16 @@ test("PUT /api/config/voice: admin-gated, validated, merges onto the resolved bl
   assert.equal(db.getDeploymentConfig("voice"), null, "nothing stored on a refused write");
   const bad = await request(ctx.app, "PUT", "/api/config/voice", { headers: AS_ADMIN, body: { ttsFormat: "midi" } });
   assert.equal(bad.status, 400);
+  const offPair = await request(ctx.app, "PUT", "/api/config/voice", { headers: AS_ADMIN, body: { ttsVoice: "101001" } });
+  assert.equal(offPair.status, 400, "a voice half-pair is refused at the write face");
+  assert.match(offPair.body.error, /ttsModel and ttsVoice must be set together/);
+  assert.equal(db.getDeploymentConfig("voice"), null, "a refused pair stores nothing");
   process.env.VOICE_CONFIG = JSON.stringify({ asrModel: "env-asr" });
-  const ok = await request(ctx.app, "PUT", "/api/config/voice", { headers: AS_ADMIN, body: { ttsVoice: "alloy" } });
+  const ok = await request(ctx.app, "PUT", "/api/config/voice", { headers: AS_ADMIN, body: { ttsModel: "tencent-tts", ttsVoice: "101001", enabled: true } });
   assert.equal(ok.status, 200);
-  assert.equal(ok.body.config.ttsVoice, "alloy");
+  assert.equal(ok.body.config.ttsVoice, "101001");
   assert.equal(ok.body.config.asrModel, "env-asr", "env-seeded field survives a one-field admin write");
-  assert.equal(JSON.parse(db.getDeploymentConfig("voice")).ttsVoice, "alloy");
+  assert.equal(JSON.parse(db.getDeploymentConfig("voice")).ttsVoice, "101001");
   delete process.env.VOICE_CONFIG;
   db.clearDeploymentConfig("voice");
 });
@@ -346,7 +363,7 @@ test("⑨ oversize upload → 413 before any upstream request; missing file → 
 
 test("speech: forwards {input, response_format, model?, voice?} and relays the audio bytes + content type", async () => {
   const ctx = makeCtx();
-  db.setDeploymentConfig("voice", JSON.stringify({ ...voice.VOICE_DEFAULTS, ttsModel: "tts-x", ttsVoice: "alloy", ttsFormat: "mp3" }));
+  db.setDeploymentConfig("voice", JSON.stringify({ ...voice.VOICE_DEFAULTS, ttsModel: "tencent-tts", ttsVoice: "101001", ttsFormat: "mp3" }));
   fake.seen.length = 0;
   const r = await tts(ctx, "你好世界");
   assert.equal(r.status, 200);
@@ -354,14 +371,75 @@ test("speech: forwards {input, response_format, model?, voice?} and relays the a
   assert.equal(r.headers["cache-control"], "no-store");
   assert.equal(r.headers["x-voice-key-source"], "deployment");
   assert.equal(r.headers["x-voice-truncated"], undefined);
+  assert.equal(r.headers["x-voice-used"], "tencent-tts:101001", "the voice that produced the audio is named");
   assert.ok(r.buf.equals(FAKE_MP3), "audio bytes relayed verbatim");
   const up = fake.seen.at(-1);
   assert.equal(up.url, "/v1/audio/speech");
-  assert.deepEqual(up.json, { input: "你好世界", response_format: "mp3", model: "tts-x", voice: "alloy" });
+  assert.deepEqual(up.json, { input: "你好世界", response_format: "mp3", model: "tencent-tts", voice: "101001" });
   db.clearDeploymentConfig("voice");
   fake.seen.length = 0;
   await tts(ctx, "plain");
   assert.deepEqual(fake.seen.at(-1).json, { input: "plain", response_format: "mp3" }, "blank model/voice are omitted");
+});
+
+test("speech: a per-request voice override wins only when it names a catalog entry", async () => {
+  const ctx = makeCtx();
+  db.setDeploymentConfig("voice", JSON.stringify({ ...voice.VOICE_DEFAULTS, ttsModel: "tencent-tts", ttsVoice: "101001", ttsFormat: "mp3" }));
+  fake.seen.length = 0;
+  const over = await request(ctx.app, "POST", "/api/voice/speech", {
+    headers: AS_OWNER,
+    body: { input: "换一个", model: "doubao-speech", voice: "zh_female_shuangkuaisisi_uranus_bigtts" },
+  });
+  assert.equal(over.status, 200);
+  assert.deepEqual(fake.seen.at(-1).json, {
+    input: "换一个",
+    response_format: "mp3",
+    model: "doubao-speech",
+    voice: "zh_female_shuangkuaisisi_uranus_bigtts",
+  }, "the override pair is forwarded, the deployment block is bypassed");
+  assert.equal(over.headers["x-voice-used"], "doubao-speech:zh_female_shuangkuaisisi_uranus_bigtts");
+
+  fake.seen.length = 0;
+  const badOverride = await request(ctx.app, "POST", "/api/voice/speech", {
+    headers: AS_OWNER,
+    body: { input: "x", model: "tencent-tts", voice: "101007" },
+  });
+  assert.equal(badOverride.status, 400);
+  assert.equal(badOverride.body.code, "voice_not_in_catalog");
+  assert.equal(fake.seen.length, 0, "a rejected override never reaches upstream");
+  db.clearDeploymentConfig("voice");
+});
+
+test("catalog read + preview: entries are readable, preview names the voice and refuses a non-entry", async () => {
+  const ctx = makeCtx();
+  const cat = await request(ctx.app, "GET", "/api/voice/catalog", { headers: AS_OWNER });
+  assert.equal(cat.status, 200);
+  assert.ok(Array.isArray(cat.body.entries) && cat.body.entries.length >= 3);
+  assert.equal(cat.body.default.voice, "101001");
+
+  fake.seen.length = 0;
+  const ok = await request(ctx.app, "POST", "/api/voice/catalog/preview", {
+    headers: AS_ADMIN,
+    body: { model: "tencent-tts", voice: "101001" },
+  });
+  assert.equal(ok.status, 200);
+  assert.equal(ok.headers["x-voice-used"], "tencent-tts:101001");
+  assert.equal(fake.seen.at(-1).json.voice, "101001");
+  assert.ok(fake.seen.at(-1).json.input.length > 0, "the preview carries a sample sentence");
+
+  fake.seen.length = 0;
+  const refused = await request(ctx.app, "POST", "/api/voice/catalog/preview", {
+    headers: AS_ADMIN,
+    body: { model: "tencent-tts", voice: "101007" },
+  });
+  assert.equal(refused.status, 400);
+  assert.equal(fake.seen.length, 0);
+
+  const nonAdmin = await request(ctx.app, "POST", "/api/voice/catalog/preview", {
+    headers: AS_OWNER,
+    body: { model: "tencent-tts", voice: "101001" },
+  });
+  assert.equal(nonAdmin.status, 403, "preview spends the deployment budget, so it is admin-only");
 });
 
 test("speech: over-long input is truncated for synthesis and flagged; empty input → 400; disabled → 503", async () => {

@@ -355,6 +355,9 @@ export function createFleetDatabase({ file } = {}) {
   for (const col of [
     "ALTER TABLE fleets ADD COLUMN input_policy TEXT",
     "ALTER TABLE fleet_members ADD COLUMN input_policy TEXT",
+    // 岗位播报音色（add-room-voice-and-catalog）：`{model, voice}` 目录条目引用，
+    // 可空 = 不声明 = 沿用部署默认音色。写面以音色目录校验，读面原样返回。
+    "ALTER TABLE fleet_members ADD COLUMN voice TEXT",
   ]) {
     try {
       db.exec(col);
@@ -836,8 +839,8 @@ export function createFleetDatabase({ file } = {}) {
   function createMember(member) {
     const now = Date.now();
     db.prepare(`
-      INSERT INTO fleet_members (id, fleet_id, title, parent_id, target_kind, target_id, kpi_slots, cadence, model, fallback_model, effort, context_budget, carrier, input_policy, pack_id, sort_key, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO fleet_members (id, fleet_id, title, parent_id, target_kind, target_id, kpi_slots, cadence, model, fallback_model, effort, context_budget, carrier, input_policy, voice, pack_id, sort_key, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       member.id,
       member.fleetId,
@@ -856,6 +859,9 @@ export function createFleetDatabase({ file } = {}) {
       // 此前只被 updateMember 认，createMember 漏了它——模板搬过来的 inputPolicy
       // 会在这里被静默丢掉，读面显示 null 而声明是有的。
       member.inputPolicy ? JSON.stringify(member.inputPolicy) : null,
+      // 建岗时的音色声明同样要写进来（add-room-voice-and-catalog）：input_policy
+      // 那次「createMember 漏写」正是同一个形状的坑，这里一次写齐。
+      member.voice ? JSON.stringify(member.voice) : null,
       member.packId ?? null,
       Number.isFinite(member.sortKey) ? member.sortKey : now,
       now,
@@ -890,7 +896,7 @@ export function createFleetDatabase({ file } = {}) {
   }
 
   function updateMember(id, updates) {
-    const JSON_COLUMNS = { kpiSlots: "kpi_slots", cadence: "cadence", inputPolicy: "input_policy" };
+    const JSON_COLUMNS = { kpiSlots: "kpi_slots", cadence: "cadence", inputPolicy: "input_policy", voice: "voice" };
     const PLAIN_COLUMNS = {
       title: "title",
       parentId: "parent_id",
@@ -3458,6 +3464,8 @@ function deserializeMember(row) {
     carrier: row.carrier ?? null,
     packId: row.pack_id ?? null,
     inputPolicy: row.input_policy ? JSON.parse(row.input_policy) : null,
+    // 播报音色（add-room-voice-and-catalog）：`{model, voice}` 或 null（未声明）。
+    voice: row.voice ? JSON.parse(row.voice) : null,
     sortKey: row.sort_key,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

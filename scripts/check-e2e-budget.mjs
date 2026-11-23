@@ -144,6 +144,11 @@ const KNOWN_FLAKY = new Set([
   "plugins-supply.spec.js", // 2 reds of 6 (43599124908, 43624475405: "the three supply states render")
   "session-navigation-streaming.spec.js", // 3 reds of 6 (43599124908, 43607929997, 43611482706: "new chat leaves the live turn running")
   "session-open.spec.js", // 3 reds of 6 (43602008389, 43607929997, 43624475405: "switch to an unknown session")
+  // 2026-11-23, measured both ways on the same commit: red on snapshot
+  // 463668c22 ("publish: preview never writes…") and green on the next one
+  // (881adfe05) with no code change in between — plus 9/9 green standalone
+  // locally. That is a flake's shape, not a regression's.
+  "team-directory.spec.js", // red 463668c22 / green 881adfe05, same code; 9/9 standalone 2026-11-23
 ]);
 
 // Dropped on the same measurement, because a listed file that never reddens is

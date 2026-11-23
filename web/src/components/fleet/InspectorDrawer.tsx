@@ -22,6 +22,7 @@ import { useFleetStore } from "@/store/fleet-store";
 import type { CanvasTraffic } from "@/components/fleet/FleetCanvas";
 import { BotPlatformIcon } from "@/components/bots/BotPlatformIcons";
 import { useChatStore } from "@platform/core";
+import { fetchVoiceCatalog, type VoiceCatalog } from "@/lib/voice";
 
 // ── shapes (mirrors of the page's MemberView slices, kept local) ────────────
 
@@ -76,6 +77,9 @@ export interface InspectorMember {
   memoryCharter?: string | null;
   /** 输入策略（既有字段，此前未在此抽屉展示）。 */
   inputPolicy?: Record<string, unknown> | null;
+  /** 播报音色（add-room-voice-and-catalog）：`{model, voice}` 目录条目，null = 未声明。
+   *  召唤进房间时随邀请带进座席；本抽屉是它的人工声明面。 */
+  voice?: { model: string; voice: string } | null;
   effectiveInputPolicy?: Record<string, unknown> | null;
   /** 角色行（5.1）：null = 这个岗还没建过角色（不是「角色器官为空」）。 */
   role?: InspectorRole | null;
@@ -83,10 +87,12 @@ export interface InspectorMember {
 
 /** 角色四件事（9.1）：章程 / 记忆层 / 胜任力 / 目标。 */
 export interface InspectorRole {
-  /** 所属包（服务端字段名是 genome，界面层改叫 package——「基因组」是内部原语）。 */
-  package: { packId: string; version: number | null } | null;
-  /** 该岗声明了什么（服务端字段名 organs）。 */
-  declared: { objective?: { metricKey?: string; label?: string } | null } | null;
+  // 字段名与 **API 返回的形状一致**（genome / organs）——类型是数据边界的描述，
+  // 不是文案。界面层用终词（「所属包」「目标」）在渲染处翻译，两者不混。
+  // 我第一版把这里的字段改名成 package/declared，结果 API 原样透传、界面读不到
+  // （TS 在 data 边界不做检查）——浏览器验收当场抓到。
+  genome: { packId: string; version: number | null } | null;
+  organs: { objective?: { metricKey?: string; label?: string } | null } | null;
   status: string | null;
   statusBasis: string | null;
 }
@@ -169,10 +175,19 @@ export function MemberInspector({
   const [contextBudget, setContextBudget] = useState(member.contextBudget != null ? String(member.contextBudget) : "");
   const [denseConfirmed, setDenseConfirmed] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
+  // 播报音色（add-room-voice-and-catalog）：空串 = 未声明（回落部署默认）。
+  const [voice, setVoice] = useState(member.voice ? `${member.voice.model}|${member.voice.voice}` : "");
+  const [voiceCatalog, setVoiceCatalog] = useState<VoiceCatalog | null>(null);
   // Effort levels of the member's effective model (add-agent-config-dims D6):
   // the dropdown renders ONLY when the model that would run declares levels;
   // an unknown model (roster drift) hides the control instead of lying.
   const modelRoster = useChatStore((st) => st.models);
+  useEffect(() => {
+    // The catalog is a file served by the cell; an unreadable one hides the
+    // picker rather than blocking the rest of the drawer.
+    void fetchVoiceCatalog().then(setVoiceCatalog).catch(() => setVoiceCatalog(null));
+  }, []);
+
   const effortLevels = useMemo(
     () => modelRoster.find((m) => m.id === (member.effectiveModel ?? member.model))?.reasoningEfforts ?? [],
     [modelRoster, member.effectiveModel, member.model],
@@ -280,6 +295,9 @@ export function MemberInspector({
       fallbackModel: fallbackModel.trim() || null,
       ...(effortLevels.length ? { effort: effort || null } : {}),
       contextBudget: budgetNum,
+      // An empty selection clears the declaration (null = inherit). The server
+      // validates the pair against the catalog and rejects an unknown one.
+      voice: voice ? { model: voice.split("|")[0], voice: voice.split("|")[1] } : null,
     });
   };
 
@@ -330,16 +348,16 @@ export function MemberInspector({
               </p>
               <p className="text-muted-foreground" data-testid="inspector-role-objective">
                 {t("fleets.inspector.roleObjective")}:{" "}
-                {member.role?.declared?.objective?.label ?? member.role?.declared?.objective?.metricKey ?? t("fleets.inspector.roleUnset")}
+                {member.role?.organs?.objective?.label ?? member.role?.organs?.objective?.metricKey ?? t("fleets.inspector.roleUnset")}
               </p>
               <p className="text-muted-foreground" data-testid="inspector-role-status">
                 {t("fleets.inspector.roleStatus")}: {member.role?.status ?? t("fleets.inspector.roleUnset")}
                 {member.role?.statusBasis ? ` · ${member.role.statusBasis}` : ""}
               </p>
-              {member.role?.package ? (
+              {member.role?.genome ? (
                 <p className="text-muted-foreground">
-                  {t("fleets.inspector.rolePackage")}: {member.role.package.packId}
-                  {member.role.package.version != null ? ` @ v${member.role.package.version}` : ""}
+                  {t("fleets.inspector.rolePackage")}: {member.role.genome.packId}
+                  {member.role.genome.version != null ? ` @ v${member.role.genome.version}` : ""}
                 </p>
               ) : null}
             </div>
@@ -529,6 +547,25 @@ export function MemberInspector({
                 </p>
               </div>
             ) : null}
+            {/* 播报音色（add-room-voice-and-catalog）：打分岗共用同一编队音色面，
+                所以这一段放在 persona 块之外——每个岗都能声明自己的声音。 */}
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="ins-voice">{t("fleets.inspector.voice")}</Label>
+              <select
+                id="ins-voice"
+                value={voice}
+                onChange={(e) => setVoice(e.target.value)}
+                data-testid="inspector-voice"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+              >
+                <option value="">{t("fleets.inspector.voiceInherit")}</option>
+                {(voiceCatalog?.entries ?? []).map((e) => (
+                  <option key={`${e.model}|${e.voice}`} value={`${e.model}|${e.voice}`}>
+                    {e.label} · {e.protocol}
+                  </option>
+                ))}
+              </select>
+            </div>
             <label className="flex items-center gap-1.5 text-muted-foreground">
               <input type="checkbox" checked={denseConfirmed} onChange={(e) => setDenseConfirmed(e.target.checked)} data-testid="inspector-dense" />
               {t("fleets.dense.confirm")}
