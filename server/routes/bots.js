@@ -17,6 +17,8 @@ import { BOT_TYPES, credentialFieldsFor, qrCapabilityFor, adapterForBot, isOutbo
 import { qrSvg } from "../bots/qr.js";
 import { GENERIC_BOT_TYPES } from "../../lib/generic-bot-types.js";
 import { escalateToHuman } from "../../lib/escalate.js";
+import { notifyHandoff } from "../../lib/handoff-notify.js";
+import { sendThrough } from "../../server/fd-bot-client.js";
 import { validateConfigDims, effortUnionFrom } from "../fleet-model.js";
 import { summarizeDispositions } from "../fleet-turn-mandate.js";
 import { ensureFdBotBinding } from "../../lib/fd-bot-binding.js";
@@ -641,14 +643,13 @@ export function registerBotRoutes(ctx) {
     const { reason, note, summary } = req.body || {};
     try {
       const result = await escalateToHuman(bot, chatKey, { reason, note, summary });
-      // A platform verdict (ok:false) is a real outcome, not a server error — 200
-      // with the classified result, matching fd-bot's send discipline.
-      res.json(result);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-    try {
-      const result = await escalateToHuman(bot, chatKey, { reason, note });
+      if (result.ok) {
+        // Tell a human it is waiting. Best-effort: the assignment already landed,
+        // so a failed page must not turn a success into an error. Fire-and-forget
+        // so the caller is not held open by an IM round-trip.
+        void notifyHandoff(bot, { chatKey, reason, note, summary, assigneeId: result.assigneeId }, { send: sendThrough })
+          .then((n) => { if (!n.sent) console.log(`[bots] handoff alert not sent: ${n.why}`); });
+      }
       // A platform verdict (ok:false) is a real outcome, not a server error — 200
       // with the classified result, matching fd-bot's send discipline.
       res.json(result);

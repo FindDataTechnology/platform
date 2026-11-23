@@ -2639,6 +2639,74 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
       .run(...(sent ? [t, t, id] : [t, id]));
   }
 
+  // ── 角色状态（establish-agent-role-and-fitness-plane 5.1 / 5.2）─────────────
+  //
+  // 表在 1.1 就建了，但**没有任何读写入口**——这正是本仓反复踩的那一类
+  // 「表建好了不等于在记录」。这里补上 CRUD，让「批准前角色零变化」这句话
+  // 可被读出来验证，而不是靠人相信。
+  //
+  // upsert 而不是 insert：一个岗位一行（UNIQUE(fleet_id, member_id)），
+  // 采纳/回滚是改这一行，不是加一行。
+
+  function getRoleState(fleetId, memberId) {
+    const row = db.prepare("SELECT * FROM role_states WHERE fleet_id = ? AND member_id = ?").get(fleetId, memberId);
+    return row ? deserializeRoleState(row) : null;
+  }
+
+  function listRoleStates(fleetId) {
+    return db
+      .prepare("SELECT * FROM role_states WHERE fleet_id = ? ORDER BY member_id")
+      .all(fleetId)
+      .map(deserializeRoleState);
+  }
+
+  function upsertRoleState({ fleetId, memberId, genome, organs, status, statusBasis }) {
+    const now = Date.now();
+    const existing = db.prepare("SELECT id FROM role_states WHERE fleet_id = ? AND member_id = ?").get(fleetId, memberId);
+    const genomePackId = genome?.packId ?? null;
+    const genomeVersion = Number.isFinite(genome?.version) ? genome.version : null;
+    if (existing) {
+      db.prepare(`
+        UPDATE role_states
+           SET genome_pack_id = ?, genome_version = ?, genome_adopted_at = ?,
+               organs = ?, status = ?, status_basis = ?, updated_at = ?
+         WHERE id = ?
+      `).run(
+        genomePackId,
+        genomeVersion,
+        genome === undefined ? null : now,
+        JSON.stringify(organs ?? {}),
+        status ?? null,
+        statusBasis ?? null,
+        now,
+        existing.id,
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO role_states (id, fleet_id, member_id, genome_pack_id, genome_version, genome_adopted_at, organs, status, status_basis, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        `role_${now}_${Math.random().toString(36).slice(2, 10)}`,
+        fleetId,
+        memberId,
+        genomePackId,
+        genomeVersion,
+        genome === undefined ? null : now,
+        JSON.stringify(organs ?? {}),
+        status ?? null,
+        statusBasis ?? null,
+        now,
+        now,
+      );
+    }
+    return getRoleState(fleetId, memberId);
+  }
+
+  function deleteRoleState(fleetId, memberId) {
+    const info = db.prepare("DELETE FROM role_states WHERE fleet_id = ? AND member_id = ?").run(fleetId, memberId);
+    return { ok: true, deleted: info.changes };
+  }
+
   // ── fitness runs（establish-agent-role-and-fitness-plane 1.1）──────────────
   //
   // 判定运行是 append-mostly：一行在开始时可只带输入，判完再写产出。
@@ -2888,7 +2956,31 @@ const PLAIN_COLS = { state: "state", route: "route", deliveredAt: "delivered_at"
     getFitnessRun,
     listFitnessRuns,
     finishFitnessRun,
+    getRoleState,
+    listRoleStates,
+    upsertRoleState,
+    deleteRoleState,
     close,
+  };
+}
+
+// 角色状态的行 → API 形状。`organs` 是 JSON；未设置时返回 {}（不是 null），
+// 使「没有任何器官声明」与「声明为空对象」在调用方看来一致——真正的口径差异
+// 由 `validateOrgans` 的 gaps 表达，不靠这里的 null/{}。
+function deserializeRoleState(row) {
+  return {
+    id: row.id,
+    fleetId: row.fleet_id,
+    memberId: row.member_id,
+    genome: row.genome_pack_id
+      ? { packId: row.genome_pack_id, version: row.genome_version ?? null }
+      : null,
+    genomeAdoptedAt: row.genome_adopted_at ?? null,
+    organs: JSON.parse(row.organs || "{}"),
+    status: row.status ?? null,
+    statusBasis: row.status_basis ?? null,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

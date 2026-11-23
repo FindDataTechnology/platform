@@ -14,6 +14,7 @@ import cronParser from "cron-parser";
 // Pure leaf module (zero imports of its own) — importing it here keeps this
 // file gateway-safe (no task-engine module graph rides along).
 import { validateOrchestration, CARRIERS } from "./fleet-orchestration.js";
+import { validateOrgans } from "../lib/agent-role.js";
 
 // Minimal cron check (the engine's own parser, applied standalone): this
 // module is also imported by the GATEWAY process (pack pre-validation), so it
@@ -576,6 +577,20 @@ export function parseFleetTemplate(manifest) {
     }
   }
 
+  // 团队级 senses 校验（7.1）：裸 URL / 缺节奏 / 缺变化判据逐条拒。
+  if (section.senses !== undefined) {
+    const v = validateOrgans({ charter: "", hands: {}, senses: section.senses });
+    const senseErrs = v.errors.filter((e) => e.entry.startsWith("organs.senses"));
+    if (senseErrs.length) {
+      return {
+        ok: false,
+        error: `fleet.senses: ${senseErrs[0].error}`,
+        code: "fleet_senses_invalid",
+        errors: senseErrs,
+      };
+    }
+  }
+
   return {
     ok: true,
     template: {
@@ -604,6 +619,12 @@ export function parseFleetTemplate(manifest) {
         memory: m.memory ?? null,
       })),
       requires: (requires ?? []).map((r) => ({ kind: r.kind ?? "a2a", name: String(r.name).trim(), optional: r.optional === true })),
+      // 团队级感官（enrich-fleet-template-member-config 7.1）：一支团队盯哪些具名
+      // 读面、多久看一次、什么算变化。**放在 fleet 层而不是成员层**：一支队的
+      // 情报源是协作事实（`fleet-intel-gather` 就是团队共用层），写进成员段会
+      // 重复 N 份并各自漂移。校验复用 `lib/agent-role.js` 的 validateOrgans，
+      // 只取 senses 那一支——同一个口径，不重写一遍。
+      ...(section.senses !== undefined ? { senses: section.senses } : {}),
       ...(section.orchestration !== undefined ? { orchestration: section.orchestration } : {}),
     },
   };

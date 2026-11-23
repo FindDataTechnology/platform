@@ -44,6 +44,10 @@ export const registry = {
     // silently "escalating" into nothing (chatwoot-ai-handoff).
     { key: "assigneeId", label: "转人工接待人的 Chatwoot 用户 ID", required: false,
       validate: (v) => (/^\d+$/.test(String(v ?? "").trim()) ? null : "必须是数字用户 ID") },
+    // 交人后往哪里报警（follow-up：无人在线时也必须有人知道）。两个都填才生效；
+    // 不填就只是不通知，交人照常。刻意不做「默认往某个群推」——内部群不是猜出来的。
+    { key: "notifyBindingId", label: "转人工报警：目的地的 fd-bot binding ID（留空=不报警）", required: false },
+    { key: "notifyChatKey", label: "转人工报警：发往哪个群/会话（该 bot 的 chatKey）", required: false },
   ],
 
   // No QR: a chatwoot bot is an Agent Bot created in the desk's own settings.

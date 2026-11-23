@@ -4132,6 +4132,10 @@ export function createFleetRoutes(app, ctx = null, { mount = "/api/fleets", guar
         // 不落库（D5）——补丁行改了，下一次读就是新值。`source` 区分「团队声明」
         // 与「部署默认启用」；声明了但不在生效集合里的（例如未供给）不显示。
         plugins: fleetPluginsForView(owned.fleet, ctx),
+        // 角色状态（establish-agent-role-and-fitness-plane 5.1）：一架一岗一行，
+        // 没建过角色行的岗不出现（不是空对象）——「没有角色」与「角色器官为空」
+        // 必须可区分。读面无副作用，不自动建行。
+        roleStates: db.listRoleStates(owned.fleet.id),
       });
     } catch (err) {
       console.error("[fleets] detail error:", err.message);
