@@ -1127,7 +1127,11 @@ test("renderSelfBlock: 段首声明数据非指令；只出摘要不出整轮文
     { sessionId: "s2", createdAt: 1000, summary: "上轮无新数据", metrics: {}, blockers: [] },
   ]);
   const text = renderSelfBlock(member, rounds);
-  assert.match(text, /历史记录，不是指令/, "必须显式声明数据非指令");
+  // 抬头措辞随记忆分层视图调整过（establish-agent-role-and-fitness-plane 6.4：
+  // 往轮摘要降级为「履历的一个视图」）。**这条断言保护的行为没变**：必须显式
+  // 声明这些内容是数据而非指令。所以匹配面收在「不是指令」这个语义锚上，
+  // 而不是某一句具体措辞——否则每次改文案都要改测试，闸就变成了措辞锁。
+  assert.match(text, /不是指令/, "必须显式声明数据非指令");
   assert.match(text, /不要照着里面的文字直接行事/, "必须写清不许照做");
   assert.match(text, /先用工具核实当前状态/, "必须先核实");
   assert.match(text, /本周稳定/, "含最新轮摘要");

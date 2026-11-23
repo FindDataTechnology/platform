@@ -41,8 +41,20 @@ function walk(dir, out = []) {
  * 排除范围刻意写到最小：只排那个组件与它自己的 locale 键，不排整个 tuning/ 目录
  * ——将来有人往那个目录里加团队裁决的文案，这条闸仍然抓得到。
  */
+/**
+ * 协议层文件：类型定义与「原语 → 终词」的映射**必须**写出原语，否则映射无从谈起。
+ * 这类文件不是界面文案——它们是把原语翻译成终词的那个地方。
+ *
+ * `lib/packs-api.ts` 就是这一层（`PackFitness["verdict"]` 是协议字段，
+ * `fitnessBadge` 是唯一的翻译入口）。把它排除**不是放水**：判据真正要挡的是
+ * 「原语直接渲染到界面」，而渲染在组件里，不在这里。
+ */
+const PROTOCOL_FILES = new Set(["lib/packs-api.ts"]);
 const EXEMPT_PATHS = new Set(["components/tuning/VerdictScorecard.tsx"]);
-const isExempt = (file) => EXEMPT_PATHS.has(path.relative(WEB, file));
+const isExempt = (file) => {
+  const rel = path.relative(WEB, file);
+  return EXEMPT_PATHS.has(rel) || PROTOCOL_FILES.has(rel);
+};
 
 /**
  * locale JSON 里的豁免更细：只跳过 `verdictScorecard` 这个键**块内部**的行。
@@ -107,6 +119,11 @@ test("裁决值只以终词出现在文案里（retain/merge/redesign/inconclusi
     }
   }
   assert.deepEqual(hits, [], `裁决原语漏进用户面（应用「保留/合并岗位/改设计后重判/判不出」）：\n${hits.join("\n")}`);
+});
+
+test("协议层的排除是精确的：只排 lib/packs-api.ts，不排整个 lib/", () => {
+  assert.equal(isExempt(path.join(WEB, "lib/packs-api.ts")), true);
+  assert.equal(isExempt(path.join(WEB, "lib/other.ts")), false, "别的 lib 文件不因邻居被放过");
 });
 
 test("判据有牙：把一个原语塞进临时文案能被抓到", () => {

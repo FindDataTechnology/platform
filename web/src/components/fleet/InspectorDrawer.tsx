@@ -83,8 +83,10 @@ export interface InspectorMember {
 
 /** 角色四件事（9.1）：章程 / 记忆层 / 胜任力 / 目标。 */
 export interface InspectorRole {
-  genome: { packId: string; version: number | null } | null;
-  organs: { charter?: string | null; memory?: unknown; senses?: unknown[]; objective?: { metricKey?: string; label?: string } | null; hands?: unknown } | null;
+  /** 所属包（服务端字段名是 genome，界面层改叫 package——「基因组」是内部原语）。 */
+  package: { packId: string; version: number | null } | null;
+  /** 该岗声明了什么（服务端字段名 organs）。 */
+  declared: { objective?: { metricKey?: string; label?: string } | null } | null;
   status: string | null;
   statusBasis: string | null;
 }
@@ -328,16 +330,16 @@ export function MemberInspector({
               </p>
               <p className="text-muted-foreground" data-testid="inspector-role-objective">
                 {t("fleets.inspector.roleObjective")}:{" "}
-                {member.role?.organs?.objective?.label ?? member.role?.organs?.objective?.metricKey ?? t("fleets.inspector.roleUnset")}
+                {member.role?.declared?.objective?.label ?? member.role?.declared?.objective?.metricKey ?? t("fleets.inspector.roleUnset")}
               </p>
               <p className="text-muted-foreground" data-testid="inspector-role-status">
                 {t("fleets.inspector.roleStatus")}: {member.role?.status ?? t("fleets.inspector.roleUnset")}
                 {member.role?.statusBasis ? ` · ${member.role.statusBasis}` : ""}
               </p>
-              {member.role?.genome ? (
+              {member.role?.package ? (
                 <p className="text-muted-foreground">
-                  {t("fleets.inspector.roleGenome")}: {member.role.genome.packId}
-                  {member.role.genome.version != null ? ` @ v${member.role.genome.version}` : ""}
+                  {t("fleets.inspector.rolePackage")}: {member.role.package.packId}
+                  {member.role.package.version != null ? ` @ v${member.role.package.version}` : ""}
                 </p>
               ) : null}
             </div>

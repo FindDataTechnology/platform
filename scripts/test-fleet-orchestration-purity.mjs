@@ -41,13 +41,22 @@ test("purity: server/fleet-orchestration.js imports NOTHING (pure leaf module)",
 test("purity: fleet-template.js's import face stays gateway-safe (no task-engine graph)", () => {
   const imports = [...templateSrc.matchAll(/^\s*import\s+(?:[\s\S]*?from\s+)?["']([^"']+)["']/gm)].map((m) => m[1]);
   assert.ok(imports.length > 0, "sanity: the parser does import something (cron-parser at least)");
-  const ALLOWED = new Set(["cron-parser", "./fleet-orchestration.js"]);
+  // `../lib/agent-role.js` 也在此列：它是**零 import 的纯模块**（validator 与
+  // 服务端共用同一份 senses/器官口径，抄第二份必然漂移）。加它时同时钉一条断言：
+  // 那个文件自己不许长出 import，否则「纯」这个前提就不再成立。
+  const ALLOWED = new Set(["cron-parser", "./fleet-orchestration.js", "../lib/agent-role.js"]);
   for (const spec of imports) {
     assert.ok(
       ALLOWED.has(spec),
       `fleet-template.js imports '${spec}' — it is loaded by the GATEWAY process; only ${[...ALLOWED].join(", ")} are safe`,
     );
   }
+});
+
+test("purity: agent-role.js itself carries zero imports（上面那条白名单的前提）", () => {
+  const src = fs.readFileSync(new URL("../lib/agent-role.js", import.meta.url), "utf8");
+  const imports = [...src.matchAll(/^\s*import\s/gm)];
+  assert.equal(imports.length, 0, "lib/agent-role.js grew an import — the allowed-face entry above is no longer safe");
 });
 
 test("purity: the validator loads and runs STANDALONE in a bare subprocess", () => {

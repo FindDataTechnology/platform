@@ -250,6 +250,42 @@ export async function runTrial({ blueprint, deps, timeoutMs = 10 * 60_000, pollM
   return report;
 }
 
+/**
+ * 多臂试跑（enrich/establish 3.1）：**逐臂复用 `runTrial`，不改它的内部**。
+ *
+ * 每一臂就是一次独立的「装一台 → 点火 → 收证 → 判绿」；本函数只负责
+ * 逐臂调用、汇总读数、并在臂数 ≥2 时把结果交给裁决层。这样：
+ *   · 试跑引擎的任何行为变化自动适用于每一臂（没有第二套执行路径）
+ *   · 单臂调用保持旧形状（arms 缺省 = [blueprint]）
+ *   · 任一一臂装配失败只让那一臂红，不中断其它臂——半份证据比零份诚实
+ *
+ * `armBlueprints` 由调用方给（通常是 `lib/fitness-arms.js` 的 buildArmSet 产物
+ * 转成的 blueprint 文档）。本函数不构造臂，只跑。
+ */
+export async function runArmSet({ armBlueprints, deps, timeoutMs, pollMs } = {}) {
+  const arms = Array.isArray(armBlueprints) && armBlueprints.length ? armBlueprints : null;
+  if (!arms) return { ok: false, error: "armBlueprints must be a non-empty array" };
+  const reports = [];
+  for (const [i, bp] of arms.entries()) {
+    const kind = bp?.armKind ?? `arm${i}`;
+    let rep;
+    try {
+      rep = await runTrial({ blueprint: bp, deps, timeoutMs, pollMs });
+    } catch (e) {
+      // runTrial 内部已 catch，这里是双保险：一臂抛不得带走其它臂。
+      rep = { ranAt: deps.now ? deps.now() : Date.now(), errors: [`arm crashed: ${e?.message || e}`], assertions: [], green: false };
+    }
+    reports.push({ kind, ref: bp?.armRef ?? kind, report: rep });
+  }
+  return {
+    ok: true,
+    arms: reports,
+    // 全部臂都绿才算整组绿——单臂失败不得被「其它臂绿了」掩盖。
+    green: reports.length > 0 && reports.every((r) => r.report?.green === true),
+    errors: reports.flatMap((r) => (r.report?.errors ?? []).map((e) => `[${r.ref}] ${e}`)),
+  };
+}
+
 // D8 约定：试跑舰命名 `${场景}·试跑`，与正式装作可区分。首铸建舰改名一次，
 // dedup 复用既有舰不重复改名（后缀已在则不动）；舰不存在时静默跳过。
 export function ensureTrialFleetName(db, fleetId) {

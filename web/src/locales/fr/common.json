@@ -3735,7 +3735,7 @@
     "roleCharter": "Charte mémoire",
     "roleObjective": "Objectif",
     "roleStatus": "Statut",
-    "roleGenome": "Génome",
+    "rolePackage": "Paquet",
     "roleUnset": "non déclaré",
       "open": "Détails",
       "statusBasis": "Base du statut",
