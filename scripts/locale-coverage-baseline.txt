@@ -77,27 +77,6 @@ settings.ciyuanAccount.pricing  # 词元账户面板（在途车道 CiyuanAccoun
 settings.ciyuanAccount.pricingOffpeak  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
 settings.ciyuanAccount.pricingPeak  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
 settings.ciyuanAccount.until  # 词元账户面板（在途车道 CiyuanAccountConnectPanel） · components/extensions/CiyuanAccountConnectPanel.tsx · 2026-11-18 存量
-settings.connections.doors.allReady  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.customerKey.declared  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.customerKey.pending  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.customerKey.subtitle  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.customerKey.title  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.footnote  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.goConnect  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.lead  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.loadFailed  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.memberAssertion.empty  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.memberAssertion.offSubtitle  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.memberAssertion.subtitle  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.memberAssertion.title  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.missingCount  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.noOwnTrack  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.ownTrack  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.refresh  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.thirdParty.subtitle  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.thirdParty.title  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.title  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
-settings.connections.doors.unreadableManifests  # 凭证门（在途车道 CredentialDoors） · components/settings/CredentialDoors.tsx · 2026-11-18 存量
 studio.acceptance.add  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
 studio.acceptance.anyPost  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
 studio.acceptance.expect  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量

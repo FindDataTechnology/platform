@@ -1387,7 +1387,36 @@
           }
         }
       },
-      "filterPlaceholder": "Filter connections…"
+      "filterPlaceholder": "Filter connections…",
+      "doors": {
+        "title": "Credential doors",
+        "lead": "Who a request runs as, and which key backs it",
+        "customerKey": {
+          "title": "Customer key",
+          "subtitle": "The line's own key, minted for this customer",
+          "declared": "Declared",
+          "pending": "Not ready"
+        },
+        "memberAssertion": {
+          "title": "Member delegation",
+          "subtitle": "A member acts on the customer's behalf",
+          "offSubtitle": "Delegation is off for this customer",
+          "empty": "No line delegates yet"
+        },
+        "thirdParty": {
+          "title": "Third-party credentials",
+          "subtitle": "Keys held by an external service"
+        },
+        "allReady": "Every door is ready",
+        "missingCount": "{{count}} door(s) not ready",
+        "ownTrack": "Own track",
+        "noOwnTrack": "No own track",
+        "goConnect": "Go connect",
+        "refresh": "Refresh",
+        "footnote": "A door that is not ready fails closed: the request is refused rather than run as someone else.",
+        "loadFailed": "Could not load the doors: {{detail}}",
+        "unreadableManifests": "{{count}} manifest(s) could not be read"
+      }
     },
     "lines": {
       "title": "Line operations",

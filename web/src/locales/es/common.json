@@ -1374,7 +1374,36 @@
           }
         }
       },
-      "filterPlaceholder": "Filtrar conexiones…"
+      "filterPlaceholder": "Filtrar conexiones…",
+      "doors": {
+        "title": "Puertas de credenciales",
+        "lead": "Con qué identidad se ejecuta una solicitud y qué clave la respalda",
+        "customerKey": {
+          "title": "Clave del cliente",
+          "subtitle": "La clave propia de la línea, emitida para este cliente",
+          "declared": "Declarada",
+          "pending": "No lista"
+        },
+        "memberAssertion": {
+          "title": "Delegación de miembro",
+          "subtitle": "Un miembro actúa en nombre del cliente",
+          "offSubtitle": "La delegación está desactivada para este cliente",
+          "empty": "Ninguna línea delega todavía"
+        },
+        "thirdParty": {
+          "title": "Credenciales de terceros",
+          "subtitle": "Claves en poder de un servicio externo"
+        },
+        "allReady": "Todas las puertas están listas",
+        "missingCount": "{{count}} puerta(s) no lista(s)",
+        "ownTrack": "Canal propio",
+        "noOwnTrack": "Sin canal propio",
+        "goConnect": "Ir a conectar",
+        "refresh": "Actualizar",
+        "footnote": "Una puerta que no está lista falla cerrada: la solicitud se rechaza en lugar de ejecutarse como otra persona.",
+        "loadFailed": "No se pudieron cargar las puertas: {{detail}}",
+        "unreadableManifests": "{{count}} manifiesto(s) ilegible(s)"
+      }
     },
     "lines": {
       "title": "Operaciones por línea",

@@ -1374,7 +1374,36 @@
           }
         }
       },
-      "filterPlaceholder": "Filtrer les connexions…"
+      "filterPlaceholder": "Filtrer les connexions…",
+      "doors": {
+        "title": "Portes d'identifiants",
+        "lead": "Sous quelle identité une requête s'exécute, et quelle clé la soutient",
+        "customerKey": {
+          "title": "Clé client",
+          "subtitle": "La clé propre à la ligne, émise pour ce client",
+          "declared": "Déclarée",
+          "pending": "Pas prête"
+        },
+        "memberAssertion": {
+          "title": "Délégation de membre",
+          "subtitle": "Un membre agit au nom du client",
+          "offSubtitle": "La délégation est désactivée pour ce client",
+          "empty": "Aucune ligne ne délègue encore"
+        },
+        "thirdParty": {
+          "title": "Identifiants tiers",
+          "subtitle": "Clés détenues par un service externe"
+        },
+        "allReady": "Tous les portes sont prêtes",
+        "missingCount": "{{count}} porte(s) non prête(s)",
+        "ownTrack": "Piste propre",
+        "noOwnTrack": "Aucune piste propre",
+        "goConnect": "Aller connecter",
+        "refresh": "Actualiser",
+        "footnote": "Une porte non prête échoue en fermeture : la requête est refusée plutôt qu'exécutée sous une autre identité.",
+        "loadFailed": "Impossible de charger les portes : {{detail}}",
+        "unreadableManifests": "{{count}} manifeste(s) illisible(s)"
+      }
     },
     "lines": {
       "title": "Opérations par ligne",

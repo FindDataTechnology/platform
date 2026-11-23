@@ -1374,7 +1374,36 @@
           }
         }
       },
-      "filterPlaceholder": "接続を絞り込む…"
+      "filterPlaceholder": "接続を絞り込む…",
+      "doors": {
+        "title": "認証情報ゲート",
+        "lead": "リクエストが誰として実行され、どの鍵で裏付けられるか",
+        "customerKey": {
+          "title": "顧客キー",
+          "subtitle": "この顧客のために発行された、ライン固有の鍵",
+          "declared": "宣言済み",
+          "pending": "未準備"
+        },
+        "memberAssertion": {
+          "title": "メンバー委任",
+          "subtitle": "メンバーが顧客の代理として行動する",
+          "offSubtitle": "この顧客では委任が無効です",
+          "empty": "まだどのラインも委任していません"
+        },
+        "thirdParty": {
+          "title": "サードパーティ認証情報",
+          "subtitle": "外部サービスが保持する鍵"
+        },
+        "allReady": "すべてのゲートが準備完了",
+        "missingCount": "{{count}} 件のゲートが未準備",
+        "ownTrack": "自前トラック",
+        "noOwnTrack": "自前トラックなし",
+        "goConnect": "接続へ",
+        "refresh": "更新",
+        "footnote": "準備できていないゲートはフェイルクローズします。他の誰かとして実行されるのではなく、リクエストは拒否されます。",
+        "loadFailed": "ゲートを読み込めませんでした: {{detail}}",
+        "unreadableManifests": "{{count}} 件のマニフェストを読めません"
+      }
     },
     "lines": {
       "title": "ライン操作",

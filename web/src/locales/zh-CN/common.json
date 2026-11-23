@@ -1374,7 +1374,36 @@
           }
         }
       },
-      "filterPlaceholder": "筛选连接…"
+      "filterPlaceholder": "筛选连接…",
+      "doors": {
+        "title": "凭据门",
+        "lead": "一次请求以谁的身份跑，背后是哪把钥",
+        "customerKey": {
+          "title": "客户钥",
+          "subtitle": "这条线自己的钥，为客户铸发",
+          "declared": "已声明",
+          "pending": "未就绪"
+        },
+        "memberAssertion": {
+          "title": "成员委托",
+          "subtitle": "由成员代表客户行事",
+          "offSubtitle": "该客户未开启委托",
+          "empty": "还没有线声明委托"
+        },
+        "thirdParty": {
+          "title": "第三方凭据",
+          "subtitle": "由外部服务持有的钥"
+        },
+        "allReady": "所有门均已就绪",
+        "missingCount": "{{count}} 扇门未就绪",
+        "ownTrack": "自有轨",
+        "noOwnTrack": "无自有轨",
+        "goConnect": "去连接",
+        "refresh": "刷新",
+        "footnote": "未就绪的门按失败关闭处理：请求会被拒绝，而不是以别人的身份跑。",
+        "loadFailed": "门总览加载失败：{{detail}}",
+        "unreadableManifests": "{{count}} 份清单读不出来"
+      }
     },
     "lines": {
       "title": "产品线操作",
