@@ -1,0 +1,301 @@
+#!/usr/bin/env node
+// ── agent-runner entrypoint (add-a2a-agent-serving 4.1) ────────────────────
+//
+// Multi-tenant runner for deployed Agent Services (ADR-0004). Boots inert —
+// polls the registry, hosts nothing — then serves A2A for whatever deploy
+// actions registered. One dsh child per role, private DSH_HOME, runner-level
+// model. Runbook: see the agent-runner design (docs/adr/0004).
+
+import http from "node:http";
+import path from "node:path";
+import { mkdirSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { loadConfig } from "./config.js";
+import { createRegistryClient } from "./registry.js";
+import { ChildManager } from "./manager.js";
+import { Rollover } from "./rollover.js";
+import { RhythmScheduler } from "./scheduler.js";
+import { createOpsApp } from "./a2a.js";
+import { HarnessClient } from "@deepseek-ai/dsh-sdk-client";
+import { dshClientRuntime } from "../lib/dsh-client-launch.js";
+import { matrixGate } from "../lib/dsh-matrix-verify.js";
+
+const config = loadConfig();
+
+if (!config.registryUrl) {
+  console.error("[agent-runner] AGENT_SERVING_REGISTRY_URL (or REGISTRY_URL) is required — nothing to poll");
+  process.exit(1);
+}
+
+// dsh install-matrix boot gate (add-dsh-matrix-lock, ADR-0007) — same
+// contract as the platform server's: tree deviating from the frozen lock
+// refuses to start with a package-level diff, DSH_MATRIX_OVERRIDE=1 forces
+// with the report logged, no install root (local dev) skips.
+{
+  const matrixLock = process.env.DSH_MATRIX_LOCK
+    || path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "dsh-matrix", "package-lock.json");
+  const matrixRoot = process.env.DSH_MATRIX_INSTALL_ROOT || "/opt/dsh";
+  const gate = matrixGate({ lockPath: matrixLock, installRoot: matrixRoot });
+  if (gate.action === "fail") {
+    console.error(gate.diff.report);
+    console.error(`[agent-runner] refusing to start — dsh tree deviates from the frozen matrix (DSH_MATRIX_OVERRIDE=1 to force)`);
+    process.exit(1);
+  } else if (gate.action === "override") {
+    console.warn(`[agent-runner] DSH_MATRIX_OVERRIDE set — booting despite dsh tree deviations:`);
+    console.warn(gate.diff.report);
+  } else if (gate.action === "skip") {
+    console.log(`[agent-runner] no install root at ${matrixRoot} — skipping dsh tree verification`);
+  } else {
+    console.log(`[agent-runner] dsh install tree matches frozen matrix (${matrixRoot})`);
+  }
+}
+
+mkdirSync(config.homeRoot, { recursive: true });
+
+// The real child factory: one HarnessClient per spawn spec, with the private
+// home as DSH_HOME. env inherits the runner's own environment (a dedicated
+// service: its LLM keys ARE the child's keys), minus anything the scrub would
+// strip for MCP subprocesses — dsh's own subprocess layer does that scrubbing.
+const clientFactory = (spec) => ({ args, cwd, env }) => {
+  const client = new HarnessClient(
+    {},
+    dshClientRuntime({
+      command: config.dshBin,
+      // dshBinArgs: desktop ships dsh as a Node entry behind the bundled
+      // node, so the real argv is [node, <entry>, ...dsh argv]; cloud keeps
+      // an empty prefix.
+      args: [...(config.dshBinArgs || []), ...args],
+      cwd,
+      env: { ...env, DSH_HOME: spec.home },
+      // The child's request timeout rides its effective turn budget
+      // (add-serving-budgets D3): the manager resolves descriptor-minutes vs
+      // the deployment default and passes the ms on the spawn spec.
+      requestTimeoutMs: (spec.turnBudgetMs ?? config.turnTimeoutMs) + 30_000,
+      shutdownTimeoutMs: 5000,
+    }),
+  );
+  // AgentChild calls start() itself — one lifecycle owner.
+  return {
+    start: () => client.start(),
+    initialize: (p) => client.initialize(p),
+    subscribe: () => client.subscribe(),
+    prompt: (sid, blocks) => client.prompt(sid, blocks),
+    request: (m, p) => client.request(m, p),
+    // The warm-zone budget samples the child's RSS through this pid
+    // (manager.js sampleRssBytes); the SDK keeps the spawned dsh process at
+    // `child`. Without this forwarder the budget saw the 96MB planning floor
+    // for every live child (measured live 2026-10-11: three real children at
+    // 141-200MB counted as 3×96).
+    pid: () => client.child?.pid ?? null,
+    // HarnessClient's lifecycle end is close() (the EOF→SIGTERM→SIGKILL
+    // ladder); it has no stop(). The old `client.stop?.()` was a silent no-op
+    // that orphaned the dsh child on manager.stopAll().
+    stop: async () => {
+      await client.close?.();
+    },
+  };
+};
+
+// The manager's factory receives the materialized spec so env/home bind per
+// child; the inner ({args,cwd,env}) shape matches what AgentChild builds.
+const wrappedFactory = (spec) => (specArg) => clientFactory(spec)(specArg);
+
+const registryClient = createRegistryClient({
+    registryUrl: config.registryUrl,
+    registryToken: config.registryToken,
+    // Sharding (add-runner-fleet-sharding D1): the fleet id hosts only its
+    // assigned slice; untagged entries default to this runner when it is the
+    // fleet's default (AGENT_RUNNER_DEFAULT_ID, itself by default).
+    runnerId: config.fleetRunnerId,
+    defaultRunnerId: config.defaultRunnerId,
+  });
+// 披露闸客户端（design D8 / fix-disclosure-gate-reachability D2 修订）：URL 与 TOKEN
+// 两个 env 齐才注入，缺一个就保持 null —— 闸门以 no_verdict_client 失败关闭。
+//
+// owner（问哪个 cell）**不再来自 env**：生产数据判掉了那个设计（唯一部署的属主
+// 没有 cell，在跑的真人 cell 又不属于它，填谁都错）。改为由 local feed 自报、
+// 调用时传入（`registryClient.feedOwner`）——owner 是数据，不是配置。
+// 传不进来（还没拉过名单 / feed 没报）→ 不带这个头 → 网关回 400，失败关闭，
+// 绝不替我们猜一个 cell。
+const mandateVerdictClient =
+  config.mandateVerdictUrl && config.mandateVerdictToken
+    ? async ({ domain, text, declaredSources, channelRevocable, owner }) => {
+        const target = String(owner ?? config.mandateVerdictOwner ?? "").trim().toLowerCase();
+        // 超时即失败关闭：宁可不发，也不要在网上挂着等。
+        const ctl = new AbortController();
+        const timer = setTimeout(() => ctl.abort(), 5000);
+        try {
+          const r = await fetch(`${config.mandateVerdictUrl}/api/actions/mandate-verdict`, {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${config.mandateVerdictToken}`,
+              // 网关只在这条 bearer 通过后才读这个头；没有就不发（400 好过猜错）。
+              ...(target ? { "x-mandate-owner": target } : {}),
+            },
+            body: JSON.stringify({ domain, text, declaredSources, channelRevocable }),
+            signal: ctl.signal,
+          });
+          // 非 2xx 一律不成「放行」：503（未配置）/401（错 token）/5xx 都算拒绝。
+          if (!r.ok) return { ok: false, reason: `verdict_http_${r.status}` };
+          const j = await r.json();
+          if (!j || typeof j !== "object") return { ok: false, reason: "bad_verdict" };
+          return {
+            ok: j.ok === true,
+            decision: j.decision,
+            reason: j.reason ?? null,
+            violations: Array.isArray(j.violations) ? j.violations : [],
+          };
+        } catch (e) {
+          return { ok: false, reason: `verdict_error: ${e?.message || e}` };
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+    : null;
+
+const manager = new ChildManager({
+  config,
+  registryClient,
+  clientFactory: wrappedFactory,
+  mandateVerdictClient,
+});
+
+// Runner fleet bridge (add-fleet-bridge-endpoint-for-agent-runner 2.1): one
+// satellite host per pod serving the fleet MCP children on loopback, so the
+// homes composed below can carry a `fleet` row that actually resolves. Inert
+// unless both envs are set; when the probe fails we deliberately hand back no
+// origin, so #spawnPod writes NO row (a row pointing at a dead endpoint reads
+// to the model as "this pack has no fleet tools" — the silent failure this
+// change exists to remove) and leaves a status file that can be judged.
+if (config.fleetBridgeUrl && config.fleetBridgeToken) {
+  const { startRunnerFleetBridge, scheduleRunnerFleetBridgeRecovery } = await import("./fleet-bridge.js");
+  manager.fleetBridge = await startRunnerFleetBridge({
+    url: config.fleetBridgeUrl,
+    token: config.fleetBridgeToken,
+    homeRoot: config.homeRoot,
+    log: console,
+  });
+  // The boot probe races the platform rollout window (measured live three
+  // times: the pod boots inside the roll, the probe fails, the bridge stays
+  // off for the pod's whole life). Retry in the background; the first success
+  // flips the handle in place and the next composed home picks the rows up
+  // with no restart.
+  if (!manager.fleetBridge?.origin) {
+    scheduleRunnerFleetBridgeRecovery(manager.fleetBridge, { homeRoot: config.homeRoot, log: console });
+  }
+}
+
+// Fleet observability (add-fleet-event-backbone 3.1): direct-post reporter +
+// state sampler, fully inert without AGENT_RUNNER_FLEET_URL.
+let fleetReporter = null;
+let fleetSampler = null;
+if (config.fleetUrl) {
+  const { createFleetReporter, createFleetSampler } = await import("./fleet.js");
+  fleetReporter = createFleetReporter({
+    url: config.fleetUrl,
+    token: config.fleetToken,
+    runnerId: config.fleetRunnerId,
+    spoolFile: path.join(config.homeRoot, ".fleet-spool.jsonl"),
+    log: (m) => console.warn(`[agent-runner:fleet] ${m}`),
+  });
+  fleetReporter.start();
+  fleetSampler = createFleetSampler({
+    manager,
+    reporter: fleetReporter,
+    runnerId: config.fleetRunnerId,
+    // Harness self-report (add-harness-adapter D5): the deploy gate reads this
+    // off the observer board to refuse harness-mismatched placements.
+    harnessProvider: () => manager.harnessRegistry.names(),
+        // Density self-report (unify-wanxing-management-plane): pod co-hosting mode.
+        podMode: config.podMode === true,
+        // Desktop seat self-report (add-desktop-fleet-runner ③).
+        desktopMode: config.desktopMode === true,
+  });
+  manager.events = (ev) => fleetReporter.emit(ev);
+  console.log(`[agent-runner:fleet] reporting to ${config.fleetUrl} as ${config.fleetRunnerId}`);
+}
+  // Residency wiring (add-agent-residency): rollover owns the day boundary,
+  // the scheduler consumes its pending digest at the day's head.
+  const rollover = new Rollover({ manager, config });
+  manager.onSpawnHook = (key, entry) => void rollover.onSpawn(key, entry).catch(() => {});
+  const scheduler = new RhythmScheduler({ manager, rollover, config });
+
+  // Seat mailbox (add-desktop-fleet-runner ④): the desktop's outbound half —
+  // poll the facade's per-seat box over the same fleet prefix, run each task
+  // locally, settle the result. Desktop seats only: a CLOUD runner's fleet
+  // uplink points at the bare observer (no mailbox face there) — polling it
+  // would be a 404 every pass.
+  if (config.fleetUrl && config.fleetToken && config.desktopMode) {
+    const { createMailboxPoller } = await import("./mailbox.js");
+    const pollSecs = Number(config.mailboxPollSecs) > 0 ? Number(config.mailboxPollSecs) : 30;
+    const mailbox = createMailboxPoller({
+      manager,
+      registryClient,
+      url: config.fleetUrl,
+      token: config.fleetToken,
+      pollSecs,
+      log: (m) => console.log(`[agent-runner:mailbox] ${m}`),
+    });
+    mailbox.start();
+  }
+
+const app = createOpsApp({ manager });
+const server = http.createServer(app);
+
+let stopping = false;
+async function poll() {
+  try {
+    const n = await manager.reconcile();
+    console.log(`[agent-runner] poll: ${n} served agent(s), ${manager.children.size} child(ren)`);
+  } catch (e) {
+    console.warn(`[agent-runner] poll failed (keeping last-good): ${e.message}`);
+  }
+}
+
+server.listen(config.port, config.host, () => {
+  console.log(`[agent-runner] listening on :${config.port} (home: ${config.homeRoot}, registry: ${config.registryUrl}, model: ${config.provider}/${config.model}, cap: ${config.maxChildren})`);
+  poll();
+  const pollTimer = setInterval(poll, config.pollSecs * 1000);
+  pollTimer.unref?.();
+  // Residency cadences (add-agent-residency): warm-zone budget enforcement,
+  // rhythm self-turns, and the day rollover — no idle reap exists anymore.
+  const budgetTimer = setInterval(() => manager.enforceBudget(), config.sampleSecs * 1000);
+  budgetTimer.unref?.();
+  const rhythmTimer = setInterval(() => void scheduler.tick(), config.rhythmTickMs);
+  rhythmTimer.unref?.();
+  const rolloverTimer = setInterval(() => void rollover.check(), 60_000);
+  rolloverTimer.unref?.();
+  // Billing-park re-probe (add-billing-failure-parking D4): parked roles only,
+  // on the slow cadence — a key the gate accepts again resumes automatically.
+  // The kill-switch (AGENT_RUNNER_BILLING_PARK=off) leaves the timer unarmed.
+  if (config.billingParkEnabled !== false) {
+    const reprobeTimer = setInterval(() => void manager.reprobeParked(), config.billingReprobeSecs * 1000);
+    reprobeTimer.unref?.();
+  }
+  // External-context reap (add-wanxing-serving-api D10): idle wx sessions are
+  // short-lived by contract; internal and rhythm sessions are untouched.
+  const reapTimer = setInterval(() => manager.reapExternalContexts(), 60_000);
+  reapTimer.unref?.();
+  // Data-workspace quota guard (facet-mcp-foundation-v1 3.1): slow cadence —
+  // a du over GB-scale dirs is IO, and a guardrail that only speaks needs no
+  // urgency.
+  const quotaTimer = setInterval(() => manager.checkWorkspaceQuotas(), 60_000);
+  quotaTimer.unref?.();
+  if (fleetSampler) {
+    const fleetTimer = setInterval(() => fleetSampler.sample(), config.fleetSampleSecs * 1000);
+    fleetTimer.unref?.();
+  }
+});
+
+for (const sig of ["SIGTERM", "SIGINT"]) {
+  process.on(sig, async () => {
+    if (stopping) return;
+    stopping = true;
+    console.log(`[agent-runner] ${sig}: draining children`);
+    server.close();
+    await manager.stopAll();
+    fleetReporter?.stop();
+    process.exit(0);
+  });
+}

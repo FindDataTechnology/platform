@@ -1,0 +1,813 @@
+name: CI
+
+# Green since 2026-10-02 (run 36896622780): lint backlog cleared, unit suite
+# deterministic (serialized runner), CI dsh bootstrap pins cordis-plugin-hmr
+# @1.0.16, and the fresh-machine dsh/runtime suites gate on a probe. Push is
+# back on so every landing runs the full gate; workflow_dispatch stays for
+# on-demand reruns.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  # On-demand knob for a leg the normal runs never reach. The dsh-contracts job
+  # restores actions/cache, and a warm hit returns at the `cached: true` branch
+  # BEFORE the npm ci line — so a green contracts job proves the tree is usable,
+  # not that the install line works. Dispatch with -f contracts_fresh=true to
+  # rebuild the scratch tree from scratch (this is how b5a72f6d7's change to
+  # that line — `{ cwd: tree }`, since npm 11.20 rejects an absolute `--prefix` —
+  # was verified on a runner: run 43634171771). Default false: push/PR unchanged.
+  workflow_dispatch:
+    inputs:
+      contracts_fresh:
+        description: "Run dsh contracts with a FRESH scratch tree (cold-cache leg)"
+        type: boolean
+        default: false
+
+# QUEUED per COMMIT, not per branch (openspec: queue-release-ci-runs).
+#
+# What this must prevent: `cancel-in-progress: true` killing a run mid-unit-test
+# when the next push lands. The unit step runs ~26 minutes and this workspace is
+# worked by several sessions in parallel, each cutting its own snapshot — with
+# cancel-in-progress the earlier run was killed by the later one four times on
+# 2026-11-09 alone. That does not save resources; it makes image builds
+# unusable and burns a whole round.
+#
+# What it must NOT do (2026-11-24): serialise EVERY snapshot behind the previous
+# one. Every snapshot pushes to `main`, so `ci-${{ github.ref }}` made all of
+# them one queue — a run sat pending ~12 minutes while an unrelated commit's
+# e2e shard finished, and a stuck run blocked everyone behind it.
+#
+# Keying the group on the COMMIT keeps both properties: the same commit's runs
+# (a re-run, a manual dispatch) still queue instead of cancelling each other,
+# while different commits run in parallel.
+concurrency:
+  group: ci-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  # ── unit, split by FILE LIST across runners ────────────────────────────────
+  #
+  # Was one 63-minute step inside `gates` (run 42630983629, 2026-11-09). The
+  # cost is per-file work, and `--test-concurrency=1` exists to keep ONE file's
+  # cases ordered — a constraint that is about a process, not a machine. So the
+  # file list is sharded across runners: each holds the invariant (one file at a
+  # time, in order), and wall clock drops ~N×.
+  #
+  # It is NOT `node --test --test-shard`: that flag partitions the flattened
+  # CASE list, putting one file's cases on different runners concurrently.
+  # scripts/test-unit-shard-safety.mjs measured that and pins the ban; the split
+  # here is `scripts/unit-shard.mjs`, and `unit-coverage` below fails the run if
+  # the shards' union is not exactly the suite.
+  #
+  # Separate jobs also make the report honest: a lint failure (the public repo
+  # has been red at step 5 since 2026-11-08) no longer hides whether the suite
+  # passes.
+  unit:
+    name: unit (shard ${{ matrix.shard }}/8)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    # 8 shards measured at ~8 min each on a 2-core runner (63 / 8) + ~4 min of
+    # setup; 45 leaves room for one slow shard without turning a slow case into
+    # a job kill that reads like a product failure.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # FULL history, not depth 1. Suites compare a file against an earlier
+          # revision to prove a change did not alter a value, and one of them
+          # (`test-knowledge-profile-noop`) SEARCHES history for the commit that
+          # introduced a spelling and then archives its parent — with a shallow
+          # clone it picks the wrong commit and dies with "not a valid object
+          # name", a red that says nothing about the code. The repo's whole
+          # history is ~48 MB / 3.5k commits, so a full clone costs seconds on a
+          # public repo, and it makes a shard behave exactly like a dev machine.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Install dependencies (skip resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      # web's dependencies are NOT optional for the unit suite: several store
+      # suites import zustand (a root dep) whose ESM entry pulls `react` from
+      # web/node_modules. The first sharded run proved it — shards died with
+      # `Cannot find package 'react' imported from
+      # node_modules/zustand/esm/react.mjs` because the old single job ran unit
+      # AFTER this step and the split dropped it. Every preparation the old job
+      # had before unit must be replicated here, or the shard result is not
+      # comparable to it.
+      - name: Install web dependencies
+        run: npm run web:install
+
+      # One unit file needs the app's OWN expo-router: it asserts the RESOLVED
+      # route tree (not files on disk — see scripts/test-app-zhiyu-routes.mjs),
+      # so it calls `getRoutes()` from app/node_modules. `--ignore-scripts`
+      # because nothing here builds a native project.
+      - name: Install app dependencies
+        run: npm --prefix app ci --ignore-scripts
+
+      # Same preparation the old in-job unit step had: the matrix tree is
+      # INSTALLED but not linked into the shared home, so dsh-dependent suites
+      # skip exactly as they did before. Keeping the two in step is what makes
+      # a shard's result comparable to the old single-job result.
+      - name: Install dsh runtime + platform profile from the matrix
+        run: |
+          mkdir -p "$HOME/.dsh-matrix"
+          cp dsh-matrix/package.json dsh-matrix/package-lock.json "$HOME/.dsh-matrix/"
+          [ -f dsh-matrix/.npmrc ] && cp dsh-matrix/.npmrc "$HOME/.dsh-matrix/" || true
+          cp -r dsh-matrix/samples "$HOME/.dsh-matrix/samples"
+          # `cd`, not `--prefix` (measured 2026-11-15 on npm 11.20.0). The
+          # trigger is the ABSOLUTE path, not the directory: the same tree gives
+          #   --prefix dsh-matrix                → rc=0, added 539 packages
+          #   --prefix paas-pack/dsh-matrix      → rc=0 (relative, outside cwd)
+          #   --prefix /tmp/.../dsh-matrix       → rc=1 `Missing: dsh-matrix@0.0.0
+          #                                        from lock file`
+          # and `--prefix "$HOME/.dsh-matrix"` (absolute) is the shape this step
+          # used to have. Everything else in this repo that uses --prefix (web,
+          # app, facet/web) passes a RELATIVE path and is unaffected. A runner's
+          # npm floats, so the version that introduced this turns the step red
+          # for a reason that reads like a corrupt lock file.
+          (cd "$HOME/.dsh-matrix" && NODE_OPTIONS=--max-old-space-size=8192 npm ci)
+          mkdir -p "$HOME/.dsh/profiles/platform"
+          cp dsh-profile-template/package.json \
+             dsh-profile-template/pnpm-workspace.yaml \
+             dsh-profile-template/cordis.yml \
+             dsh-profile-template/cordis.patch.yml \
+             "$HOME/.dsh/profiles/platform/"
+
+      # The manifest is written BEFORE the tests run, so a shard that fails (or
+      # times out) still proves which files it owned — a missing manifest means
+      # the shard never started, not that its files vanished.
+      #
+      # The filename MUST carry the shard number: the coverage job downloads
+      # every artifact with `merge-multiple`, and eight files all called
+      # `shard.json` merge into one (first run did exactly that — the gate then
+      # reported "shard indexes are 7 but 8 shards were declared", which was
+      # true: seven manifests had been overwritten).
+      - name: Unit shard ${{ matrix.shard }}/8
+        run: node scripts/unit-shard.mjs --run --shard ${{ matrix.shard }}/8 --manifest "$RUNNER_TEMP/shard-${{ matrix.shard }}.json"
+
+      # Storage-full is not a test result. Measured 2026-11-14 on the private
+      # mirror: all eight shards ran the suite and passed, then failed HERE with
+      # `Failed to CreateArtifact: Artifact storage quota has been hit` — the
+      # account held ~2.5 GB of artifacts against the free plan's 500 MB (not the
+      # ~575 MB this comment used to say), and 1.7 GB of that was one repo
+      # uploading the same five connector builds 86 times over four days; the
+      # enforced quota number recalculates every 6-12 hours, so even after the
+      # cleanup, uploads stay blocked until GitHub catches up. Reporting that as
+      # "the unit suite is red" misattributes an infrastructure limit to the
+      # code, the same mistake as reading a skipped gate as a pass. The coverage
+      # job below turns a missing manifest into its own named failure instead.
+      #
+      # retention-days: 1, not 3 — these manifests are consumed by unit-coverage
+      # minutes after upload. Every retained day is storage against the cap that
+      # once made ALL uploads on the account fail (2026-11-15, measured).
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: unit-shard-${{ matrix.shard }}
+          path: ${{ runner.temp }}/shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # The completeness gate. A partition that quietly drops a file turns "the
+  # suite is green" into a lie with no symptom: nothing errors, fewer tests
+  # just run. This job compares the shards against the suite's own file list.
+  unit-coverage:
+    name: unit (shards cover the whole suite)
+    needs: unit
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unit-shard-*
+          merge-multiple: true
+          path: shards
+
+      # No `npm ci`: the check uses node builtins only, so it cannot be
+      # blocked by an install step that already succeeded eight times.
+      #
+      # Two causes, two messages. A manifest that says the wrong thing is a real
+      # defect and stays red. A manifest that never arrived is the artifact store
+      # being full: the run cannot verify per-shard OWNERSHIP, so it says so with
+      # a warning annotation — but it still verifies the property this gate
+      # exists for (no suite file silently assigned to no shard), from the same
+      # matrix literal the shards above use, and passes. Red here used to mean
+      # "eight green shards plus a full disk", which is not a fact about the code.
+      - name: Every suite file ran on exactly one shard
+        run: |
+          if ls shards/*.json >/dev/null 2>&1; then
+            node scripts/unit-shard.mjs --check-artifacts shards
+          else
+            echo "::warning::分片清单没有到达这一环（账户 artifact 存储满时 upload-artifact 会失败；2026-11-14 实测约 575 MB / 免费版 500 MB，占用最多的是 fd-wire 与 fd-wire-images）。改用不依赖产物的判据：划分本身必须是严格划分。"
+            node scripts/unit-shard.mjs --check-split 8
+          fi
+
+  gates:
+    name: lint → contracts → typecheck → locales → build
+    runs-on: ubuntu-latest
+    # 2026-11-15 (shard-the-e2e-lane): the fast e2e lane moved to the `e2e`
+    # matrix below — it was 1731 s of this job's 1906 s (91%), and sharding by
+    # FILE LIST across runners is the only parallelism this suite admits (the
+    # server hosts ONE shared agent session, so `workers: 1` is load-bearing).
+    # What is left here measured ~175 s (run 43637301859 step timings): lint 7,
+    # contracts ~5, typecheck 17, locales 0, web build 14, plus ~2 min of
+    # checkout/npm ci. 30 minutes is headroom for a cold npm cache.
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      # npm 11 (bundled with Node 25) is required by the lockfile format;
+      # see release.yml and Dockerfile for the same pin.
+      - name: Install dependencies (skip resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      - name: Lint (Biome)
+        run: npm run lint
+
+      # release-line-hygiene: the same judgement the local pre-push hook makes,
+      # over the pushed range. It exists because a pusher without the hook (or
+      # with SKIP_LINT_HOOK=1) would otherwise ship lint-red code and block the
+      # IMAGE build — where the submit already left the machine and someone else
+      # has to clear it. Scoped to the changed files so pre-existing debt in
+      # untouched files never turns this red.
+      - name: Lint (pushed range)
+        if: github.event_name == 'push'
+        run: node scripts/lint-changed.mjs --range "${{ github.event.before }}..${{ github.sha }}"
+
+      - name: dsh adapter boundary (ADR-0023)
+        run: node scripts/lint-dsh-adapter.mjs
+
+      # publish-surface-hygiene: the open-source snapshot is what goes to the public
+      # docs repo and what the release chain builds the image from. Its forbidden-pattern
+      # scan is the only thing between an internal name and a public commit, yet nothing
+      # in CI ran it — only a human at release time. That is exactly how
+      # docs/deploy-record-personal-agent-2026-11-10.md (internal registry, gitops repo,
+      # production pod name) broke the build on 2026-11-10 without anyone noticing: the
+      # whole release path was dead until someone tried to cut an image. ~6s, no deps.
+      #
+      # The `if` is load-bearing, not defensive: the built snapshot deliberately does not
+      # contain this script (`scripts/make-public-snapshot.mjs` is in EXCLUDE_PATHS), so in
+      # the mirror repo where CI also runs the file is absent and this step must no-op
+      # instead of failing on a missing module. gitleaks is skipped here — it is not on the
+      # runner, and the secret scan already runs as part of a real release.
+      # spec-constant agreement: a number that binds behaviour must live in BOTH
+      # the spec (the contract people read) and the code (what runs). On
+      # 2026-11-11 the wrap-up salvage budget had drifted — spec said 90 seconds,
+      # code ran 240 — for a full day, silently: the code change was deliberate
+      # and recorded in the ledger, but the spec never followed, so anyone writing
+      # an acceptance check from the contract would be 2.7x off. ~50ms, no deps,
+      # and the files it reads all ship in the public snapshot (verified by
+      # running it inside a built snapshot), so it gates the mirror repo too.
+      - name: Spec ↔ code constants
+        run: node scripts/check-spec-constants.mjs
+
+      # Catches "caller kept the import, export went away" — the 2026-11-24
+      # failure where every image failed to boot while the files looked fine.
+      # Runs here (first, fast) instead of waiting for the shard that loads it.
+      #
+      # NOTE: this was pasted into the step above as a SECOND `run:` key, which
+      # is invalid YAML — GitHub parsed nothing and failed the whole workflow
+      # with zero jobs (run 45338131647, 2026-11-24). A step has exactly one
+      # `run:`; a second command is a second step.
+      - name: Named imports resolve
+        run: node scripts/check-named-imports.mjs
+
+      # 提交树完整性：镜像由 `git archive` 出，工作树里有、提交里没有的模块
+      # 在容器启动时是 ERR_MODULE_NOT_FOUND（2026-11-28 image 46037755619:
+      # lib/team-structure.js 被已提交的 fleet-ops-manager 引用却从未 git add）。
+      - name: Committed tree completeness
+        run: node scripts/check-committed-tree.mjs
+
+      # facets 的可选数组字段（lines/domains）读成必填 = 一个残缺响应白屏整个目录
+      # （2026-11-25：unlinedCount 的 effect 直接 facets.lines.reduce，三条 e2e 因
+      # mock 缺该字段整页崩）。规则窄、无依赖、读仓即判。
+      - name: Facets array fields are guarded
+        run: node scripts/check-facets-guards.mjs
+
+      # Three envelopes, one source (add-pack-bundle-projection 3.3): the bakery
+      # list, the .yizpack files, and the dsh bundle trees are all regenerated
+      # from packs/projections.json. A manifest edited without re-projecting is
+      # exactly the "change one, remember three" drift this gate exists to stop,
+      # and it is cheap (~100ms) because it reads only the repo.
+      - name: Pack projection drift (--check)
+        run: node scripts/project-pack-bundles.mjs --check
+
+      # Ledger is generated from the catalogue (add-curation-evidence-gate 4.2).
+      # The gate owns a MARKED BLOCK only: hand-editing that table fails, while
+      # the human prose around it (first-batch rationale, exclusions) is never
+      # regenerated and never checked.
+      - name: Curation ledger drift (--check)
+        run: node scripts/gen-curation-ledger.mjs --check
+
+      # The same rejection point CI-side (add-curation-evidence-gate 3.2): a
+      # supplied catalogue entry with missing or expired evidence fails here
+      # rather than only at image build. No catalogue in the tree ⇒ exit 0.
+      - name: Curation evidence (blocking)
+        run: node scripts/check-curation-evidence.mjs
+
+      - name: Publish surface (snapshot gate)
+        if: hashFiles('scripts/make-public-snapshot.mjs') != ''
+        env:
+          # Two switches, two different guards, names one letter apart — so this
+          # list is load-bearing:
+          #   LINE_CHECK    → check-release-lines.mjs   (are the release lines whole?)
+          #   LINEAGE_CHECK → check-snapshot-base-lineage.mjs (is the deployed baseline
+          #                   contained in this tree?) A runner has no kubeconfig, so that
+          #                   guard cannot judge here: it reads the base from the running
+          #                   pod and exits 2 on "判不出" (refusal by design).
+          # 2026-11-15: this step set ONLY LINE_CHECK — it believed it was skipping the
+          # lineage guard and was not. Every run of the day therefore died at 55 s on
+          # "✗ 谱系判不出，切片被拒" and lint/typecheck/locales/build never ran at all.
+          # A switch nobody honours still looks like a switch.
+          # The step only builds a throwaway tree under dist-opensource/ci-check for the
+          # forbidden-pattern scan — nothing is pushed, so the lineage question is not
+          # being asked here. Real cuts keep the guard (no switch, no skip).
+          SNAPSHOT_SKIP_LINE_CHECK: "1"
+          SNAPSHOT_SKIP_LINEAGE_CHECK: "1"
+        run: node scripts/make-public-snapshot.mjs --ref HEAD --out dist-opensource/ci-check --skip-gitleaks
+
+      # Must precede typecheck/build: web's tsc (TS 5.7) resolves from
+      # web/node_modules — without this, npm falls back to the root
+      # typescript@7 devDep, which rejects web/tsconfig.json (baseUrl removed).
+      - name: Install web dependencies
+        run: npm run web:install
+
+      # The facet shell smoke e2e (e2e/facet-shell-server.mjs) builds the
+      # thin SPA from src — same as the Dockerfile — so its deps must be
+      # present before the fast e2e project boots its webServer chain.
+      - name: Install facet/web dependencies
+        run: npm --prefix facet/web install --ignore-scripts
+
+      - name: Typecheck (web)
+        run: npm run typecheck
+
+      # Color/primitive discipline, changed-set mode: a file touched by this
+      # push may not carry MORE literal-color debt than its baseline entry.
+      # This used to run nowhere — the script existed and the spec claimed it
+      # was in the unit chain, but no workflow, hook, or npm script called it,
+      # so 144 Tailwind palette shades accumulated unopposed. Full-tree mode
+      # stays in the unit chain as the backstop (unify-workbench-ui 6.2).
+      - name: Design discipline (changed set)
+        run: npm run design:lint:changed
+
+      # The dsh bootstrap that used to sit here moved to the `e2e` matrix: it
+      # exists only because the e2e server spawns the dsh runtime child
+      # (dsh-bridge.js COMMAND), and nothing else in this job touches it. Its
+      # generation rules are documented there — one `npm ci` from the frozen
+      # dsh-matrix lock, never a hand-pin (ADR-0007/0023).
+
+      # Unit lives in the `unit` matrix above (file-list shards + the
+      # `unit-coverage` completeness gate). It is deliberately NOT repeated
+      # here: two paths running the same suite would let one mask the other.
+
+      - name: Locale parity
+        run: npm run check:locales
+
+      # e2e serves web/dist via express.static; build with the e2e test seam
+      # (window.__chatStore) — release builds never set VITE_E2E_SEAM.
+      #
+      # The shards rebuild this in their own checkout (14 s each). Kept here as
+      # well so a broken build fails a job named "build" instead of four shards
+      # dying inside their boot chain; shipping dist as an artifact instead
+      # would add real bytes to an artifact store that is already over its cap.
+      - name: Build web (e2e seam)
+        run: npm run web:build:e2e
+
+      # First-paint payload (openspec: slim-i18n-payload). Reads the just-built
+      # dist and asserts only the active locale + `en` ride the entry chunk.
+      # Lives HERE because it needs a build product and this is the one job that
+      # has one; running it locally means running a build, which an 8 GB dev box
+      # cannot afford (unit lane stays build-free).
+      - name: i18n first-paint split
+        run: node scripts/check-i18n-split.mjs
+
+  # ── e2e fast lane, split by FILE LIST across runners ──────────────────────
+  #
+  # 2026-11-15 (shard-the-e2e-lane). Measured on run 43637301859: the lane was
+  # 1731 s of gates' 1906 s — 91% of the job, 750 tests over 148 spec files, one
+  # runner, `workers: 1`.
+  #
+  # Why sharding the FILE LIST is the only safe parallelism here (unlike unit,
+  # it is not enough to say "the cost is per-file work"): the e2e server hosts
+  # ONE shared agent session, so `workers: 1` + `fullyParallel: false` are
+  # load-bearing — two files must never run on the same server at once. But that
+  # constraint is about a PROCESS, not a machine: with `fullyParallel: false`,
+  # Playwright's `--shard` partitions the file list, so each shard keeps one file
+  # at a time in order, and each shard gets its own throwaway server and its own
+  # temp store dirs (the harness already provisions both). Verified locally on
+  # 2026-11-15: 4 shards → 34/29/35/39 files, zero overlap, union 137 = the
+  # lane's own `--list` enumeration.
+  #
+  # The flake budget moved to `e2e-budget` below and judges the AGGREGATE — a
+  # per-shard budget would let a shard absorb a regression the lane as a whole
+  # would have caught. Keep the reports JSON (not blob+merge-reports): the
+  # budget gate's native input is the JSON reporter shape, and blobs bundle
+  # retry traces into an artifact store already over its cap (~575 MB against
+  # the free plan's 500 MB, measured 2026-11-14).
+  e2e:
+    name: e2e (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    strategy:
+      # One shard's red must not cancel the others: the budget gate needs every
+      # shard's report to distinguish "this file regressed" from "the lane never
+      # finished".
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    # 1731/4 ≈ 433 s of tests + ~130 s of measured prep per shard; 45 minutes
+    # leaves room for one slow shard without turning it into a job kill.
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Install dependencies (skip resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      # e2e imports zustand's ESM entry through web node_modules in a couple of
+      # store specs; the web build below also needs web's tsc.
+      - name: Install web dependencies
+        run: npm run web:install
+
+      # The facet shell server (e2e/facet-shell-server.mjs) builds the thin SPA
+      # from src, so its deps must be present before the webServer chain boots.
+      - name: Install facet/web dependencies
+        run: npm --prefix facet/web install --ignore-scripts
+
+      # The e2e server spawns the dsh runtime child (dsh-bridge.js COMMAND), so
+      # the shared install has to exist before the suite boots. This replicates
+      # the IMAGE's recipe (Dockerfile) rather than the retired `dsh plugin add`
+      # + pnpm dance: one `npm ci` from the frozen dsh-matrix lock.
+      #
+      # Generation matters more than anything else here. The old bootstrap
+      # pinned dsh/dsh-base 0.1.1-rc.2 and sdk-jsonrpc-server 0.0.1-rc.5 while
+      # the repo, dsh-matrix and the image had all moved to 0.2.0-rc.2, so the
+      # composed profile was 0.1.1 plugins on a 0.2.0 harness: every plugin
+      # failed its peer range ("Plugin @deepseek-ai/dsh-llm@0.1.1-rc.2 is
+      # incompatible with dsh 0.2.0-rc.2"), got disabled, `tools`/`systemPrompt`
+      # never came up, /api/ready never answered, and the e2e suite could not
+      # run on CI at all (run 42457279018, 2026-11-08). The matrix lock is the
+      # single version truth (ADR-0007/0023) — never hand-pin here again.
+      - name: Install dsh runtime + platform profile from the matrix
+        run: |
+          mkdir -p "$HOME/.dsh-matrix"
+          cp dsh-matrix/package.json dsh-matrix/package-lock.json "$HOME/.dsh-matrix/"
+          # .npmrc may be absent in the lock tree; copy it only when present.
+          [ -f dsh-matrix/.npmrc ] && cp dsh-matrix/.npmrc "$HOME/.dsh-matrix/" || true
+          cp -r dsh-matrix/samples "$HOME/.dsh-matrix/samples"
+          # npm's resolver exhausts the default heap on this closure (Dockerfile
+          # needs the same bump). Default peer resolution, NO --legacy-peer-deps:
+          # under npm 11 the flag makes npm ci skip every lock entry marked
+          # "peer": true and the dsh rc.2 plugin closure vanishes.
+          #
+          # `cd`, not `--prefix`: an ABSOLUTE prefix breaks npm 11.20.0's lock
+          # lookup (see the unit job's note for the three-way measurement).
+          (cd "$HOME/.dsh-matrix" && NODE_OPTIONS=--max-old-space-size=8192 npm ci)
+          # The profile keeps only its scaffold files and borrows the tree —
+          # exactly the image's seedHome shape, so the hundreds-of-MB closure is
+          # never duplicated per home.
+          mkdir -p "$HOME/.dsh/profiles/platform"
+          cp dsh-profile-template/package.json \
+             dsh-profile-template/pnpm-workspace.yaml \
+             dsh-profile-template/cordis.yml \
+             dsh-profile-template/cordis.patch.yml \
+             "$HOME/.dsh/profiles/platform/"
+
+      # e2e serves web/dist via express.static; `npm run test:e2e` builds it with
+      # the e2e test seam (window.__chatStore) as its first step, so each shard
+      # is independent of gates' build.
+      - name: Install Playwright chromium
+        run: npx playwright install --with-deps chromium
+
+      # The matrix tree from the bootstrap becomes the shared home HERE (the
+      # unit matrix installs the same tree WITHOUT linking, so its dsh-dependent
+      # suites keep skipping). --dump-config composes the profile first: a broken
+      # composition then fails in seconds with a readable error instead of as a
+      # 3-minute Playwright timeout.
+      - name: Link the dsh matrix tree into the shared home
+        run: |
+          mkdir -p "$HOME/.dsh/profiles/platform"
+          ln -sfn "$HOME/.dsh-matrix/node_modules" "$HOME/.dsh/profiles/platform/node_modules"
+          ln -sfn "$HOME/.dsh-matrix/node_modules" "$HOME/.dsh/profiles/node_modules"
+          # Invoke the MATRIX tree's own CLI, not whatever is on PATH: the
+          # composing binary and the plugins must be one generation, and the
+          # matrix lock is that generation's single truth. (Removing the old
+          # global install is why `dsh` alone is no longer found — exit 127.)
+          DSH_BIN="$HOME/.dsh-matrix/node_modules/.bin/dsh"
+          echo "dsh: $("$DSH_BIN" --version)"
+          "$DSH_BIN" --profile platform --dump-config > /dev/null
+
+      - name: Probe dsh runtime usability
+        id: dsh
+        run: echo "usable=$(node --input-type=module -e "const { dshRuntimeAvailable } = await import('./scripts/lib/dsh-available.mjs'); process.stdout.write(String(dshRuntimeAvailable()))")" >> "$GITHUB_OUTPUT"
+
+      # continue-on-error is NOT advisory here — the `e2e-budget` job fails the
+      # run. It exists because this suite is load-sensitive rather than
+      # deterministic: measured 2026-11-13 over four full runs (two CI, two
+      # local), every run ended with 5-6 reds and no two runs agreed on which,
+      # and every one of them passes when its file runs alone. A binary gate on
+      # that produces a red nobody can act on; the budget gate judges the
+      # aggregate on two signals instead (unfamiliar file ⇒ fail at once, count
+      # ⇒ fail past the measured band). The JSON report is the only
+      # machine-readable record of what failed, and it is what the gate reads.
+      #
+      # The manifest filename MUST carry the shard number: the budget job
+      # downloads every artifact with `merge-multiple`, and four files all called
+      # `e2e-report.json` would merge into one (the unit lane's first run did
+      # exactly that and the completeness gate truthfully reported "7 indexes
+      # for 8 shards").
+      - name: E2E fast lane ${{ matrix.shard }}/4
+        id: e2e
+        if: steps.dsh.outputs.usable == 'true'
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: e2e-shard-${{ matrix.shard }}.json
+        run: npm run test:e2e -- --shard=${{ matrix.shard }}/4 --reporter=line,json
+
+      # 编制段一致性（team-derivation-and-export 2.5 / 7.2）。独立 config：
+      # fast lane 的 server 默认不开 PACK_MARKETPLACE（`intent-onboarding.spec.js`
+      # 甚至断言市场是 OFF 的），而这条 spec 需要市场面开着才能渲染包详情。
+      # 只在 shard 1 跑（13 s，相对 433 s/ shard 可忽略），避免四份重复起服务。
+      - name: E2E team roster (shard 1 only)
+        if: steps.dsh.outputs.usable == 'true' && matrix.shard == 1
+        continue-on-error: true
+        run: npx playwright test --config=playwright.market.config.js --reporter=line
+
+      # Report-before-test is deliberate: a shard that dies mid-lane still
+      # proves which shard produced what, and the budget gate turns a MISSING
+      # report into a named failure instead of an aggregate of what arrived.
+      # Storage-full is not a test result (measured 2026-11-14: all eight unit
+      # shards passed, then every upload failed with "Artifact storage quota has
+      # been hit"), so the upload is best-effort and the gate names the absence.
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.dsh.outputs.usable == 'true'
+        continue-on-error: true
+        with:
+          name: e2e-shard-${{ matrix.shard }}
+          path: ${{ github.workspace }}/e2e-shard-${{ matrix.shard }}.json
+          if-no-files-found: warn
+          retention-days: 1
+
+      # Quota-proof transport (run 43681090511, 2026-11-15): the artifact store
+      # was still refusing uploads after cleanup — "recalculated every 6-12 h"
+      # also left a window where ONE probe upload succeeded and the next four
+      # failed — so artifacts alone cannot carry the verdict. The report is a
+      # few hundred KB of JSON, well under a job-summary's size budget, so each
+      # shard ALSO prints it to STDOUT between sentinels (job log == logs API); the
+      # budget job re-materialises each file from its shard's summary page.
+      # Artifacts stay first choice (structured download, zero parsing); the
+      # summary copy is the fallback the gate can actually rely on.
+      - name: Mirror the shard report into the job log (quota-proof)
+        # run 43683686716 实证：$GITHUB_STEP_SUMMARY 只进 UI 的 summary 页，
+        # logs API 的 job log 里没有它 —— 恢复步骤按 log 找哨兵必落空。改成
+        # 直接把 JSON 打到 stdout：step 输出本身就是 job log，logs API 一定
+        # 有。每片 ~700KB 的日志开销可以接受；artifacts 仍是首选通道。
+        if: always() && steps.dsh.outputs.usable == 'true'
+        run: |
+          if [ -s e2e-shard-${{ matrix.shard }}.json ]; then
+            echo "<<<E2E-SHARD-${{ matrix.shard }}-BEGIN>>>"
+            cat e2e-shard-${{ matrix.shard }}.json
+            echo ""
+            echo "<<<END-E2E-SHARD-${{ matrix.shard }}-END>>>"
+          else
+            echo "<<<E2E-SHARD-${{ matrix.shard }}-BEGIN>>> MISSING <<<END-E2E-SHARD-${{ matrix.shard }}-END>>>"
+          fi
+
+      # The escape hatch is a FAILURE, not a notice. For months this branch was
+      # a silently-skipped step, so every "green" CI run above it certified a
+      # suite that never executed — the exact false green this job removed. The
+      # bootstrap composes the profile from dsh-matrix, so on CI the probe must
+      # be true; a `false` here means that step regressed and the gate would go
+      # quiet again. Loud beats green.
+      - name: E2E could not run (runtime unusable)
+        if: steps.dsh.outputs.usable != 'true'
+        run: |
+          echo "::error::E2E did not run: the shared dsh runtime is not usable on this runner (shard ${{ matrix.shard }}/4)."
+          echo "The bootstrap step composes the profile from dsh-matrix (healProfilesModuleFallback),"
+          echo "so 'usable=false' means that step regressed — not that this runner is special."
+          echo "See scripts/lib/dsh-available.mjs for the two paths the probe checks."
+          exit 1
+
+  # The lane's verdict, judged ONCE over all shards. Two completeness rules are
+  # part of the verdict, both failures rather than warnings (shard-the-e2e-lane):
+  #   1. every shard report must arrive (a shard that never reported means the
+  #      lane did not run to completion — boot failure, timeout, storage quota);
+  #   2. the union of spec files observed across shards must equal the lane's own
+  #      `--list` enumeration, in BOTH directions — enumerated here from the
+  #      config, never derived from the reports, or a truncated lane would define
+  #      its own truncated expectation.
+  e2e-budget:
+    name: e2e (all shards — flake budget + lane coverage)
+    needs: e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The log-fallback fetches job logs via the API; the repo's default
+    # workflow permissions are the restricted "read" (= contents:read only),
+    # and the job-logs endpoint 403s without `actions: read` (run
+    # 43684958536: all four fetches died "Resource not accessible by
+    # integration" while the jobs listing itself passed).
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+
+      # Only the reporting toolchain is needed here: the gate parses JSON and
+      # `--list` collects from the config without booting a server or a browser.
+      - name: Install dependencies (skip resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-shard-*
+          merge-multiple: true
+          path: shards
+
+      # Re-materialise any shard report that never made it into the artifact
+      # store (storage-full window, run 43681090511): each shard mirrors its
+      # JSON into its own job log between sentinels; the log of job
+      # `e2e (shard N/4)` is fetched via the API and the payload extracted.
+      # A MISSING sentinel is left in place — the gate below names it exactly
+      # like a missing report, so the completeness rule is unchanged.
+      - name: Recover shard reports from job logs (quota-proof fallback)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p shards
+          for i in 1 2 3 4; do
+            [ -s "shards/e2e-shard-$i.json" ] && continue
+            # `gh api --jq` runs over the RAW REST body where the field is
+            # `id` — `.databaseId` only exists in `gh run view`'s normalised
+            # output and resolves to nothing here (run 43686746382: all four
+            # lookups came back empty; run 43684958536 got the literal string
+            # "null" and fetched /jobs/null/logs → 403).
+            eid=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs?per_page=100" \
+              --jq ".jobs[] | select(.name == \"e2e (shard $i/4)\") | .id" | head -1)
+            if [ -z "$eid" ]; then
+              echo "::warning::no job named 'e2e (shard $i/4)' found for the summary fallback"
+              continue
+            fi
+            # Fetch with curl, not `gh api`: gh refuses to print a response that
+            # contains ANSI escapes ("the response contains terminal escape
+            # sequences; pass --allow-escape-sequences") and prints NOTHING
+            # with exit 1 — which reads exactly like "the log has no report"
+            # (run 43688118485: all four fetches empty, the flag in `gh api
+            # --help` on the runner being the only clue). curl has no such
+            # filter; `gh api` stays as a fallback for hosts without curl.
+            if ! curl -sSfL -o "summary-$i.txt" \
+                  -H "Authorization: Bearer $GH_TOKEN" \
+                  -H "Accept: application/vnd.github+json" \
+                  "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/jobs/$eid/logs" 2>/dev/null; then
+              gh api --allow-escape-sequences \
+                "repos/$GITHUB_REPOSITORY/actions/jobs/$eid/logs" > "summary-$i.txt" 2>/dev/null || true
+            fi
+            # "fetched but no sentinel" (mirror step broken) and "could not
+            # fetch at all" (token 403, transient) look identical downstream —
+            # name the fetch failure on its own so it isn't misread as the
+            # mirror being absent (run 43684958536 hid a permissions 403 here).
+            if [ ! -s "summary-$i.txt" ]; then
+              echo "::warning::shard $i job log could not be fetched (empty response — token permissions or transient API failure)"
+              continue
+            fi
+            # Logs API prefixes every line with "<UTC ts>Z ", and the step also
+            # echoes its own script (quoted sentinels) into the log — so both
+            # range markers are anchored to end-of-line after a space (matches
+            # real output only, never the echo: unanchored BEGIN started the
+            # range at the echoed command and `^`-anchored END never matched a
+            # timestamp-prefixed line), and the timestamp prefix is stripped
+            # before the JSON lands on disk. Verified against the real 660KB
+            # job log of run 43684958536: shard 1 → 165 expected / 25 skipped,
+            # gate reads it clean.
+            if grep -q " <<<E2E-SHARD-$i-BEGIN>>>$" "summary-$i.txt"; then
+              sed -n "/ <<<E2E-SHARD-$i-BEGIN>>>$/,/ <<<END-E2E-SHARD-$i-END>>>$/p" "summary-$i.txt" \
+                | sed '1d;$d' \
+                | sed -E 's/^[0-9-]+T[0-9:.]+Z //' > "shards/e2e-shard-$i.json"
+              echo "recovered e2e-shard-$i.json from the job log ($(wc -c < shards/e2e-shard-$i.json) bytes)"
+            else
+              echo "::warning::shard $i left no report in either channel (artifact + job log) — the gate will name it"
+            fi
+          done
+
+      - name: Lane enumeration (what the fast project collects)
+        # `--list` reads the config, applies the project's grepInvert/testIgnore
+        # and reports the file list WITHOUT running anything. Files whose tests
+        # are all @smoke/@live appear on neither side of the comparison, so the
+        # check stays symmetric without a hand-maintained exception list
+        # (measured locally 2026-11-15: 137 of 148 spec files, the 11 excluded
+        # being 7 smoke + 3 live + full-mode-tool-scope which has its own config).
+        run: npx playwright test --project=fast --list --reporter=json > lane-list.json
+
+      - name: Aggregate shard reports, judge the lane
+        run: node scripts/check-e2e-budget.mjs shards/*.json --lane lane-list.json
+
+
+  # dsh-contracts gate (add-dsh-contracts, ADR-0007): when a PR touches the
+  # dsh install matrix, the six upstream-behavior contracts run against the
+  # PR's own scratch npm-ci tree — a red contract fails the check. This job is
+  # deliberately INDEPENDENT of `gates` (needs: []): the repo carries an
+  # outstanding lint backlog (header note above), and a matrix PR's contracts
+  # verdict must not inherit unrelated debt. Both jobs must pass for the PR.
+  dsh-contracts:
+    name: dsh contracts (matrix scratch tree)
+    runs-on: ubuntu-latest
+    needs: []
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The path filter diffs the PR head against its base sha.
+          fetch-depth: 0
+
+      - name: Did this PR touch dsh-matrix?
+        id: matrix
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            if git diff --name-only "$BASE"...HEAD -- dsh-matrix/ | grep -q .; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              echo "no dsh-matrix/ changes — skipping the contracts job"
+            fi
+          else
+            # workflow_dispatch is an explicit ask: always run.
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.matrix.outputs.changed == 'true'
+        with:
+          node-version: 25
+          cache: npm
+
+      - name: Install runner deps
+        if: steps.matrix.outputs.changed == 'true'
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      # The scratch npm ci (~450 packages) is the slow leg; cache it keyed on
+      # the matrix lock. MUST come after `npm ci` above — that step removes
+      # node_modules wholesale and would delete a restored cache with it. The
+      # runner re-verifies a restored tree against the lock (dsh-matrix-verify)
+      # before trusting it, so a partial save self-heals into a rebuild
+      # instead of failing contracts.
+      - name: Cache scratch tree
+        if: steps.matrix.outputs.changed == 'true'
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/dsh-contracts-tree
+          key: dsh-contracts-tree-${{ hashFiles('dsh-matrix/package-lock.json') }}
+
+      - name: Run dsh contracts
+        if: steps.matrix.outputs.changed == 'true'
+        # contracts_fresh=true (branch-only input) skips the cached branch and
+        # rebuilds the scratch tree — exercising the npm ci line itself.
+        run: node scripts/dsh-contracts.mjs ${{ inputs.contracts_fresh == true && '--fresh' || '' }}

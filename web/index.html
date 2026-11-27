@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Platform</title>
+    <meta property="og:image" content="https://platform.finddatatech.cloud/og.png">
+    <!-- 默认图标=寻数壹座品牌标（web/public 静态 asset）；服务端下发
+        brandIconUrl 时 main.tsx 的运行时注入会覆盖掉这一行，二者不冲突。-->
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <!--
+      Applies an explicit theme before first paint. Must stay inline and stay
+      here: a deferred module would run after the first frame, which is exactly
+      the flash this prevents. No stored value = no attribute = the stylesheet's
+      `color-scheme: light dark` follows the OS, so the system case needs no JS
+      and cannot flash.
+    -->
+    <script>
+      try {
+        var t = localStorage.getItem("platform-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) {
+        /* private mode / storage disabled — fall through to the OS preference */
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- 萬星跨线副驾（adopt-wanxing-copilot-in-paas）：一行 loader，本站不写 postMessage 协议。
+         绑定与来源白名单在萬星侧（line=yizuo → 壹座专家）。
+         不实现 identify()：本站身份是 forward_auth（代理头注入，浏览器无 ID token），
+         与萬星 identify 契约不兼容；副驾的身份升级走萬星自己的 popup 登录，见 design D4。
+         context() 递本站路径与 board line，由 main.tsx 注入（需要读 router 状态）。
+         data-open="0"：显式声明首屏收起（loader 自 2026-11-22 起缺省即收起，写不写都不展开；
+         留着它是为了让本页意图一眼可读）。收起态只有一个 48px 圆钮，用户点了才展开
+         （scope-copilot-dock-to-line-surfaces）。
+
+         ⚠️ 访客车道（/zhiyu/join/*、/zhiyu/embed/*）不发这一段：它们是同一个
+         index.html 由 SPA 路由推出的，访客没有壹座账号，也不该在分享链接上看到
+         产品线入口。守卫在 gateway/zhiyu/index.js 的 guestShellHtml()——标签是
+         静态的，读不到 router 状态，所以不能在这里加条件。 -->
+    <script src="https://wanxing.finddatatech.cloud/copilot.js" data-line="yizuo" data-open="0" defer></script>
+  </body>
+</html>

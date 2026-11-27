@@ -1,0 +1,145 @@
+{
+ "schema": "erp-vertical-connector-pack/v1",
+ "name": "餐饮连锁对账连接器包",
+ "version": "1.1.0",
+ "description": "餐饮连锁对账模板·连接器 pack：POS BYOK 适配器框架（框架一个、厂商逐个插拔；首个适配厂商由首单客户的实际厂商决定，不预设名单；未适配厂商如实报出 + 导出文件替代通道）+ 收款渠道商户侧适配（微信支付/支付宝/美团商户侧 API 结算流水拉取，可用面以实测为准，未实测不宣称 live）+ 外卖结算读取（美团等，实测后写入适配器范围）。凭证逐店授权 BYOK 环境变量注入零落库。只读滩头：对渠道/平台侧零写入；无资金执行面（二清红线）。",
+ "tags": [
+  "ERP",
+  "餐饮连锁",
+  "对账",
+  "POS",
+  "BYOK"
+ ],
+ "visibility": "public",
+ "category": "facet",
+ "connectors": {
+  "pos_framework": {
+   "model": "framework-one-vendor-pluggable",
+   "production_vendors": [],
+   "registered": [
+    "synthetic（测试）",
+    "export-file（导出文件替代通道）"
+   ],
+   "per_store_authorization": "ERP_BYOK_POS_<厂商>_<店> 环境变量，逐店开通",
+   "fallback": "未适配厂商：商户后台导出 CSV → 导出文件通道（不以人工补录冒充自动接入）",
+   "writes_external": false
+  },
+  "payment_channels": {
+   "framework_channels": [
+    "wechat-pay",
+    "alipay",
+    "meituan",
+    "synthetic"
+   ],
+   "live_surfaces": {},
+   "note": "框架就绪；live 面须实测证据后声明（design D7：spec 只约束行为不预设接口）",
+   "credential_env": "ERP_BYOK_PAY_<渠道>",
+   "writes_external": false
+  }
+ },
+ "connector_bindings": [
+  {
+   "key": "pos-sales",
+   "external_system": "门店 POS（厂商按客户插拔）",
+   "surface": "销售流水/订单明细只读（日结对账口径）",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_POS_<厂商>_<店>（逐店授权，凭证不出库）",
+   "note": "适配器框架一个、厂商逐个插拔；客户在连接器卡片选定自己实际在用的 POS。未适配厂商走导出文件替代通道，不以人工补录冒充自动接入。",
+   "provider": "pos",
+   "providerRole": true,
+   "allowOperations": [
+    "read"
+   ],
+   "optional": true
+  },
+  {
+   "key": "payments-merchant",
+   "external_system": "收款渠道（微信支付/支付宝/美团，商户侧）",
+   "surface": "商户侧结算流水 + 手续费明细只读",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_PAY_<渠道>",
+   "note": "可用面以实测为准，未实测不宣称 live；平台零资金执行面（二清红线）。",
+   "provider": "wechatpay",
+   "allowOperations": [
+    "read"
+   ],
+   "alternativeProviders": [
+    "alipay",
+    "meituan"
+   ],
+   "optional": true
+  },
+  {
+   "key": "delivery-settlement",
+   "external_system": "外卖平台结算（美团等）",
+   "surface": "外卖订单结算单/佣金明细只读",
+   "direction": "read-only",
+   "credential": "BYOK：ERP_BYOK_PAY_<平台>",
+   "note": "与收款渠道是两个面（外卖结算单 ≠ 支付流水），分别对账；实测后写入适配器范围。",
+   "provider": "meituan",
+   "allowOperations": [
+    "read"
+   ],
+   "optional": true
+  }
+ ],
+ "skills": [
+  {
+   "name": "erp-restaurant-recon-discipline",
+   "description": "餐饮连锁对账纪律卡：门店三方对账、日结三段、未适配厂商如实报出、导出文件替代通道、渠道侧零写入、资金红线。",
+   "content": "---\nname: erp-restaurant-recon-discipline\ndescription: 餐饮连锁对账纪律卡：门店 POS-收款-外卖三方逐店对账、日结三段（流水/收款/差异）、未适配厂商如实报出+导出文件通道、渠道侧零写入、资金执行面禁止（二清红线）。\n---\n\n# 餐饮连锁对账纪律卡\n\n本卡是餐饮连锁对账模板岗位（日结巡检/核对/拍板）的纪律底座。\n\n## 一、门店三方对账\n- 以门店为单位：POS 日流水、收款渠道结算流（微信支付/支付宝/美团）、外卖平台结算流三方对齐；多门店逐店出账，互不混账。\n- 差异四类（缺失/多余/金额不符/状态不符）每条含双侧原始引用；渠道侧零写入。\n- 佣金差异按平台费率出处解释；费率无出处如实 unexplained。\n\n## 二、日结三段（design D5 滩头）\n- 每日出门店营业日报三段：流水（POS 逐笔与渠道归类）/ 收款（各渠道结算总额与手续费）/ 差异（四类清单）。\n- 日结是每日刚需：对账结果为分成核对与经营决策积累数据。\n\n## 三、POS 接入守界\n- POS 厂商无合格开源 MCP server：适配器自建 BYOK 框架，厂商逐个上线（首单客户驱动，不预设名单）。\n- 未适配厂商如实报出 + 替代路径（商户后台导出 CSV → 导出文件通道）；MUST NOT 用人工补录冒充已适配厂商的自动接入。\n- 授权逐店开通（ERP_BYOK_POS_<厂商>_<店>），凭证零落库零日志。\n\n## 四、资金红线（二清）\n- 模板只产出对账结果、分成对账单与核对指令数据；资金归集/代收代付/分账执行一律不存在（模板无任何资金执行工具面）。\n- 分账指令输出为对接客户自选持牌通道的核对数据；资金划转由品牌方经持牌通道执行，平台不经手资金。\n\n## 五、主数据守则\n- 门店/POS 终端/收款商户号/外卖店铺建档与变更经确认车道并留痕；门店开停业生命周期与加盟/直营标注必填。\n- 对账按门店维度独立出账；停业门店不参与日结。\n\n## 六、回写车道\n- 核对结论回写只走内核 proposal 车道（pending 待确认）；确认门只在拍板席位；回写科目限白名单（应收/在途/收入/费用），资金类分录禁入机器车道。",
+   "en": "Restaurant chain recon discipline: per-store three-way reconciliation, daily close three sections, honest unsupported-vendor answers with export-file fallback, zero writes to channels, fund-execution ban (second-clearing red line), writeback only via kernel proposal lane.",
+   "ja": "飲食チェーン対照規律：店別三方式照合、日次締め三セクション、未対応ベンダーは正直回答＋エクスポート代替、チャネル書込ゼロ、資金実行禁止（二清赤線）、書戻しは kernel proposal レーンのみ。",
+   "es": "Disciplina de conciliación para cadenas de restaurantes: reconciliación de tres vías por tienda, cierre diario en tres secciones, respuesta honesta para proveedores no adaptados con alternativa de archivo exportado, cero escrituras en canales, prohibición de ejecución de fondos (línea roja), reescritura solo por el carril de propuestas del kernel.",
+   "fr": "Discipline de réconciliation pour chaînes de restaurants : réconciliation à trois volets par magasin, clôture quotidienne en trois sections, réponse honnête pour les fournisseurs non adaptés avec alternative d'export, zéro écriture sur les canaux, interdiction d'exécution de fonds (ligne rouge), réécriture uniquement via le canal de propositions du noyau."
+  }
+ ],
+ "mcpServers": [
+  {
+   "registryName": "fd-erp-ledger-mcp",
+   "allowTools": [
+    "run_reconciliation",
+    "get_recon_report",
+    "query_balance",
+    "query_entries",
+    "list_proposals",
+    "submit_proposal"
+   ]
+  }
+ ],
+ "fleet": {
+  "name": "餐饮连锁对账连接器包（供给包）",
+  "members": [
+   {
+    "ref": "rest-recon-operator",
+    "title": "对账产出位",
+    "parentRef": null,
+    "target": {
+     "kind": "pack-preset",
+     "packId": "Mo3_aWe7tF2eFVzkqFT9mA",
+     "presetId": "erp-ledger-board-post"
+    },
+    "kpiSlots": [
+     {
+      "key": "stores_closed",
+      "label": "已日结门店"
+     },
+     {
+      "key": "diffs_found",
+      "label": "差异条目"
+     }
+    ]
+   }
+  ],
+  "orchestration": {
+   "mode": "supervisor",
+   "edges": []
+  }
+ },
+ "_casting": {
+  "packDependencies": {
+   "fleet-board-contribution": "Mo3_aWe7tF2eFVzkqFT9mA"
+  },
+  "note": "pack v2 形状免自指。首个 POS 厂商适配器待首单客户确定（挂账，客户驱动）；渠道 live 面实测后声明。publish-ready：上架挂账。"
+ }
+}

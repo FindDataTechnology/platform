@@ -1,0 +1,52 @@
+feat: Add Agent Cluster Platform implementation
+
+## Summary
+Complete implementation of the Agent Cluster Platform feature, enabling users to:
+- Define packs as agent clusters with metadata
+- Create dynamic clusters from multiple packs at runtime
+- Schedule tasks that run across agent groups
+- Manage cluster lifecycle through API and UI
+
+## Changes
+
+### Backend
+- `server/routes/clusters.js`: REST API endpoints (7 endpoints)
+- `server/routes/clusters-db.js`: SQLite database persistence layer
+- `server/cron-mcp.js`: Extended scheduling tools with cluster support
+- `server.js`: Route registration for cluster APIs
+
+### Frontend
+- `web/src/components/clusters/ClusterComposerModal.tsx`: New component
+- `web/src/pages/AgentsPage.tsx`: Added cluster listing
+- `web/src/lib/packs-api.ts`: Added cluster API functions
+- `web/src/locales/*/common.json`: i18n translations (EN + ZH)
+
+### Core
+- `lib/pack-manifest.js`: Cluster metadata validation
+- `catalog.js`: Added cluster fields to catalog responses
+
+### Testing & Docs
+- `scripts/test-cluster-platform.mjs`: Unit test suite (8 tests)
+- `docs/`: 6 documentation files created
+- `AGENT_CLUSTER_README.md`: Project README
+- `CHANGELOG.md`: Version history
+- `DELIVERY_CHECKLIST.md`: Delivery verification
+
+## Validation
+- ✅ All 8 unit tests passing
+- ✅ OpenSpec validation passed (8/8)
+- ✅ No syntax errors
+- ✅ Backward compatible
+
+## Migration Notes
+- Existing packs without cluster metadata continue to work unchanged
+- Database file automatically created at `<data-dir>/clusters.db`
+- No breaking changes to existing APIs
+
+## Related Specs
+- openspec/specs/agent-cluster-core/spec.md
+- openspec/specs/marketplace-cluster-view/spec.md
+- openspec/specs/dynamic-cluster-composer/spec.md
+- openspec/specs/scheduling-cluster-aware/spec.md
+
+Closes: AGENT-CLUSTER-PLATFORM

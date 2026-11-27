@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "updated": "2026-11-19",
+  "note": "线索属性的唯一权威数据（openspec: close-marketing-funnel / marketing-lead-capture）。任何面要写或读线索属性，都从这份取键名与取值约束，不另写平行清单；改这里 = 改契约，必须同时跑 check_lead_attributes.py。",
+  "carrier": {
+    "kind": "chatwoot-contact",
+    "note": "线索的载体是收件箱 contact，不新建线索表。属性写入走 Chatwoot 的自定义属性；阶段变化体现为属性或会话事实，不另起状态机。"
+  },
+  "attributes": {
+    "source": {
+      "label_zh": "来源",
+      "label_en": "source",
+      "type": "enum",
+      "required": true,
+      "values": ["site-mkt", "site-official", "social", "referral", "manual"],
+      "first_touch_only": false,
+      "note": "来源由挂载的独立 inbox channel 承担；本属性是冗余留痕，用于跨 inbox 聚合。未识别的面一律写 manual，不猜。"
+    },
+    "stage": {
+      "label_zh": "阶段",
+      "label_en": "stage",
+      "type": "enum",
+      "required": true,
+      "values": ["new", "contacted", "qualified", "converted", "lost"],
+      "first_touch_only": false,
+      "note": "阶段只由人推进；系统 MUST NOT 依据点击、访问或信号自动推进。"
+    },
+    "name": {
+      "label_zh": "称呼",
+      "label_en": "name",
+      "type": "string",
+      "required": true,
+      "first_touch_only": false,
+      "note": "访客自填。必填是在表单侧约束（未填不提交），服务端不做推断补全。"
+    },
+    "company": {
+      "label_zh": "公司 / 机构",
+      "label_en": "company",
+      "type": "string",
+      "required": false,
+      "first_touch_only": false,
+      "note": "访客自填。未填即空串——MUST NOT 依据邮箱域名或 IP 推断公司名。"
+    },
+    "scenario": {
+      "label_zh": "想解决什么",
+      "label_en": "scenario",
+      "type": "string",
+      "required": false,
+      "first_touch_only": false,
+      "note": "自由文本，暂不收敛为枚举（design 开放问题：等 30 条真实数据后再议）。"
+    },
+    "first_touch_content_id": {
+      "label_zh": "首触内容",
+      "label_en": "first touch content",
+      "type": "string",
+      "required": false,
+      "first_touch_only": true,
+      "note": "首触口径，非末触：一经写入不被后续访问覆盖。当前取值为承接面路径，日后可改为内容标识。"
+    },
+    "first_touch_at": {
+      "label_zh": "首触时间",
+      "label_en": "first touch at",
+      "type": "string",
+      "required": false,
+      "first_touch_only": true,
+      "note": "ISO 8601。与 first_touch_content_id 同生命周期：只在首次写入。"
+    },
+    "signal": {
+      "label_zh": "信号",
+      "label_en": "signal",
+      "type": "string",
+      "required": false,
+      "first_touch_only": false,
+      "format": "类型|日期|来源",
+      "note": "由 arm-marketing-signal-scout 写入；本 change 只登记键位，不产生值。只陈述可查事实，不加推断性评价。"
+    }
+  },
+  "first_touch_rules": {
+    "note": "first_touch_only=true 的属性一经写入不得覆盖；写入方必须先读现值，非空即跳过。",
+    "enforced_by": "写入侧（paas 埋点端点 + 前端提交）"
+  }
+}

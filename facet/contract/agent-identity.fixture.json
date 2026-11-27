@@ -1,0 +1,67 @@
+{
+  "x-contract-rev": "1",
+  "description": "The public agent identity rule, as a cross-repo fixture. Every implementation (wanxing facade/observer, paas runner/spine/web) runs this file. These are MEASURED values from the current implementation, not a specification of what it ought to be — a fixture that disagrees with reality would just make everyone edit code to match a wish. Change the fixture only by changing all implementations in the same breath.",
+  "rule": "String(p || '').replace(/^\\/+/, '').replace(/[^A-Za-z0-9._-]+/g, '-').toLowerCase()",
+  "cases": [
+    {
+      "input": "/packs/Law_Bench/assistant",
+      "expect": "packs-law_bench-assistant",
+      "note": "The canonical shape: leading slash stripped, upper case lowered, underscore preserved (it is an allowed character)."
+    },
+    {
+      "input": "Packs/Law Bench/x",
+      "expect": "packs-law-bench-x",
+      "note": "A space is a disallowed run of length 1 → one hyphen."
+    },
+    {
+      "input": "a//b",
+      "expect": "a-b",
+      "note": "A RUN of disallowed characters collapses to ONE hyphen (the regex quantifier is greedy). Anyone 'tidying up' duplicate hyphens here breaks the contract in the opposite direction."
+    },
+    {
+      "input": "a - b",
+      "expect": "a---b",
+      "note": "The other half of the same rule: a hyphen is an ALLOWED character, so it survives between two collapsed runs and accumulates. Fixture siblings `a//b` and `a - b` together pin the whole semantics; testing only one loses half of it."
+    },
+    {
+      "input": "中文/包",
+      "expect": "-",
+      "note": "The whole string is one disallowed run (non-ASCII is not allowed) → a single hyphen."
+    },
+    {
+      "input": "a中b",
+      "expect": "a-b",
+      "note": "Non-ASCII between ASCII collapses to one hyphen."
+    },
+    {
+      "input": "  a  ",
+      "expect": "-a-",
+      "note": "Leading/trailing whitespace becomes a hyphen — only LEADING SLASHES are stripped, not other whitespace. Easy to 'fix' by accident."
+    },
+    {
+      "input": "",
+      "expect": "",
+      "note": "Empty in, empty out — never throws."
+    },
+    {
+      "input": "///",
+      "expect": "",
+      "note": "All slashes are stripped by the leading-slash rule, leaving nothing."
+    },
+    {
+      "input": "/a/../b",
+      "expect": "a-..-b",
+      "note": "Dots are allowed characters, so a traversal segment stays as dots (and cannot escape: the result is a flat slug)."
+    },
+    {
+      "input": "packs-a-b",
+      "expect": "packs-a-b",
+      "note": "Idempotent on an already-slugged value."
+    },
+    {
+      "input": "A/B_C",
+      "expect": "a-b_c",
+      "note": "Mixed: slash → hyphen, underscore preserved, all lowered."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "_comment": "Copy to keys.json (gitignored). ciyuan: the platform gateway websearch lane — the ONLY supply (retire-search-relay-direct retired the direct provider path and its `serpapi[]` cold standby; leftover serpapi/glm keys in this file are ignored). Both halves of ciyuan or nothing. tokens: Bearer tokens the platform deployments use (issue one per customer/deployment so a leak costs one token's daily cap, not the pool). scoped_master/revoked_scopes: see scoped-token.js.",
+  "ciyuan": {
+    "url": "https://token.finddatatech.cloud",
+    "key": "INTERNAL_LANE_KEY"
+  },
+  "tokens": [
+    "GENERATE_WITH_openssl_rand_hex_24"
+  ]
+}

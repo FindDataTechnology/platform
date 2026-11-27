@@ -1,0 +1,65 @@
+{
+  "_comment": "租户标识白名单的判据（erp-tenant-from-session 6.1）。内核侧 fd-erp-ledger-mcp/tests/test_tenancy_schema.py 内嵌同一组值；两侧逐值一致由工作区脚本 scripts/check_erp_tenant_slug_contract.py 核对（两份 CI 各自 checkout 自己，读不到对方文件，所以契约必须以「值清单两份 + 跨仓比对」的形式存在）。",
+  "cases": [
+    {
+      "value": "acme",
+      "accept": true,
+      "why": "生产实际值（ERP_TENANT_ID=acme）"
+    },
+    {
+      "value": "default",
+      "accept": true,
+      "why": "租户 0，内核映射到 public"
+    },
+    {
+      "value": "a",
+      "accept": true,
+      "why": "下界：单字符"
+    },
+    {
+      "value": "a1_b2",
+      "accept": true,
+      "why": "下划线+数字"
+    },
+    {
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accept": true,
+      "why": "上界：恰好 32 字符（写成 >= 会在此红）"
+    },
+    {
+      "value": "acme-corp",
+      "accept": false,
+      "why": "连字符：schema 名转义风险，两侧都必须拒"
+    },
+    {
+      "value": "ACME",
+      "accept": false,
+      "why": "大写：会与 acme 映射到不同 schema，等于悄悄多开一个租户"
+    },
+    {
+      "value": "百度",
+      "accept": false,
+      "why": "中文：非 ASCII"
+    },
+    {
+      "value": "",
+      "accept": false,
+      "why": "空串：不能静默变成 tenant_"
+    },
+    {
+      "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "accept": false,
+      "why": "33 字符：超上界 1 位"
+    },
+    {
+      "value": "acme corp",
+      "accept": false,
+      "why": "空格"
+    },
+    {
+      "value": "acme;drop",
+      "accept": false,
+      "why": "分号：注入防线"
+    }
+  ]
+}

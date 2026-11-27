@@ -1,0 +1,436 @@
+# chat-history Specification
+
+## Purpose
+Chat sessions as durable, user-facing history: every conversation is mirrored to the project database as it runs, and users can list, start, resume, switch, rename, and delete sessions — the list refreshes after each turn ends, and each session records the workspace it ran in.
+
+## Requirements
+
+### Requirement: Chat sessions are mirrored to the project database as the conversation progresses
+The server SHALL mirror each chat session's user prompts and assistant responses into the project SQLite database (managed by `project-database`) as the conversation progresses - the user message on `prompt` and the assistant's final message on turn completion (`done`). This SHALL apply to **both local dsh agent turns and remote (catalog `agent-remote`) agent turns**: remote turns (streamed via `streamRemoteChat`) SHALL be persisted on stream completion via the same `recordMessage()` path as local turns, so a browser close/reopen does not leave a dangling user message with no reply. The project database SHALL be the store of record for the session list and read-only view APIs. The dsh runtime persists sessions by id to its own disk store; the server SHALL keep the SQLite mirror in sync as turns progress. The server SHALL track a current session in memory. Each session SHALL expose an id, a title (derived from the first user message), creation timestamp, and update timestamp. SQLite writes SHALL be atomic and crash-safe via transactions.
+
+Before persisting assistant text, the server SHALL normalize **functional references** only: a markdown link whose target is a `data:text/*` URI SHALL be replaced by a workspace file link when the decoded payload's bytes match a file under the session workspace, and SHALL be reduced to its link text otherwise; a markdown link whose absolute-path target resolves under the session workspace SHALL be rewritten to workspace-relative form. Narrative content — prose and inline code spans — SHALL NOT be altered by normalization.
+
+#### Scenario: user prompt is persisted
+- **WHEN** the server receives a `prompt` WebSocket message for the current session
+- **THEN** the server SHALL persist the user message to the project database for the current session
+- **AND** the current session's update timestamp SHALL advance
+
+#### Scenario: assistant turn is persisted on completion
+- **WHEN** the agent turn completes (`done`)
+- **THEN** the server SHALL persist the assistant's final message to the project database for the current session
+- **AND** the session's update timestamp SHALL advance
+
+#### Scenario: remote agent turn is persisted on completion
+- **WHEN** a remote (catalog `agent-remote`) turn completes
+- **THEN** the server SHALL persist the assistant's final aggregated text to the project database for the current session via `recordMessage()`
+- **AND** the session's update timestamp SHALL advance
+- **AND** a browser close/reopen SHALL show both the user message and the remote assistant reply
+
+#### Scenario: session title derived from first message
+- **WHEN** a session receives its first user message
+- **THEN** the server SHALL set the session's display name to a truncated form of that message
+
+#### Scenario: data URI link matching a workspace file becomes a platform link
+- **WHEN** an assistant message contains a markdown link whose target is a `data:text/*` URI, and the decoded payload's bytes match a file under the session workspace
+- **THEN** the mirrored message stores the link with a workspace-relative path to that file instead of the `data:` URI
+
+#### Scenario: data URI link without a match is reduced to plain text
+- **WHEN** an assistant message contains a markdown link whose target is a `data:text/*` URI and no workspace file matches its payload
+- **THEN** the mirrored message stores the link's visible text without the `data:` URI target
+
+#### Scenario: absolute in-workspace link is rewritten relative
+- **WHEN** an assistant message contains a markdown link whose absolute-path target resolves under the session workspace
+- **THEN** the mirrored message stores that link with a workspace-relative target
+
+#### Scenario: narrative content is untouched
+- **WHEN** an assistant message contains absolute paths or `data:` URIs inside prose or inline code spans rather than markdown link targets
+- **THEN** the mirrored message stores them verbatim
+
+### Requirement: Users can list past chat sessions
+The server SHALL expose an endpoint and a WebSocket message that return a list of persisted chat sessions with their id, title, creation timestamp, update timestamp, and message count, ordered most-recently-updated first, sourced from the project SQLite database. The list SHALL NOT include full message bodies. The list SHALL be scoped to the requesting user's visibility: only sessions that user owns, except admin-group users who receive all sessions (see `session-ownership`). The `sessions` WebSocket event SHALL be computed per connection from that connection's visibility — one broadcast never carries one user's session metadata to another user's client.
+
+#### Scenario: list sessions
+- **WHEN** a client requests the session list
+- **THEN** the server SHALL return session metadata ordered by update timestamp descending
+- **AND** SHALL NOT include message content in the list response
+- **AND** SHALL include only sessions the requesting user is entitled to see
+
+#### Scenario: each connection's list reflects its own user
+- **WHEN** two clients of different users are connected and a list refresh is delivered
+- **THEN** each client's `sessions` event contains only its own user's visible sessions
+
+### Requirement: Users can start a new chat session
+The server SHALL expose an endpoint, a `new_session` WebSocket message, AND a `/new` chat command to start a new chat session, each of which creates a new SDK session and makes it the current session. Subsequent prompts SHALL be appended to the new session. The previous session SHALL remain persisted and listed. Starting a new session SHALL be rejected while the agent is streaming. The server SHALL broadcast a refreshed session list after a new session is created.
+
+#### Scenario: start a new session via the button
+- **WHEN** a client starts a new chat session (button or `new_session` message) and the agent is not streaming
+- **THEN** the server SHALL create a new SDK session and make it the current session
+- **AND** the previous session SHALL remain persisted and listed
+
+#### Scenario: start a new session via the /new command
+- **WHEN** a client sends `{ "type": "prompt", "text": "/new" }` and the agent is not streaming
+- **THEN** the server SHALL create a new SDK session and make it the current session
+- **AND** SHALL broadcast a `command_use` event for the `new` command
+- **AND** SHALL broadcast a refreshed session list
+
+#### Scenario: new session rejected while streaming
+- **WHEN** a client starts a new chat session while the agent is streaming
+- **THEN** the server SHALL reject the request with an error
+- **AND** the current session SHALL remain unchanged
+
+### Requirement: Users can resume a past session into the live agent
+The server SHALL allow a past session to be resumed into the live agent. Resuming a session SHALL load that session's message history into the agent's context so subsequent turns continue the conversation, and SHALL set it as the current session so new turns append to it. The server SHALL broadcast the loaded session's messages to clients so the chat view renders the resumed conversation.
+
+#### Scenario: resume a session
+- **WHEN** a client selects a past session to resume
+- **THEN** the server SHALL load that session's message history into the agent's context
+- **AND** SHALL set it as the current session
+- **AND** SHALL broadcast the session's messages to clients for rendering
+
+#### Scenario: resumed session continues the conversation
+- **WHEN** the user sends a prompt after resuming a session
+- **THEN** the agent SHALL respond with awareness of the resumed session's history
+- **AND** the turn SHALL be appended to that session
+
+### Requirement: Users can switch the active chat session without disturbing in-flight turns
+The server SHALL accept a `switch_session` WebSocket message and point the live agent at the requested session by id, delivering a `session_loaded` event carrying the session id, title, and message list to the requesting connection and any other connection viewing that session (per-viewer delivery, `session-ownership`). Switching SHALL be allowed while any session — including the one being left — is streaming, and SHALL NOT cancel, pause or otherwise affect any in-flight turn; the outgoing session's turn continues, and its events keep flowing to its remaining viewers and into its replay log (`web-chat-server`). The request SHALL be rejected with an access error when the requester neither owns the session nor is an admin-group user. The active session SHALL be reflected as highlighted in the sidebar.
+
+#### Scenario: switch to a session
+- **WHEN** a client sends `switch_session` for a valid session id it owns
+- **THEN** the server SHALL point the live agent at that session
+- **AND** SHALL deliver `session_loaded` with that session's id, title, and messages to the requesting connection and same-session viewers
+
+#### Scenario: switching away from a streaming session leaves it running
+- **WHEN** session A is streaming and the viewing client sends `switch_session` for session B
+- **THEN** the server SHALL complete the switch and deliver `session_loaded` for B
+- **AND** A's turn SHALL continue to completion with no cancel issued
+- **AND** a later `switch_session` back to A SHALL answer with `running: true` and the replay log while A is still in flight
+
+#### Scenario: another connection's navigation does not disturb a streaming session
+- **WHEN** connection 1 views streaming session A and connection 2 sends `switch_session` for session B
+- **THEN** A's turn SHALL continue and connection 1 SHALL keep receiving A's events
+
+#### Scenario: switch to an unknown session
+- **WHEN** a client sends `switch_session` for an id that does not exist
+- **THEN** the server SHALL send an error and the active session SHALL remain unchanged
+
+#### Scenario: switch to a session the requester does not own
+- **WHEN** a client sends `switch_session` for a session owned by a different, non-admin user
+- **THEN** the server SHALL send an access error and the active session SHALL remain unchanged
+
+### Requirement: Session list refreshes after every turn end
+The server SHALL broadcast a refreshed session list whenever an agent turn ends, whether the turn succeeded or failed, so that a newly created session appears in the sidebar even when its first turn errors. The list SHALL also be broadcast when a client connects and when a session is created or switched.
+
+#### Scenario: session list refreshes after a failed turn
+- **WHEN** an agent turn ends with an error
+- **THEN** the server SHALL broadcast a refreshed session list
+- **AND** any session created during that turn SHALL appear in the list
+
+### Requirement: Server exposes a session delete endpoint
+The server SHALL expose `DELETE /api/chat-history/sessions/:id` to remove a session by id. The server SHALL delete the on-disk session store file (atomic temp-file + rename, matching the existing write pattern) AND delete the mirror row in the project database (managed by `project-database`). After a successful delete, the server SHALL deliver a refreshed `sessions` WebSocket event to every connected client, each computed from that client's user visibility. A request for a non-existent id SHALL return 404. A request for the current session id, OR for a session whose turn is in flight, OR for a session with a queued prompt (`turn-dispatch`), SHALL be rejected with 409 and a clear error (`Cannot delete the active session; switch first`). A request for a session the requester neither owns nor is admin for SHALL be rejected with 403 and remove nothing. The dsh runtime's own session persistence (sessions stored by id on disk by dsh itself) SHALL also be removed so reopening the dsh session does not resurrect the deleted entry.
+
+#### Scenario: delete a non-active session
+- **WHEN** the client sends `DELETE /api/chat-history/sessions/<id>` for a session it owns that is not the current one and has no in-flight or queued turn
+- **THEN** the server SHALL remove the on-disk file and the database row
+- **AND** deliver a `sessions` event with the refreshed list to every client (each scoped to its user)
+- **AND** return HTTP 200 with `{ ok: true }`
+
+#### Scenario: delete the active session is rejected
+- **WHEN** the client sends `DELETE /api/chat-history/sessions/<id>` for the current session
+- **THEN** the server SHALL return HTTP 409 with `{ error: "Cannot delete the active session; switch first" }`
+- **AND** no data SHALL be removed
+
+#### Scenario: delete a background-streaming session is rejected
+- **WHEN** the client views session B and sends `DELETE /api/chat-history/sessions/<id>` for session A whose turn is in flight
+- **THEN** the server SHALL return HTTP 409 and no data SHALL be removed
+
+#### Scenario: delete a queued session is rejected
+- **WHEN** the client sends `DELETE /api/chat-history/sessions/<id>` for a session with a queued prompt
+- **THEN** the server SHALL return HTTP 409 and no data SHALL be removed
+
+#### Scenario: delete a non-existent session
+- **WHEN** the client sends `DELETE /api/chat-history/sessions/<id>` for an id that does not exist
+- **THEN** the server SHALL return HTTP 404 with `{ error: "session not found" }`
+
+#### Scenario: delete a session the requester does not own
+- **WHEN** the client sends `DELETE /api/chat-history/sessions/<id>` for a session owned by a different, non-admin user
+- **THEN** the server SHALL return HTTP 403 and no data SHALL be removed
+
+#### Scenario: delete broadcasts refreshed list
+- **WHEN** a delete completes
+- **THEN** every connected WebSocket client SHALL receive a `sessions` event whose `sessions[]` array does not include the deleted id and matches that client's user visibility
+
+### Requirement: Sessions carry a title that the user can rename
+Each session SHALL have a `title` field that defaults to the first user message (truncated) but MAY be set by the user via a rename action. The server SHALL expose `PATCH /api/chat-history/sessions/:id` accepting `{ title }` (validated to a non-empty string ≤ 200 characters). On success, the server SHALL update the title in the project-database mirror and the on-disk store, and SHALL deliver a `session_renamed` WebSocket event `{ id, title }` to the connections viewing that session. The WS protocol SHALL also accept a `rename_session` client message with `{ id, title }` as an alternative to the REST route — both produce the same server-side effect and the same ownership gate: a rename from a requester who neither owns the session nor is admin SHALL be rejected with an access error (REST 403) and change nothing. The existing title-derivation logic (truncate the first user message) is the default; the user can override it at any time.
+
+#### Scenario: rename via REST
+- **WHEN** the client sends `PATCH /api/chat-history/sessions/:id` with `{ title: "New name" }` for a session it owns
+- **THEN** the server SHALL update the title in the project database and the on-disk store
+- **AND** deliver a `session_renamed` event to the session's viewers
+- **AND** return HTTP 200 with `{ ok: true }`
+
+#### Scenario: rename via WS
+- **WHEN** the client sends `{ type: "rename_session", id, title }` for a session it owns
+- **THEN** the server SHALL perform the same update as the REST route
+- **AND** deliver the same `session_renamed` event to the session's viewers
+
+#### Scenario: rename a session the requester does not own
+- **WHEN** the client sends a rename (REST or WS) for a session owned by a different, non-admin user
+- **THEN** the server SHALL reject it with an access error (REST 403)
+- **AND** the title SHALL be unchanged
+
+#### Scenario: empty title is rejected
+- **WHEN** the client sends a rename with `title: ""` (or whitespace only)
+- **THEN** the server SHALL return HTTP 400 with `{ error: "title must be non-empty" }`
+- **AND** no change SHALL be made
+
+#### Scenario: title too long is rejected
+- **WHEN** the client sends a rename with `title` longer than 200 characters
+- **THEN** the server SHALL return HTTP 400 with `{ error: "title must be 200 characters or fewer" }`
+- **AND** no change SHALL be made
+
+### Requirement: Sessions record their owner
+The session mirror SHALL stamp the authenticated owner (see `session-ownership`) on a session when its first turn is mirrored and SHALL NOT change it afterwards. The underlying storage change SHALL be an additive migration; sessions created before this capability are assigned to the deploy-designated owner account by that migration.
+
+#### Scenario: first turn stamps the owner
+- **WHEN** a new session's first user turn is mirrored from `alice@example.com`'s connection
+- **THEN** the session record carries `alice@example.com` as its owner
+
+#### Scenario: pre-existing sessions are assigned
+- **WHEN** the additive migration runs
+- **THEN** every pre-existing session row carries the deploy-designated owner
+
+### Requirement: Sessions record the workspace they ran in
+The session mirror SHALL stamp the runtime workspace on a session when its
+first turn is mirrored and SHALL NOT change it afterwards, including when the
+runtime workspace is switched mid-conversation. The sessions list payload and
+the `sessions` WebSocket broadcast SHALL include the recorded workspace
+(absent for sessions created before this capability). The underlying storage
+change SHALL be an additive migration.
+
+#### Scenario: first turn stamps the workspace
+- **WHEN** a new session's first user turn is mirrored while the runtime
+  workspace is `/home/me/paas`
+- **THEN** the session record carries `/home/me/paas` and the sessions
+  broadcast includes it
+
+#### Scenario: workspace switch mid-session does not re-stamp
+- **WHEN** the user switches the runtime workspace and continues the same
+  session
+- **THEN** the session's recorded workspace is unchanged
+
+#### Scenario: pre-existing sessions have no workspace
+- **WHEN** the sessions payload includes rows created before this capability
+- **THEN** those rows carry no workspace value and clients render them under
+  the Ungrouped group
+
+### Requirement: The session index is a rebuildable projection of the dsh transcripts
+
+The SQLite session index (`chat_sessions` / `chat_messages`) SHALL be treated as a projection that can be rebuilt from the dsh runtime's per-session transcripts (`<DSH_HOME>/sessions/<scope>/<sessionId>/session.jsonl.zstd`), which are the store of record for conversation content. The server SHALL ship a rebuild tool that reconstructs the index from transcripts alone, or by merging transcripts with a pre-migration single-process database when one is supplied. The tool SHALL default to a dry run that reports the plan without writing, SHALL back up the existing index before any write, SHALL be idempotent (upsert by session id, safe to re-run), and SHALL reproduce the live mirror's row semantics exactly: one `user` row per genuine user event (events whose `source.kind` is `user`, deduplicated by event id), one `assistant` row per `assistant/message` event that carries text or tool blocks, and an assistant row's `blocks` synthesized from that turn's `tool/call` and `tool/result` events. Only top-level sessions (`delegationDepth` 0) SHALL be indexed, matching the live mirror; session metadata (`title`, `agent_preset`, `workspace`, timestamps) SHALL be derived from the transcript header and first user message. Sessions present only in the supplied legacy database SHALL be imported as-is, and rows belonging to a different owner than the cell's user SHALL NOT be imported.
+
+#### Scenario: dry run reports without writing
+
+- **WHEN** the rebuild tool runs against a cell's transcripts without `--apply`
+- **THEN** it prints the planned session and message counts (with per-session provenance: transcript, legacy database, or both) and SHALL NOT modify the index
+
+#### Scenario: rebuild reproduces the live mirror byte-for-byte
+
+- **WHEN** the tool rebuilds a session whose transcript was also mirrored live
+- **THEN** the resulting rows match the live mirror's role, content, and `blocks` for every message, in order
+
+#### Scenario: tool evidence survives rebuild
+
+- **WHEN** a rebuilt assistant row's turn contained tool calls
+- **THEN** its `blocks` carry each call's id, name, parsed `args`, result text, and `done`/`error` state, reconstructed from the transcript's `tool/call` and `tool/result` events
+
+#### Scenario: subagent sessions are not indexed
+
+- **WHEN** a transcript belongs to a delegated subagent session (`delegationDepth` > 0)
+- **THEN** the rebuild creates no session row for it
+
+#### Scenario: merge prefers the more complete side per session
+
+- **WHEN** a session exists both in the transcripts and in the supplied legacy database
+- **THEN** the rebuild uses the side with more messages, keeping the other side's extra sessions intact
+
+#### Scenario: foreign-owner sessions are not imported
+
+- **WHEN** the supplied legacy database contains session rows whose owner is not the cell's user
+- **THEN** those rows are skipped and no session or message row is created for them
+
+#### Scenario: write is guarded and idempotent
+
+- **WHEN** the tool runs with `--apply` against an index that already holds rows
+- **THEN** it first writes a backup copy of the index, then upserts, and a second run produces the same result
+
+### Requirement: 面向用户的会话列表只列人工对话
+
+会话列表（`sessions` WebSocket 事件，以及供界面列表使用的 REST 列表）SHALL
+只包含由人发起的对话会话。由排期引擎、集群扇出、a2a 委托自动铸造的会话
+（其 id 以 `cron-` 或 `task-` 开头的）SHALL NOT 出现在该列表里。
+
+例外：发起本次请求的连接**正在查看**的那一个会话 SHALL 始终包含在列表里，
+不论它是否属于自动化会话——界面依赖列表行取该会话的标题与元数据。
+
+该过滤 SHALL NOT 影响会话本身的存储、读取、转写、权限或删除：
+`GET /api/chat-history/sessions/:id`、`switch_session`、删除、导出
+SHALL 对这些会话照常工作。用于按 id 反查标题等内部用途的列表调用
+SHALL 保持全量。
+
+#### Scenario: 排期轮次不出现在侧栏
+
+- **WHEN** 数据库中存在由排期引擎铸造的会话 `cron-<taskId>--r<ts>`
+- **AND** 一个连接请求会话列表
+- **THEN** 该列表 SHALL NOT 包含这个会话
+
+#### Scenario: 任务会话与委托会话同样被排除
+
+- **WHEN** 数据库中存在 `task-<id>`（a2a 委托）或 `cron-<id>--<agentKey>`
+  （集群成员）形态的会话
+- **THEN** 会话列表 SHALL NOT 包含它们
+
+#### Scenario: 正在查看的自动化会话仍在列表里
+
+- **WHEN** 某连接正查看一个 `cron-` 前缀的会话（例如从任务页点进这次执行）
+- **AND** 该连接请求会话列表
+- **THEN** 该会话 SHALL 出现在列表中
+- **AND** 界面 SHALL 能取到它的标题
+
+#### Scenario: 按 id 读取自动化会话照常工作
+
+- **WHEN** 客户端请求 `GET /api/chat-history/sessions/<cron- 前缀 id>`
+- **THEN** 服务端 SHALL 返回该会话的完整消息
+- **AND** `switch_session` 进入它 SHALL 正常加载转写
+
+#### Scenario: 人工会话不受影响
+
+- **WHEN** 数据库中存在由人发起的会话（id 为 UUID 或其它非自动化前缀）
+- **THEN** 会话列表 SHALL 照常包含它
+
+### Requirement: 列表刷新不再随时间线性变重
+
+触发会话列表刷新的频率（每轮结束、会话同步等）SHALL NOT 使单次刷新负载
+随自动化会话的累计数量增长。自动化轮次持续产生时，一次列表刷新的负载
+SHALL 只与人工会话的数量及其元数据规模相关。
+
+#### Scenario: 排期连跑不会推高刷新负载
+
+- **WHEN** 排期引擎连续完成 100 轮，每轮结束后各触发一次列表刷新
+- **THEN** 每次刷新的负载 SHALL 与轮次开始前处于同一量级
+- **AND** 该负载 SHALL NOT 随数据库里 `cron-` 会话行数增长
+
+### Requirement: The session index is bounded by a retention window
+
+The SQLite session index (`chat_sessions` / `chat_messages`) SHALL be bounded by a
+configurable retention window, swept on a **recurring** schedule rather than once at
+boot, so a long-resident cell's index does not grow without bound.
+
+The window SHALL default to a finite value and SHALL be disableable, in which case the
+index is never pruned.
+
+#### Scenario: sessions older than the window leave the index
+
+- **WHEN** the retention sweep runs and a session's last activity predates the window
+- **THEN** that session and all of its `chat_messages` rows are removed from the index
+
+#### Scenario: sessions inside the window are kept intact
+
+- **WHEN** the retention sweep runs and a session's last activity is inside the window
+- **THEN** neither the session row nor any of its messages are removed
+- **AND** its message order, content, and tool blocks are unchanged
+
+#### Scenario: the window can be disabled
+
+- **WHEN** the retention window is configured as disabled
+- **THEN** no session or message is ever pruned, and the sweep reports that it is off
+
+### Requirement: Pruning the index is not deleting the conversation
+
+Pruning SHALL be limited to the two index tables. dsh transcripts, the session
+workspace, documents, usage telemetry, and any other table SHALL NOT be touched.
+
+Because the transcripts are the store of record and the index is a rebuildable
+projection (see "The session index is a rebuildable projection of the dsh transcripts"),
+a pruned session SHALL remain recoverable by rebuilding the index from transcripts.
+
+#### Scenario: pruning is recoverable, not destructive
+
+- **WHEN** a session has been pruned from the index
+- **THEN** its dsh transcript remains on disk, untouched
+- **AND** rebuilding the index from that cell's transcripts restores a session row and
+  message rows for it, matching the live mirror's role/content/blocks semantics
+
+### Requirement: A retention sweep never blocks the chat path
+
+Pruning SHALL be failure-isolated: a failure logs and is reported, and SHALL NOT block a
+chat turn, a restart, or any read path.
+
+The outcome of a sweep SHALL be observable to an operator — rows removed, the next
+scheduled run, or the failure — so index growth is a visible rule rather than a silent one.
+
+#### Scenario: a pruned row count is observable
+
+- **WHEN** a sweep removes rows, or is skipped, or fails
+- **THEN** the outcome is observable to an operator
+
+#### Scenario: pruning never blocks the chat path
+
+- **WHEN** the retention sweep fails for any reason
+- **THEN** chat turns, session creation, and history reads continue to work
+- **AND** the failure is logged without escalating to the user
+
+### Requirement: Pruned volume returns to the filesystem
+
+Deleting index rows SHALL return freed space to the filesystem rather than only shrinking
+the row count while the database file keeps its high-water mark. A cell whose index is
+pruned SHALL observably use less disk after pruning than before it.
+
+#### Scenario: the file shrinks after a sweep that removed rows
+
+- **WHEN** a retention sweep removes index rows and the freed space is reclaimed
+- **THEN** the on-disk size of the project database decreases relative to before the sweep
+
+#### Scenario: no reclamation when nothing was removed
+
+- **WHEN** a sweep removes no rows
+- **THEN** no reclamation work is performed and the database file is left as-is
+
+### Requirement: Sessions can be pinned
+
+A session SHALL be pinnable per browser user, persisted in
+`chat_sessions.pinned_at` (NULL = not pinned) and returned on every session-list
+read as `pinnedAt`. The session row's context menu (and the chat header's
+overflow, which renders the same menu) SHALL offer「置顶」for an unpinned session
+and「取消置顶」for a pinned one. A successful write SHALL be reflected by a
+session-list refresh; a failed write SHALL surface its error in the menu rather
+than failing silently.
+
+#### Scenario: pin a session
+
+- **WHEN** the owner selects「置顶」on a session in the row menu
+- **THEN** the session's `pinnedAt` is set, the list refreshes, and the session
+  appears in the sidebar's pinned group
+
+#### Scenario: unpin a session
+
+- **WHEN** the owner selects「取消置顶」on a pinned session
+- **THEN** `pinnedAt` is cleared and the session returns to the recent list
+
+### Requirement: Pin writes are ownership-gated and validated
+
+Pin writes SHALL use `PATCH /api/chat-history/sessions/:id` with body
+`{pinned: boolean}` — the same route as the title rename, dispatched on the
+presence of `pinned` so the two never collide. The route SHALL apply the same
+ownership gate as the other session routes (403 on a foreign session, 404 on an
+unknown id) and SHALL reject a non-boolean `pinned` with 400 without writing.
+
+#### Scenario: pinning a foreign session is refused
+
+- **WHEN** a non-owner requests `PATCH /api/chat-history/sessions/:id` for a
+  session they do not own (auth on)
+- **THEN** the route answers 403 and the session's pin state does not change
+
+#### Scenario: invalid body is rejected
+
+- **WHEN** the request body carries no boolean `pinned`
+- **THEN** the route answers 400 and nothing is written

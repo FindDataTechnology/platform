@@ -1,0 +1,4 @@
+{
+  "$comment": "Fully-ticked changes that are deliberately still open. Each entry needs a reason and an `until` (YYYY-MM-DD) date; once that date passes the change is an offender again, so this file cannot silence the archive-hygiene gate by accident. See scripts/test-openspec-archive-hygiene.mjs. An entry is also removed (rather than re-dated) when the underlying fact changes — either the change got archived, or it turned out not to be fully ticked after all; re-deferring in that case would keep a promise nobody can keep.",
+  "deferred": []
+}

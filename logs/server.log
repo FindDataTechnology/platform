@@ -1,0 +1,13 @@
+
+> platform@1.3.17 start
+> node scripts/start.js
+
+◇ injected env (42) from .env // tip: ⌘ override existing { override: true }
+[bootstrap] Running first-run check in /Users/chengsishi/paas
+
+[local-services] Platform ready: http://localhost:3000
+
+[local-services] Press Ctrl+C to stop.
+
+
+[local-services] SIGTERM received, shutting down...

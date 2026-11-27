@@ -1,0 +1,733 @@
+// Composer: textarea + send + slash-command autocomplete + file attachment.
+//
+// Slash commands:
+//   /clear /help    - client-handled, never sent to server
+//   /model /new     - server-handled
+//   /skill:<name>   - server expands from loaded skills
+//
+// The paperclip uploads via POST /api/documents and injects an @doc:<id>
+// reference the server expands into the agent's context. The slash-command
+// autocomplete is delegated to <SlashCommandPicker> (sectioned popover with
+// filter, keyboard nav, Esc dismiss, Enter insert).
+//
+// All user-visible strings resolve through the i18n bundle. Slash-command
+// tokens (/model, /new, …) are identifiers and stay literal.
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowUp, Loader2, Mic, Paperclip, Square, TriangleAlert, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useChatStore } from "@platform/core";
+import { SlashCommandPicker, type SlashCommand } from "@/components/SlashCommandPicker";
+import { ControlStrip } from "@/components/ControlStrip";
+import { PlanDock } from "@/components/PlanPanel";
+import { HelpDialog } from "@/components/HelpDialog";
+import { ConnectCta } from "@/components/ConnectCta";
+import { useBranding } from "@/hooks/useAppConfig";
+import { useVoice } from "@/hooks/useVoice";
+import { composeTranscript, VoiceRecorder } from "@platform/core";
+import { isCredentialFailure, transcribeAudio, VoiceError } from "@/lib/voice";
+import { browserRecordingSupported, createBrowserRecorderAdapter, type BlobLike } from "@/lib/voice-adapter";
+import type { ClientMessage } from "@platform/core";
+import { cn } from "@/lib/utils";
+import { showToast } from "@/components/ui/toast";
+import { uploadFile } from "@platform/core";
+import { usePreviewStore } from "@/hooks/usePreviewStore";
+import { fileUrl, type FileRef } from "@/lib/file-preview";
+
+// One attached document chip. `key` is the local chip identity — the server
+// document id doesn't exist until the upload resolves.
+interface Attachment {
+  key: string;
+  id: string;
+  name: string;
+  state: "uploading" | "attached" | "error";
+  error?: string;
+  // Where the server stored this file's original, so the chip can open it in
+  // the preview drawer. Set on success and on extraction failure alike.
+  preview?: FileRef;
+}
+let attachSeq = 0;
+
+interface Props {
+  send: (m: ClientMessage) => void;
+  // Controlled draft, owned by ChatPage so it survives the welcome ↔
+  // in-session branch swap and can be prefilled by suggested-prompt cards.
+  value: string;
+  onChange: (v: string) => void;
+  // Bumped by ChatPage to focus the composer (e.g. after a card prefill).
+  focusTick?: number;
+}
+
+// Command tokens (identifiers, not translated) paired with i18n keys for their
+// descriptions. Built into a translated commands array inside the component.
+const CMD_META = [
+  { label: "/model", descKey: "composer.cmd.model" },
+  { label: "/new", descKey: "composer.cmd.new" },
+  { label: "/clear", descKey: "composer.cmd.clear" },
+  { label: "/help", descKey: "composer.cmd.help" },
+];
+
+export function Composer({ send, value, onChange, focusTick = 0 }: Props) {
+  const { t } = useTranslation();
+  const { assistant } = useBranding();
+  const status = useChatStore((s) => s.status);
+  const isStreaming = useChatStore((s) => s.isStreaming);
+  const stopStreaming = useChatStore((s) => s.stopStreaming);
+  const skills = useChatStore((s) => s.skills);
+  const clearView = useChatStore((s) => s.clearView);
+  // A model/effort/workspace change restarts the dsh child; sending into a
+  // restarting runtime would just error.
+  const pendingConfig = useChatStore((s) => s.pendingConfig);
+  const hasPermissionRoster = useChatStore((s) => s.permissionOptions.length > 0);
+  const openPreview = usePreviewStore((s) => s.open);
+  // Submit latch (chat-streaming: latched submission): true from send until
+  // the `user` echo — Enter-repeat and double-click duplicates die here, and
+  // the send control shows an in-progress state through the blind window
+  // between "prompt left" and "agent_start".
+  const promptInFlight = useChatStore((s) => s.promptInFlight);
+
+  const [acIdx, setAcIdx] = useState(0);
+  // Esc "dismisses" the picker without clearing the composer (a separate
+  // state from the text-derived open check so the user keeps what they
+  // typed). The flag resets as soon as the text changes.
+  const [pickerDismissed, setPickerDismissed] = useState(false);
+  const [drag, setDrag] = useState(false);
+  // The persistent help center — opened by the /help command (it replaces the
+  // old behavior of flashing the command list in a 1.6-second toast).
+  const [helpOpen, setHelpOpen] = useState(false);
+  // Attached documents: each chip is an ingested @doc:<id> reference (design
+  // D4) that the server expands into the agent's context on submit. BOTH
+  // entry gestures — paperclip and drag-drop — share one path, and the chip
+  // is visible through the whole lifecycle (上传中 → 已附加/失败) so the
+  // upload is never silent.
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  // Live upload controllers, keyed by chip key — the X on an uploading chip
+  // aborts the in-flight POST instead of waiting it out.
+  const abortRef = useRef<Map<string, AbortController>>(new Map());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Voice input (voice-lane, design D4): a dedicated path — microphone or an
+  // audio file — that ends in TEXT inserted into this box, never a document
+  // attachment (the upload path rejects audio by design). The recording itself
+  // is driven by the shared state machine (add-voice-input-mobile): this
+  // component renders its phase and supplies the browser adapter, so web, the
+  // mini-program and the app run the same transitions.
+  const voice = useVoice();
+  const canRecord = voice.available && browserRecordingSupported();
+  type VoiceState =
+    | { kind: "idle" }
+    | { kind: "recording" }
+    | { kind: "transcribing" }
+    | { kind: "error"; message: string; connect: { panel: string } | null };
+  const [voiceState, setVoiceState] = useState<VoiceState>({ kind: "idle" });
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // The latest render's inputs, read through a ref so the recorder instance is
+  // created once instead of being rebuilt (and losing its phase) on every
+  // keystroke.
+  const latest = useRef({ t, refresh: voice.refresh, value, onChange, textareaRef });
+  latest.current = { t, refresh: voice.refresh, value, onChange, textareaRef };
+
+  const insertTranscript = (text: string) => {
+    const { value: current, onChange: write } = latest.current;
+    const next = composeTranscript(current, text);
+    if (next === null) return;
+    write(next);
+    requestAnimationFrame(() => latest.current.textareaRef.current?.focus());
+  };
+
+  const recorderRef = useRef<VoiceRecorder<BlobLike> | null>(null);
+  if (recorderRef.current === null) {
+    recorderRef.current = new VoiceRecorder<BlobLike>({
+      adapter: createBrowserRecorderAdapter(),
+      upload: async (take) => {
+        try {
+          return await transcribeAudio(take.artifact as unknown as Blob, take.fileName);
+        } catch (e) {
+          // A credential-shaped failure flipped the server-side binding; re-read
+          // availability so the entries reflect whatever key is left.
+          if (isCredentialFailure(e)) void latest.current.refresh();
+          throw e;
+        }
+      },
+      insert: (text) => insertTranscript(text),
+      onPhase: (phase, failure) => {
+        if (phase === "error") {
+          const message =
+            failure?.code === "permission_denied"
+              ? latest.current.t("composer.voice.permissionDenied")
+              : failure?.message || latest.current.t("composer.voice.failed");
+          setVoiceState({ kind: "error", message, connect: failure?.connect ?? null });
+          return;
+        }
+        // "requesting" renders as idle: the browser's permission prompt is the
+        // only feedback at that moment, and the machine ignores a second tap.
+        setVoiceState({
+          kind: phase === "recording" ? "recording" : phase === "transcribing" ? "transcribing" : "idle",
+        });
+      },
+    });
+  }
+  const recorder = recorderRef.current;
+
+  const toggleRecording = () => {
+    if (recorder.phase() === "recording") void recorder.stop();
+    else if (recorder.phase() !== "transcribing") void recorder.start();
+  };
+
+  // Unmount mid-recording: release the microphone and drop the take. This goes
+  // through the MACHINE, not just the adapter — cancel() bumps the generation,
+  // which is what stops an in-flight stop()/upload from landing after teardown.
+  useEffect(() => {
+    return () => {
+      void recorderRef.current?.cancel();
+    };
+  }, []);
+
+  // The audio-file entry keeps its own path on purpose: there is nothing to
+  // record, so it must not drive the recorder machine — but it must look and
+  // behave exactly as before (transcribing chip → text → honest error).
+  const transcribeFile = (file: File | undefined) => {
+    if (!file) return;
+    void (async () => {
+      setVoiceState({ kind: "transcribing" });
+      try {
+        const { text } = await transcribeAudio(file, file.name || "audio");
+        insertTranscript(text);
+        setVoiceState({ kind: "idle" });
+      } catch (e) {
+        const err = e instanceof VoiceError ? e : null;
+        setVoiceState({
+          kind: "error",
+          message: err?.message || latest.current.t("composer.voice.failed"),
+          connect: err?.connect ?? null,
+        });
+        if (isCredentialFailure(err)) void latest.current.refresh();
+      }
+    })();
+  };
+
+  const disabled = status !== "connected";
+  const trimmed = value.trim();
+  // Send is blocked while any upload is in flight — a prompt must never leave
+  // with its document half-ingested (the exact "did my file reach the agent?"
+  // failure this state makes visible).
+  const isUploading = attachments.some((a) => a.state === "uploading");
+  // A pending user question owns the floor (add-user-questions): the composer
+  // stays closed until the card is answered or cancelled, so the ask's answer
+  // never competes with a parallel prompt in the same turn.
+  const pendingQuestion = useChatStore((s) => s.pendingQuestion);
+  const canSend =
+    !!trimmed &&
+    !disabled &&
+    !isUploading &&
+    pendingConfig === null &&
+    pendingQuestion === null &&
+    // Latched (this prompt's echo hasn't landed) or streaming (a run owns the
+    // floor) — both mean another submission cannot produce an honest new turn.
+    !promptInFlight &&
+    !isStreaming;
+
+  // Built-in commands (Commands section). Skills come from the store and are
+  // rendered as the Skills section inside <SlashCommandPicker>. Memoized on
+  // the locale: a per-render rebuild changed `commands` identity every render
+  // and defeated the mergedItems memo below.
+  const commands: SlashCommand[] = useMemo(
+    () => CMD_META.map((c) => ({ label: c.label, description: t(c.descKey) })),
+    [t],
+  );
+
+  // Autogrow.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `value` is the deliberate trigger — resize the textarea on every keystroke
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [value]);
+
+  // Focus on demand — ChatPage bumps `focusTick` when a suggested-prompt card
+  // prefills the draft.
+  useEffect(() => {
+    if (focusTick > 0) textareaRef.current?.focus();
+  }, [focusTick]);
+
+  // After a restart-carrying switch completes (pendingConfig non-null → null),
+  // re-read the permission roster: the fresh child's session reverts to the
+  // deployment default, and only a fresh roster/current push shows that
+  // honestly instead of the stale pre-restart value.
+  const wasPending = useRef(false);
+  useEffect(() => {
+    if (pendingConfig) {
+      wasPending.current = true;
+    } else if (wasPending.current) {
+      wasPending.current = false;
+      if (hasPermissionRoster) send({ type: "list_permissions" });
+    }
+  }, [pendingConfig, hasPermissionRoster, send]);
+
+  const submit = () => {
+    if (!canSend) return;
+    // Stale-closure armor: an Enter key-repeat firing before the re-render
+    // still sees the old (latch-free) canSend — the store read is always
+    // fresh, and the latch is set before the send leaves.
+    const chat = useChatStore.getState();
+    if (chat.promptInFlight || chat.isStreaming) return;
+
+    // Local commands never reach the server.
+    if (/^\/clear\b/i.test(trimmed)) {
+      clearView();
+      onChange("");
+      return;
+    }
+    if (/^\/help\b/i.test(trimmed)) {
+      setHelpOpen(true);
+      onChange("");
+      return;
+    }
+
+    // Append @doc:<id> references for ATTACHED documents (uploading/error
+    // chips are never referenced) so the server expands the ingested document
+    // content into the agent's context (design D4).
+    const refs = attachments
+      .filter((a) => a.state === "attached")
+      .map((a) => `@doc:${a.id}`)
+      .join(" ");
+    const text = refs ? `${trimmed} ${refs}` : trimmed;
+
+    // The server echoes the user turn back as a `user` event - no optimistic
+    // append here, or it renders twice. The latch arms now so the blind window
+    // between "prompt left" and "agent_start" cannot produce a re-send.
+    chat.beginPromptSubmit();
+    send({ type: "prompt", text });
+    onChange("");
+    setAttachments([]);
+  };
+
+  const acceptAc = (label?: string) => {
+    const pick = label;
+    if (!pick) return;
+    onChange(pick + " ");
+    setAcIdx(0);
+    textareaRef.current?.focus();
+  };
+
+  // The commands button inserts a bare "/" — the picker already opens off a
+  // trailing `/` token, so there is no click-mode to build and no second
+  // command list to keep in sync. Appends to a non-empty draft rather than
+  // replacing it, so it never eats what the user typed.
+  const openCommands = () => {
+    const base = value.length === 0 || /\s$/.test(value) ? value : `${value} `;
+    onChange(`${base}/`);
+    setAcIdx(0);
+    setPickerDismissed(false);
+    textareaRef.current?.focus();
+  };
+
+  // ONE attach path for both gestures (paperclip + drag-drop): the chip
+  // mounts as 上传中 the moment a file enters, then flips to 已附加 or 失败.
+  // The chip IS the feedback — no success toast to chase. Every upload is
+  // cancellable (X on the uploading chip aborts the fetch) — a guard without
+  // an escape is a trap.
+  const attachFiles = async (files: File[]) => {
+    for (const f of files) {
+      const key = `att-${++attachSeq}`;
+      const abort = new AbortController();
+      abortRef.current.set(key, abort);
+      setAttachments((a) => [...a, { key, id: "", name: f.name, state: "uploading" }]);
+      try {
+        const doc = await uploadFile(f, abort.signal);
+        setAttachments((a) =>
+          a.map((x) =>
+            x.key === key
+              ? {
+                  ...x,
+                  id: doc.id,
+                  name: doc.name || f.name,
+                  state: "attached" as const,
+                  preview: doc.preview ?? undefined,
+                }
+              : x,
+          ),
+        );
+      } catch (err) {
+        // A cancel is a choice, not a failure: drop the chip silently.
+        if ((err as Error).name === "AbortError") {
+          setAttachments((a) => a.filter((x) => x.key !== key));
+          continue;
+        }
+        const message = (err as Error).message.slice(0, 120);
+        // Extraction failed, but the server still stored the original: keep the
+        // reference so the failed chip can show the file.
+        const preview = (err as Error & { preview?: FileRef }).preview;
+        setAttachments((a) =>
+          a.map((x) =>
+            x.key === key ? { ...x, state: "error" as const, error: message, preview } : x,
+          ),
+        );
+        // The chip shows the failure; the toast carries the reason.
+        showToast({ severity: "error", title: t("composer.uploadFailed", { message: message.slice(0, 80) }) });
+      } finally {
+        abortRef.current.delete(key);
+      }
+    }
+    textareaRef.current?.focus();
+  };
+
+  const removeAttachment = (key: string) => {
+    abortRef.current.get(key)?.abort();
+    abortRef.current.delete(key);
+    setAttachments((a) => a.filter((x) => x.key !== key));
+  };
+
+  // Open a chip's stored original in the preview drawer. Only chips whose file
+  // the server actually stored carry a reference.
+  const previewAttachment = (a: Attachment) => {
+    if (!a.preview) return;
+    openPreview({ name: a.name, url: fileUrl(a.preview.root, a.preview.rel), ref: a.preview });
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // IME composition (pinyin, kana, …): Enter confirms the composition and
+    // arrows navigate the IME candidate list — neither may submit or drive
+    // the slash picker. isComposing misses some Safari versions, hence 229.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+    // The slash picker derives "is open" from the text content, so we always
+    // forward arrow / Enter / Tab / Esc when the picker is showing.
+    if (pickerOpen) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setAcIdx((i) => i + 1);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setAcIdx((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        // The picker itself handles the pick via mouse; keyboard Enter uses
+        // the same path. The flat item list lives inside the picker.
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setPickerDismissed(true);
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey) {
+        // Insert the highlighted pick rather than submit the raw `/...` text.
+        e.preventDefault();
+        const items = mergedItems;
+        const pick = items[Math.min(acIdx, items.length - 1)];
+        if (pick) acceptAc(pick.label);
+        return;
+      }
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
+  };
+
+  // Build the same flat item list the picker renders, so Enter can resolve
+  // the highlighted label without the picker exposing a ref-based lookup.
+  // Mirrors the filter (substring, case-insensitive, max 8/section) and the
+  // Commands → Skills ordering. The picker is "open" only while a `/` token
+  // is present AND the user has not dismissed it with Esc.
+  const pickerOpen = useMemo(() => {
+    const m = value.match(/(^|\s)(\/[^/\s]*)$/);
+    if (!m) return false;
+    if (pickerDismissed) return false;
+    return true;
+  }, [value, pickerDismissed]);
+  // Reset the dismissed flag whenever the user edits the text (typing or
+  // pasting), so the next `/` token re-opens the picker.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — resetting on `pickerDismissed` would immediately undo the Esc-dismiss; `value` is the reset trigger
+  useEffect(() => {
+    if (pickerDismissed) setPickerDismissed(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  const mergedItems = useMemo(() => {
+    const m = value.match(/(^|\s)(\/[^/\s]*)$/);
+    if (!m) return [];
+    const query = (m[2] ?? "").slice(1).toLowerCase();
+    const cmds = commands
+      .filter((c) => c.label.toLowerCase().includes(query))
+      .slice(0, 8);
+    const sks = skills
+      .map((s) => ({ label: `/skill:${s.name}`, description: s.description || "" }))
+      .filter((s) => s.label.toLowerCase().includes(query))
+      .slice(0, 8);
+    return [...cmds, ...sks];
+  }, [value, commands, skills]);
+
+  // Drag-drop attaches through the SAME path as the paperclip — dropping a
+  // file on the composer means "attach it to this conversation", not "upload
+  // it somewhere in the background".
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDrag(false);
+    const files = [...(e.dataTransfer?.files ?? [])];
+    if (files.length) attachFiles(files);
+  };
+
+  // Determine the active filter index across the merged list. The picker
+  // exposes its own index internally; we drive its highlight from here via
+  // the `highlight` + `onHighlight` contract. The composer owns the
+  // highlight state because it also drives keyboard navigation; the picker
+  // clamps it on render.
+  const handlePick = (label: string) => acceptAc(label);
+
+  return (
+    <div
+      className={cn("relative border-t border-border bg-card px-4 py-3", drag && "bg-primary/5")}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!drag) setDrag(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.target === e.currentTarget) setDrag(false);
+      }}
+      onDrop={onDrop}
+    >
+      <SlashCommandPicker
+        text={value}
+        open={pickerOpen}
+        highlight={acIdx}
+        onHighlight={setAcIdx}
+        onPick={handlePick}
+        commands={commands}
+      />
+      <div className="mx-auto flex max-w-4xl flex-col gap-2 rounded-2xl border border-border bg-background px-3 py-2 focus-within:border-primary">
+        {/* Narrow-viewport plan line (≥ lg it lives in the right-hand panel
+            instead). Inside the pinned composer card, so expanding it consumes
+            message-log height rather than moving the composer. */}
+        <PlanDock />
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] text-muted-foreground" data-testid="composer-attach-count">
+              {t("composer.attachments", { count: attachments.length })}
+            </span>
+            {attachments.map((a) => (
+              <span
+                key={a.key}
+                data-testid="composer-attachment"
+                data-state={a.state}
+                title={a.state === "error" ? a.error : a.state === "uploading" ? t("composer.uploading") : a.name}
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs",
+                  a.state === "error"
+                    ? "border border-destructive/40 bg-destructive/10 text-destructive"
+                    : "bg-muted text-foreground",
+                )}
+              >
+                {a.state === "uploading" ? (
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                ) : a.state === "error" ? (
+                  <TriangleAlert className="h-3 w-3" />
+                ) : (
+                  <Paperclip className="h-3 w-3 text-muted-foreground" />
+                )}
+                {a.preview ? (
+                  <button
+                    type="button"
+                    onClick={() => previewAttachment(a)}
+                    aria-label={t("preview.openInDrawer")}
+                    className="max-w-[12rem] truncate underline-offset-2 hover:underline focus-visible:underline"
+                  >
+                    {a.name}
+                  </button>
+                ) : (
+                  <span className="max-w-[12rem] truncate">{a.name}</span>
+                )}
+                <button
+                  onClick={() => removeAttachment(a.key)}
+                  aria-label={a.state === "uploading" ? t("composer.cancelUpload") : t("composer.removeAttachment")}
+                  className="-my-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          data-testid="composer-file-input"
+          className="hidden"
+          onChange={(e) => {
+            attachFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+        />
+        {/* Voice file entry (voice-lane): its own input so audio never enters
+            the document upload path above. Triggered from the `+` menu. */}
+        <input
+          ref={audioInputRef}
+          type="file"
+          accept="audio/*"
+          data-testid="composer-audio-input"
+          className="hidden"
+          onChange={(e) => {
+            transcribeFile(e.target.files?.[0]);
+            e.target.value = "";
+          }}
+        />
+        {voiceState.kind !== "idle" && (
+          <div
+            data-testid="composer-voice-state"
+            data-state={voiceState.kind}
+            className={cn(
+              "mb-1 flex flex-wrap items-center gap-2 text-xs",
+              voiceState.kind === "error" ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {voiceState.kind === "recording" && (
+              <>
+                <span className="h-2 w-2 animate-pulse rounded-full bg-destructive" aria-hidden="true" />
+                {t("composer.voice.recording")}
+              </>
+            )}
+            {voiceState.kind === "transcribing" && (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                {t("composer.voice.transcribing")}
+              </>
+            )}
+            {voiceState.kind === "error" && (
+              <>
+                <TriangleAlert className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 break-words">{voiceState.message}</span>
+                {voiceState.connect?.panel && <ConnectCta panel={voiceState.connect.panel} testId="composer-voice-connect" />}
+                <button
+                  type="button"
+                  onClick={() => recorder.dismissError()}
+                  aria-label={t("composer.voice.dismiss")}
+                  className="-my-1 rounded p-1 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" aria-hidden="true" />
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          rows={1}
+          data-testid="composer-input"
+          placeholder={t("composer.placeholder", { assistant })}
+          className={cn(
+            "min-h-[24px] w-full resize-none bg-transparent text-sm text-foreground outline-none",
+            "max-md:text-base",
+            "placeholder:text-muted-foreground",
+          )}
+        />
+        {/* One control row, two clusters, with send/stop as its rightmost
+            element (see ControlStrip). The attachment entry inside the `+` menu
+            clicks the file input above — the upload path is unchanged. */}
+        <ControlStrip
+          send={send}
+          onOpenCommands={openCommands}
+          onAttach={() => fileInputRef.current?.click()}
+          onVoiceFile={voice.available ? () => audioInputRef.current?.click() : undefined}
+          trailing={
+            <>
+              {/* Microphone (voice-lane): click to record, click again to stop
+                  and transcribe. Hidden when voice is unavailable or the
+                  browser has no MediaRecorder (the file entry still works). */}
+              {canRecord && (
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  disabled={voiceState.kind === "transcribing"}
+                  aria-label={voiceState.kind === "recording" ? t("composer.voice.stop") : t("composer.voice.record")}
+                  aria-pressed={voiceState.kind === "recording"}
+                  data-testid="composer-voice-mic"
+                  data-state={voiceState.kind}
+                  className={cn(
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-full",
+                    voiceState.kind === "recording"
+                      ? "bg-destructive text-destructive-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    "disabled:cursor-not-allowed disabled:opacity-40",
+                  )}
+                >
+                  {voiceState.kind === "recording" ? (
+                    <Square className="h-3 w-3 fill-current" aria-hidden="true" />
+                  ) : voiceState.kind === "transcribing" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Mic className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              )}
+              {
+                /* Typing is never disabled — a local-first product must absorb the
+                   outage, not punish it: draft while disconnected, send when back.
+                   Three states: a live run owns the Stop control (real cancel via
+                   stop_turn + the local finalize for instant feedback); a latched
+                   submission shows the in-progress spinner through the blind
+                   window until agent_start takes over; otherwise Send. */
+                isStreaming ? (
+              <button
+                onClick={() => {
+                  // Real stop (live-runtime-control): the server cancels the
+                  // run in the child; the local finalize below stays the
+                  // instant-view fallback and the suppression clearer.
+                  send({ type: "stop_turn" });
+                  stopStreaming();
+                }}
+                aria-label={t("composer.stop")}
+                data-testid="composer-stop"
+                className={cn(
+                  "grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-deep text-primary-foreground",
+                  "hover:opacity-90",
+                )}
+              >
+                <Square className="h-3 w-3 fill-current" />
+              </button>
+            ) : promptInFlight ? (
+              <span
+                role="status"
+                aria-label={t("composer.sending")}
+                data-testid="composer-sending"
+                className="grid h-8 w-8 shrink-0 place-items-center"
+              >
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </span>
+            ) : (
+              <button
+                onClick={submit}
+                disabled={!canSend}
+                aria-label={t("composer.send")}
+                data-testid="composer-send"
+                className={cn(
+                  "grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-deep text-primary-foreground",
+                  "hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40",
+                )}
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+                )
+              }
+            </>
+          }
+        />
+      </div>
+      {drag && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center rounded-md border-2 border-dashed border-primary bg-primary/5 text-sm text-primary">
+          {t("composer.dropHint")}
+        </div>
+      )}
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+    </div>
+  );
+}

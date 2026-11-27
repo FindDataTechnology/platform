@@ -1,0 +1,1055 @@
+{
+ "entries": {
+  "actions": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Actions",
+      "summary": "把需要人确认的状态改动作为提案交给人。"
+     },
+     "zh": {
+      "name": "动作提议",
+      "summary": "把需要人确认的状态改动作为提案交给人。",
+      "whenToUse": "要真正改状态、但必须人点头的动作。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "propose_action": {
+      "human": {
+       "en": {
+        "name": "Propose an action for human confirmation",
+        "summary": "A state change that a human must confirm before it runs."
+       },
+       "zh": {
+        "name": "提议一个需人工确认的动作",
+        "summary": "任何要真正改动状态、但必须由人点确认的操作，都先走这个通道；提案会进入 pending。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "bench-ops": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Bench Ops",
+      "summary": "读取/认领/关闭知验台工单，并把每轮结果报进台账。"
+     },
+     "zh": {
+      "name": "知验台作业",
+      "summary": "读取/认领/关闭知验台工单，并把每轮结果报进台账。",
+      "whenToUse": "舰队接知验台的活时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "bench_ruler_list": {
+      "human": {
+       "en": {
+        "name": "List this domain's grading rulers",
+        "summary": "The rubrics / gold sets / checker sets this domain is judged by."
+       },
+       "zh": {
+        "name": "列出本领域可用的评分标尺",
+        "summary": "动手前先看评分口径（评分表/金标集/校验集），按标尺做事。"
+       }
+      }
+     },
+     "bench_run_report": {
+      "human": {
+       "en": {
+        "name": "Report a round into the bench ledger",
+        "summary": "Report one round (role, outcome, counts) into the ledger."
+       },
+       "zh": {
+        "name": "把一轮结果报进知验台台账",
+        "summary": "每跑完一轮就报数（岗位、结果、计数），供评测与复测。"
+       }
+      }
+     },
+     "bench_verdict_get": {
+      "human": {
+       "en": {
+        "name": "Read one verdict with its evidence",
+        "summary": "One verdict with its per-criterion evidence."
+       },
+       "zh": {
+        "name": "读一条裁决及其逐项依据",
+        "summary": "需要看清某次判定为什么这么判、附了哪些证据时用。"
+       }
+      }
+     },
+     "bench_verdict_list": {
+      "human": {
+       "en": {
+        "name": "Read the bench verdict ledger",
+        "summary": "Read past verdicts for this domain."
+       },
+       "zh": {
+        "name": "读取知验台的裁决台账",
+        "summary": "想知道本领域近期怎么被判的、或查自己的历史表现时用。"
+       }
+      }
+     },
+     "bench_work_order_claim": {
+      "human": {
+       "en": {
+        "name": "Claim one work order",
+        "summary": "Take one work order; 409 means another fleet holds it."
+       },
+       "zh": {
+        "name": "认领一张工单",
+        "summary": "要开始做某张工单时先认领；409 表示已被别的舰队持有。"
+       }
+      }
+     },
+     "bench_work_order_complete": {
+      "human": {
+       "en": {
+        "name": "Close a completed work order",
+        "summary": "Close a work order after the round has done the work."
+       },
+       "zh": {
+        "name": "关闭一张已完成工单",
+        "summary": "一轮做完后关闭工单；必须先认领过。"
+       }
+      }
+     },
+     "bench_work_order_list": {
+      "human": {
+       "en": {
+        "name": "List work orders assigned to this fleet",
+        "summary": "The work orders the bench has assigned to this fleet."
+       },
+       "zh": {
+        "name": "列出知验台派给本舰队的工单",
+        "summary": "开工前先看有哪些工单在等你，以及它们的期限与状态。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "bench-proposal": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Bench Proposal",
+      "summary": "把本体草案提交到本领域的提案收件箱。"
+     },
+     "zh": {
+      "name": "本体提案",
+      "summary": "把本体草案提交到本领域的提案收件箱。",
+      "whenToUse": "有本体/词表草案要交人审时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "bench_proposal_submit": {
+      "human": {
+       "en": {
+        "name": "Submit an ontology draft to the bench",
+        "summary": "Submit one ontology draft to this domain's inbox."
+       },
+       "zh": {
+        "name": "向本领域提交一份本体草案",
+        "summary": "有新的本体/词表草案要交给人审时用。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "blueprint-author": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Blueprint Author",
+      "summary": "列出、校验、保存蓝图草案。"
+     },
+     "zh": {
+      "name": "蓝图编写",
+      "summary": "列出、校验、保存蓝图草案。",
+      "whenToUse": "要沉淀或修改一个可复用的蓝图时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "blueprint_drafts_list": {
+      "human": {
+       "en": {
+        "name": "List blueprint drafts",
+        "summary": "Drafts with id, name, version and status."
+       },
+       "zh": {
+        "name": "列出我的蓝图草案",
+        "summary": "想知道有哪些蓝图草案及各自状态时用。"
+       }
+      }
+     },
+     "blueprint_save": {
+      "human": {
+       "en": {
+        "name": "Save a validated blueprint",
+        "summary": "Stores a validation-green blueprint into the owner's draft pool."
+       },
+       "zh": {
+        "name": "把校验通过的蓝图存成草案",
+        "summary": "校验全绿后存入我的草案池。"
+       }
+      }
+     },
+     "blueprint_validate": {
+      "human": {
+       "en": {
+        "name": "Dry-run a blueprint",
+        "summary": "Runs the full validation chain; nothing is persisted."
+       },
+       "zh": {
+        "name": "试跑校验一份蓝图",
+        "summary": "保存前先走完整校验链，不落库，返回逐项结果。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "board": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Board",
+      "summary": "读用户当前正在看的看板。"
+     },
+     "zh": {
+      "name": "看板读取",
+      "summary": "读用户当前正在看的看板。",
+      "whenToUse": "需要知道用户此刻在看什么时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "board_read": {
+      "human": {
+       "en": {
+        "name": "Read the board the user is viewing",
+        "summary": "The board the user is currently looking at."
+       },
+       "zh": {
+        "name": "读用户当前正在看的看板",
+        "summary": "需要知道用户此刻在看什么、或按 blockId 定位某一块时用。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "cron": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Cron",
+      "summary": "创建、修改、暂停、删除定时任务。"
+     },
+     "zh": {
+      "name": "定时任务",
+      "summary": "创建、修改、暂停、删除定时任务。",
+      "whenToUse": "要让某段提示词按时间重复跑时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "cron_create": {
+      "human": {
+       "en": {
+        "name": "Schedule a recurring or one-shot task",
+        "summary": "Schedule a task that runs a prompt on a cron, at a time, or after a delay."
+       },
+       "zh": {
+        "name": "创建定时任务",
+        "summary": "要按周期或指定时刻重复跑同一段提示词时用；三种排期形式互斥。"
+       }
+      }
+     },
+     "cron_delete": {
+      "human": {
+       "en": {
+        "name": "Permanently delete a scheduled task",
+        "summary": "Permanently remove a scheduled task."
+       },
+       "zh": {
+        "name": "永久删除一个定时任务",
+        "summary": "确定不再需要这个任务时用；不可恢复。"
+       }
+      }
+     },
+     "cron_list": {
+      "human": {
+       "en": {
+        "name": "List scheduled tasks",
+        "summary": "Scheduled tasks with their schedule, status and last outcome."
+       },
+       "zh": {
+        "name": "列出已排期的任务",
+        "summary": "想知道现在有哪些定时任务、它们上次跑得怎么样时用。"
+       }
+      }
+     },
+     "cron_pause": {
+      "human": {
+       "en": {
+        "name": "Pause a scheduled task",
+        "summary": "Stop a scheduled task from firing until resumed."
+       },
+       "zh": {
+        "name": "暂停一个定时任务",
+        "summary": "临时停掉某个任务但想保留它的定义时用。"
+       }
+      }
+     },
+     "cron_update": {
+      "human": {
+       "en": {
+        "name": "Edit a scheduled task in place",
+        "summary": "Edit a scheduled task in place by id."
+       },
+       "zh": {
+        "name": "就地修改一个定时任务",
+        "summary": "只改某个任务的一部分（提示词/名字/时区/排期/次数上限）时用这个，不要删了重建。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "delegation": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Delegation",
+      "summary": "把独立任务派给别的 agent，并跟踪/取回结果。"
+     },
+     "zh": {
+      "name": "委派",
+      "summary": "把独立任务派给别的 agent，并跟踪/取回结果。",
+      "whenToUse": "任务可自包含且别人能独立完成时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "delegate_task": {
+      "human": {
+       "en": {
+        "name": "Delegate a task to another agent",
+        "summary": "Send a self-contained task to another agent."
+       },
+       "zh": {
+        "name": "把一个独立任务派给另一个 agent",
+        "summary": "任务可自包含、且别人（本 cell 的岗位或市场 Agent）能独立完成时用。"
+       }
+      }
+     },
+     "search_agents": {
+      "human": {
+       "en": {
+        "name": "Search the online agent market",
+        "summary": "Search the online agent market by keyword."
+       },
+       "zh": {
+        "name": "按关键词搜在线市场 Agent",
+        "summary": "不知道该派给谁、或想看看市面上有什么现成能力时用。"
+       }
+      }
+     },
+     "task_progress": {
+      "human": {
+       "en": {
+        "name": "Report delegated-task status",
+        "summary": "Live state, elapsed time and token spend of delegated tasks."
+       },
+       "zh": {
+        "name": "查本轮派出任务的实时状态",
+        "summary": "想知道派出去的任务排队/在跑/完成/失败，以及耗时和用量时用。"
+       }
+      }
+     },
+     "task_result": {
+      "human": {
+       "en": {
+        "name": "Fetch a finished task's output",
+        "summary": "The recorded output (or error gist) of a finished task."
+       },
+       "zh": {
+        "name": "取一个已完成任务的产出",
+        "summary": "task_progress 显示终态之后，用这个拿结果或失败摘要。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "fleet": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Fleet",
+      "summary": "岗位报数、上升待拍板、集群派发、常务与审计专用面。"
+     },
+     "zh": {
+      "name": "舰队协同",
+      "summary": "岗位报数、上升待拍板、集群派发、常务与审计专用面。",
+      "whenToUse": "作为舰队一员巡逻、交接或裁决时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "auditor_submit_verdict": {
+      "human": {
+       "en": {
+        "name": "Auditor: submit a review verdict",
+        "summary": "Agree, dissent with a note, or block and escalate."
+       },
+       "zh": {
+        "name": "审计官：对一条待决事项给出复核结论",
+        "summary": "同意 / 有异议但放行（须给理由）/ 阻断并上报。仅审计官岗位可调。"
+       }
+      }
+     },
+     "decision_escalate_to_owner": {
+      "human": {
+       "en": {
+        "name": "Deputy: hand a decision back to the owner",
+        "summary": "Hand an undecidable item back to the owner with your analysis."
+       },
+       "zh": {
+        "name": "常务岗：判不了则上升给主人",
+        "summary": "超出授权、事实不足、或需要主人偏好的事，转回主人队列并附你的分析。"
+       }
+      }
+     },
+     "decision_queue": {
+      "human": {
+       "en": {
+        "name": "Deputy: read the pending-decision queue",
+        "summary": "The deputy's pending-decision queue, with policy and budget."
+       },
+       "zh": {
+        "name": "常务岗：读取待裁队列",
+        "summary": "常务岗开工前读队列，先看 policy 给出的可委托类别与今日预算。"
+       }
+      }
+     },
+     "decision_resolve": {
+      "human": {
+       "en": {
+        "name": "Deputy: rule on one pending decision",
+        "summary": "Rule on one pending item; approve needs a choice, reject a note."
+       },
+       "zh": {
+        "name": "常务岗：裁决一条待裁项",
+        "summary": "批准需给出选项值、驳回需给出理由；必须附依据。"
+       }
+      }
+     },
+     "dispatch_post": {
+      "human": {
+       "en": {
+        "name": "Dispatch a task to another post in this cluster",
+        "summary": "Async dispatch to another post of your cluster."
+       },
+       "zh": {
+        "name": "派任务给本集群的另一个岗位",
+        "summary": "任务可自包含、且属于同集群其他岗位职责时用（集群派发，异步）。"
+       }
+      }
+     },
+     "escalate": {
+      "human": {
+       "en": {
+        "name": "Escalate a decision to the fleet owner",
+        "summary": "Ask the fleet owner to decide something beyond your authority."
+       },
+       "zh": {
+        "name": "向舰队主人提交待拍板事项",
+        "summary": "遇到超出本岗位权限或预算的选择时用，不要自己硬决定。"
+       }
+      }
+     },
+     "report_status": {
+      "human": {
+       "en": {
+        "name": "File this post's status report",
+        "summary": "File this post's status report at the end of a turn."
+       },
+       "zh": {
+        "name": "提交本岗位的报数",
+        "summary": "每轮巡逻/任务结束时，或数字有实质变化时用（仅舰队成员）。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "fleet-architect": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Fleet Architect",
+      "summary": "起草、校验、应用舰队改组，并读取回合结果。"
+     },
+     "zh": {
+      "name": "舰队架构",
+      "summary": "起草、校验、应用舰队改组，并读取回合结果。",
+      "whenToUse": "要改舰队结构或查它的运转情况时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "fleet_apply": {
+      "human": {
+       "en": {
+        "name": "Apply an approved fleet draft",
+        "summary": "Revalidates first; fails honestly when the fleet drifted since the draft."
+       },
+       "zh": {
+        "name": "应用已批准的舰队草案",
+        "summary": "用户明确点头后才用；会先重校验，舰队已漂移则如实失败。"
+       }
+      }
+     },
+     "fleet_draft": {
+      "human": {
+       "en": {
+        "name": "Draft a fleet change",
+        "summary": "Dry run: validation, per-post diff and cost estimate. Nothing is persisted."
+       },
+       "zh": {
+        "name": "起草一次舰队改组",
+        "summary": "要改舰队结构时先起草：服务端校验 + 逐岗 diff + 成本估算，不落库。"
+       }
+      }
+     },
+     "fleet_list": {
+      "human": {
+       "en": {
+        "name": "List the owner's fleets",
+        "summary": "Fleets with id, name, state, member count, open decisions, failing posts."
+       },
+       "zh": {
+        "name": "列出我拥有的舰队",
+        "summary": "想知道有哪些舰队、各自规模与健康度时用。"
+       }
+      }
+     },
+     "fleet_spec_read": {
+      "human": {
+       "en": {
+        "name": "Read a fleet's full spec",
+        "summary": "Org tree, post targets, cadences and model declarations."
+       },
+       "zh": {
+        "name": "读一支舰队的完整结构",
+        "summary": "要看清组织树、岗位目标、节奏与模型声明时用。"
+       }
+      }
+     },
+     "fleet_turns_read": {
+      "human": {
+       "en": {
+        "name": "Read a fleet's turn outcomes",
+        "summary": "Turn events filtered by ok / failed / interrupted."
+       },
+       "zh": {
+        "name": "读某支舰队的回合结果",
+        "summary": "查岗位近轮成败与中断原因时用。"
+       }
+      }
+     },
+     "guidance_list": {
+      "human": {
+       "en": {
+        "name": "Read role guidance patches",
+        "summary": "Pending / merged / rejected patches plus each post's current role version."
+       },
+       "zh": {
+        "name": "读角色定向指导补丁",
+        "summary": "要提补丁前先看各岗当前版本与待审补丁时用。"
+       }
+      }
+     },
+     "guidance_submit": {
+      "human": {
+       "en": {
+        "name": "Propose a role guidance patch",
+        "summary": "Submit an organ change as a post; takes effect only after the owner approves."
+       },
+       "zh": {
+        "name": "提交角色定向指导补丁",
+        "summary": "以某岗身份提一条器官修改，须属主批准后才生效。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "handoff": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Handoff",
+      "summary": "把当前对话交给真人接手。"
+     },
+     "zh": {
+      "name": "转人工",
+      "summary": "把当前对话交给真人接手。",
+      "whenToUse": "答不好或用户明确要人时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "handoff_to_human": {
+      "human": {
+       "en": {
+        "name": "Hand this conversation to a human",
+        "summary": "Hand this conversation to a human agent."
+       },
+       "zh": {
+        "name": "把本次对话转交真人",
+        "summary": "答不好、或用户明确要人时用。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "input-request": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Input Request",
+      "summary": "向人索取结构化输入（表单/确认/单选）。"
+     },
+     "zh": {
+      "name": "向人要输入",
+      "summary": "向人索取结构化输入（表单/确认/单选）。",
+      "whenToUse": "需要人给结构化答案时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "request_input": {
+      "human": {
+       "en": {
+        "name": "Ask the human for structured input",
+        "summary": "Ask the human to fill a form, confirm, or pick an option."
+       },
+       "zh": {
+        "name": "向人索取结构化输入",
+        "summary": "需要人填表、确认、或从几个选项里挑一个时用。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "library": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Library",
+      "summary": "列出、检索、读正文、取原件。"
+     },
+     "zh": {
+      "name": "资料库",
+      "summary": "列出、检索、读正文、取原件。",
+      "whenToUse": "需要用户资料库里的内容时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "fetch_document_file": {
+      "human": {
+       "en": {
+        "name": "Fetch a document's original uploaded file",
+        "summary": "The original uploaded file (docx, xlsx, pdf, …)."
+       },
+       "zh": {
+        "name": "取文档的原始上传文件",
+        "summary": "需要原件（docx/xlsx/pdf）而不是抽取文本时用。"
+       }
+      }
+     },
+     "list_library": {
+      "human": {
+       "en": {
+        "name": "List library documents",
+        "summary": "Documents in the library with id, name, type and status."
+       },
+       "zh": {
+        "name": "列出资料库里的文档",
+        "summary": "想知道资料库里有什么、以及各自状态时用。"
+       }
+      }
+     },
+     "read_document": {
+      "human": {
+       "en": {
+        "name": "Read a document's text, page by page",
+        "summary": "One page of a document's extracted text (~8000 chars)."
+       },
+       "zh": {
+        "name": "读一篇文档的正文（分页）",
+        "summary": "需要正文内容时逐页读，每次约 8000 字符。"
+       }
+      }
+     },
+     "search_library": {
+      "human": {
+       "en": {
+        "name": "Full-text search the library",
+        "summary": "Ranked full-text hits over the library's documents."
+       },
+       "zh": {
+        "name": "在资料库里全文检索",
+        "summary": "按关键词找内容片段时用；返回带排序的命中片段。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "notify": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Notify",
+      "summary": "列出待处理通知并执行其中的动作。"
+     },
+     "zh": {
+      "name": "通知收件箱",
+      "summary": "列出待处理通知并执行其中的动作。",
+      "whenToUse": "有通知在等我处理时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "notify_inbox_act": {
+      "human": {
+       "en": {
+        "name": "Act on a notification, then mark it done",
+        "summary": "Run a notice's action, then mark that notice acted."
+       },
+       "zh": {
+        "name": "执行一条通知里的动作",
+        "summary": "按通知里的 action 执行，并把该通知标记为已处理。"
+       }
+      }
+     },
+     "notify_inbox_list": {
+      "human": {
+       "en": {
+        "name": "List the notifications in your inbox",
+        "summary": "Notifications waiting in your inbox, each with a ref."
+       },
+       "zh": {
+        "name": "列出我的待办通知",
+        "summary": "看有哪些通知在等我处理时用；每条带 ref。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "pack-author": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Pack Author",
+      "summary": "列出、校验、保存套件草案，并挑注册表 MCP 服务器。"
+     },
+     "zh": {
+      "name": "套件编写",
+      "summary": "列出、校验、保存套件草案，并挑注册表 MCP 服务器。",
+      "whenToUse": "要做一个谦面套件时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "pack_drafts_list": {
+      "human": {
+       "en": {
+        "name": "List pack drafts",
+        "summary": "Drafts with id, name, entry counts and published pack id."
+       },
+       "zh": {
+        "name": "列出我的套件草案",
+        "summary": "想知道有哪些套件草案及条目数时用。"
+       }
+      }
+     },
+     "pack_market_servers": {
+      "human": {
+       "en": {
+        "name": "List registry MCP servers",
+        "summary": "The only legal source for MCP servers when authoring a pack."
+       },
+       "zh": {
+        "name": "列出可选的注册表 MCP 服务器",
+        "summary": "编套件时挑 MCP 服务器，只有这个来源合法。"
+       }
+      }
+     },
+     "pack_save": {
+      "human": {
+       "en": {
+        "name": "Save a pack manifest as a draft",
+        "summary": "Stores a validation-green manifest as an editable draft."
+       },
+       "zh": {
+        "name": "把套件清单存成可编辑草案",
+        "summary": "校验通过后落入我的草案池（可选更新已有草案）。"
+       }
+      }
+     },
+     "pack_validate": {
+      "human": {
+       "en": {
+        "name": "Dry-run a pack manifest",
+        "summary": "Same validator the install path applies; nothing is persisted."
+       },
+       "zh": {
+        "name": "试跑校验一份套件清单",
+        "summary": "与安装路径同一套校验器，不落库，逐条报错。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "persona-evolution": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Persona Evolution",
+      "summary": "落地方案化的人格修订候选。"
+     },
+     "zh": {
+      "name": "人格演进",
+      "summary": "落地方案化的人格修订候选。",
+      "whenToUse": "要把人格改动沉淀成候选并交审时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "persona_amend": {
+      "human": {
+       "en": {
+        "name": "Land a persona amendment",
+        "summary": "Targets a preset or a pack persona with the amendment."
+       },
+       "zh": {
+        "name": "落地一条人格修订候选",
+        "summary": "要把修订应用到某个预设或套件的人格时用。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "skill-evolution": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Skill Evolution",
+      "summary": "提交技能候选供审。"
+     },
+     "zh": {
+      "name": "技能演进",
+      "summary": "提交技能候选供审。",
+      "whenToUse": "要新增或改写一个技能时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "skill_propose": {
+      "human": {
+       "en": {
+        "name": "Land a skill candidate",
+        "summary": "Name, description, SKILL.md body and evidence."
+       },
+       "zh": {
+        "name": "提交一条技能候选",
+        "summary": "有新的技能草案（含描述与正文依据）要交审时用。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "websearch": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Websearch",
+      "summary": "搜索实时信息并按 URL 读网页正文。"
+     },
+     "zh": {
+      "name": "联网检索",
+      "summary": "搜索实时信息并按 URL 读网页正文。",
+      "whenToUse": "需要训练数据之外的信息时。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-24"
+    },
+    "tools": {
+     "web_read": {
+      "human": {
+       "en": {
+        "name": "Read a web page by URL",
+        "summary": "A page's readable text (not raw HTML) by URL."
+       },
+       "zh": {
+        "name": "按 URL 抓取网页正文",
+        "summary": "读到搜索结果里的链接、或用户给了链接时用；返回可读文本而非 HTML。"
+       }
+      }
+     },
+     "web_search": {
+      "human": {
+       "en": {
+        "name": "Search the web for current information",
+        "summary": "Current, real-time information beyond the training data."
+       },
+       "zh": {
+        "name": "联网搜索实时信息",
+        "summary": "训练数据之外的事实、新闻、价格、发布之类，先搜再答。"
+       }
+      }
+     }
+    }
+   }
+  },
+  "trade": {
+   "annotation": {
+    "human": {
+     "en": {
+      "name": "Trade",
+      "summary": "AI-native trade chain: find shops, ask for a quote, quote, accept."
+     },
+     "zh": {
+      "name": "交易",
+      "summary": "AI 原生交易链：找店、询价、报价、接受报价。"
+     }
+    },
+    "provenance": {
+     "source": "platform-builtin",
+     "updatedAt": "2026-11-27"
+    },
+    "tools": {
+     "trade_discover": {
+      "human": {
+       "en": {
+        "name": "Find shops",
+        "summary": "Search the shop directory by category, keyword or region; prices come from the shop."
+       },
+       "zh": {
+        "name": "找店",
+        "summary": "按品类/关键词/地区检索店目录；价格以店铺自身为准。"
+       }
+      }
+     },
+     "trade_demand": {
+      "human": {
+       "en": {
+        "name": "Ask for a quote",
+        "summary": "State what/when/where; a buy-side price is refused by design."
+       },
+       "zh": {
+        "name": "询价",
+        "summary": "声明要什么、何时、寄到哪；带买价会被拒（价格必须来自卖方）。"
+       }
+      }
+     },
+     "trade_quote": {
+      "human": {
+       "en": {
+        "name": "Quote a price",
+        "summary": "Seller-side time-bounded commitment against a demand."
+       },
+       "zh": {
+        "name": "报价",
+        "summary": "卖方针对询价给出有时效的承诺。"
+       }
+      }
+     },
+     "trade_accept": {
+      "human": {
+       "en": {
+        "name": "Accept a quote",
+        "summary": "Creates the order at the quoted price under the budget gate."
+       },
+       "zh": {
+        "name": "接受报价",
+        "summary": "按报价成交价下单，受预算闸约束。"
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "skills": {},
+ "version": 1
+}

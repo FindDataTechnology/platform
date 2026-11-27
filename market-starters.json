@@ -1,0 +1,467 @@
+{
+ "mcpServers": [
+  {
+   "name": "fetch",
+   "displayName": "Fetch",
+   "description": "Fetch content from any URL — no configuration needed",
+   "category": "Productivity",
+   "icon": "globe",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-fetch"
+    ]
+   },
+   "installInstructions": "No additional configuration needed",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "网页抓取",
+      "summary": "拉取任意网址的内容并转成可读文本，无需任何配置。",
+      "whenToUse": "需要阅读某个网页或在线文档的内容时。"
+     },
+     "en": {
+      "name": "Web fetch",
+      "summary": "Fetch any URL's content and convert it to readable text; zero configuration.",
+      "whenToUse": "When you need to read a web page or an online document."
+     }
+    },
+    "canonical": {
+     "brief": "Fetches a URL over plain HTTP GET and returns the body as readable text/markdown. Zero configuration. Prefer for reading public pages; not for authenticated or interactive sites."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "time",
+   "displayName": "Time",
+   "description": "Get current time and timezone information — no configuration needed",
+   "category": "Productivity",
+   "icon": "clock",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-time"
+    ]
+   },
+   "installInstructions": "No additional configuration needed",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "时间与时区",
+      "summary": "查询当前时间、做时区换算与日期计算。",
+      "whenToUse": "遇到「现在几点/换算时区/几天后是哪天」一类问题时。"
+     },
+     "en": {
+      "name": "Time & timezone",
+      "summary": "Current time, timezone conversion, and date arithmetic.",
+      "whenToUse": "For 'what time is it now', timezone conversion, or date math."
+     }
+    },
+    "canonical": {
+     "brief": "Returns current time in a requested IANA timezone and converts/computes dates. Deterministic; no network."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "everything",
+   "displayName": "Everything (Demo)",
+   "description": "Demo MCP server for testing — no configuration needed",
+   "category": "Development",
+   "icon": "box",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-everything"
+    ]
+   },
+   "installInstructions": "No additional configuration needed. This is a demo/test server.",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "测试服务器（Everything）",
+      "summary": "官方演示服务器：回显、采样等测试能力，用于验证 MCP 链路本身。",
+      "whenToUse": "调试或验证 MCP 连接是否通时。"
+     },
+     "en": {
+      "name": "Everything (test server)",
+      "summary": "The official demo server: echo/sampling test utilities for verifying the MCP path itself.",
+      "whenToUse": "When debugging or verifying an MCP connection."
+     }
+    },
+    "canonical": {
+     "brief": "Reference test server exercising echo, sampling, and resource primitives. Not for production tasks; useful to prove the transport works."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "sequential-thinking",
+   "displayName": "Sequential Thinking",
+   "description": "Break down complex problems into step-by-step thinking processes",
+   "category": "Productivity",
+   "icon": "list",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-sequential-thinking"
+    ]
+   },
+   "installInstructions": "No additional configuration needed",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "逐步思考",
+      "summary": "提供结构化的分步思考草稿区，把复杂问题拆成小步推进。",
+      "whenToUse": "复杂推理或规划任务需要中途草稿时。"
+     },
+     "en": {
+      "name": "Sequential thinking",
+      "summary": "A structured scratchpad for step-by-step reasoning on complex problems.",
+      "whenToUse": "When a complex plan benefits from explicit intermediate steps."
+     }
+    },
+    "canonical": {
+     "brief": "Maintains a revision-friendly chain-of-thought scratchpad: record a thought, revise or branch it. Purely organizational; emits no side effects."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "memory",
+   "displayName": "Memory",
+   "description": "Persistent memory system for storing and retrieving information across conversations",
+   "category": "Productivity",
+   "icon": "brain",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-memory"
+    ]
+   },
+   "installInstructions": "No additional configuration needed",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "长期记忆",
+      "summary": "本地知识图谱式记忆库：存取实体、关系与事实备忘。",
+      "whenToUse": "需要跨会话记住事实或关系时。"
+     },
+     "en": {
+      "name": "Memory",
+      "summary": "A local knowledge-graph memory: store and recall entities, relations, and facts.",
+      "whenToUse": "When facts must persist across sessions."
+     }
+    },
+    "canonical": {
+     "brief": "Stores entities/relations/observations in a local JSON knowledge graph under the memory dir. Scope is local to this machine."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "puppeteer",
+   "displayName": "Puppeteer",
+   "description": "Browser automation - navigate, screenshot, and interact with web pages",
+   "category": "Browser",
+   "icon": "globe",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-puppeteer"
+    ]
+   },
+   "installInstructions": "No additional configuration needed. Puppeteer will download Chromium automatically.",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "浏览器自动化",
+      "summary": "驱动无头浏览器打开网页、点击与截图。",
+      "whenToUse": "需要看渲染后的页面、截图或做网页操作时。"
+     },
+     "en": {
+      "name": "Browser automation",
+      "summary": "Drive a headless browser: navigate, click, and screenshot.",
+      "whenToUse": "When you need the rendered page or to interact with a site."
+     }
+    },
+    "canonical": {
+     "brief": "Drives headless Chromium: navigate/click/fill/screenshot. Use for JS-rendered pages; slower than fetch and can hit site bot-walls."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "filesystem",
+   "displayName": "Filesystem",
+   "description": "Read, write, and manage files and directories on your local system",
+   "category": "Productivity",
+   "icon": "folder",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-filesystem",
+     "/path/to/allowed/directory"
+    ]
+   },
+   "installInstructions": "Replace '/path/to/allowed/directory' with the directory you want to grant access to",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "本地文件",
+      "summary": "在授权目录内读写、搜索本地文件。",
+      "whenToUse": "需要整理、查找或改写本机文件时。"
+     },
+     "en": {
+      "name": "Local files",
+      "summary": "Read, write, and search files inside the authorized directories.",
+      "whenToUse": "When organizing, finding, or editing local files."
+     }
+    },
+    "canonical": {
+     "brief": "File CRUD and search restricted to the allowed-roots configured at startup. Paths outside the roots are rejected."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    },
+    "tools": {
+     "read_file": {
+      "human": {
+       "zh": {
+        "name": "读文件",
+        "summary": "读取一个文本文件的内容。"
+       },
+       "en": {
+        "name": "Read file",
+        "summary": "Read a text file's content."
+       }
+      },
+      "canonical": {
+       "brief": "Reads a UTF-8 text file inside the allowed roots."
+      }
+     },
+     "write_file": {
+      "human": {
+       "zh": {
+        "name": "写文件",
+        "summary": "把内容写入一个文件（整文件覆盖）。"
+       },
+       "en": {
+        "name": "Write file",
+        "summary": "Write content to a file (full overwrite)."
+       }
+      },
+      "canonical": {
+       "brief": "Creates or fully overwrites a file inside the allowed roots."
+      }
+     },
+     "list_directory": {
+      "human": {
+       "zh": {
+        "name": "列目录",
+        "summary": "列出一个目录下的条目。"
+       },
+       "en": {
+        "name": "List directory",
+        "summary": "List entries of a directory."
+       }
+      },
+      "canonical": {
+       "brief": "Lists direct children of a directory inside the allowed roots."
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "sqlite",
+   "displayName": "SQLite",
+   "description": "Query and manage SQLite databases",
+   "category": "Database",
+   "icon": "database",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-sqlite",
+     "--db-path",
+     "/path/to/database.db"
+    ]
+   },
+   "installInstructions": "Replace '/path/to/database.db' with the path to your SQLite database file",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "SQLite 数据库",
+      "summary": "对本地 SQLite 库执行查询与更新。",
+      "whenToUse": "需要查或改本地结构化数据时。"
+     },
+     "en": {
+      "name": "SQLite database",
+      "summary": "Run queries and updates on a local SQLite database.",
+      "whenToUse": "When local structured data needs querying or updating."
+     }
+    },
+    "canonical": {
+     "brief": "Executes SQL against the configured SQLite file. Schema changes are possible — confirm destructive DDL with the user first."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  },
+  {
+   "name": "github",
+   "displayName": "GitHub",
+   "description": "Interact with GitHub repositories, issues, pull requests, and more",
+   "category": "Development",
+   "icon": "github",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-github"
+    ],
+    "env": {
+     "GITHUB_PERSONAL_ACCESS_TOKEN": "your_token_here"
+    }
+   },
+   "installInstructions": "Create a GitHub personal access token at https://github.com/settings/tokens and replace 'your_token_here'",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "GitHub",
+      "summary": "操作 GitHub：仓库/issue/PR 的查询与创建。",
+      "whenToUse": "需要查仓库状态、建 issue、开 PR 时。"
+     },
+     "en": {
+      "name": "GitHub",
+      "summary": "Work with GitHub: query and create repos, issues, and pull requests.",
+      "whenToUse": "When checking repo state, filing issues, or opening PRs."
+     }
+    },
+    "canonical": {
+     "brief": "GitHub API operations (repos/issues/PRs/files). Honors the configured token's scopes; read calls are safe, write calls create real GitHub content."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    },
+    "tools": {
+     "create_issue": {
+      "human": {
+       "zh": {
+        "name": "建 issue",
+        "summary": "在指定仓库新建一个 issue。"
+       },
+       "en": {
+        "name": "Create issue",
+        "summary": "Open a new issue on a repository."
+       }
+      },
+      "canonical": {
+       "brief": "Creates a real GitHub issue with title/body on the given repo."
+      }
+     },
+     "list_issues": {
+      "human": {
+       "zh": {
+        "name": "列 issue",
+        "summary": "按条件列出仓库的 issue。"
+       },
+       "en": {
+        "name": "List issues",
+        "summary": "List a repository's issues with filters."
+       }
+      },
+      "canonical": {
+       "brief": "Lists issues (state/labels/filters) for a repo; read-only."
+      }
+     },
+     "create_pull_request": {
+      "human": {
+       "zh": {
+        "name": "建 PR",
+        "summary": "从分支向目标分支发起 pull request。"
+       },
+       "en": {
+        "name": "Create PR",
+        "summary": "Open a pull request from a branch."
+       }
+      },
+      "canonical": {
+       "brief": "Opens a real pull request; requires an existing branch with the changes."
+      }
+     }
+    }
+   }
+  },
+  {
+   "name": "postgres",
+   "displayName": "PostgreSQL",
+   "description": "Query and manage PostgreSQL databases",
+   "category": "Database",
+   "icon": "database",
+   "configTemplate": {
+    "command": "npx",
+    "args": [
+     "-y",
+     "@modelcontextprotocol/server-postgres"
+    ],
+    "env": {
+     "POSTGRES_CONNECTION_STRING": "your_connection_string_here"
+    }
+   },
+   "installInstructions": "Replace the connection string with your PostgreSQL database credentials",
+   "annotation": {
+    "human": {
+     "zh": {
+      "name": "PostgreSQL",
+      "summary": "对 PostgreSQL 数据库做受控查询。",
+      "whenToUse": "需要查库中数据或做受控写操作时。"
+     },
+     "en": {
+      "name": "PostgreSQL",
+      "summary": "Run controlled queries against a PostgreSQL database.",
+      "whenToUse": "When data in the database needs querying or controlled writes."
+     }
+    },
+    "canonical": {
+     "brief": "Executes SQL against the configured PostgreSQL instance via the connection string. Treat every write as production-affecting."
+    },
+    "provenance": {
+     "source": "catalog",
+     "updatedAt": "2026-11-01"
+    }
+   }
+  }
+ ]
+}

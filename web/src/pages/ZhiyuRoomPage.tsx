@@ -1,0 +1,1811 @@
+// ZhiyuRoomPage.tsx — the room itself (add-zhiyu-room group 9).
+//
+// Stream model (design D-E): one EventSource per room pumps seq-monotone rows
+// (messages + system/event rows) and, on the `overlay` event, ephemeral
+// agent_start/delta/done marks rendered as a transient "answering" bubble.
+// Persisted rows win: an overlay bubble dissolves when its agent's settled
+// message row arrives over the pump. Duty circuit (take over / hand back /
+// call) acts on the roster; posting is itself a take-over.
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Skeleton } from "@/components/ui/states-kit";
+import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { PollDriver, ZhiyuRoomClient } from "@platform/core";
+import { MeetingPanel } from "@/components/zhiyu/MeetingPanel";
+import { CaptureSession } from "@/components/voice/CaptureSession";
+import { createEventSourceTransport, type EventSourceLike } from "@/lib/zhiyu-room-transport";
+import { isNonChatRow, nonChatLabelKey, nonChatLabelParams, nonChatVisible } from "@/lib/zhiyu-events";
+import { fetchVoiceCatalog, speechPlayer, VoiceError, type VoiceCatalog } from "@/lib/voice";
+import { RoomComposer, RoomMessageBody, AttachmentRowCard } from "@/components/zhiyu/RoomComposer";
+
+interface MemberRow {
+  id: string;
+  // `guest` is a real seat kind (IM group members and widget visitors) and was
+  // missing from this union — which is exactly why the roster rendered the raw
+  // key `zhiyu.kind.guest` for six visitors: the template literal bypassed the
+  // type check, and the locale bundle had no `guest` entry either.
+  kind: "user" | "facade" | "agent" | "guest";
+  ref: string;
+  onBehalfOf: string | null;
+  display: string;
+  presence: "active" | "away" | "on_duty" | "listening";
+  state: string;
+  // 座席音色（add-room-voice-and-catalog）：本场对这一席的指定，null = 未指定
+  // （按岗位/部署回落）。与 display/presence 同级，属房间自己的事实。
+  voice?: { model: string; voice: string } | null;
+}
+
+interface RoomDetail {
+  id: string;
+  title: string;
+  ownerEmail: string;
+  status: "active" | "ended";
+  effectiveReplyCap: number;
+  idleMinutes: number;
+  replyCap: number | null;
+  dailyBudgetTurns: number | null;
+  billingMode?: "billed" | "showcase";
+  sessionScope?: "shared" | "per-sender";
+  contextWindow?: number | null;
+}
+
+interface StreamRow {
+  seq: number;
+  kind: "human" | "agent" | "system" | "event";
+  senderMemberId: string | null;
+  fromAgent: boolean;
+  visibility: string;
+  content: string;
+  meta: Record<string, unknown> | null;
+  provenance: string | null;
+  createdAt: number;
+}
+
+interface Overlay {
+  memberId: string;
+  display: string;
+  text: string;
+  startedAt: number;
+  /** True while the model is reasoning (a pulse arrived, no text yet). */
+  thinking?: boolean;
+}
+
+async function jcall<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const r = await fetch(path, {
+    method,
+    headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  const data = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(data?.error ?? `HTTP ${r.status}`);
+  return data as T;
+}
+
+// Non-chat rows (event AND system) share one catalog with the visitor page —
+// see lib/zhiyu-events.ts for why keeping two lists silently leaked a raw
+// i18n key into a production room.
+
+/**
+ * The wall clock for the event timeline (redesign-zhiyu-room-surfaces 1.1).
+ *
+ * A fixed-width HH:MM for today and MM-DD HH:MM for older rows: the gutter must
+ * stay constant or the labels start at different x positions down the column,
+ * which is the same scanning problem the centred layout had. `Intl` with a fixed
+ * hour cycle, not `toLocaleTimeString()`, so the format does not follow the
+ * machine's 12/24-hour setting and change width mid-column.
+ */
+function clockOf(ts: number): string {
+  const d = new Date(ts);
+  if (!Number.isFinite(d.getTime())) return "";
+  const sameDay = new Date().toDateString() === d.toDateString();
+  const time = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(d);
+  if (sameDay) return time;
+  const date = new Intl.DateTimeFormat(undefined, { month: "2-digit", day: "2-digit" }).format(d);
+  return `${date} ${time}`;
+}
+
+/**
+ * The structured facts a fleet report row carries, or null.
+ *
+ * Deliberately strict: a row is a run record only if the bridge stamped a real
+ * `reportData` object. Rows written before that existed fall through to the
+ * timeline — degraded, but never wrong. Guessing from `content` is what this
+ * type exists to prevent.
+ */
+interface ReportData {
+  memberTitle: string | null;
+  metrics: Record<string, string>;
+  blockers: string[];
+  summary: string;
+}
+
+function readReportData(meta: Record<string, unknown> | null): ReportData | null {
+  const raw = meta?.reportData as Record<string, unknown> | undefined;
+  if (!raw || typeof raw !== "object") return null;
+  const metrics: Record<string, string> = {};
+  if (raw.metrics && typeof raw.metrics === "object") {
+    for (const [k, v] of Object.entries(raw.metrics as Record<string, unknown>)) {
+      metrics[k] = String(v ?? "");
+    }
+  }
+  return {
+    memberTitle: typeof raw.memberTitle === "string" ? raw.memberTitle : null,
+    metrics,
+    blockers: Array.isArray(raw.blockers) ? raw.blockers.map(String) : [],
+    summary: typeof raw.summary === "string" ? raw.summary : "",
+  };
+}
+
+/**
+ * One fleet report, as a scannable line (redesign-zhiyu-room-surfaces 3.1-3.3).
+ *
+ * A report used to arrive as a 60-100 character sentence in the same grey as
+ * every other event. The facts a reader actually scans — which post, which
+ * dimension, did it pass, what blocked it — were inside that sentence, so they
+ * could only be recovered by reading every row. This renders them as columns.
+ *
+ * Dimensions come from `metrics` KEYS: that is where the real field lives, not
+ * in the prose (D3). A blocked window is the only thing worth colour, and it
+ * takes the existing warning/destructive tokens — no new hue (D6).
+ */
+/**
+ * Whether a run row is abnormal. ONE definition — the row's colour and the
+ * 「只看异常」 filter both go through it, because two copies of a judgement
+ * always drift and a filter showing a row that is not red is indistinguishable
+ * from a broken filter (measured live 2026-11-25).
+ *
+ * Decided by the METRICS, not by `blockers.length`: posts use `blockers` to say
+ * what they did and why ("v3.1 硬禁", "单次取数成功即止"), so a non-empty list is
+ * normal. Live data: 5 of 9 rows had blockers, only 7 had any anomaly, and two
+ * with `anomalies_found: 0` were being coloured red.
+ */
+function isAbnormalReport(data: ReportData, deliveryOk?: boolean): boolean {
+  const n = Number(data.metrics.anomalies_found ?? 0);
+  return (Number.isFinite(n) && n > 0) || deliveryOk === false;
+}
+
+function RunRow({
+  seq,
+  createdAt,
+  data,
+  deliveryOk,
+  expanded,
+  onToggle,
+}: {
+  seq: number;
+  createdAt: number;
+  data: ReportData;
+  deliveryOk?: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+  // What counts as abnormal — decided by the METRICS, not by `blockers.length`
+  // (redesign-zhiyu-room-surfaces 3.2, corrected against live data 2026-11-25).
+  //
+  // The first version treated any non-empty `blockers` as a problem. Real rows
+  // disproved it: a post fills `blockers` with what it did and why —
+  //   「fleet_turns_read_banned: 全程未调用（v3.1 硬禁）」
+  //   「single_call_no_retry: 单次取数成功即止，非 partial」
+  // — so 4 of 5 rows on the live room read as abnormal while only 3 had any
+  // anomaly at all, and one had none. A false alarm is worse than a missing one:
+  // it teaches the reader to ignore the colour.
+  //
+  // `blockers` still renders, expanded, as context. It just does not colour the
+  // row. The two facts that DO mean something went wrong:
+  //   · the report says it found anomalies (`anomalies_found` > 0)
+  //   · the row never reached the reader (delivery failed)
+  const anomalyCount = Number(data.metrics.anomalies_found ?? 0);
+  const hasAnomalies = Number.isFinite(anomalyCount) && anomalyCount > 0;
+  const undelivered = deliveryOk === false;
+  const abnormal = isAbnormalReport(data, deliveryOk);
+  const dims = Object.keys(data.metrics);
+  // The anomalous dimension leads; everything else collapses to "+N". A report
+  // with four slots rendered in full is a paragraph again.
+  const headDim = dims.includes("anomalies_found") && hasAnomalies ? "anomalies_found" : (dims[0] ?? null);
+  const rest = Math.max(0, dims.length - 1);
+
+  return (
+    <div
+      className={`my-0.5 rounded-md border px-2 py-1 text-xs ${
+        abnormal
+          ? "border-warning/50 bg-warning/5"
+          : "border-transparent hover:border-border/60 hover:bg-muted/30"
+      }`}
+      data-testid={`zy-run-${seq}`}
+      data-abnormal={abnormal ? "true" : "false"}
+    >
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 text-left"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        data-testid={`zy-run-toggle-${seq}`}
+      >
+        <time className="shrink-0 tabular-nums text-muted-foreground/60" dateTime={new Date(createdAt).toISOString()}>
+          {clockOf(createdAt)}
+        </time>
+        <span className="shrink-0 font-medium">{data.memberTitle || t("zhiyu.room.runUnknownPost")}</span>
+        {headDim ? (
+          <span className="shrink-0 text-muted-foreground">
+            {headDim}
+            {data.metrics[headDim] ? ` ${data.metrics[headDim]}` : ""}
+          </span>
+        ) : null}
+        {rest > 0 ? (
+          <span className="shrink-0 text-muted-foreground/60">{t("zhiyu.room.runMoreDims", { n: rest })}</span>
+        ) : null}
+        {abnormal ? (
+          <span
+            className={`ml-auto inline-flex h-7 shrink-0 items-center rounded px-1.5 text-xs ${
+              undelivered && !hasAnomalies ? "bg-destructive/10 text-destructive" : "bg-warning/15 text-warning"
+            }`}
+            data-testid={`zy-run-badge-${seq}`}
+          >
+            {undelivered && !hasAnomalies
+              ? t("zhiyu.room.runUndelivered")
+              : t("zhiyu.room.runAnomalies", { n: anomalyCount })}
+          </span>
+        ) : null}
+      </button>
+      {expanded ? (
+        <div className="mt-1 space-y-1 border-t border-border/50 pt-1 text-muted-foreground">
+          {dims.length ? (
+            <dl className="flex flex-wrap gap-x-3 gap-y-0.5">
+              {dims.map((k) => (
+                <div key={k} className="flex gap-1">
+                  <dt className="opacity-60">{k}</dt>
+                  <dd className="tabular-nums">{data.metrics[k]}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {data.blockers.length ? (
+            // Context, not alarm: posts use this field for what they did and why
+            // (see isAbnormalReport). Plain colour, so a genuinely red row stands out.
+            <ul className="list-disc pl-4" data-testid={`zy-run-blockers-${seq}`}>
+              {/* Keyed by the text, not the index: a blocker list can change
+                  between renders (the server keeps the first 5), and an index
+                  key would make React reuse a row for different text. */}
+              {data.blockers.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+          {data.summary ? <p className="whitespace-pre-wrap break-words">{data.summary}</p> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function ZhiyuRoomPage() {
+  const { t } = useTranslation();
+  const { roomId = "" } = useParams();
+  const navigate = useNavigate();
+  const [room, setRoom] = useState<RoomDetail | null>(null);
+  const [streamOpen, setStreamOpen] = useState(false);
+  // Which meeting the capture lane was opened for (meeting-capture-client-wiring
+  // D4): null = closed. Both fields travel together, so the lane never starts a
+  // session that belongs to no meeting.
+  const [recordCtx, setRecordCtx] = useState<{ meetingId: string; roomId: string } | null>(null);
+  const [endOpen, setEndOpen] = useState(false);
+  const [members, setMembers] = useState<MemberRow[]>([]);
+  const [myMemberId, setMyMemberId] = useState<string | null>(null);
+  const [rows, setRows] = useState<StreamRow[]>([]);
+  // 房间播报（add-room-voice-and-catalog）：默认只点播；「开语音」后对会话启用
+  // 自动朗读。自动朗读必须先有一次显式点击——这是浏览器的播放许可要求，不是偏好。
+  const VOICE_ON_KEY = `zhiyu:voice-on:${roomId}`;
+  const [voiceOn, setVoiceOn] = useState<boolean>(() => {
+    try { return localStorage.getItem(VOICE_ON_KEY) === "1"; } catch { return false; }
+  });
+  const [speakBusy, setSpeakBusy] = useState<number | null>(null);
+  const autoSeenRef = useRef<number>(0);
+  const voiceOnRef = useRef(voiceOn);
+  voiceOnRef.current = voiceOn;
+  // 座席音色（add-room-voice-and-catalog）：只有主办会渲染这个选择器，所以目录
+  // 只在需要时拉一次；读不到就隐藏，不阻断房间其余部分。
+  const [seatCatalog, setSeatCatalog] = useState<VoiceCatalog | null>(null);
+  // Paging state (spec: 消息流与发送者归因 — the first screen is the TAIL window;
+  // earlier history is fetched on demand). olderCursor is the smallest seq we
+  // hold; hasOlder says whether one more `before` window exists.
+  const [olderCursor, setOlderCursor] = useState<number | null>(null);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const skipScrollRef = useRef(false);
+  // The shared room state machine for the CURRENT room (one per mount).
+  const clientRef = useRef<ZhiyuRoomClient | null>(null);
+  // Its driver (fix-zhiyu-room-live-stream): the thing that actually asks for
+  // increments. Held so it can be stopped before the transport closes.
+  const driverRef = useRef<PollDriver | null>(null);
+  const [overlays, setOverlays] = useState<Record<string, Overlay>>({});
+  // Ticking clock for the answering bubble's elapsed counter. The guest surface
+  // has shown elapsed seconds all along; a member staring at "…" for 30s on a
+  // 5–30s seat reads it as broken.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const hasOverlays = Object.keys(overlays).length > 0;
+  useEffect(() => {
+    if (!hasOverlays) return;
+    const id = setInterval(() => setNowMs(Date.now()), 1000); // gate-allow: ui-clock
+    return () => clearInterval(id);
+  }, [hasOverlays]);
+  const [privateOpen, setPrivateOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [composer, setComposer] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  // Which long event rows the reader chose to open (redesign-zhiyu-room-surfaces
+  // 1.2). Event rows carry a whole sentence; showing it all inline is what made
+  // the stream a wall, so the default is a one-line summary and this holds the
+  // exceptions the reader asked for. Keyed by seq — stable across re-renders.
+  const [expandedEvents, setExpandedEvents] = useState<Set<number>>(() => new Set());
+  // Stream view + the "only abnormal" cut (4.2). Deliberately client-side only.
+  const [streamFilter, setStreamFilter] = useState<"all" | "run" | "event" | "talk">("all");
+  const [abnormalOnly, setAbnormalOnly] = useState(false);
+  // Guests are default-collapsed in the roster (redesign-zhiyu-room-surfaces
+  // 5.2). A live room had 13 visitor seats against 1 human and 6 agents — the
+  // people you are actually talking to were pushed below the fold by probe and
+  // test residue. Collapsed by default, one click to see them.
+  const [guestsOpen, setGuestsOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ kind: "user", ref: "", onBehalfOf: "", display: "", historyGrant: "join_from" });
+  const [capForm, setCapForm] = useState("");
+  const [budgetForm, setBudgetForm] = useState("");
+  const [billingModeForm, setBillingModeForm] = useState<"billed" | "showcase">("billed");
+  const [sessionScopeForm, setSessionScopeForm] = useState<"shared" | "per-sender">("shared");
+  // Website-embed management (add-zhiyu-website-embed group 5, owner only).
+  const [widgetStatus, setWidgetStatus] = useState<{
+    enabled: boolean;
+    publicOpen: boolean;
+    token: { fingerprint: string; allowlist: string[]; createdAt: number; revoked: boolean } | null;
+    linkToken: { fingerprint: string; createdAt: number } | null;
+  } | null>(null);
+  const [widgetDomainInput, setWidgetDomainInput] = useState("");
+  const [widgetIssued, setWidgetIssued] = useState<{ token: string; siteSecret: string; snippet: string } | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [widgetBusy, setWidgetBusy] = useState(false);
+  const [widgetNote, setWidgetNote] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const membersRef = useRef<MemberRow[]>([]);
+  membersRef.current = members;
+
+  const load = useCallback(async () => {
+    try {
+      const d = await jcall<{ room: RoomDetail; members: MemberRow[]; myMemberId: string | null }>("GET", `/api/zhiyu/rooms/${roomId}`);
+      setRoom(d.room);
+      setMembers(d.members);
+      setMyMemberId(d.myMemberId);
+      setCapForm(d.room.replyCap != null ? String(d.room.replyCap) : "");
+      setBudgetForm(d.room.dailyBudgetTurns != null ? String(d.room.dailyBudgetTurns) : "");
+      setBillingModeForm(d.room.billingMode === "showcase" ? "showcase" : "billed");
+      setSessionScopeForm(d.room.sessionScope === "per-sender" ? "per-sender" : "shared");
+      setError(null);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }, [roomId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  // Widget status loads lazily with the settings dialog (owner-only surface).
+  useEffect(() => {
+    if (!settingsOpen) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const st = await jcall<typeof widgetStatus>("GET", `/api/zhiyu/rooms/${roomId}/widget`);
+        if (!cancelled) {
+          setWidgetStatus(st);
+          if (st?.token?.allowlist) setWidgetDomainInput(st.token.allowlist.join("\n"));
+        }
+      } catch {
+        if (!cancelled) setWidgetStatus(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [settingsOpen, roomId]);
+
+  const widgetEnable = async () => {
+    setWidgetBusy(true);
+    setWidgetNote(null);
+    try {
+      const allowlist = widgetDomainInput.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+      const out = await jcall<{ token: string; siteSecret: string; snippet: string } & Record<string, unknown>>(
+        "POST",
+        `/api/zhiyu/rooms/${roomId}/widget`,
+        { allowlist },
+      );
+      setWidgetIssued({ token: out.token, siteSecret: out.siteSecret, snippet: out.snippet });
+      const st = await jcall<typeof widgetStatus>("GET", `/api/zhiyu/rooms/${roomId}/widget`);
+      setWidgetStatus(st);
+    } catch (err) {
+      setWidgetNote((err as Error).message);
+    } finally {
+      setWidgetBusy(false);
+    }
+  };
+
+  const widgetAction = async (action: "patch" | "rotate-secret" | "revoke" | "share-link" | "share-link/revoke") => {
+    setWidgetBusy(true);
+    setWidgetNote(null);
+    try {
+      if (action === "patch") {
+        const allowlist = widgetDomainInput.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+        await jcall("PATCH", `/api/zhiyu/rooms/${roomId}/widget`, { allowlist });
+        setWidgetNote("白名单已更新");
+      } else if (action === "rotate-secret") {
+        const out = await jcall<{ siteSecret: string }>("POST", `/api/zhiyu/rooms/${roomId}/widget/rotate-secret`);
+        setWidgetIssued({ token: "", siteSecret: out.siteSecret, snippet: "" });
+        setWidgetNote("站点密钥已轮换（旧密钥即刻失效）");
+      } else if (action === "revoke") {
+        await jcall("POST", `/api/zhiyu/rooms/${roomId}/widget/revoke`);
+        setWidgetIssued(null);
+        setWidgetStatus(null);
+        const st = await jcall<typeof widgetStatus>("GET", `/api/zhiyu/rooms/${roomId}/widget`);
+        setWidgetStatus(st);
+      } else if (action === "share-link") {
+        const out = await jcall<{ url: string; replaced?: boolean }>("POST", `/api/zhiyu/rooms/${roomId}/share-link`);
+        setShareUrl(out.url);
+        // Minting replaces: the previous URL is dead the moment this returns,
+        // and its plaintext is gone for good (only sha256 reaches the store).
+        // Saying so is the whole point — an operator who re-mints without
+        // knowing has silently broken whatever they sent last week.
+        setWidgetNote(out.replaced ? t("zhiyu.widget.linkReplaced") : t("zhiyu.widget.linkMinted"));
+      } else if (action === "share-link/revoke") {
+        await jcall("POST", `/api/zhiyu/rooms/${roomId}/share-link/revoke`);
+        setShareUrl(null);
+        setWidgetNote(t("zhiyu.widget.linkRevoked"));
+      }
+      if (action !== "revoke" && action !== "share-link/revoke") {
+        const st = await jcall<typeof widgetStatus>("GET", `/api/zhiyu/rooms/${roomId}/widget`);
+        setWidgetStatus(st);
+      }
+    } catch (err) {
+      setWidgetNote((err as Error).message);
+    } finally {
+      setWidgetBusy(false);
+    }
+  };
+
+  const copyText = async (text: string, note: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setWidgetNote(note);
+    } catch {
+      setWidgetNote("复制失败，请手动选择复制");
+    }
+  };
+
+  // First screen + live pump. The first screen is the TAIL window: opening a
+  // room used to replay the whole history from seq 0 (a 1000+ row room stalled
+  // and re-rendered everything). Now we fetch the last page over REST, render
+  // it immediately, and open the stream from that seq; earlier history only
+  // arrives when the member asks for it (`loadEarlier`).
+  useEffect(() => {
+    if (!roomId) return;
+    setRows([]);
+    setOlderCursor(null);
+    setHasOlder(false);
+
+    // One state machine, one transport (openspec: add-zhiyu-mobile-clients 2.2).
+    // What used to live here — tail-first, dedupe on replay, prepend on demand,
+    // "the cursor never goes backwards" — is `ZhiyuRoomClient`, which the
+    // mini-program and the app drive with their own transports. This page keeps
+    // only the browser-specific parts: the stream itself and the overlay
+    // rendering (overlays are seq-less, so they are not messages).
+    const transport = createEventSourceTransport({
+      roomId,
+      request: (p) => fetch(p),
+      // The DOM EventSource satisfies the structural shape; the cast is the
+      // one place the browser global meets the injectable interface.
+      eventSource: (url) => new EventSource(url) as unknown as EventSourceLike,
+      onConnectionChange: (open) => setStreamOpen(open),
+      onOverlay: (payload) => {
+        const o = payload as { type?: string; memberId?: string; display?: string; delta?: string };
+        if (o.type === "agent_start" && o.memberId) {
+          setOverlays((prev) => ({ ...prev, [o.memberId!]: { memberId: o.memberId!, display: o.display ?? "", text: "", startedAt: Date.now() } }));
+        } else if (o.type === "agent_thinking" && o.memberId) {
+          // Reasoning pulse (no text rides it). Keeps the clock honest while
+          // the model thinks for several seconds before its first byte.
+          setOverlays((prev) => {
+            const cur = prev[o.memberId!];
+            if (!cur) return prev;
+            return { ...prev, [o.memberId!]: { ...cur, thinking: true, startedAt: cur.text ? cur.startedAt : Date.now() } };
+          });
+        } else if (o.type === "agent_delta" && o.memberId) {
+          setOverlays((prev) => {
+            const cur = prev[o.memberId!];
+            if (!cur) return prev;
+            return { ...prev, [o.memberId!]: { ...cur, text: cur.text + (o.delta ?? "") } };
+          });
+        } else if (o.type === "agent_done" && o.memberId) {
+          setOverlays((prev) => {
+            const next = { ...prev };
+            delete next[o.memberId!];
+            return next;
+          });
+        }
+      },
+    });
+    // No `resumedFrom` on purpose: a web reload has always reopened at the tail,
+    // and this change is not the place to alter that.
+    const client = new ZhiyuRoomClient({ transport, roomId, tailCount: 200, pageSize: 200 });
+    clientRef.current = client;
+    // DRIVE it (fix-zhiyu-room-live-stream). `client.start()` alone reads one
+    // tail window and stops — the EventSource only opens inside
+    // `transport.increment()`, which only `poll()`/`catchUp()` call. Between
+    // 2026-11-17 and this fix the page called start() and nothing else, so the
+    // room showed a single snapshot until a manual reload.
+    //
+    // `holdMs: 0` because this transport is a real stream, not a long poll:
+    // `increment()` resolves from its in-memory buffer the moment SSE delivers
+    // a row, so a zero wait means "hand me anything buffered, then ask again" —
+    // no added latency and no second backoff ladder.
+    const driver = new PollDriver({ client, holdMs: 0 });
+    driverRef.current = driver;
+    // Membership/system rows are not rendered, they are TRIGGERS: they mean the
+    // room object changed (a join, a take-over, an end). Fired once per seq.
+    let lastSeenSeq = 0;
+    const unsubscribe = client.subscribe((state) => {
+      setRows(state.messages as StreamRow[]);
+      setHasOlder(state.hasOlder);
+      setOlderCursor(state.messages.length ? state.messages[0]!.seq : null);
+      for (const row of state.messages) {
+        if (row.seq <= lastSeenSeq) continue;
+        lastSeenSeq = row.seq;
+        const event = row.kind === "system" ? String((row.meta as { event?: string } | null)?.event ?? "") : "";
+        if (
+          ["member_joined", "member_left", "member_removed", "take_over", "hand_back", "room_ended"].includes(event)
+        ) {
+          void load();
+        }
+      }
+    });
+    void driver.start();
+    return () => {
+      unsubscribe();
+      // Order matters: the driver cancels its timer BEFORE the transport tears
+      // the stream down, or a tick can fire into a closed connection.
+      driver.stop();
+      driverRef.current = null;
+      transport.close();
+      clientRef.current = null;
+      setStreamOpen(false);
+    };
+  }, [roomId, load]);
+
+  // Load one earlier window and PREPEND it. The prepend must not yank the
+  // reader to the bottom, so the follow-the-stream scroll is skipped once.
+  // Routing trail actions (add-voice-routing 6.1): who to move a decision to.
+  const [reassignTo, setReassignTo] = useState("");
+  const [routeError, setRouteError] = useState<string | null>(null);
+
+  /** Stop the part of one round that has not started (4.3). */
+  const cancelDispatch = useCallback(
+    async (seq: number) => {
+      try {
+        await jcall("POST", `/api/zhiyu/rooms/${roomId}/dispatch/${seq}/cancel`, {});
+        setRouteError(null);
+        await load();
+      } catch (err) {
+        setRouteError((err as Error).message);
+      }
+    },
+    [roomId, load],
+  );
+
+  /** Move one round to a different seat, leaving the original record intact (4.4). */
+  const reassignDispatch = useCallback(
+    async (seq: number, targetId: string) => {
+      try {
+        await jcall("POST", `/api/zhiyu/rooms/${roomId}/dispatch/${seq}/reassign`, {
+          targets: [targetId],
+          reason: t("zhiyu.event.route_action.reassignReason"),
+        });
+        setRouteError(null);
+        setReassignTo("");
+        await load();
+      } catch (err) {
+        setRouteError((err as Error).message);
+      }
+    },
+    [roomId, load, t],
+  );
+
+  // Paging back is the state machine's job too (it owns "prepend, and never
+  // move the cursor"). What stays here is the scroll bookkeeping: a prepend must
+  // not yank the reader to the bottom.
+  const loadEarlier = useCallback(async () => {
+    const client = clientRef.current;
+    if (!client || !olderCursor || loadingOlder) return;
+    setLoadingOlder(true);
+    skipScrollRef.current = true;
+    try {
+      const state = await client.loadOlder();
+      if (state.error) setError(state.error);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [olderCursor, loadingOlder]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rows/overlays are intentional re-scroll triggers, not values the effect body reads
+  useEffect(() => {
+    if (skipScrollRef.current) {
+      skipScrollRef.current = false; // a prepend keeps the reader where they were
+      return;
+    }
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [rows, overlays]);
+
+  const memberById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
+  const me = members.find((m) => m.id === myMemberId) ?? null;
+  const isOwner = Boolean(room && me && room.ownerEmail === me.ref);
+  const active = room?.status === "active";
+
+  // Fleet bridge state (add-zhiyu-team-memory 刀B). Subscriptions are event
+  // sources, not members; the summon plan separates serving members (can be
+  // invited) from cockpit-only posts (named honestly, never fake-invited).
+  interface FleetSub { id: string; fleetId: string; fleetName: string }
+  interface SummonPlan { fleetId: string; fleetName: string; summonable: { ref: string; title?: string }[]; cockpitOnly: string[] }
+  const [fleetSubs, setFleetSubs] = useState<FleetSub[] | null>(null);
+  const [fleetIdDraft, setFleetIdDraft] = useState("");
+  const [summonPlan, setSummonPlan] = useState<SummonPlan | null>(null);
+  const [summonResult, setSummonResult] = useState<{ ref: string; ok: boolean; error?: string; admitted?: boolean; already?: boolean }[] | null>(null);
+  const reloadFleetSubs = useCallback(async () => {
+    if (!isOwner || !active) return setFleetSubs(null);
+    try {
+      const r = await jcall<{ subscriptions: FleetSub[] }>("GET", `/api/zhiyu/rooms/${roomId}/fleet-subscriptions`);
+      setFleetSubs(r.subscriptions);
+    } catch {
+      setFleetSubs(null); // the bridge face degrades to absence, not an error
+    }
+  }, [isOwner, active, roomId]);
+  useEffect(() => {
+    void reloadFleetSubs();
+  }, [reloadFleetSubs]);
+
+  // Room memory panel (add-memory-visible-ux 任务 4). Owner-only collapsible
+  // "what this room remembers": reads the existing /api/memory/entries proxy
+  // with the room's project (the owner person token only ever reaches their
+  // own root — the proxy IS the permission boundary, D4). Members and guests
+  // get zero render (hard privacy spec: not rendered, not greyed out).
+  interface RoomMemoryEntry {
+    path: string;
+    title: string;
+    layer?: string;
+    ts?: string;
+    metadata?: { lane?: string; harness?: string } | null;
+  }
+  const [memOpen, setMemOpen] = useState(false);
+  const [memEntries, setMemEntries] = useState<RoomMemoryEntry[] | null>(null);
+  const [memLoading, setMemLoading] = useState(false);
+  const [memOff, setMemOff] = useState(false);
+  const memLoadedRef = useRef(false);
+  const loadRoomMemory = useCallback(async () => {
+    if (memLoadedRef.current) return;
+    memLoadedRef.current = true;
+    setMemLoading(true);
+    try {
+      const out = await jcall<{ items?: RoomMemoryEntry[] }>(
+        "GET",
+        `/api/memory/entries?project=${encodeURIComponent(`room-${roomId}`)}`,
+      );
+      setMemEntries(Array.isArray(out.items) ? out.items : []);
+      setMemOff(false);
+    } catch {
+      // Explanatory degrade (memoryOff-style): say why it's blank, and allow
+      // a fresh attempt on the next expand instead of a dead panel.
+      setMemEntries([]);
+      setMemOff(true);
+      memLoadedRef.current = false;
+    } finally {
+      setMemLoading(false);
+    }
+  }, [roomId]);
+  useEffect(() => {
+    if (!isOwner || !memOpen) return;
+    void loadRoomMemory();
+  }, [isOwner, memOpen, loadRoomMemory]);
+
+  const label = (row: StreamRow): string => {
+    if (row.provenance) return t("zhiyu.room.hatchedSender");
+    const m = row.senderMemberId ? memberById.get(row.senderMemberId) : null;
+    if (row.kind === "human") return m?.display || m?.ref || t("zhiyu.room.memberFallback");
+    if (row.kind === "agent") {
+      const base = m?.display || t("zhiyu.room.agentFallback");
+      return m?.kind === "facade" && m.onBehalfOf ? t("zhiyu.room.facadeLabel", { name: base, owner: m.onBehalfOf }) : base;
+    }
+    return t("zhiyu.room.systemLabel");
+  };
+
+  // 播报一条座席消息：走房间专用的合成端点，用该席解析出的音色。
+  const speakRow = useCallback(async (row: StreamRow) => {
+    setSpeakBusy(row.seq);
+    try {
+      const res = await fetch(`/api/zhiyu/rooms/${roomId}/messages/${row.seq}/speech`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "on_demand", senderMemberId: row.senderMemberId ?? null }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new VoiceError(body.error || `speak failed (${res.status})`, res.status, null, null);
+      }
+      const blob = await res.blob();
+      await speechPlayer.play(`room:${roomId}:${row.seq}`, blob);
+    } catch (e) {
+      setError(e instanceof VoiceError ? e.message : ((e as Error).message || "播报失败"));
+    } finally {
+      setSpeakBusy(null);
+    }
+  }, [roomId]);
+
+  // 自动朗读：voiceOn 打开后，新到的座席消息依次进入播放队列；人类与系统行
+  // 永不朗读。`autoSeenRef` 记住已经排过的 seq，避免历史回填时一次性把整段
+  // 旧消息都念一遍。
+  useEffect(() => {
+    if (!isOwner || seatCatalog) return;
+    void fetchVoiceCatalog().then(setSeatCatalog).catch(() => setSeatCatalog(null));
+  }, [isOwner, seatCatalog]);
+
+  useEffect(() => {
+    if (!voiceOn) {
+      autoSeenRef.current = rows.length ? rows[rows.length - 1]!.seq : 0;
+      return;
+    }
+    if (autoSeenRef.current === 0) {
+      // First render with voice on: start from the current tail, do not replay
+      // the whole window.
+      autoSeenRef.current = rows.length ? rows[rows.length - 1]!.seq : 0;
+      return;
+    }
+    const fresh = rows.filter((r) => r.seq > autoSeenRef.current && r.kind === "agent" && String(r.content ?? "").trim());
+    if (!fresh.length) return;
+    autoSeenRef.current = rows[rows.length - 1]!.seq;
+    for (const r of fresh) {
+      void (async () => {
+        try {
+          const res = await fetch(`/api/zhiyu/rooms/${roomId}/messages/${r.seq}/speech`, {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "auto", senderMemberId: r.senderMemberId ?? null }),
+          });
+          if (!res.ok) return; // quota / upstream: stay silent, never interrupt the reader
+          speechPlayer.enqueue(`room:${roomId}:${r.seq}`, await res.blob());
+        } catch {
+          /* a failed auto-read must not surface as an error banner */
+        }
+      })();
+    }
+  }, [rows, voiceOn, roomId]);
+
+  const toggleVoiceOn = useCallback(() => {
+    setVoiceOn((v) => {
+      const next = !v;
+      try { localStorage.setItem(VOICE_ON_KEY, next ? "1" : "0"); } catch { /* storage may be blocked */ }
+      if (!next) speechPlayer.clear();
+      return next;
+    });
+  }, [VOICE_ON_KEY]);
+
+  // One file → the room attachment endpoint. This is the only thing the web
+  // composer injects into the shared upload machine.
+  const uploadOne = async (file: File, signal: AbortSignal) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const r = await fetch(`/api/zhiyu/rooms/${encodeURIComponent(roomId)}/attachments`, {
+      method: "POST",
+      credentials: "same-origin",
+      body: fd,
+      signal,
+    });
+    const body = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(body?.error || `HTTP ${r.status}`);
+    return body as { attachment: import("@platform/core").ZhiyuAttachment };
+  };
+
+  // Text send. Attachments ride their OWN rows (the composer uploads each file
+  // as a message row server-side before calling this), so this only carries the
+  // human's sentence — the composer has already folded the file names in.
+  const send = async (content: string) => {
+    try {
+      await jcall("POST", `/api/zhiyu/rooms/${roomId}/messages`, { content });
+    } catch (err) {
+      setError((err as Error).message);
+      throw err;
+    }
+  };
+
+  // Private window composer (add-zhiyu-private-window-send): member-only —
+  // guests have no user seat and the endpoint refuses them server-side too.
+  const [privateDraft, setPrivateDraft] = useState("");
+  const [privateBusy, setPrivateBusy] = useState(false);
+  const sendPrivate = async () => {
+    const content = privateDraft.trim();
+    if (!content || privateBusy) return;
+    setPrivateBusy(true);
+    try {
+      await jcall("POST", `/api/zhiyu/rooms/${roomId}/private`, { content });
+      setPrivateDraft("");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setPrivateBusy(false);
+    }
+  };
+
+  // @mention completion on the last @ fragment. Chinese has no word
+  // separator, so `@` lands straight after a character
+  // （「帮我看看@产品顾问」）— requiring a leading space or line start disabled
+  // the picker in exactly the way room members write.
+  const mentionFragment = useMemo(() => {
+    const m = /@([^\s@]{0,30})$/.exec(composer);
+    return m?.[1] ?? null;
+  }, [composer]);
+  const mentionCandidates = useMemo(() => {
+    if (mentionFragment === null) return [];
+    const frag = mentionFragment.toLowerCase();
+    return members
+      .filter((m) => (m.kind === "agent" || m.kind === "facade") && m.state === "active")
+      .filter((m) => m.display.toLowerCase().includes(frag) || m.ref.toLowerCase().includes(frag))
+      .slice(0, 6);
+  }, [mentionFragment, members]);
+
+  const completeMention = (display: string) => {
+    setComposer((prev) => prev.replace(/@([^\s@]{0,30})$/, `@${display} `));
+  };
+
+  const act = async (path: string, body?: unknown) => {
+    try {
+      await jcall("POST", path, body ?? {});
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const invite = async () => {
+    try {
+      await jcall("POST", `/api/zhiyu/rooms/${roomId}/invites`, {
+        kind: inviteForm.kind,
+        ref: inviteForm.ref.trim().toLowerCase(),
+        ...(inviteForm.onBehalfOf.trim() ? { onBehalfOf: inviteForm.onBehalfOf.trim().toLowerCase() } : {}),
+        ...(inviteForm.display.trim() ? { display: inviteForm.display.trim() } : {}),
+        historyGrant: inviteForm.historyGrant,
+      });
+      setInviteOpen(false);
+      setInviteForm({ kind: "user", ref: "", onBehalfOf: "", display: "", historyGrant: "join_from" });
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  // One roster member. Extracted so the grouped roster (humans / agents /
+  // guests) renders the SAME row the flat list did — grouping is presentation,
+  // and every action below keeps its original gating.
+  const renderMember = (m: MemberRow) => (
+    <li key={m.id} className="rounded-md border px-2.5 py-1.5 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate font-medium">{m.display}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{t(`zhiyu.kind.${m.kind}`)}</span>
+      </div>
+      <div className="mt-0.5 flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">{presenceLabel(m)}</span>
+        <span className="flex gap-1">
+          {m.kind === "user" && me && m.ref !== me.ref && active && (
+            <button type="button" className="inline-action text-primary" onClick={() => void act(`/api/zhiyu/rooms/${roomId}/call`, { target: m.ref })} data-testid={`zy-call-${m.ref}`}>
+              {t("zhiyu.room.call")}
+            </button>
+          )}
+          {m.kind === "facade" && me && m.onBehalfOf === me.ref && active && (
+            m.presence === "on_duty" ? (
+              <button type="button" className="inline-action text-primary" onClick={() => void act(`/api/zhiyu/rooms/${roomId}/takeover`)} data-testid="zy-takeover">
+                {t("zhiyu.room.takeOver")}
+              </button>
+            ) : (
+              <button type="button" className="inline-action text-primary" onClick={() => void act(`/api/zhiyu/rooms/${roomId}/handback`)} data-testid="zy-handback">
+                {t("zhiyu.room.handBack")}
+              </button>
+            )
+          )}
+          {(m.kind === "agent" || m.kind === "facade") && isOwner && seatCatalog && active && (
+            <select
+              className="h-7 max-w-[7rem] rounded border border-input bg-background px-1 text-xs"
+              data-testid={`zy-seat-voice-${m.id}`}
+              value={m.voice ? `${m.voice.model}|${m.voice.voice}` : ""}
+              onChange={(e) => {
+                const [model, voice] = e.target.value.split("|");
+                void act(`/api/zhiyu/rooms/${roomId}/seat-voice`, {
+                  memberId: m.id,
+                  voice: e.target.value ? { model, voice } : null,
+                });
+              }}
+            >
+              <option value="">{t("zhiyu.room.voiceSeatInherit")}</option>
+              {(seatCatalog.entries ?? []).map((e) => (
+                <option key={`${e.model}|${e.voice}`} value={`${e.model}|${e.voice}`}>
+                  {e.label}
+                </option>
+              ))}
+            </select>
+          )}
+          {isOwner && m.id !== myMemberId && active && (
+            <button type="button" className="inline-action text-destructive" onClick={() => void act(`/api/zhiyu/rooms/${roomId}/remove`, { memberId: m.id })}>
+              {t("zhiyu.room.remove")}
+            </button>
+          )}
+        </span>
+      </div>
+    </li>
+  );
+
+  const presenceLabel = (m: MemberRow) => {
+    if (m.kind === "user") return t(`zhiyu.room.presence.${m.presence}`);
+    if (m.kind === "facade") return t(`zhiyu.room.presence.${m.presence}`);
+    return t("zhiyu.room.presence.seated");
+  };
+
+  if (error && !room) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-sm text-muted-foreground">
+        <p>{error}</p>
+        <Button variant="outline" onClick={() => navigate("/zhiyu")}>{t("zhiyu.room.back")}</Button>
+      </div>
+    );
+  }
+
+  // Which slice of the stream the reader asked for (redesign-zhiyu-room-
+  // surfaces 4.1). A FILTER over already-loaded rows, never a re-fetch: the
+  // visibility rules stay exactly what the server sent, and switching views
+  // costs no request. "All" is the default because filtering by default hides
+  // the thing you did not think to ask for.
+  const baseRows = rows.filter(nonChatVisible);
+  const visibleRows = baseRows.filter((row) => {
+    switch (streamFilter) {
+      case "run": {
+        const rd = readReportData(row.meta);
+        if (!rd) return false;
+        // Same predicate as the row's colour — see isAbnormalReport. Using
+        // `blockers.length` here instead is exactly the drift that makes a
+        // filter show rows that are not red (measured live 2026-11-25: it
+        // returned a `data-abnormal="false"` row).
+        return !abnormalOnly || isAbnormalReport(rd, (row.meta?.delivery as { ok?: boolean } | undefined)?.ok);
+      }
+      case "event":
+        return isNonChatRow(row) && !readReportData(row.meta);
+      case "talk":
+        return !isNonChatRow(row);
+      default:
+        return true;
+    }
+  });
+  const privateRows = rows.filter((r) => myMemberId && r.visibility === `private:${myMemberId}`);
+
+  return (
+    <div className="flex h-full min-h-0" data-testid="zhiyu-room">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-between border-b px-4 py-2.5">
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold">{room?.title ?? roomId}</h1>
+            <p className="text-xs text-muted-foreground">
+              {t("zhiyu.room.headerMeta", { cap: room?.effectiveReplyCap ?? "—", status: t(`zhiyu.status.${room?.status ?? "active"}`) })}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              size="sm"
+              variant={voiceOn ? "default" : "outline"}
+              onClick={toggleVoiceOn}
+              data-testid="zhiyu-voice-toggle"
+              data-state={voiceOn ? "on" : "off"}
+            >
+              {voiceOn ? t("zhiyu.room.voiceOn") : t("zhiyu.room.voiceOff")}
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setPrivateOpen((v) => !v)} data-testid="zhiyu-private-toggle">
+              {t("zhiyu.room.privateWindow")}{privateRows.length ? ` (${privateRows.length})` : ""}
+            </Button>
+            {active && (
+              <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)} data-testid="zhiyu-invite-open">
+                {t("zhiyu.room.invite")}
+              </Button>
+            )}
+            {isOwner && (
+              <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)} data-testid="zhiyu-settings-open">
+                {t("zhiyu.room.settings")}
+              </Button>
+            )}
+          </div>
+        </header>
+
+        {error && <div className="mx-4 mt-2 rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+
+        {/* Connection honesty (fix-zhiyu-room-live-stream 3.1). A room that
+            silently stops receiving looks exactly like a room where nobody is
+            talking — that ambiguity is what turned a stream bug into "my
+            message didn't arrive". Say it, quietly, above the flow. */}
+        {active && !streamOpen && (
+          <div className="mx-4 mt-2 rounded-md border border-border bg-muted px-3 py-1.5 text-xs text-muted-foreground" data-testid="zhiyu-stream-offline">
+            {t("zhiyu.room.streamOffline")}
+          </div>
+        )}
+
+        {/* The window is bounded (zhiyu-room-session-scope 3.4). Saying so is the
+            difference between "the agent forgot" and "the agent was never given
+            that part" — the reader deserves to know which. Quiet, above the
+            flow: it is a fact about the room, not an error. */}
+        {rows.length > (room?.contextWindow ?? 40) && (
+          <div className="mx-4 mt-2 text-center text-xs text-muted-foreground" data-testid="zhiyu-window-hint">
+            {t("zhiyu.room.windowTruncated")}
+          </div>
+        )}
+
+        {/* Stream view switch (redesign-zhiyu-room-surfaces 4.1). A room this
+            size mixes 150+ work records with a handful of spoken lines; without
+            a cut the reader has to scroll past the machinery to find a person.
+            Sits above the flow, quiet — it filters, it does not announce. */}
+        <div className="flex items-center gap-1 px-4 pt-2 text-xs" data-testid="zhiyu-stream-filter">
+          {(["all", "run", "event", "talk"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setStreamFilter(k)}
+              data-testid={`zhiyu-filter-${k}`}
+              data-state={streamFilter === k ? "on" : "off"}
+              className={`inline-flex h-7 items-center rounded px-2 ${
+                streamFilter === k ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t(`zhiyu.room.filter.${k}`)}
+            </button>
+          ))}
+          {streamFilter === "run" ? (
+            <label className="ml-1 flex cursor-pointer items-center gap-1 text-muted-foreground" data-testid="zhiyu-filter-abnormal-only">
+              <input
+                type="checkbox"
+                className="h-3 w-3"
+                checked={abnormalOnly}
+                onChange={(e) => setAbnormalOnly(e.target.checked)}
+              />
+              {t("zhiyu.room.filter.abnormalOnly")}
+            </label>
+          ) : null}
+          <span className="ml-auto tabular-nums text-muted-foreground/60" data-testid="zhiyu-filter-count">
+            {visibleRows.length}/{baseRows.length}
+          </span>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3" data-testid="zhiyu-stream">
+          {hasOlder && (
+            <div className="mb-2 flex justify-center">
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => void loadEarlier()}
+                disabled={loadingOlder}
+                data-testid="zhiyu-load-earlier"
+              >
+                {loadingOlder ? t("zhiyu.room.loadingEarlier") : t("zhiyu.room.loadEarlier")}
+              </Button>
+            </div>
+          )}
+          {!streamOpen && visibleRows.length === 0 && (
+            <div className="flex flex-col gap-2 py-4" data-testid="zhiyu-stream-loading">
+              <Skeleton className="h-10 w-3/5" />
+              <Skeleton className="ml-auto h-10 w-2/5" />
+              <Skeleton className="h-10 w-1/2" />
+            </div>
+          )}
+          {/* A filter that hides everything must SAY so (redesign-zhiyu-room-
+              surfaces 7.5). Measured on the live room 2026-11-25: switching to
+              「运行」 in a room with no fleet reports left the stream completely
+              blank while the counter read 0/4 — indistinguishable from a broken
+              stream. The message depends on WHY it is empty: nothing of that
+              kind at all, versus everything filtered out by 「只看异常」. */}
+          {visibleRows.length === 0 && baseRows.length > 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground" data-testid="zhiyu-stream-empty">
+              {abnormalOnly && streamFilter === "run"
+                ? t("zhiyu.room.empty.noAbnormal")
+                : t(`zhiyu.room.empty.${streamFilter}`)}
+            </p>
+          ) : null}
+          {visibleRows.map((row) => {
+            // A fleet report, when the bridge stamped its structured facts onto
+            // the row (redesign-zhiyu-room-surfaces 3.1). Checked BEFORE the
+            // non-chat branch: both are `kind=system`, but one is a scannable
+            // work record and the other is a one-off event.
+            const rd = readReportData(row.meta);
+            if (rd) {
+              return (
+                <RunRow
+                  key={row.seq}
+                  seq={row.seq}
+                  createdAt={row.createdAt}
+                  data={rd}
+                  deliveryOk={row.meta?.delivery && typeof row.meta.delivery === "object"
+                    ? (row.meta.delivery as { ok?: boolean }).ok
+                    : undefined}
+                  expanded={expandedEvents.has(row.seq)}
+                  onToggle={() => setExpandedEvents((s) => {
+                    const n = new Set(s);
+                    if (n.has(row.seq)) n.delete(row.seq); else n.add(row.seq);
+                    return n;
+                  })}
+                />
+              );
+            }
+            if (isNonChatRow(row)) {
+              // Busy-vs-broken (clarify-zhiyu-guest-failure-copy) and the
+              // showcase-room split both live in the shared catalog now, so
+              // this page and the visitor page cannot drift apart.
+              const key = nonChatLabelKey(row);
+              // The routing decision is the one event row that carries ACTIONS:
+              // who it went to, why, and the two ways to correct it (6.1).
+              if (key === "route_decision") {
+                const basis = String(row.meta?.kind ?? "");
+                const recipients = Array.isArray(row.meta?.recipients) ? row.meta.recipients : [];
+                return (
+                  <div key={row.seq} className="my-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground" data-testid={`zy-event-route_decision-${row.seq}`}>
+                    <div className="text-foreground">
+                      {t(`zhiyu.event.route_decision.${basis}`, {
+                        defaultValue: t("zhiyu.event.route_decision.fallback"),
+                        n: recipients.length,
+                        to: recipients.join("、"),
+                      })}
+                    </div>
+                    {row.meta?.reason ? <div className="mt-0.5">{String(row.meta.reason)}</div> : null}
+                    {routeError && (
+                      <div className="mt-1 text-status-failed" data-testid="zy-route-error">
+                        {routeError}
+                      </div>
+                    )}
+                    {isOwner && active && (
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          data-testid={`zy-route-cancel-${row.seq}`}
+                          onClick={() => void cancelDispatch(row.seq)}
+                        >
+                          {t("zhiyu.event.route_action.cancel")}
+                        </Button>
+                        <select
+                          className="rounded-md border border-border bg-background px-2 py-0.5"
+                          data-testid={`zy-route-target-${row.seq}`}
+                          value={reassignTo}
+                          onChange={(e) => setReassignTo(e.target.value)}
+                        >
+                          <option value="">{t("zhiyu.event.route_action.pickTarget")}</option>
+                          {members
+                            .filter((m) => m.kind === "agent")
+                            .map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.display || m.ref}
+                              </option>
+                            ))}
+                        </select>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          disabled={!reassignTo}
+                          data-testid={`zy-route-reassign-${row.seq}`}
+                          onClick={() => void reassignDispatch(row.seq, reassignTo)}
+                        >
+                          {t("zhiyu.event.route_action.reassign")}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              // A non-chat row whose content IS the message (the guest
+              // greeting, a fleet report, the IM delivery-failure sentence)
+              // renders its text; meta-only rows keep the catalog label. A row
+              // with neither never reaches here (nonChatVisible keeps it out).
+              // Six classes must be tellable apart at a glance (design D3). The
+              // receipt is deliberately LIGHTER than a system event: it is
+              // process noise ("on it"), while a system event ("the room ended")
+              // is a fact. Same for the pass marks — they are the quietest thing
+              // in the stream on purpose.
+              const isReceipt = key === "commander_receipt";
+              const isQuiet = key === "pass" || key === "all_passed";
+              // A timeline row, not a centred paragraph (redesign-zhiyu-room-
+              // surfaces 1.1). These rows used to be `text-center` minimum-size
+              // grey: each carries a 60-100 character sentence, and centred
+              // wrapping over that length is unreadable — 171 of them in the
+              // live room made a wall you could not scan. Left-aligned with a
+              // fixed time gutter, a label, and a ONE-LINE summary; the full
+              // text stays available by expanding (1.2).
+              const body = row.content?.trim() ? row.content.trim() : t(`zhiyu.event.${key}`, nonChatLabelParams(row));
+              const isLong = body.length > 72;
+              const expanded = expandedEvents.has(row.seq);
+              return (
+                <div
+                  key={row.seq}
+                  className={`px-1 py-1 text-xs ${
+                    isQuiet ? "text-muted-foreground/60" : isReceipt ? "text-muted-foreground/70" : "text-muted-foreground"
+                  }`}
+                  data-testid={`zy-event-${key ?? String(row.meta?.event ?? "")}`}
+                >
+                  <div className="flex items-start gap-2">
+                    <time
+                      className="shrink-0 tabular-nums opacity-60"
+                      dateTime={new Date(row.createdAt).toISOString()}
+                    >
+                      {clockOf(row.createdAt)}
+                    </time>
+                    {isReceipt ? <span aria-hidden="true" className="shrink-0 opacity-60">·</span> : null}
+                    {isLong && !expanded ? (
+                      <button
+                        type="button"
+                        className="min-w-0 truncate text-left hover:underline"
+                        title={body}
+                        onClick={() => setExpandedEvents((s) => new Set(s).add(row.seq))}
+                        data-testid={`zy-event-expand-${row.seq}`}
+                      >
+                        {body}
+                      </button>
+                    ) : (
+                      <span className="min-w-0 whitespace-pre-wrap break-words">{body}</span>
+                    )}
+                    {isLong && expanded ? (
+                      <button
+                        type="button"
+                        className="shrink-0 whitespace-nowrap opacity-60 hover:opacity-100"
+                        onClick={() => setExpandedEvents((s) => { const n = new Set(s); n.delete(row.seq); return n; })}
+                      >
+                        {t("zhiyu.room.collapseEvent")}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div key={row.seq} className={`group mb-3 flex ${row.kind === "agent" ? "" : "flex-row-reverse"}`} data-testid={`zy-msg-${row.seq}`}>
+                <div className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${row.kind === "agent" ? "bg-muted" : "bg-primary text-primary-foreground"}`}>
+                  <div className={`mb-0.5 text-xs ${row.kind === "agent" ? "text-muted-foreground" : "text-primary-foreground/70"}`}>{label(row)}</div>
+                  {/* Markdown, not pre-wrap: agents answer in Markdown and the
+                      room used to show its raw syntax (zhiyu-room-attachments). */}
+                  <RoomMessageBody text={row.content} />
+                  {row.kind === "agent" && String(row.content ?? "").trim() ? (
+                    <div className="mt-1 flex justify-start">
+                      <button
+                        type="button"
+                        data-testid={`zy-speak-${row.seq}`}
+                        data-state={speakBusy === row.seq ? "loading" : "idle"}
+                        onClick={() => void speakRow(row)}
+                        disabled={speakBusy !== null}
+                        className="text-xs text-muted-foreground underline-offset-2 hover:underline disabled:opacity-50"
+                      >
+                        {speakBusy === row.seq ? t("zhiyu.room.speaking") : t("zhiyu.room.speak")}
+                      </button>
+                    </div>
+                  ) : null}
+                  {row.meta?.attachment ? (
+                    <AttachmentRowCard
+                      roomId={roomId}
+                      meta={row.meta.attachment as { id: string; name: string; mime?: string; bytes?: number; status?: "ready" | "extracting" | "opaque" | "failed" }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+          {Object.values(overlays).map((o) => (
+            <div key={o.memberId} className="mb-3 flex" data-testid="zy-overlay">
+              <div className="max-w-[75%] rounded-2xl bg-muted px-3.5 py-2 text-sm opacity-80">
+                <div className="mb-0.5 text-xs text-muted-foreground">
+                  {o.display} · {t("zhiyu.room.answering")}
+                  {/* A room seat can take 5–30s; silence reads as broken. */}
+                  {(() => {
+                    const waited = Math.max(0, Math.round((nowMs - o.startedAt) / 1000));
+                    if (waited < 3) return null;
+                    return waited >= 15 ? `（已等 ${waited} 秒，上游较慢，仍在等）` : `（已等 ${waited} 秒）`;
+                  })()}
+                </div>
+                <div className="whitespace-pre-wrap break-words">{o.text || "…"}</div>
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+
+        <MeetingPanel
+          roomId={roomId}
+          onError={(m) => setError(m)}
+          onRecordMine={(ctx) => setRecordCtx(ctx)}
+        />
+
+        {/* Meeting mode of the capture lane (meeting-capture-client-wiring, D4):
+            the panel gives the entry, the lane still owns recording, slicing and
+            retry. Keyed by meeting so a second meeting starts a fresh session. */}
+        <CaptureSession
+          open={recordCtx !== null}
+          onOpenChange={(o) => {
+            if (!o) setRecordCtx(null);
+          }}
+          meetingId={recordCtx?.meetingId}
+          meetingRoomId={recordCtx?.roomId}
+        />
+
+        {privateOpen && (
+          <div className="border-t bg-muted/30 px-4 py-3" data-testid="zhiyu-private-panel">
+            <h3 className="mb-2 text-xs font-medium">{t("zhiyu.room.privateWindow")}</h3>
+            {privateRows.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t("zhiyu.room.privateEmpty")}</p>
+            ) : (
+              <ul className="max-h-40 space-y-1.5 overflow-y-auto text-sm">
+                {privateRows.map((row) => (
+                  <li key={row.seq} className="rounded-md bg-background px-2.5 py-1.5">
+                    <span className="mr-2 text-xs text-muted-foreground">{label(row)}</span>
+                    {row.content}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {me && me.kind === "user" && (
+              <div className="mt-2 flex gap-2" data-testid="zhiyu-private-composer">
+                <Input
+                  value={privateDraft}
+                  onChange={(e) => setPrivateDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void sendPrivate();
+                    }
+                  }}
+                  placeholder={t("zhiyu.room.privatePlaceholder")}
+                  className="h-8 text-sm"
+                />
+                <Button size="sm" onClick={() => void sendPrivate()} disabled={privateBusy || !privateDraft.trim()}>
+                  {privateBusy ? "…" : t("zhiyu.room.send")}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {active && (
+          <div className="relative border-t p-3">
+            {mentionCandidates.length > 0 && (
+              <div className="absolute bottom-full left-3 mb-1 w-64 rounded-md border bg-popover p-1 shadow-md" data-testid="zy-mentions">
+                {mentionCandidates.map((m) => (
+                  <button key={m.id} type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-muted" onClick={() => completeMention(m.display)}>
+                    @{m.display} <span className="text-xs text-muted-foreground">{m.kind === "facade" ? `(${m.onBehalfOf})` : m.ref}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <RoomComposer
+              roomId={roomId}
+              allowVoice
+              // Controlled: the mention picker above reads `composer`, and
+              // inserting a candidate only lands if the composer renders it.
+              // Left uncontrolled, `composer` stays "" forever — the picker
+              // never opens and @ is type-only.
+              value={composer}
+              onChange={setComposer}
+              placeholder={t("zhiyu.room.composerPlaceholder")}
+              sendLabel={t("zhiyu.room.send")}
+              onSend={(text) => send(text)}
+              uploadOne={uploadOne}
+            />
+          </div>
+        )}
+      </div>
+
+      <aside className="hidden w-64 shrink-0 border-l p-3 md:block" data-testid="zhiyu-roster">
+        <h3 className="mb-2 text-xs font-medium">{t("zhiyu.room.roster", { count: members.filter((m) => m.state === "active").length })}</h3>
+        <ul className="space-y-1.5">
+          {(() => {
+            const live = members.filter((m) => m.state === "active");
+            const humans = live.filter((m) => m.kind === "user");
+            const agents = live.filter((m) => m.kind === "agent" || m.kind === "facade");
+            const guests = live.filter((m) => m.kind === "guest");
+            // Three groups so the first screen answers "who is here that I
+            // actually talk to". The grouping is presentation only — every
+            // action below is unchanged and still gated the same way.
+            const group = (label: string, list: MemberRow[], testid: string) =>
+              list.length === 0 ? null : (
+                <li key={`grp-${testid}`} className="pt-1 first:pt-0">
+                  <div className="mb-1 text-xs text-muted-foreground/70" data-testid={testid}>
+                    {label} · {list.length}
+                  </div>
+                  <ul className="space-y-1.5">{list.map((m) => renderMember(m))}</ul>
+                </li>
+              );
+            return (
+              <>
+                {group(t("zhiyu.room.group.humans"), humans, "zy-roster-humans")}
+                {group(t("zhiyu.room.group.agents"), agents, "zy-roster-agents")}
+                {guests.length ? (
+                  <li key="grp-guests" className="pt-1">
+                    <button
+                      type="button"
+                      className="mb-1 flex w-full items-center gap-1 text-xs text-muted-foreground/70 hover:text-foreground"
+                      onClick={() => setGuestsOpen((v) => !v)}
+                      data-testid="zy-roster-guests-toggle"
+                      aria-expanded={guestsOpen}
+                    >
+                      <span aria-hidden="true">{guestsOpen ? "▾" : "▸"}</span>
+                      {t("zhiyu.room.group.guests", { n: guests.length })}
+                    </button>
+                    {guestsOpen ? <ul className="space-y-1.5">{guests.map((m) => renderMember(m))}</ul> : null}
+                  </li>
+                ) : null}
+              </>
+            );
+          })()}
+        </ul>
+        {/* Fleet bridge (add-zhiyu-team-memory 刀B): owner-facing subscription
+            list + summon. Subscriptions are event sources, NOT members — the
+            section names that distinction itself. */}
+        {isOwner && active && (
+          <div className="mt-4 border-t pt-3" data-testid="zy-fleet-bridge">
+            <h3 className="mb-1.5 text-xs font-medium">{t("zhiyu.fleet.title")}</h3>
+            <ul className="space-y-1" data-testid="zy-fleet-subs">
+              {(fleetSubs ?? []).map((s) => (
+                <li key={s.id} className="flex items-center justify-between gap-2 rounded-md border px-2 py-1 text-xs">
+                  <span className="min-w-0 truncate">{s.fleetName}</span>
+                  <button
+                    type="button"
+                    className="inline-action shrink-0 text-destructive"
+                    onClick={async () => {
+                      await jcall("DELETE", `/api/zhiyu/rooms/${roomId}/fleet-subscriptions/${s.id}`);
+                      await reloadFleetSubs();
+                    }}
+                    data-testid={`zy-fleet-unsub-${s.id}`}
+                  >
+                    {t("zhiyu.fleet.unsubscribe")}
+                  </button>
+                </li>
+              ))}
+              {(fleetSubs ?? []).length === 0 && <li className="text-xs text-muted-foreground">{t("zhiyu.fleet.none")}</li>}
+            </ul>
+            <div className="mt-2">
+              <input
+                className="h-7 w-full rounded-md border border-border bg-background px-2 text-xs"
+                placeholder={t("zhiyu.fleet.fleetIdPlaceholder")}
+                value={fleetIdDraft}
+                onChange={(e) => setFleetIdDraft(e.target.value)}
+                data-testid="zy-fleet-id-input"
+              />
+              <div className="mt-1 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 flex-1 px-2 text-xs"
+                  onClick={async () => {
+                    setSummonPlan(null);
+                    const r = await jcall<{ plan: SummonPlan }>("POST", `/api/zhiyu/rooms/${roomId}/fleet-summon`, { fleetId: fleetIdDraft, dryRun: true });
+                    setSummonPlan(r.plan);
+                  }}
+                  data-testid="zy-fleet-preview"
+                >
+                  {t("zhiyu.fleet.preview")}
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-7 flex-1 px-2 text-xs"
+                  disabled={!summonPlan || !summonPlan.summonable.length}
+                  onClick={async () => {
+                    const r = await jcall<{ results: { ref: string; ok: boolean; error?: string; admitted?: boolean; already?: boolean }[] }>("POST", `/api/zhiyu/rooms/${roomId}/fleet-summon`, { fleetId: fleetIdDraft });
+                    setSummonResult(r.results);
+                    setFleetIdDraft("");
+                    await reloadFleetSubs();
+                    // Seats that were admitted change the roster, so the room
+                    // must re-read it — otherwise the summon "worked" but the
+                    // member list (and @-completion) still shows the old one.
+                    await load();
+                  }}
+                  data-testid="zy-fleet-summon"
+                >
+                  {t("zhiyu.fleet.summon")}
+                </Button>
+              </div>
+              {summonPlan && (
+                <div className="mt-1.5 space-y-0.5 text-xs text-muted-foreground" data-testid="zy-fleet-plan">
+                  {summonPlan.summonable.map((m) => (
+                    <div key={m.ref}>✓ {m.title ?? m.ref}</div>
+                  ))}
+                  {summonPlan.cockpitOnly.map((title) => (
+                    <div key={title} className="text-warning">• {t("zhiyu.fleet.cockpitOnly", { title })}</div>
+                  ))}
+                </div>
+              )}
+              {summonResult && (
+                <div className="mt-1.5 space-y-0.5 text-xs" data-testid="zy-fleet-summon-result">
+                  {summonResult.map((r) => (
+                    <div key={r.ref} className={r.ok ? "text-primary" : "text-destructive"}>
+                      {r.ok ? "✓" : "✗"} {r.ref}
+                      {r.admitted ? `：${t("zhiyu.fleet.admitted")}` : r.already ? `：${t("zhiyu.fleet.alreadySeated")}` : r.ok ? `：${t("zhiyu.fleet.pendingAccept")}` : ""}
+                      {r.error ? `：${r.error}` : ""}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Room memory (add-memory-visible-ux 任务 4): owner-gated zero-render —
+            the whole subtree exists only under isOwner, members/guests never
+            even get a disabled shell (spec: 不渲染，非置灰). */}
+        {isOwner && (
+          <div className="mt-4 border-t pt-3" data-testid="zy-room-memory">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between text-left text-xs font-medium"
+              onClick={() => setMemOpen((v) => !v)}
+              data-testid="zy-room-memory-toggle"
+            >
+              {t("zhiyu.room.memory.title")}
+              <span className="text-muted-foreground">{memOpen ? "−" : "+"}</span>
+            </button>
+            {memOpen && (
+              <div className="mt-1.5" data-testid="zy-room-memory-body">
+                {memLoading && <p className="text-xs text-muted-foreground">…</p>}
+                {!memLoading && memOff && (
+                  <p className="text-xs text-muted-foreground">{t("zhiyu.room.memory.off")}</p>
+                )}
+                {!memLoading && !memOff && memEntries != null && memEntries.length === 0 && (
+                  <p className="text-xs text-muted-foreground">{t("zhiyu.room.memory.empty")}</p>
+                )}
+                {!memLoading && !memOff && memEntries != null && memEntries.length > 0 && (
+                  <ul className="space-y-1">
+                    {memEntries.map((e) => (
+                      <li key={e.path} className="rounded-md border px-2 py-1 text-xs" data-testid="zy-room-memory-entry">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="min-w-0 truncate font-medium">{e.title}</span>
+                          <span className="shrink-0 text-muted-foreground">{String(e.ts ?? "").slice(0, 10)}</span>
+                        </div>
+                        {e.metadata?.lane === "zhiyu" && (
+                          <span className="mt-0.5 inline-block rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                            {t("zhiyu.room.memory.turnBadge")}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </aside>
+
+      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("zhiyu.invite.title")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              {(["user", "facade", "agent"] as const).map((k) => (
+                <Button key={k} size="sm" variant={inviteForm.kind === k ? "default" : "outline"} onClick={() => setInviteForm((f) => ({ ...f, kind: k }))}>
+                  {t(`zhiyu.kind.${k}`)}
+                </Button>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              <Label>{inviteForm.kind === "user" ? t("zhiyu.invite.refUser") : t("zhiyu.invite.refAgent")}</Label>
+              <Input value={inviteForm.ref} onChange={(e) => setInviteForm((f) => ({ ...f, ref: e.target.value }))} placeholder={inviteForm.kind === "user" ? "someone@corp.com" : "pack-id:agent-id"} />
+            </div>
+            {inviteForm.kind !== "user" && (
+              <div className="space-y-1.5">
+                <Label>{t("zhiyu.invite.onBehalfOf")}</Label>
+                <Input value={inviteForm.onBehalfOf} onChange={(e) => setInviteForm((f) => ({ ...f, onBehalfOf: e.target.value }))} placeholder="owner@corp.com" />
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label>{t("zhiyu.invite.display")}</Label>
+              <Input value={inviteForm.display} onChange={(e) => setInviteForm((f) => ({ ...f, display: e.target.value }))} placeholder={t("zhiyu.invite.displayPlaceholder")} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("zhiyu.invite.historyGrant")}</Label>
+              <div className="flex gap-2">
+                {(["join_from", "full"] as const).map((g) => (
+                  <Button key={g} size="sm" variant={inviteForm.historyGrant === g ? "default" : "outline"} onClick={() => setInviteForm((f) => ({ ...f, historyGrant: g }))}>
+                    {t(`zhiyu.invite.grant.${g}`)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Button className="w-full" onClick={() => void invite()} data-testid="zhiyu-invite-submit">
+              {t("zhiyu.invite.submit")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("zhiyu.settings.title")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>{t("zhiyu.settings.cap")}</Label>
+                <Input type="number" min={1} max={20} value={capForm} onChange={(e) => setCapForm(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>{t("zhiyu.settings.budget")}</Label>
+                <Input type="number" min={1} value={budgetForm} onChange={(e) => setBudgetForm(e.target.value)} placeholder={t("zhiyu.settings.budgetPlaceholder")} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>{t("zhiyu.settings.billingMode")}</Label>
+              <select
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={billingModeForm}
+                onChange={(e) => setBillingModeForm(e.target.value as "billed" | "showcase")}
+                data-testid="zhiyu-settings-billing-mode"
+              >
+                <option value="billed">{t("zhiyu.settings.billingModeBilled")}</option>
+                <option value="showcase">{t("zhiyu.settings.billingModeShowcase")}</option>
+              </select>
+              <p className="text-xs text-muted-foreground">{t("zhiyu.settings.billingModeHint")}</p>
+            </div>
+            {/* Who shares the agent's memory (zhiyu-room-session-scope). The
+                message stream stays shared either way — this only decides
+                whether one seat remembers everyone's words or just its
+                interlocutor's. */}
+            <div className="space-y-1.5">
+              <Label>{t("zhiyu.settings.sessionScope")}</Label>
+              <select
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                value={sessionScopeForm}
+                onChange={(e) => setSessionScopeForm(e.target.value as "shared" | "per-sender")}
+                data-testid="zhiyu-settings-session-scope"
+              >
+                <option value="shared">{t("zhiyu.settings.sessionScopeShared")}</option>
+                <option value="per-sender">{t("zhiyu.settings.sessionScopePerSender")}</option>
+              </select>
+              <p className="text-xs text-muted-foreground">{t("zhiyu.settings.sessionScopeHint")}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() =>
+                  void (async () => {
+                    try {
+                      await jcall("PATCH", `/api/zhiyu/rooms/${roomId}`, {
+                        ...(capForm.trim() ? { replyCap: Number(capForm) } : { replyCap: null }),
+                        ...(budgetForm.trim() ? { dailyBudgetTurns: Number(budgetForm) } : { dailyBudgetTurns: null }),
+                        ...(billingModeForm ? { billingMode: billingModeForm } : {}),
+                        sessionScope: sessionScopeForm,
+                      });
+                      await load();
+                    } catch (err) {
+                      setError((err as Error).message);
+                    }
+                  })()
+                }
+                data-testid="zhiyu-settings-save"
+              >
+                {t("zhiyu.settings.save")}
+              </Button>
+              <Button variant="destructive" onClick={() => setEndOpen(true)}>
+                {t("zhiyu.settings.end")}
+              </Button>
+              <ConfirmDialog
+                open={endOpen}
+                onOpenChange={setEndOpen}
+                title={t("zhiyu.settings.end")}
+                description={t("zhiyu.settings.endConfirm")}
+                confirmLabel={t("zhiyu.settings.end")}
+                cancelLabel={t("common.cancel")}
+                variant="danger"
+                onConfirm={() => {
+                  void (async () => {
+                    await act(`/api/zhiyu/rooms/${roomId}/end`);
+                    navigate("/zhiyu");
+                  })();
+                }}
+              />
+            </div>
+
+            {/* Website embed (add-zhiyu-website-embed). Owner-only surface; the
+                public lane reports separately whether it is deployment-open. */}
+            <div className="border-t pt-4">
+              <h3 className="mb-2 text-sm font-medium">{t("zhiyu.widget.title")}</h3>
+              {widgetStatus && !widgetStatus.publicOpen && (
+                <p className="mb-2 rounded-md bg-muted px-2.5 py-1.5 text-xs text-muted-foreground">{t("zhiyu.widget.publicClosed")}</p>
+              )}
+              <p className="mb-2 text-xs text-muted-foreground">
+                {widgetStatus?.enabled
+                  ? t("zhiyu.widget.statusOn", { fp: widgetStatus.token?.fingerprint ?? "" })
+                  : t("zhiyu.widget.statusOff")}
+              </p>
+              <div className="space-y-2">
+                <Label className="text-xs">{t("zhiyu.widget.allowlist")}</Label>
+                <Textarea
+                  value={widgetDomainInput}
+                  onChange={(e) => setWidgetDomainInput(e.target.value)}
+                  placeholder={"shop.example.com\n*.partner.com"}
+                  className="min-h-[64px] text-xs"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {!widgetStatus?.enabled ? (
+                    <Button size="sm" disabled={widgetBusy} onClick={() => void widgetEnable()} data-testid="zy-widget-enable">
+                      {t("zhiyu.widget.enable")}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button size="sm" variant="outline" disabled={widgetBusy} onClick={() => void widgetAction("patch")}>
+                        {t("zhiyu.widget.saveAllowlist")}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => void copyText(`<script src="${location.origin}/zhiyu/widget.js" data-room="${widgetIssued?.token ?? ""}" async></script>`, "已复制 snippet")}>
+                        {t("zhiyu.widget.copySnippet")}
+                      </Button>
+                      <Button size="sm" variant="outline" disabled={widgetBusy} onClick={() => void widgetAction("rotate-secret")}>
+                        {t("zhiyu.widget.rotate")}
+                      </Button>
+                      <Button size="sm" variant="destructive" disabled={widgetBusy} onClick={() => void widgetAction("revoke")}>
+                        {t("zhiyu.widget.revoke")}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                {widgetIssued?.token && (
+                  <div className="rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-xs text-warning">
+                    <div className="font-medium">{t("zhiyu.widget.onceOnly")}</div>
+                    <code className="mt-1 block break-all">{widgetIssued.snippet}</code>
+                    <code className="mt-1 block break-all">site-secret: {widgetIssued.siteSecret}</code>
+                  </div>
+                )}
+                {/* Current link status (harden-zhiyu-outbound-lanes 1.2). The
+                    status was already being fetched into widgetStatus and then
+                    never rendered, so re-opening this panel told an operator
+                    nothing about whether a link exists or how old it is — the
+                    only way to know was to remember the last session. */}
+                <p className="text-xs text-muted-foreground" data-testid="zy-link-status">
+                  {widgetStatus?.linkToken
+                    ? t("zhiyu.widget.linkStatusOn", {
+                        fp: widgetStatus.linkToken.fingerprint,
+                        at: new Date(widgetStatus.linkToken.createdAt).toLocaleString(),
+                      })
+                    : t("zhiyu.widget.linkStatusNone")}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" disabled={widgetBusy} onClick={() => void widgetAction("share-link")}>
+                    {t("zhiyu.widget.makeLink")}
+                  </Button>
+                  {shareUrl && (
+                    <button type="button" className="truncate text-xs text-primary hover:underline" onClick={() => void copyText(shareUrl, "链接已复制")}>
+                      {shareUrl}
+                    </button>
+                  )}
+                </div>
+                {/* The one fact that cannot be discovered after the fact. */}
+                <p className="text-xs text-muted-foreground">{t("zhiyu.widget.linkSecretHint")}</p>
+                {widgetNote && <p className="text-xs text-muted-foreground">{widgetNote}</p>}
+                <p className="border-t pt-3 text-xs text-muted-foreground">
+                  老客服台（Chatwoot）商家两条线可并行：既有会话继续走{" "}
+                  <a className="text-primary hover:underline" href="/external/crm-desk/sso">客服台</a>
+                  ，新接待访客可从本房间的嵌入或进房链接起线，分期迁移互不打断。
+                </p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

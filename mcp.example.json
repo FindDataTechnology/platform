@@ -1,0 +1,117 @@
+{
+  "_comment": "Copy this file to mcp.json and edit. mcp.json is gitignored. Two server shapes are supported: stdio (spawns a local process) and http (connects to a remote Streamable HTTP / SSE endpoint).",
+  "mcpServers": {
+    "example-stdio": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "env": {
+        "SOME_VAR": "value"
+      }
+    },
+    "example-http": {
+      "url": "https://example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
+      }
+    },
+    "playwright": {
+      "_comment": "浏览器操作车道（add-browser-use-lane）。桌面/本地 opt-in 启用步骤：① `npm install -g @playwright/mcp@0.0.80`（或装进任意目录），运行一次 `npx playwright install chromium` 装浏览器；② 在 .env 设置 BROWSER_MCP_CLI=<该包的 cli.js 绝对路径>（+ PLAYWRIGHT_BROWSERS_PATH=<浏览器目录>）；③ 车道本身随 platform.bundle.json 的 playwright 条目供给，无需在此再声明——本块只是说明；供给门三形态与 BROWSER_LANE=off 见 .env.example。确认 MCP 市场里启用了条目。",
+      "_disabled": true,
+      "command": "node",
+      "args": [
+        "server/browser-mcp.js"
+      ]
+    },
+    "fleet": {
+      "command": "node",
+      "args": [
+        "server/fleet-mcp.js"
+      ],
+      "comment": "Fleet report_status tool (agent-fleet-report-lane) — loopback bridge to the platform server."
+    },
+    "fleet-architect": {
+      "command": "node",
+      "args": [
+        "server/fleet-architect-mcp.js"
+      ]
+    },
+    "library": {
+      "command": "node",
+      "args": [
+        "server/library-mcp.js"
+      ],
+      "comment": "知识库检索面（add-knowledge-memory-surface 2.1）——agents 主动调 library_* 工具；PROJECT_ID/COLLECTION_IDS 环境变量钉检索边界，缺省=全量。"
+    },
+    "cron": {
+      "command": "node",
+      "args": [
+        "server/cron-mcp.js"
+      ],
+      "comment": "定时任务 MCP 面（cron_add/cron_list/cron_update/cron_delete）——九条优化 #1 的 agent 侧工具。"
+    },
+    "delegation": {
+      "command": "node",
+      "args": [
+        "server/delegation-mcp.js"
+      ],
+      "comment": "任务委托 MCP 面（delegate_task/task_progress/task_result，agent-delegation-tools spec）——std 工具桥 /api/delegation 回环；授权闸在平台侧，工具面只暴露入口。"
+    },
+    "trade": {
+      "command": "node",
+      "args": [
+        "server/trade-mcp.js"
+      ],
+      "comment": "交易 MCP 面（trade_discover/trade_demand/trade_quote/trade_accept，establish-ai-native-trade-discovery 5.x）——四个动词直连店目录与 ERP trade 面；委托票由服务端 /api/trade/grant 用部署的 registry 机器凭据签，act=会话主人，上限 ERP_TRADE_GRANT_BUDGET。无 TRADE_ACTOR 时降级为「人下单」，不伪造额度。"
+    },
+    "bench-proposal": {
+      "command": "node",
+      "args": [
+        "server/bench-proposal-mcp.js"
+      ],
+      "envRefs": [
+        "BENCH_URL",
+        "BENCH_CONSUMER_TOKEN",
+        "BENCH_PROPOSAL_DOMAIN",
+        "BENCH_FLEET_TOKEN",
+        "BENCH_FLEET_REF",
+        "BENCH_PROPOSAL_MODE"
+      ],
+      "comment": "本体草案出口（switch-fleet-proposals-to-domain-inbox；身份面见 bind-bench-proposal-identity-to-credential）。一个工具 bench_proposal_submit，把草案投到知验台该域提案箱，取代往柏讯动作闸逐租户声明实体。五项一律走 envRefs 显式转发：dsh 子进程会擦除形似凭据的环境名（含 *TOKEN*），只写在环境里的凭据过不了这一跳；URL/域一并走 refs，好让目标随部署档切换。凭据只经 env/secret 注入，不落仓。**两套面不可互换**：`BENCH_PROPOSAL_MODE` 缺省 session —— `BENCH_CONSUMER_TOKEN`（lbk_ 走 X-API-Key，否则 Bearer）代表**一个人**，提案的提交方来自请求体里的 source（自述）；`mode=machine` 时改用 `BENCH_FLEET_TOKEN`（X-Consumer-Token），身份由对端从登记行派生，`source` 必须形如 fleet:<自己的 fleet_ref>/<post>`，而 `BENCH_FLEET_REF` 让客户端在**发请求之前**就判出「这不是你自己」，并把正确的 ref 写进报错。切换默认是独立一步，见该 change 的 design D6。"
+    },
+    "bench-ops": {
+      "command": "node",
+      "args": [
+        "server/bench-ops-mcp.js"
+      ],
+      "envRefs": [
+        "BENCH_URL",
+        "BENCH_FLEET_TOKEN",
+        "BENCH_PROPOSAL_DOMAIN"
+      ],
+      "comment": "舰队执行面（add-bench-ops-tools）——四个工具：bench_work_order_list / claim / complete / bench_run_report。**凭据与 bench-proposal 不是同一枚**：机器面（/api/v1/distribution/*）只认 X-Consumer-Token，故用 BENCH_FLEET_TOKEN（舰队登记的消费者令牌）；BENCH_CONSUMER_TOKEN 属提案面（lbk_ api key 走 X-API-Key 或 Logto JWT 走 Bearer），两者不可互换、也没有回退——拿它顶替只会得到 403「未登记」，读起来像舰队被删了。初版曾照搬提案面的 authHeaders()，于是每条调用都是 401 而 14 条测试全绿（测试都注入 transport，没人看头）。envRefs 仍需显式转发：dsh 子进程会擦除形似凭据的环境名（含 *TOKEN*）；URL/域一并走 refs 好随部署档切换。**身份不由配置给**：fleet_ref 取自 list 的响应（对端刚认证的就是它），runner_ref 由 fleet:<fleet_ref>/<post>#<round> 拼出，因此一笔回写没法被记到没跑它的舰队头上。404 的两种含义在客户端分开报：裸 404=该面未上线（等部署/改 BENCH_URL），正文点名域或工单=东西不存在；403=不是本舰队的活；409=别人已认领。"
+    },
+    "archive": {
+      "command": "node",
+      "args": [
+        "server/archive/mcp.js"
+      ],
+      "envRefs": [
+        "ARCHIVE_DB"
+      ],
+      "comment": "会话存档读面（add-wecom-archive-ingest 6.1b）——三个只读工具 archive_conversations / archive_messages / archive_search。同意边界做在工具层：未同意存档的会话既列不出、取不到、也搜不到，且取不到时明确说原因（空数组会让 agent 换个角度重试，明说才会停手）。ARCHIVE_DB 走 envRefs：库路径随部署档变化，不能写死在 args 里。"
+    },
+    "kf": {
+      "command": "node",
+      "args": [
+        "server/archive/kf/mcp.js"
+      ],
+      "envRefs": [
+        "KF_DB"
+      ],
+      "comment": "微信客服读面（add-kf-agent-tools）——四个只读工具 kf_conversations / kf_messages / kf_search / kf_attachment。只读是刻意的：没有拉取、没有下载附件、没有发送；给客户发消息仍只有 CLI 的 reply --confirm。默认只给客户发言（本方回复与系统事件会污染判断），要本方发言显式传 includeSelf=true。附件正文随消息带出，未抽取时给状态与原因而不是空串；kf_attachment 只查已落库的抽取结果，不下载也不现场解析。KF_DB 走 envRefs：库路径随部署档变化，不能写死在 args 里。"
+    }
+  }
+}
