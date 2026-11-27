@@ -328,6 +328,39 @@ const MCP_TARGETS = {
     json: { container: (doc) => (doc.mcp ??= { servers: {} }).servers ??= {}, key: null },
     entry: (url, headers) => ({ url, transport: "streamable-http", headers }),
   },
+  // hermes keeps MCP in ~/.hermes/config.yaml (YAML, not JSON). Shaped like the
+  // vendor docs (`mcp_servers.<name>.{url,headers}`); written by a real YAML
+  // parser, not string splicing. (`hermes mcp add --url --auth header` also
+  // exists as the vendor-owned writer; that needs a token prompt we cannot
+  // answer headlessly, so we write the file directly.)
+  hermes: {
+    userFile: () => path.join(HOME(), ".hermes", "config.yaml"),
+    yaml: { container: (doc) => (doc.mcp_servers ??= {}) },
+    entry: (url, headers) => ({ url, headers }),
+  },
+  // trae-agent's CLI only speaks stdio MCP (its http_url path raises
+  // NotImplementedError), so a remote server is reached through supergateway,
+  // which terminates HTTP and pipes JSON-RPC over stdio. Its config is YAML at
+  // trae_config.yaml with a top-level mcp_servers map plus an allow list.
+  trae: {
+    userFile: () => path.join(HOME(), ".trae", "trae_config.yaml"),
+    yaml: {
+      container: (doc) => {
+        // trae-agent only enables servers named in allow_mcp_servers; a server
+        // written without it is discovered-but-unusable.
+        (doc.allow_mcp_servers ??= []);
+        return (doc.mcp_servers ??= {});
+      },
+      allow: (doc, name) => {
+        const list = (doc.allow_mcp_servers ??= []);
+        if (!list.includes(name)) list.push(name);
+      },
+    },
+    entry: (url, headers) => ({
+      command: "npx",
+      args: ["-y", "supergateway", "--streamableHttp", url, "--oauth2Bearer", String(headers.Authorization || "").replace(/^Bearer\s+/, "")],
+    }),
+  },
   codex: {
     userFile: () => path.join(HOME(), ".codex", "config.toml"),
     toml: true,
@@ -377,6 +410,21 @@ async function upsertJsonMcp(file, container, key, name, entry) {
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, JSON.stringify(doc, null, 2) + "\n", "utf8");
   if (!existed) await chmod(file, 0o600); // the file now carries the caller key
+  return file;
+}
+
+// Upsert one entry into a YAML config (hermes). Parsed, not string-spliced: text
+// markers in YAML silently match the wrong block (a text-split once deleted a
+// whole ConfigMap), and js-yaml round-trips the rest of the file untouched.
+async function upsertYamlMcp(file, spec, name, entry) {
+  const YAML = (await import("js-yaml")).default;
+  const existed = await stat(file).then(() => true).catch(() => false);
+  const doc = existed ? (YAML.load(await readFile(file, "utf8")) ?? {}) : {};
+  spec.container(doc)[name] = entry;
+  spec.allow?.(doc, name);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, YAML.dump(doc, { lineWidth: -1 }), "utf8");
+  if (!existed) await chmod(file, 0o600);
   return file;
 }
 
@@ -430,7 +478,8 @@ async function writeMcpConfig(target, { registry, servers, key, project, oauth }
       files.push(`${target} mcp add-json ${s.registryName}`);
       continue;
     }
-    if (t.toml) files.push(await upsertTomlMcp(t.userFile(), s.registryName, url, headers));
+    if (t.yaml) files.push(await upsertYamlMcp(t.userFile(), t.yaml, s.registryName, t.entry(url, headers)));
+    else if (t.toml) files.push(await upsertTomlMcp(t.userFile(), s.registryName, url, headers));
     else {
       const file = project && t.projectFile ? t.projectFile(project) : t.userFile();
       files.push(await upsertJsonMcp(file, t.json.container, t.json.key, s.registryName, t.entry(url, headers)));
@@ -1866,6 +1915,20 @@ async function writeLlmConfig(target, key, router) {
     await mkdir(path.dirname(cfg), { recursive: true });
     await writeFile(cfg, text, "utf8");
     files.push(cfg);
+  } else if (target === "hermes") {
+    // config.yaml is hermes's single source of truth for the endpoint; there is
+    // no env-var path for a custom base URL unless the provider is openai-api.
+    // model.provider: custom + base_url + api_key is the documented form.
+    const YAML = (await import("js-yaml")).default;
+    const file = path.join(home, ".hermes", "config.yaml");
+    const existed = await stat(file).then(() => true).catch(() => false);
+    const doc = existed ? (YAML.load(await readFile(file, "utf8")) ?? {}) : {};
+    const modelId = process.env.FACET_KEY_MODEL || "deepseek-v4-pro";
+    doc.model = { ...(doc.model ?? {}), default: modelId, provider: "custom", base_url: `${router}/v1`, api_key: key };
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, YAML.dump(doc, { lineWidth: -1 }), "utf8");
+    await chmod(file, 0o600);
+    files.push(file);
   }
   return files;
 }
