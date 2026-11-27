@@ -98,14 +98,43 @@ test("budget with no healthy candidate → insufficient evidence, not a guess", 
   assert.equal(out.missingEvidence[0].reason.includes("no healthy candidate"), true);
 });
 
-test("timeout without turn-timeout evidence → insufficient evidence", () => {
+test("timeout without a budget figure still yields a raise (bare 'turn timed out')", () => {
+  // 生产实测（2026-11-28，cell 1da519d4c1c0bf89）：1168 条 timeout 的错误文本
+  // 几乎都是裸的 "turn timed out"。诊断据此给不出 turnTimeoutMs，但诊断自己的
+  // action 仍写着「调高回合超时上限」——调高超时不需要知道当前值。这条钉住
+  // 修复脑与诊断侧的契约一致：没有数字也要能建议，且不把上限改小。
   const out = repairDraft({
     diagnoses: [{ ref: "m1", errorKind: "timeout" }],
     liveRows: [liveRow()],
     modelRoster: ROSTER,
   });
-  assert.equal(out.ok, false);
-  assert.match(out.missingEvidence[0].reason, /turn-timeout evidence/);
+  assert.equal(out.ok, true);
+  const after = out.diff.updates[0].after;
+  const raised = after.cadence.turnTimeoutMs;
+  assert.ok(Number.isFinite(raised) && raised > 0, "must propose a concrete raised timeout");
+  // 15 分钟下限 —— 低于已知生产上限（960s/1200s 软停），不会把上限改小
+  assert.ok(raised >= 15 * 60_000, `raised value ${raised} must not lower a known ceiling`);
+  // cron 不许被动
+  assert.equal(after.cadence.cron, "0 9 * * *");
+});
+
+test("timeout doubles a known current budget (evidence absent)", () => {
+  const out = repairDraft({
+    diagnoses: [{ ref: "m1", errorKind: "timeout" }],
+    liveRows: [liveRow({ cadence: { cron: "0 9 * * *", turnTimeoutMs: 600_000 } })],
+    modelRoster: ROSTER,
+  });
+  assert.equal(out.ok, true);
+  assert.equal(out.diff.updates[0].after.cadence.turnTimeoutMs, 1_200_000);
+});
+
+test("timeout with explicit evidence uses the diagnostic's number verbatim", () => {
+  const out = repairDraft({
+    diagnoses: [{ ref: "m1", errorKind: "timeout", evidence: { turnTimeoutMs: 900_000 } }],
+    liveRows: [liveRow({ cadence: { cron: "0 9 * * *", turnTimeoutMs: 600_000 } })],
+    modelRoster: ROSTER,
+  });
+  assert.equal(out.diff.updates[0].after.cadence.turnTimeoutMs, 900_000);
 });
 
 test("unknown error_kind → no repair, not a guess", () => {

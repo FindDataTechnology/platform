@@ -34,6 +34,7 @@ import { resolveLocale, projectManifestForLocale, applyLocaleToSummary } from ".
 import { safePackagePath } from "../lib/skill-files.js";
 import { deriveTeam } from "../lib/team-derivation.js";
 import { derivePillars } from "../lib/pack-pillars.js";
+import { deriveCapabilities } from "../lib/capability-layer.js";
 import { deriveBadge, badgeFromFlags } from "../lib/pack-badge.js";
 import { describeProvenance, PROVENANCE_SOURCE } from "../lib/pack-provenance.js";
 import { localeCoverage } from "../lib/pack-locale-coverage.js";
@@ -1899,7 +1900,11 @@ export function registerPackRoutes(app, {
     // 只算**无作用域**的全量投影。按岗位作用域的那一份由详情面在需要时自行传
     // agentId 重算——把 N 个岗位的投影塞进 payload，会让一个 6 岗模板的响应里
     // 多出 6 份几乎相同的记忆块，而多数读者只关心合计。
+    // pillars 字段保持原样（逐字段兼容）；capabilities 是新增的统一视图
+    // （capability-layer）：三作用域同形状、带三轴与 skills 面。
+    // 生产比对 120/120 样本：pillars 与 capabilities.pillars 逐字段一致。
     pack.pillars = derivePillars(pack.manifest);
+    pack.capabilities = deriveCapabilities(pack.manifest, { scope: "pack" }).capabilities;
     // Adopted provenance (add-official-adopted-agents D1): the SOURCE axis,
     // synthesized through the one projection so no surface can invent
     // "official-adopted" independently. `official` comes from the roster
@@ -3468,7 +3473,11 @@ export function registerPackRoutes(app, {
     }
     // 形状不合法时 derivePillars 自己会给出 invalid 态与 errors，这里不预判——
     // 预判会让「编辑器看到的原因」与「市场门拒绝的原因」成为两个说法。
-    res.json({ pillars: derivePillars(manifest), team: deriveTeam(manifest) });
+    res.json({
+      pillars: derivePillars(manifest),
+      capabilities: deriveCapabilities(manifest, { scope: "pack" }).capabilities,
+      team: deriveTeam(manifest),
+    });
   });
 
   app.post("/api/packs/:id/unpublish", (req, res) => {
