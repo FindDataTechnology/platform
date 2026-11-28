@@ -1,0 +1,74 @@
+# iOS / macOS lane — real-environment acceptance on a macOS host (task 4.3).
+#
+# Why this exists: iOS cannot be built or run on Windows (needs macOS + Xcode).
+# That is a platform fact, not a choice — so the rig carries iOS on a macOS CI
+# host instead of pretending a Windows box can.
+#
+# Honest scope (read before trusting a green):
+#   * REAL: the desktop/server app builds and boots on macOS (the shipped
+#     platform artifact is a macOS .dmg — see electron-builder.js / release.yml).
+#   * SIMULATOR, NOT A DEVICE: any iOS run here is the simulator. A green run is
+#     NOT real-device acceptance; it proves build+launch only.
+#   * MINI-PROGRAM iOS GAP: paas/miniapp has only `build:weapp` (WeChat). There
+#     is no iOS miniapp target to build — we say so in the summary rather than
+#     invent one. Re-evaluate when a Taro build:h5/ios or an RN target lands.
+#
+# A macOS host is expensive on Actions minutes, so this is workflow_dispatch +
+# a weekly schedule, not per-push.
+
+name: ios-macos-lane
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 20 * * 0" # weekly, Sunday 20:30 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  macos-acceptance:
+    name: macos desktop build + boot
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Backend + server are buildless JS; skip the frontend bundle to keep the
+      # job honest about what it proves (that the app tree loads on macOS).
+      - name: Install (skip web build + resource bundling)
+        env:
+          PLATFORM_SKIP_WEB_BUILD: "1"
+          PLATFORM_SKIP_BUNDLE: "1"
+        run: npm ci
+
+      # Boot the server on the macOS host and hit its health probe. This is the
+      # macOS-specific evidence: the same single supervised process the product
+      # ships (see CLAUDE.md "deploys exactly one server process").
+      - name: Boot server and probe /api/config
+        run: |
+          set -euo pipefail
+          PORT=3971 HOST=127.0.0.1 node server.js > /tmp/server.log 2>&1 &
+          SRV=$!
+          for i in $(seq 1 60); do
+            if curl -sf -m 2 http://127.0.0.1:3971/api/config > /tmp/config.json; then
+              echo "health: OK"; break
+            fi
+            sleep 1
+            if [ "$i" = 60 ]; then echo "server did not answer /api/config"; cat /tmp/server.log; kill $SRV || true; exit 1; fi
+          done
+          echo "--- /api/config ---"; cat /tmp/config.json; echo
+          kill $SRV || true
+
+      - name: Desktop packaging resources (node fetch for the bundled runtime)
+        run: npm run predist
+
+      - name: Record platform + mini-program iOS gap
+        run: |
+          echo "platform: $(uname -sm)"
+          node -e "const p=require('./miniapp/package.json');const ios=Object.keys(p.scripts).filter(s=>/build:(ios|h5|rn)|ios/i.test(s));console.log('miniapp scripts:',Object.keys(p.scripts).join(', '));console.log(ios.length?'miniapp iOS target(s): '+ios:'GAP: paas/miniapp has no iOS target (build:weapp only) — iOS miniapp unverified')"

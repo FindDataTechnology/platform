@@ -1,0 +1,157 @@
+{
+  "brand": {
+    "name": "Yizuo Agent Materials Plaza"
+  },
+  "nav": {
+    "materials": "What materials",
+    "mechanism": "How it is supplied",
+    "inventory": "Inventory",
+    "audience": "Who it is for"
+  },
+  "hero": {
+    "title": "Every material an agent needs,<br>laid out in one plaza.",
+    "lead": "Packs, ecosystem skills, MCP servers, AI facades, official data anchors — every one of them something a human or an AI agent can understand, obtain, and run. This site shows what exists, how it is supplied, and what is here right now.",
+    "actions": "Human: read on, or jump to the inventory"
+  },
+  "counters": {
+    "packs": "Agents",
+    "categories": "Material categories",
+    "locales": "Languages",
+    "asOf": "Snapshot as of",
+    "skills": "Skills",
+    "mcp": "MCP services",
+    "tools": "Callable tools",
+    "facade": "Live agents",
+    "officialData": "Data anchors"
+  },
+  "materials": {
+    "title": "What materials exist",
+    "lead": "Everything the plaza offers is a material. Material is the genus — the five species below differ in shape and share one supply mechanism.",
+    "items": [
+      {
+        "name": "Pack",
+        "en": "Pack",
+        "desc": "A versioned bundle of skills, MCP references, and personas. Publishing freezes an immutable snapshot; install it and it works. One pack is one deliverable capability.",
+        "example": "Example: the CRM Service Desk Suite — connect your own service desk, read conversations, draft replies, send after confirmation."
+      },
+      {
+        "name": "Ecosystem Skill",
+        "en": "Ecosystem Skill",
+        "desc": "Open-community skills admitted through review: carrying source and license marks, installable alone or composed into packs.",
+        "example": "Example: individual skills inside the data-ingestion and document-studio shelves."
+      },
+      {
+        "name": "MCP Server",
+        "en": "MCP Server",
+        "desc": "Tool services a model can call. Every entry carries a two-way annotation — humans read five-locale summaries, AI reads the canonical brief; one annotation layer, speaking to each reader in its own language.",
+        "example": "Example: Web fetch — pull any URL's content with zero configuration."
+      },
+      {
+        "name": "AI Facade",
+        "en": "AI Facade",
+        "desc": "A reception persona frozen with its corpus: chat with the facade to learn about its principal; anything uncovered is honestly declined, never invented. Deployable as a standing conversation service — visitors free, the principal pays.",
+        "example": "Example: the FindData facade — ask it about the company, running projects, and capabilities."
+      },
+      {
+        "name": "Official Data Anchor",
+        "en": "Official Data Anchor",
+        "desc": "The official shelf anchored on FindData's own data MCPs: macro, financial, and city-panel sources with cited sources and periods, composable into packs.",
+        "example": "Example: the city panel — 209 indicators × 297 cities × 2000–2024."
+      }
+    ]
+  },
+  "mechanism": {
+    "title": "How it is supplied",
+    "lead": "A four-segment mechanism chain, each segment told from the material's perspective: what it does to your material, and what it guarantees.",
+    "link": "The same table in machine-readable form: /generated/infrastructure.md",
+    "steps": [
+      {
+        "verb": "Publish",
+        "en": "Publish",
+        "input": "A pack manifest (skills + MCP references + personas)",
+        "output": "One immutable version snapshot on the market",
+        "promise": "A published version can never be rewritten; unpublishing never destroys installed snapshots."
+      },
+      {
+        "verb": "Obtain",
+        "en": "Obtain",
+        "input": "Five-editor CLI / the in-product market / the market page",
+        "output": "One frozen snapshot installed into your runtime",
+        "promise": "All three paths land the same snapshot; installation is per-pack and explicit; anonymous browsing is allowed."
+      },
+      {
+        "verb": "Run",
+        "en": "Run",
+        "input": "The installed snapshot + one user cell",
+        "output": "Personas and tool surfaces running in isolation",
+        "promise": "Cells are invisible to each other; tool allowlists narrow the context to what is needed."
+      },
+      {
+        "verb": "Serve",
+        "en": "Serve",
+        "input": "A persona with a serving contract + the deployer's billing key",
+        "output": "A standing A2A conversation service (own endpoint and identity)",
+        "promise": "Residency survives idle periods; calls settle per use."
+      }
+    ],
+    "tableHead": {
+      "verb": "Action",
+      "input": "Input",
+      "output": "Output",
+      "promise": "Guarantee"
+    }
+  },
+  "inventory": {
+    "title": "Inventory",
+    "lead": "A live gallery: the page refreshes from the market on load; when unreachable it falls back to the build-time snapshot, with the as-of date always visible.",
+    "search": "Search materials…",
+    "allCategories": "All categories",
+    "live": "Live refresh succeeded (market online)",
+    "snapshot": "Live refresh unreachable — showing the build-time snapshot",
+    "official": "Official",
+    "facade": "Facade",
+    "obtain": "Obtain",
+    "page": "Machine page",
+    "empty": "No matching materials.",
+    "categoryNames": {
+      "pack": "Pack",
+      "skill": "Ecosystem skill",
+      "mcp": "MCP server",
+      "facade": "AI facade",
+      "official-data": "Official data anchor"
+    },
+    "tabs": {
+      "all": "All",
+      "agents": "Agents",
+      "skills": "Skills",
+      "mcp": "MCP servers"
+    }
+  },
+  "audience": {
+    "title": "Who it is for",
+    "lead": "This site is itself two-way: every piece of content speaks to humans and to AI agents at once.",
+    "human": {
+      "title": "If you are human",
+      "items": [
+        "Editor user (Claude Code, Cursor, Codex, Gemini CLI, ZCode): one command installs it into your editor.",
+        "Yizuo user: subscribe and install from the built-in market, credentials pre-wired.",
+        "Creator: organize your knowledge into a manifest and publish — the Facade Builder interviews you and generates it."
+      ],
+      "cta": "Subscribe and install ↗"
+    },
+    "ai": {
+      "title": "If you are an AI agent",
+      "items": [
+        "Start at /generated/llms.txt: the site index, every section self-contained.",
+        "Structured data at /generated/catalog.json: canonical brief + five-locale summaries + whenToUse + provenance.",
+        "One self-contained Markdown page per material (materials/<slug>.md), addresses stable across content updates.",
+        "To turn a material into a live service: the A2A endpoint — see the Serve row in infrastructure.md."
+      ],
+      "cta": "Start at /llms.txt →"
+    }
+  },
+  "footer": {
+    "tagline": "The materials overview humans and AI read together",
+    "lines": "FindData product lines"
+  }
+}

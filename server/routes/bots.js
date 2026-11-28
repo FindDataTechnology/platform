@@ -1,0 +1,706 @@
+// Bot management + inbound webhook routes.
+//
+// TRUST BOUNDARY (design D3, spec "Webhook authentication under forward auth"):
+// `/api/bots/webhook/*` is the ONLY route in this file exempt from the
+// forward-auth identity header — external chat platforms cannot send
+// X-Forwarded-Email. It authenticates on the per-bot path secret plus the
+// platform's own signature/decryption instead, both of which run before any
+// payload content is parsed or logged. The exemption is applied by an explicit
+// path check in server/auth.js, not a blanket public flag. Every other route
+// here stays behind the proxy and is admin-gated.
+
+import express from "express";
+import crypto from "node:crypto";
+import * as bots from "../bots.js";
+import { createBotAcceptance } from "../bot-acceptance.js";
+import { BOT_TYPES, credentialFieldsFor, qrCapabilityFor, adapterForBot, isOutboundOnly } from "../bots/adapter.js";
+import { qrSvg } from "../bots/qr.js";
+import { GENERIC_BOT_TYPES } from "../../lib/generic-bot-types.js";
+import { escalateToHuman } from "../../lib/escalate.js";
+import { notifyHandoff } from "../../lib/handoff-notify.js";
+import { sendThrough } from "../../server/fd-bot-client.js";
+import { validateConfigDims, effortUnionFrom } from "../fleet-model.js";
+import { summarizeDispositions } from "../fleet-turn-mandate.js";
+import { ensureFdBotBinding } from "../../lib/fd-bot-binding.js";
+
+// The webhook path prefix, shared with the forward-auth exemption in auth.js.
+export const WEBHOOK_PREFIX = "/api/bots/webhook/";
+
+// Feed the gateway's bot→cell reverse index (harden-cell-isolation 2.1) so an
+// anonymous webhook resolves with one query instead of scanning every cell.
+// Fire-and-forget: a failed feed costs a fallback scan, never a bot creation.
+function feedGatewayBotIndex(kind, keys) {
+  const cellId = String(process.env.CELL_ID || "");
+  const secret = String(process.env.CELL_GATEWAY_SECRET || "");
+  const list = [...new Set(keys.filter((k) => typeof k === "string" && k))];
+  if (!cellId || !secret || !list.length) return; // dev/test (no gateway) — no index to feed
+  const base = (process.env.GATEWAY_INTERNAL_URL || `http://127.0.0.1:${process.env.GATEWAY_PORT || 3080}`).replace(/\/+$/, "");
+  fetch(`${base}/api/bots/index`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-cloud-gateway-secret": secret },
+    body: JSON.stringify({ kind, keys: list }),
+    signal: AbortSignal.timeout(5000),
+  }).catch((e) => console.warn(`[bots] gateway index feed failed (${kind}): ${e?.message || e}`));
+}
+
+function feedBotIndex(bot) {
+  feedGatewayBotIndex("bot", [bot.id]);
+  if (bot.fdBotBindingId) feedGatewayBotIndex("binding", [bot.fdBotBindingId]);
+  if (bot.type === "chatwoot") feedGatewayBotIndex("website", [bot.credentials?.websiteToken]);
+}
+
+// Re-feed existing bots shortly after boot: a gateway restart or a missed
+// create-feed would otherwise leave a live bot unindexed (and thus unroutable,
+// because the indexed world never scans). Fire-and-forget, dev-inert.
+function scheduleBootBotIndexFeed(db) {
+  if (!process.env.CELL_ID) return;
+  setTimeout(() => {
+    try {
+      for (const bot of db?.listBots?.() ?? []) feedBotIndex(bot);
+    } catch (e) {
+      console.warn(`[bots] boot index feed skipped: ${e?.message || e}`);
+    }
+  }, 5000).unref?.();
+}
+
+// Boot window handling. Measured 2026-10-29 in fd-prod: the cell calls
+// server.listen 8.2s BEFORE bots.initBots finishes (db open + dsh handshake),
+// while WeCom/WeChat drop a callback at roughly 5s. Waiting therefore loses
+// either way — so during boot the webhook is ACKED at once and ACCEPTED TO
+// DISK (add-rollout-gap-durability: the old in-memory bootBuffer died with
+// the process), and the accepted request is replayed through the FULL
+// pipeline (signature check included) once the registry is up. A forged
+// request earns a bare 200 and no processing; nothing is dispatched before
+// verification still.
+const BOOT_REPLAY_WAIT_MS = Number(process.env.BOTS_WEBHOOK_BOOT_WAIT_MS) || 30_000;
+
+export function registerBotRoutes(ctx) {
+  const { app, db } = ctx;
+  scheduleBootBotIndexFeed(db);
+
+  // 结构化输入请求投递到 bot 聊天（add-input-request-cards 4.5）：路由层用
+  // 可选钩子调用，避免把 bots.js（连同它对适配器、dsh 的依赖）拽进每个
+  // 只需要输入请求的进程。
+  ctx.deliverInputRequest = (sessionId, request) =>
+    import("../bots.js")
+      .then((m) => m.deliverInputRequestToBotChat(sessionId, request))
+      .catch((err) => {
+        console.warn(`[bots] input-request delivery failed: ${err?.message || err}`);
+        return false;
+      });
+
+  const requireDb = (res) => {
+    if (db.isDbReady()) return true;
+    res.status(503).json({ error: "Bot management is disabled (database unavailable)" });
+    return false;
+  };
+
+  // Durable acceptance store (add-rollout-gap-durability): every webhook is
+  // on disk before the ack, boot-window ones included (the old bootBuffer was
+  // memory-only and died with the process). Tests inject their own instance.
+  const acceptance = ctx.botsAcceptance ?? createBotAcceptance();
+  acceptance.cleanup();
+  let bootDrainArmed = false;
+
+  // Startup takeover: records a previous process left behind map to honest
+  // actions — `dispatched` means the turn had already started (re-running
+  // risks a double reply, so settle as interrupted), `pending` boot records
+  // replay through the full pipeline once the registry is up, `pending`
+  // message records dispatch directly (already verified and parsed).
+  for (const rec of acceptance.all()) {
+    if (rec.state === "dispatched") acceptance.markDone(rec.id, "interrupted");
+  }
+  void bots.whenBooted(BOOT_REPLAY_WAIT_MS).then(async (ready) => {
+    if (!ready) {
+      console.warn(`[bots] registry not ready at takeover; ${acceptance.pending().length} accepted webhook(s) stay pending for the next boot`);
+      return;
+    }
+    for (const rec of acceptance.pending()) {
+      // Claim first: the takeover races the boot drain on the same store, and
+      // the state machine makes the second claim a no-op.
+      if (!acceptance.markDispatched(rec.id)) continue;
+      try {
+        if (rec.kind === "boot") {
+          console.log(`[bots] takeover: replaying accepted boot webhook for ${rec.botId}`);
+          await handleVerifiedWebhook(rec.botId, rec.given, rec.adapterReq, null);
+        } else {
+          console.log(`[bots] takeover: dispatching accepted webhook for ${rec.botId}`);
+          await bots.handleMessage(rec.botId, rec.message);
+        }
+        acceptance.markDone(rec.id, "takeover");
+      } catch (e) {
+        console.warn(`[bots] takeover webhook for ${rec.botId} failed: ${e.message}`);
+        acceptance.markDone(rec.id, `takeover failed: ${e.message}`);
+      }
+    }
+  });
+
+  // Turn dispatch for an accepted record: claim before the turn (a crash
+  // after the claim must not re-run it — double reply), settle honestly.
+  function dispatchAccepted(rec) {
+    if (!rec?.message) return;
+    acceptance.markDispatched(rec.id);
+    bots.handleMessage(rec.botId, rec.message)
+      .then(() => acceptance.markDone(rec.id))
+      .catch((e) => {
+        console.warn(`[bots] "${rec.botId}" accepted turn failed: ${e.message}`);
+        acceptance.markDone(rec.id, `turn failed: ${e.message}`);
+      });
+  }
+
+  // ── Inbound webhook ────────────────────────────────────────────────────────
+  // Raw body: WeCom/WeChat send XML and every platform signs the bytes as sent,
+  // so the payload must not be re-serialized by express.json() before checking.
+  app.all(
+    `${WEBHOOK_PREFIX}:botId/:secret`,
+    express.raw({ type: "*/*", limit: "1mb" }),
+    async (req, res) => {
+      const raw = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : "";
+      let json;
+      try { json = JSON.parse(raw); } catch { /* XML platforms: adapters read .raw */ }
+      const adapterReq = { method: req.method, query: req.query, headers: req.headers, raw, json };
+      const botId = req.params.botId;
+      const given = req.params.secret;
+
+      // Outbound-only platforms have no callback at all (make-im-lane-outbound-capable):
+      // a group robot is push-only by platform design. This gate sits FIRST, before
+      // the boot-acceptance branch, because otherwise such a request would be
+      // accepted to disk during boot and replayed through the full pipeline later —
+      // a receive path through the back door for a type that must not have one.
+      {
+        const row = typeof ctx?.db?.getBot === "function" ? ctx.db.getBot(botId) : null;
+        if (row && isOutboundOnly(row.type)) {
+          console.warn(`[bots] "${row.name}" (${row.type}) is outbound-only; webhook refused`);
+          return res.sendStatus(403);
+        }
+        // fd-bot transport guard (unify-im-solution 3.2): a bot migrated to the
+        // fd-bot transport receives via /api/bots/events, never this per-bot
+        // webhook. If a stale legacy webhook URL still points here, refuse it —
+        // otherwise it would run through the paas adapter (verifyWebhook) a
+        // second time, a double-path the migration exists to remove. 410 (gone)
+        // not 404: the binding is real, this address is simply no longer its door.
+        if (row && row.transport === "fd-bot") {
+          console.warn(`[bots] "${row.name}" is on the fd-bot transport; legacy webhook is gone (use /api/bots/events)`);
+          return res.sendStatus(410);
+        }
+      }
+
+      // Boot window: registry not loaded yet and the bot is not in it. Accept
+      // to disk and ack — the drain replays through the full pipeline once
+      // the registry is up (a forged request earns a bare 200 and no
+      // processing, exactly like the old memory buffer).
+      if (bots.bootPending() && !bots.getEntry(botId)) {
+        try {
+          acceptance.accept({ kind: "boot", botId, given, adapterReq });
+        } catch (e) {
+          if (e.code === "BOTS_ACCEPTANCE_FULL") {
+            console.warn(`[bots] acceptance store full (${acceptance.MAX_RECORDS}); refusing boot webhook for ${botId}`);
+            return res.sendStatus(503);
+          }
+          throw e;
+        }
+        console.log(`[bots] webhook for ${botId} accepted to disk until the registry loads`);
+        res.type("text/plain").send("success");
+        armBootDrain();
+        return;
+      }
+
+      await handleVerifiedWebhook(botId, given, adapterReq, res);
+    },
+  );
+
+  function armBootDrain() {
+    if (bootDrainArmed) return;
+    bootDrainArmed = true;
+    void bots.whenBooted(BOOT_REPLAY_WAIT_MS).then(async (ready) => {
+      bootDrainArmed = false;
+      const queued = acceptance.pending("boot");
+      if (!queued.length) return;
+      if (!ready) {
+        // Pending is the new not-dropped: the records stay on disk for the
+        // next drain pass (or the next process's takeover).
+        console.warn(`[bots] registry still not loaded after ${BOOT_REPLAY_WAIT_MS}ms; ${queued.length} accepted webhook(s) stay pending on disk`);
+        armBootDrain();
+        return;
+      }
+      for (const item of queued) {
+        // Claim first — the startup takeover races this drain on the same
+        // store; the state machine makes the second claim a no-op.
+        if (!acceptance.markDispatched(item.id)) continue;
+        try {
+          await handleVerifiedWebhook(item.botId, item.given, item.adapterReq, null);
+          acceptance.markDone(item.id, "boot-drain");
+        } catch (e) {
+          console.warn(`[bots] accepted webhook replay failed for ${item.botId}: ${e.message}`);
+          acceptance.markDone(item.id, `replay failed: ${e.message}`);
+        }
+      }
+    });
+  }
+
+  // The verification + dispatch pipeline. `res` null = replay (no HTTP reply).
+  async function handleVerifiedWebhook(botId, given, adapterReq, res) {
+    const done = (code, body, type = "text/plain") => {
+      if (!res) {
+        if (code >= 400) console.warn(`[bots] buffered webhook for ${botId} refused (${code})`);
+        return;
+      }
+      if (type === "json") return res.status(code).json(body);
+      res.status(code).type(type).send(body);
+    };
+
+    const entry = bots.getEntry(botId);
+    // Same 403 for unknown bot, disabled bot, and bad secret: an attacker
+    // learns nothing about which bot ids exist. timingSafeEqual guards the
+    // secret compare; unequal lengths are a mismatch by definition.
+    const secret = entry ? Buffer.from(entry.bot.secret) : null;
+    const submitted = Buffer.from(String(given));
+    const ok =
+      entry?.bot.enabled &&
+      secret.length === submitted.length &&
+      crypto.timingSafeEqual(secret, submitted);
+    // The reply stays identical for unknown/disabled/bad-secret (attackers
+    // learn nothing), but a mismatch is LOGGED: "arrived and was refused"
+    // and "never arrived" must be distinguishable when debugging a
+    // platform whose console shows the config as saved (fd-prod lesson,
+    // add-user-questions).
+    if (!ok) {
+      console.warn(
+        `[bots] webhook refused: botId=${botId}${entry ? ` (${entry.bot.name}, enabled=${entry.bot.enabled})` : " unknown"}`,
+      );
+      return done(403, "Forbidden");
+    }
+
+    // Platform verification. A throw here means the request is forged or
+    // undecryptable — 403, and the content is never logged (design D3.1).
+    //
+    // Outbound-only platforms (wecom-webhook) have no verification path at all:
+    // a group robot has no callback, so ANY request to this route is either a
+    // misconfiguration or a probe. Refuse it as an unknown bot would be refused
+    // — the same 403, no extra signal — instead of letting it throw a stack.
+    if (entry.adapter.outbound?.inbound === false) {
+      console.warn(`[bots] "${entry.bot.name}" (${entry.bot.type}) is outbound-only; webhook ignored`);
+      return done(403, "Forbidden");
+    }
+    let challenge;
+    try {
+      challenge = await entry.adapter.verifyWebhook(adapterReq, entry.bot.credentials);
+    } catch (err) {
+      console.warn(`[bots] "${entry.bot.name}" rejected an unverified webhook request: ${err.message}`);
+      return done(403, "Forbidden");
+    }
+    // The platform's URL-verification handshake wants its literal echo.
+    // Logged: a SILENT success is indistinguishable from "the platform
+    // never called" when debugging why a saved console config delivers
+    // nothing (fd-prod lesson, add-user-questions).
+    if (challenge !== null) {
+      console.log(`[bots] "${entry.bot.name}" handshake verified and echoed`);
+      return done(200, challenge);
+    }
+
+    let message;
+    try {
+      message = await entry.adapter.parseMessage(adapterReq, entry.bot.credentials);
+    } catch (err) {
+      console.warn(`[bots] "${entry.bot.name}" could not parse a verified payload: ${err.message}`);
+      return done(400, "Bad Request");
+    }
+
+    if (!message) {
+      // Events are not messages: they have no conversation and must not occupy a
+      // turn key. Ask the adapter to surface one before declaring the payload
+      // noise. WeCom's consent change (`Event=msg_audit_approved`) arrives
+      // exactly here — it used to be logged as "non-text" and dropped, which
+      // left the archive writing for up to the 5-minute consent-cache TTL after
+      // a customer revoked consent (compliance, not latency).
+      if (typeof entry.adapter.parseEvent === "function") {
+        let evt = null;
+        try {
+          evt = await entry.adapter.parseEvent(adapterReq, entry.bot.credentials);
+        } catch (err) {
+          // Signature/decrypt failure — the request is forged or undecryptable.
+          // Same 403 as verifyWebhook; the content is never logged.
+          console.warn(`[bots] "${entry.bot.name}" rejected an unverified event: ${err.message}`);
+          return done(403, "Forbidden");
+        }
+        if (evt) {
+          let outcome = null;
+          try {
+            // Dynamic import keeps node:sqlite + the archive schema off the bot
+            // hot path; most installs never enable archive.
+            const { handleInboundEvent } = await import("../archive/consent-ingress.js");
+            outcome = handleInboundEvent({ event: evt });
+          } catch (err) {
+            // Never surface as 5xx: the platform retries non-2xx, and a retry
+            // cannot make the archive database writable — it only widens the
+            // outage for every other lane sharing this webhook.
+            outcome = { handled: false, reason: `ingress_throw:${err.message}` };
+          }
+          console.log(
+            `[bots] "${entry.bot.name}" inbound event ${evt.event} from ${evt.from || "?"} → ${JSON.stringify(outcome)}`,
+          );
+          done(200, "success");
+          return;
+        }
+      }
+      // Forensics (fd-prod lesson): the canonical text XML parsed locally but
+      // not in prod — the length, content-type and first bytes name the
+      // culprit (empty body vs gzip magic vs unexpected shape).
+      // Shape only (harden-cell-isolation 5.3): the payload's content is tenant
+      // data and must not sit in the container log. Length + type + a digest of
+      // the first bytes are enough to tell empty/gzip/unexpected apart.
+      console.log(
+        `[bots] "${entry.bot.name}" non-text payload ignored (len=${adapterReq.raw.length} ct=${adapterReq.headers["content-type"] ?? "?"} digest=${crypto.createHash("sha256").update(adapterReq.raw).digest("hex").slice(0, 12)})`,
+      );
+      done(200, "success");
+      return;
+    }
+
+    // Durable acceptance BEFORE the ack (add-rollout-gap-durability): the
+    // record — keyed by the platform message id when the adapter supplies
+    // one — is on disk before the platform learns the message was taken, so
+    // a pod roll after the ack can only delay, never lose. A retry or edge
+    // replay of the same message id lands on the key and is acked WITHOUT a
+    // second turn.
+    const key = message.platformMessageId ? `${botId}:${message.platformMessageId}` : null;
+    let accepted;
+    let duplicate;
+    try {
+      ({ record: accepted, duplicate } = acceptance.accept({ kind: "message", botId, key, message }));
+    } catch (e) {
+      if (e.code === "BOTS_ACCEPTANCE_FULL") {
+        console.warn(`[bots] acceptance store full (${acceptance.MAX_RECORDS}); refusing webhook for "${entry.bot.name}"`);
+        return done(503, "Service Unavailable");
+      }
+      throw e;
+    }
+    if (duplicate) {
+      console.log(`[bots] "${entry.bot.name}" duplicate webhook (key=${key}) — acked, no second turn`);
+      done(200, "success");
+      return;
+    }
+    // Shape only (5.3): id, length, chat-key digest — never the text.
+    console.log(
+      `[bots] "${entry.bot.name}" inbound (id=${message.platformMessageId ?? "-"} len=${String(message.text ?? "").length} chat=${crypto.createHash("sha256").update(String(message.chatKey ?? "")).digest("hex").slice(0, 12)})`,
+    );
+    // Ack after the record is durable, before the (possibly minutes-long) turn.
+    done(200, "success");
+    dispatchAccepted(accepted);
+  }
+
+  // ── Generic bot types (read-only registry face) ────────────────────────────
+  // The platform-hosted generic bot type set (pack-bot-units): the same
+  // objects the manifest validator checks references against and the pack
+  // install face lists. Read-only — types are defined by the platform, never
+  // configured here. No db gate: a static registry answers even before the
+  // database is ready (the publish prevalidation face has no cell state).
+
+  app.get("/api/bots/generic-types", (_req, res) => {
+    res.json({ genericTypes: GENERIC_BOT_TYPES });
+  });
+
+  // ── Config CRUD (admin-gated; credentials masked in every response) ────────
+
+  app.get("/api/bots", (_req, res) => {
+    if (!requireDb(res)) return;
+    res.json({
+      bots: db.listBots().map(bots.maskBot),
+      types: BOT_TYPES.map((type) => ({
+        type,
+        credentialFields: credentialFieldsFor(type),
+        qr: qrCapabilityFor(type),
+      })),
+      genericTypes: GENERIC_BOT_TYPES,
+    });
+  });
+
+  app.post("/api/bots", async (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    const { type, name, credentials, enabled = true, persona, allowTools, allowedSenders } = req.body || {};
+    if (!type || !name) return res.status(400).json({ error: "Missing type or name" });
+    const invalid = bots.validateCredentials(type, credentials);
+    if (invalid) return res.status(400).json({ error: invalid });
+    // Sender allowlist (add-staff-fleet-channels): normalized here, refused
+    // structurally when it cannot be — a silently shortened entry would match
+    // nobody and read to the operator as "my allowlist does nothing".
+    const allow = bots.normalizeAllowedSenders(allowedSenders);
+    if (!allow.ok) return res.status(400).json({ error: allow.error });
+    const bot = db.addBot({
+      id: crypto.randomUUID(),
+      type,
+      name,
+      credentials,
+      // The webhook path secret; random per bot, never rotated in place (delete
+      // and recreate to rotate — the platform's callback URL must change too).
+      secret: crypto.randomBytes(24).toString("base64url"),
+      enabled,
+      // Identity + tool posture (harden-bot-reply-lane): both are plain row
+      // fields, so they can be set at creation and edited later without a
+      // restart (reload() below picks them up).
+      persona,
+      allowTools,
+      allowedSenders: allow.value,
+      // Creator identity (fix-gateway-bot-owner): the gateway's webhook router
+      // prefers this over session-ownership inference, which is arbitrary on
+      // cells with mixed sign-in history.
+      ownerEmail: req.user?.email ?? null,
+    });
+    // fd-bot binding (adopt-fd-bot-transport 6.1). Never fails bot creation: no
+    // config / an fd-bot refusal leaves the row on legacy and logs why.
+    await ensureFdBotBinding({ bot, publicBaseUrl: bots.publicBaseUrl() });
+    const saved = db.getBot(bot.id) ?? bot;
+    bots.reload(saved);
+    feedBotIndex(saved);
+    res.json(bots.maskBot(saved));
+  });
+
+  app.patch("/api/bots/:id", async (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    const existing = db.getBot(req.params.id);
+    if (!existing) return res.status(404).json({ error: "Bot not found" });
+    const { name, credentials, enabled, effort, contextBudget, persona, allowTools, allowedSenders } = req.body || {};
+    // Config dimensions (add-agent-config-dims D5): the same shape gate the
+    // fleet PATCH uses — a bot inherits the same effort/budget semantics.
+    const dims = validateConfigDims({ effort, contextBudget }, effortUnionFrom(ctx?.dshModels));
+    if (dims.error) return res.status(400).json({ error: dims.error });
+    // Sender allowlist (add-staff-fleet-channels): same gate as create. An
+    // empty array is a deliberate CLEAR (back to no allowlist), so it is only
+    // applied when the field is present at all.
+    let allowPatch;
+    if (allowedSenders !== undefined) {
+      const allow = bots.normalizeAllowedSenders(allowedSenders);
+      if (!allow.ok) return res.status(400).json({ error: allow.error });
+      allowPatch = allow.value;
+    }
+    if (credentials !== undefined) {
+      // Merge over the stored values so the UI can save a form whose secret
+      // fields were left blank without wiping the credentials behind them.
+      const merged = { ...existing.credentials };
+      for (const [k, v] of Object.entries(credentials)) if (String(v ?? "").trim()) merged[k] = v;
+      const invalid = bots.validateCredentials(existing.type, merged);
+      if (invalid) return res.status(400).json({ error: invalid });
+      req.body.credentials = merged;
+    } else if (enabled === true) {
+      // Enabling is an operator's explicit action — a generic channel bot
+      // (pack-born) must have its platform binding and credentials in place
+      // before it can go live. Plain bots were credential-validated at
+      // creation, so this re-check is a no-op for them.
+      const invalid = bots.validateCredentials(existing.type, existing.credentials);
+      if (invalid) return res.status(400).json({ error: invalid });
+    }
+    const bot = db.updateBot(req.params.id, {
+      name,
+      credentials: req.body.credentials,
+      enabled,
+      ...(effort !== undefined ? { effort: dims.effort } : {}),
+      ...(contextBudget !== undefined ? { contextBudget: dims.contextBudget } : {}),
+      ...(persona !== undefined ? { persona } : {}),
+      ...(allowTools !== undefined ? { allowTools } : {}),
+      ...(allowPatch !== undefined ? { allowedSenders: allowPatch } : {}),
+    });
+    // Credentials changed → the fd-bot binding still holds the OLD secret, so
+    // re-bind (the existing id is replaced, not stacked). Other field edits
+    // leave the binding alone.
+    let saved = bot;
+    if (credentials !== undefined) {
+      await ensureFdBotBinding({ bot, publicBaseUrl: bots.publicBaseUrl(), force: true });
+      saved = db.getBot(bot.id) ?? bot;
+    }
+    bots.reload(saved);
+    feedBotIndex(saved);
+    res.json(bots.maskBot(saved));
+  });
+
+  // Inbound disposition summary (add-staff-fleet-channels): the read half of
+  // the rejection bookkeeping. Without it "my allowlist turned someone away"
+  // and "the channel is broken" are indistinguishable from the admin surface,
+  // which is the whole reason the allowlist records anything at all.
+  //
+  // Admin-gated like the rest of bot management (it names rejected senders by
+  // hash, which is still operational data about who tried).
+  app.get("/api/bots/:id/dispositions", (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    if (!db.getBot(req.params.id)) return res.status(404).json({ error: "Bot not found" });
+    res.json({ summary: summarizeDispositions(req.params.id) });
+  });
+
+  app.delete("/api/bots/:id", (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    if (!db.getBot(req.params.id)) return res.status(404).json({ error: "Bot not found" });
+    bots.stop(req.params.id);
+    db.deleteBot(req.params.id);
+    res.json({ ok: true });
+  });
+
+  // ── Seen chats + relay channels (admin-gated) ──────────────────────────────
+  //
+  // The destination list a relay caller can address (add-bot-relay-endpoint).
+  // A binding is creatable only from a chat the inbound pipeline recorded, so
+  // the relay token can never be pointed at a chat this deployment has not
+  // seen. These rows carry identity and timing only — no message text, and no
+  // bot credentials.
+
+  const CHANNEL_NAME_RE = /^[a-z0-9][a-z0-9._-]{0,63}$/;
+
+  app.get("/api/bots/chats", (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    const names = new Map(db.listBots().map((b) => [b.id, b.name]));
+    res.json({
+      chats: db.listBotChats().map((c) => ({ ...c, botName: names.get(c.botId) ?? null })),
+    });
+  });
+
+  app.get("/api/bots/channels", (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    res.json({ channels: db.listChannels() });
+  });
+
+  app.post("/api/bots/channels", (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    const { name, botId, chatKey } = req.body || {};
+    if (!CHANNEL_NAME_RE.test(String(name ?? ""))) {
+      return res.status(400).json({ error: "Channel name must match [a-z0-9][a-z0-9._-]{0,63}" });
+    }
+    if (!botId || !chatKey) return res.status(400).json({ error: "Missing botId or chatKey" });
+    if (!db.getBot(botId)) return res.status(404).json({ error: "Bot not found" });
+    if (!db.getBotChat(botId, chatKey)) {
+      return res.status(400).json({ error: "That chat has never messaged this bot" });
+    }
+    try {
+      db.createChannel({ name, botId, chatKey });
+    } catch {
+      // The primary key is the authority; a check-then-insert would race it.
+      return res.status(409).json({ error: "Channel name already exists" });
+    }
+    res.json({ channel: db.getChannel(name) });
+  });
+
+  app.delete("/api/bots/channels/:name", (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    if (!db.deleteChannel(req.params.name)) {
+      return res.status(404).json({ error: "Channel not found" });
+    }
+    res.json({ ok: true });
+  });
+
+  // ── Onboarding QR (user entry) ─────────────────────────────────────────────
+  // Same posture as the read side of config management: behind the proxy /
+  // forward-auth gate like every non-webhook route here, credentials stay
+  // server-side, nothing about the request is logged. A disabled bot still
+  // resolves — the QR advertises an entry the operator may be preparing.
+  //
+  // Failure isolation: every failure path answers 200 with
+  // `{ strategy: "manual", url: null, qr: null, error? }` so the panel shows
+  // the reason plus the manual-link fallback — a bad token, an unsupported
+  // account type, or an upstream outage never 500s bot management.
+  app.get("/api/bots/:id/qr", async (req, res) => {
+    if (!requireDb(res)) return;
+    const bot = db.getBot(req.params.id);
+    // adapterForBot resolves a generic channel row's platform binding; an
+    // unbound pack bot has no adapter yet and answers 404 like an unknown bot.
+    const adapter = bot ? adapterForBot(bot) : null;
+    if (!bot || !adapter?.qr) return res.status(404).json({ error: "Bot not found" });
+
+    const { strategy, hintKey } = adapter.qr;
+    const hint = hintKey ?? "botsPage.qr.hint.manual";
+    const manual = (error) => res.json({ strategy: "manual", url: null, qr: null, hint, ...(error && { error }) });
+
+    // A stored entry link wins on every platform: it is the manual fallback's
+    // save target, so an override must survive later panel opens.
+    const manualUrl = String(bot.credentials?.qrUrl ?? "").trim();
+    if (manualUrl) {
+      try {
+        return res.json({ strategy: "manual", url: manualUrl, qr: await qrSvg(manualUrl), hint });
+      } catch (err) {
+        return manual(err.message);
+      }
+    }
+
+    if (strategy === "manual") {
+      // No link yet: the panel prompts for it instead of failing.
+      return manual();
+    }
+
+    try {
+      const { url } = await adapter.qr.resolve(bot.credentials);
+      res.json({ strategy, url, qr: await qrSvg(url), hint });
+    } catch (err) {
+      manual(err.message);
+    }
+  });
+
+  // ── Proactive outbound send ────────────────────────────────────────────────
+
+  app.post("/api/bots/:id/send", async (req, res) => {
+    if (!ctx.requireAdmin(req, res) || !requireDb(res)) return;
+    const { chatKey, text } = req.body || {};
+    if (!chatKey || !text) return res.status(400).json({ error: "Missing chatKey or text" });
+    try {
+      await bots.sendTo(req.params.id, chatKey, text);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(502).json({ error: err.message });
+    }
+  });
+
+  // ── Escalate a chatwoot conversation to a human (chatwoot-ai-handoff) ──────
+  // The AI's other half of the human-handoff loop: the stop-guard makes the AI
+  // go silent once a conversation is ASSIGNED TO A HUMAN; THIS performs that
+  // assignment (Conversations::AssignmentService → status open, ai_assignee
+  // cleared). Operator-triggered today; an agent tool that decides to escalate
+  // reuses the same lib function (see tasks.md 4.1).
+  app.post("/api/bots/:id/escalate", async (req, res) => {
+    // Two legitimate callers: an operator (admin identity, via requireAdmin) and
+    // the bot's OWN handoff MCP child (loopback, no forwarded email — auth.js
+    // stamps it as handoff-bridge@internal at the INTERNAL_BRIDGES table). The
+    // child knows only its bot id; the chat is resolved from the running turn.
+    const isHandoffChild = req.user?.email === "handoff-bridge@internal";
+    if (isHandoffChild) {
+      const owned = String(process.env.HANDOFF_BOT_ID || "").trim();
+      if (owned && owned !== String(req.params.id)) {
+        return res.status(403).json({ error: "handoff bridge may only escalate the bot it was launched for" });
+      }
+    } else if (!ctx.requireAdmin(req, res)) return;
+    if (!requireDb(res)) return;
+    const bot = db.getBot(req.params.id);
+    if (!bot) return res.status(404).json({ error: "Bot not found" });
+    if (bot.type !== "chatwoot") return res.status(400).json({ error: "escalate is only supported for chatwoot bots" });
+    const { chatKey: rawChatKey, sessionId: rawSession } = req.body || {};
+    let chatKey = rawChatKey;
+    // The handoff MCP child has no DSH_SESSION_ID (one profile = one process), so
+    // it reports none. Resolve it the same way the input-request lane does: the
+    // single streaming turn in this cell IS the turn that called the tool. Then
+    // the chat (and its chatKey) comes from botChatForSession.
+    if (!chatKey) {
+      let sessionId = rawSession;
+      if (!sessionId) {
+        const streaming = [];
+        for (const [sid, turn] of ctx.turnStateBySession ?? []) {
+          if (sid && turn?.isStreaming === true) streaming.push(sid);
+        }
+        if (streaming.length === 1) sessionId = streaming[0];
+      }
+      if (sessionId) {
+        const found = bots.botChatForSession(sessionId);
+        if (found) chatKey = found.chatKey;
+      }
+    }
+    if (!chatKey) return res.status(400).json({ error: "Missing chatKey (or an unresolvable sessionId)" });
+    const { reason, note, summary } = req.body || {};
+    try {
+      const result = await escalateToHuman(bot, chatKey, { reason, note, summary });
+      if (result.ok) {
+        // Tell a human it is waiting. Best-effort: the assignment already landed,
+        // so a failed page must not turn a success into an error. Fire-and-forget
+        // so the caller is not held open by an IM round-trip.
+        void notifyHandoff(bot, { chatKey, reason, note, summary, assigneeId: result.assigneeId }, { send: sendThrough })
+          .then((n) => { if (!n.sent) console.log(`[bots] handoff alert not sent: ${n.why}`); });
+      }
+      // A platform verdict (ok:false) is a real outcome, not a server error — 200
+      // with the classified result, matching fd-bot's send discipline.
+      res.json(result);
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+}

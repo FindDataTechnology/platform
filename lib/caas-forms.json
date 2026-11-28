@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "updated": "2026-11-18",
+  "note": "caas-delivery 的唯一权威数据。任何面要宣告可投递形态、或要按收件方能力选形态，都读这一份，不另写平行文案。改这里 = 改契约，必须同时跑 check_caas_conformance。",
+  "forms": {
+    "text": {
+      "label_zh": "纯文本",
+      "label_en": "plain text",
+      "carries": "摘要、结论、提示语。任何收件方都必须能读。",
+      "inline_bytes": false
+    },
+    "chart": {
+      "label_zh": "图表",
+      "label_en": "chart",
+      "carries": "ECharts option（JSON）。渲染侧是 echarts fence。",
+      "inline_bytes": false
+    },
+    "file": {
+      "label_zh": "文件",
+      "label_en": "file",
+      "carries": "按工作区相对路径或房间附件引用的具体文件。",
+      "inline_bytes": false
+    },
+    "asset": {
+      "label_zh": "资产",
+      "label_en": "asset",
+      "carries": "资产账本产物引用（asset id + mime + 可选一次性签名）。MUST NOT 内联字节。",
+      "inline_bytes": false
+    },
+    "link": {
+      "label_zh": "链接",
+      "label_en": "link",
+      "carries": "深链或外部 URL（驾驶舱、看板、分享链接）。",
+      "inline_bytes": false
+    }
+  },
+  "ack": {
+    "order": ["none", "delivered", "consumed"],
+    "aliases": {
+      "read": "consumed",
+      "acted": "consumed"
+    },
+    "note": "声明强度高于实得强度时必须记 downgraded。read/acted 是 consumed 的历史别名，读到别名一律按 consumed 处理。"
+  },
+  "recipients": {
+    "room-seat": {
+      "label_zh": "智语房间席位",
+      "caps": ["text", "chart", "file", "asset", "link"],
+      "max_ack": "consumed",
+      "addressing": "席位 id（zy_room_members.id）；解析由 gateway/zhiyu 既有 seatAuth/成员表完成"
+    },
+    "a2a-slug": {
+      "label_zh": "萬星 A2A 部署",
+      "caps": ["text", "asset"],
+      "max_ack": "delivered",
+      "addressing": "部署 slug；解析由 wanxing-facade resolveDeployment 完成"
+    },
+    "platform-identity": {
+      "label_zh": "平台用户（邮箱）",
+      "caps": ["text", "link"],
+      "max_ack": "consumed",
+      "addressing": "邮箱；解析由既有站内通知 lane（zy_notifications）完成"
+    },
+    "external-endpoint": {
+      "label_zh": "外部 HTTP 端点",
+      "caps": ["text"],
+      "max_ack": "delivered",
+      "addressing": "http(s) URL；解析即一次可达性检查"
+    }
+  },
+  "channels": {
+    "relay": {
+      "label_zh": "平台 bot relay",
+      "forms": ["text", "link", "file"],
+      "max_ack": "delivered"
+    },
+    "smtp": {
+      "label_zh": "邮件",
+      "forms": ["text", "link", "chart", "file"],
+      "max_ack": "delivered"
+    },
+    "webhook": {
+      "label_zh": "同型 HTTP webhook",
+      "forms": ["text"],
+      "max_ack": "delivered"
+    }
+  },
+  "conformance": {
+    "forbidden_parallel_form_lists": true,
+    "note": "任一实现若在代码里硬编码形态名清单而不读本文件，即视为第二份口径。"
+  }
+}

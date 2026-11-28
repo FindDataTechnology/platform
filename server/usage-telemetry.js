@@ -1,0 +1,144 @@
+// server/usage-telemetry.js — per-turn pack usage rows for supply feedback.
+//
+// The marketplace's M1 feedback lane (add-pack-usage-telemetry): every
+// completed turn lands one row in the main app db (`pack_usage_events`,
+// migration 24) so "which pack did whom use, how many turns" is answerable —
+// the weekly-active-pack gate and the next-vertical content decisions both
+// read from here. Everything is failure-isolated (trace.js discipline): a
+// telemetry failure logs and never breaks the chat turn.
+//
+// Storage is bounded by a RECURRING prune (not boot-only — the 2026-10-10
+// trace incident taught that lesson): rows older than the retention window
+// (default 180 days) go on a daily timer, and the db runs
+// auto_vacuum=INCREMENTAL so pruned volume actually returns to the fs.
+
+import { getDb, isDbReady } from "../db.js";
+import * as dbModule from "../db.js";
+import { getChatAgentEntries } from "../catalog.js";
+import { attributionForSession } from "../lib/usage-attribution.js";
+
+const RETENTION_DAYS = Number(process.env.PACK_USAGE_RETENTION_DAYS) || 180;
+const PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+let pruneTimer = null;
+
+// Record one completed turn. Resolves the pack origin from the catalog at
+// record time; local personas and custom presets (no catalog entry — or an
+// entry with no packId) record NULL rather than dropping the row — losing the
+// dimension is acceptable, losing the fact is not.
+export function recordPackUsage({ userEmail, sessionId, agentId, outcome, durationMs, startedAt }) {
+  try {
+    if (!isDbReady()) return;
+    let packId = null;
+    if (agentId && agentId !== "local") {
+      const entry = getChatAgentEntries().find((e) => e.id === agentId);
+      packId = entry?.packId ?? null;
+    }
+    const duration = Number.isFinite(startedAt)
+      ? Math.max(0, Date.now() - startedAt)
+      : Math.max(0, Number(durationMs) || 0);
+    // Channel-identity attribution (unify-im-solution 1.6): resolve which room/
+    // conversation this bot session's chat belongs to, under failure isolation.
+    // A non-bot or unmapped session yields nulls (plain 1:1 — pre-change shape).
+    let roomId = null;
+    let conversationId = null;
+    try {
+      const a = attributionForSession(
+        { getBot: dbModule.getBot, listBotChats: dbModule.listBotChats, rawDb: getDb() },
+        sessionId,
+      );
+      roomId = a.roomId ?? null;
+      conversationId = a.conversationId ?? null;
+    } catch {
+      /* attribution is advisory — never break the usage row */
+    }
+    // Channel-identity attribution (unify-im-solution 1.6): the resolvable归属
+    // this turn belongs to, or nulls for a plain 1:1 / non-bot turn. Written on
+    // the same row so a mapped chat's usage can be read by room/conversation.
+    getDb()
+      .prepare(
+        `INSERT INTO pack_usage_events (ts, user_email, session_id, agent_id, pack_id, outcome, duration_ms, room_id, conversation_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        Date.now(),
+        userEmail ?? null,
+        String(sessionId ?? ""),
+        String(agentId ?? "local"),
+        packId,
+        String(outcome ?? "ok"),
+        duration,
+        roomId ?? null,
+        conversationId ?? null,
+      );
+  } catch (e) {
+    console.warn(`[usage-telemetry] record failed (turn unaffected): ${e?.message || e}`);
+  }
+}
+
+// Prune rows past the retention window. Exported for tests; the recurring
+// timer in startUsagePruneTimer is what keeps a long-resident cell bounded.
+export function prunePackUsage() {
+  try {
+    if (!isDbReady()) return 0;
+    const cutoff = Date.now() - RETENTION_DAYS * 86_400_000;
+    const r = getDb().prepare(`DELETE FROM pack_usage_events WHERE ts < ?`).run(cutoff);
+    return r.changes;
+  } catch (e) {
+    console.warn(`[usage-telemetry] prune failed: ${e?.message || e}`);
+    return 0;
+  }
+}
+
+export function startUsagePruneTimer() {
+  if (pruneTimer) return;
+  pruneTimer = setInterval(() => prunePackUsage(), PRUNE_INTERVAL_MS);
+  pruneTimer.unref?.();
+}
+
+// Aggregate per pack origin over the window (default 7 days — the
+// weekly-active gate): turns, distinct active users, last-used. The packless
+// bucket (local / custom presets) is its own line and never inflates a pack.
+export function packUsageAggregate(days = 7) {
+  const windowDays = Math.min(Math.max(Number(days) || 7, 1), 365);
+  const since = Date.now() - windowDays * 86_400_000;
+  const rows = getDb()
+    .prepare(
+      `SELECT pack_id AS packId,
+          COUNT(*) AS turns,
+          COUNT(DISTINCT user_email) AS activeUsers,
+          MAX(ts) AS lastUsedAt
+       FROM pack_usage_events
+       WHERE ts >= ?
+       GROUP BY pack_id
+       ORDER BY turns DESC`,
+    )
+    .all(since);
+  const weeklyActivePacks = rows.filter((r) => r.packId && r.activeUsers >= 1).length;
+  return { windowDays, weeklyActivePacks, rows };
+}
+
+// Per-agent aggregate for the role's own owner (add-agent-roster-management D6):
+// the same rows, grouped by agent_id, scoped to ONE requester. `ownerEmail` null
+// means the auth-off requester IS the machine owner, so the whole table is
+// theirs — the same branch agent-catalog's role visibility takes. Same window
+// bounds and same table as packUsageAggregate, so the two can never count
+// different things (spec: pack-usage-telemetry「The ops per-pack aggregate keeps
+// its gate and grouping」).
+export function agentUsageAggregate({ days = 7, ownerEmail = null } = {}) {
+  const windowDays = Math.min(Math.max(Number(days) || 7, 1), 365);
+  const since = Date.now() - windowDays * 86_400_000;
+  const scoped = ownerEmail ? "AND user_email = ?" : "";
+  const params = ownerEmail ? [since, ownerEmail] : [since];
+  const rows = getDb()
+    .prepare(
+      `SELECT agent_id AS agentId,
+          COUNT(*) AS turns,
+          MAX(ts) AS lastUsedAt
+       FROM pack_usage_events
+       WHERE ts >= ? ${scoped}
+       GROUP BY agent_id
+       ORDER BY turns DESC`,
+    )
+    .all(...params);
+  return { windowDays, rows };
+}

@@ -1,0 +1,97 @@
+# plaza-refresh — 让机器面自己跟上市场（fix-supply-machine-faces 4.x / D2）
+#
+# 为什么要有这一档：plaza 的机器面（llms.txt / llms-full.txt / catalog.json /
+# robots.txt）只在有人手工跑 deploy-plaza.sh 时才更新。2026-11-05 的快照在
+# 11-09 仍挂在线上，而市场已经从 82 涨到 114 个包——AI 客户端读到的是两周前
+# 的目录，且没有任何地方会报错。
+#
+# 定时器是保底，不是加速器：发布事件驱动在三种情况下恰好失效——历史回填、
+# 注册中心侧的可见性变更、导出静默失败。周期到了就重跑，才是「不无限漂移」
+# 的那条保证。
+#
+# 本档复用 scripts/deploy-plaza.sh（导出 → 打包 → 上传 → 原子落位 → 四个根
+# 路径自检），不另写一套发布逻辑：同一路径一处维护。
+#
+# 需要的仓库 Secret：
+#   PLAZA_DEPLOY_HOST  部署目标，形如 user@host（deploy-plaza.sh 的 TARGET）
+#   PLAZA_DEPLOY_KEY   对应私钥（能免密登录该 host）
+# 可选：
+#   PLAZA_DIR          站点根，默认 /srv/agent-plaza-site
+#   PLAZA_PUBLIC_BASE  自检的公开基址，默认 https://agent.finddatatech.cloud
+#
+# 成本：ubuntu runner，单次约 4-6 分钟（导出要拉 facet 的公开目录 API）。
+# 每日三次 ≈ 540 分钟/月；私仓额度吃紧时把 cron 降到每日一次即可，语义不变
+# （spec 只要求「与人工部署无关的有界周期」）。
+
+name: plaza-refresh
+
+on:
+  # 定时入口已下线（2026-11-10）。周期刷新现在跑在 cheap1 主机 cron：
+  # `/opt/fd/plaza-refresh.sh` + `17 4 * * *`。两条 Actions 路都实测不通——
+  # 私有仓被账户计费挡住（job 根本不启动），镜像仓是快照产物，既没有
+  # PLAZA_DEPLOY_HOST secret 也没有 scripts/deploy-plaza.sh，于是每 8 小时挂一次
+  # 「Prepare ssh」，把「红」变成噪音。这里只留手动派发：计费恢复后可随时跑一轮。
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: plaza-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Prepare ssh (deploy key + host trust)
+        env:
+          PLAZA_DEPLOY_KEY: ${{ secrets.PLAZA_DEPLOY_KEY }}
+          PLAZA_DEPLOY_HOST: ${{ secrets.PLAZA_DEPLOY_HOST }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$PLAZA_DEPLOY_KEY" > ~/.ssh/plaza_deploy
+          chmod 600 ~/.ssh/plaza_deploy
+          ssh-keygen -y -f ~/.ssh/plaza_deploy > /dev/null   # fail early on a malformed key
+          host="${PLAZA_DEPLOY_HOST#*@}"
+          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host *
+            IdentityFile ~/.ssh/plaza_deploy
+            IdentitiesOnly yes
+          EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Export, publish, and verify the four machine faces
+        env:
+          PLAZA_DEPLOY_HOST: ${{ secrets.PLAZA_DEPLOY_HOST }}
+          PLAZA_DIR: ${{ secrets.PLAZA_DIR }}
+          PLAZA_PUBLIC_BASE: ${{ secrets.PLAZA_PUBLIC_BASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PLAZA_DEPLOY_HOST:-}" ]; then
+            echo "PLAZA_DEPLOY_HOST 未配置：不发布（宁可不动，也不落半套）" >&2
+            exit 1
+          fi
+          scripts/deploy-plaza.sh "$PLAZA_DEPLOY_HOST"
+
+      - name: Keep the generated bundle for audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plaza-machine-faces
+          path: |
+            site-plaza/generated/llms.txt
+            site-plaza/generated/llms-full.txt
+            site-plaza/generated/catalog.json
+            site-plaza/generated/counts.json
+          retention-days: 14
+          if-no-files-found: warn

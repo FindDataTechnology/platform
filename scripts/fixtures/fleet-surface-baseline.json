@@ -1,0 +1,887 @@
+{
+  "GET /api/fleets": {
+    "body": {
+      "fleets": [
+        {
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "defaultModel": null,
+          "deputyOpen": 0,
+          "effort": null,
+          "id": "fleet_fixture_a",
+          "memberCount": 2,
+          "name": "甲队",
+          "openDecisions": 0,
+          "spend": {
+            "allTime": {
+              "costUsd": null,
+              "deliveredOk": 0,
+              "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+              "deliveryRate": null,
+              "eventTurns": 0,
+              "missingReportTurns": 0,
+              "okTurns": 0,
+              "partialTurns": 0,
+              "pricedTurns": 0,
+              "runs": 0,
+              "turns": 0,
+              "usageInput": null,
+              "usageOutput": null
+            },
+            "baseline": "fleet_runs projection (usage 缺失如实记 null)",
+            "sampledAt": "<ts>",
+            "windows": {
+              "24h": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "30d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "7d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              }
+            }
+          },
+          "state": "active",
+          "statusCounts": {
+            "passive": 2
+          },
+          "updatedAt": "<ts>"
+        },
+        {
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "defaultModel": null,
+          "deputyOpen": 0,
+          "effort": null,
+          "id": "fleet_fixture_b",
+          "memberCount": 1,
+          "name": "乙队",
+          "openDecisions": 0,
+          "spend": {
+            "allTime": {
+              "costUsd": null,
+              "deliveredOk": 0,
+              "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+              "deliveryRate": null,
+              "eventTurns": 0,
+              "missingReportTurns": 0,
+              "okTurns": 0,
+              "partialTurns": 0,
+              "pricedTurns": 0,
+              "runs": 0,
+              "turns": 0,
+              "usageInput": null,
+              "usageOutput": null
+            },
+            "baseline": "fleet_runs projection (usage 缺失如实记 null)",
+            "sampledAt": "<ts>",
+            "windows": {
+              "24h": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "30d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "7d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              }
+            }
+          },
+          "state": "active",
+          "statusCounts": {
+            "vacant": 1
+          },
+          "updatedAt": "<ts>"
+        },
+        {
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "defaultModel": null,
+          "deputyOpen": 0,
+          "effort": null,
+          "id": "fleet_fixture_c",
+          "memberCount": 0,
+          "name": "丙队",
+          "openDecisions": 0,
+          "spend": {
+            "allTime": {
+              "costUsd": null,
+              "deliveredOk": 0,
+              "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+              "deliveryRate": null,
+              "eventTurns": 0,
+              "missingReportTurns": 0,
+              "okTurns": 0,
+              "partialTurns": 0,
+              "pricedTurns": 0,
+              "runs": 0,
+              "turns": 0,
+              "usageInput": null,
+              "usageOutput": null
+            },
+            "baseline": "fleet_runs projection (usage 缺失如实记 null)",
+            "sampledAt": "<ts>",
+            "windows": {
+              "24h": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "30d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "7d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              }
+            }
+          },
+          "state": "active",
+          "statusCounts": {},
+          "updatedAt": "<ts>"
+        }
+      ]
+    },
+    "status": 200
+  },
+  "GET /api/fleets (after writes)": {
+    "body": {
+      "fleets": [
+        {
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "defaultModel": null,
+          "deputyOpen": 0,
+          "effort": null,
+          "id": "fleet_fixture_a",
+          "memberCount": 2,
+          "name": "甲队",
+          "openDecisions": 0,
+          "spend": {
+            "allTime": {
+              "costUsd": null,
+              "deliveredOk": 0,
+              "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+              "deliveryRate": null,
+              "eventTurns": 0,
+              "missingReportTurns": 0,
+              "okTurns": 0,
+              "partialTurns": 0,
+              "pricedTurns": 0,
+              "runs": 0,
+              "turns": 0,
+              "usageInput": null,
+              "usageOutput": null
+            },
+            "baseline": "fleet_runs projection (usage 缺失如实记 null)",
+            "sampledAt": "<ts>",
+            "windows": {
+              "24h": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "30d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "7d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              }
+            }
+          },
+          "state": "active",
+          "statusCounts": {
+            "passive": 2
+          },
+          "updatedAt": "<ts>"
+        },
+        {
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "defaultModel": null,
+          "deputyOpen": 0,
+          "effort": null,
+          "id": "fleet_fixture_b",
+          "memberCount": 1,
+          "name": "乙队",
+          "openDecisions": 0,
+          "spend": {
+            "allTime": {
+              "costUsd": null,
+              "deliveredOk": 0,
+              "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+              "deliveryRate": null,
+              "eventTurns": 0,
+              "missingReportTurns": 0,
+              "okTurns": 0,
+              "partialTurns": 0,
+              "pricedTurns": 0,
+              "runs": 0,
+              "turns": 0,
+              "usageInput": null,
+              "usageOutput": null
+            },
+            "baseline": "fleet_runs projection (usage 缺失如实记 null)",
+            "sampledAt": "<ts>",
+            "windows": {
+              "24h": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "30d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "7d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              }
+            }
+          },
+          "state": "active",
+          "statusCounts": {
+            "vacant": 1
+          },
+          "updatedAt": "<ts>"
+        },
+        {
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "defaultModel": null,
+          "deputyOpen": 0,
+          "effort": null,
+          "id": "fleet_fixture_c",
+          "memberCount": 0,
+          "name": "丙队",
+          "openDecisions": 0,
+          "spend": {
+            "allTime": {
+              "costUsd": null,
+              "deliveredOk": 0,
+              "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+              "deliveryRate": null,
+              "eventTurns": 0,
+              "missingReportTurns": 0,
+              "okTurns": 0,
+              "partialTurns": 0,
+              "pricedTurns": 0,
+              "runs": 0,
+              "turns": 0,
+              "usageInput": null,
+              "usageOutput": null
+            },
+            "baseline": "fleet_runs projection (usage 缺失如实记 null)",
+            "sampledAt": "<ts>",
+            "windows": {
+              "24h": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "30d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              },
+              "7d": {
+                "costUsd": null,
+                "deliveredOk": 0,
+                "deliveryBasis": "since the missingReport flag shipped (earlier rows carry no flag)",
+                "deliveryRate": null,
+                "eventTurns": 0,
+                "missingReportTurns": 0,
+                "okTurns": 0,
+                "partialTurns": 0,
+                "pricedTurns": 0,
+                "runs": 0,
+                "turns": 0,
+                "usageInput": null,
+                "usageOutput": null
+              }
+            }
+          },
+          "state": "active",
+          "statusCounts": {},
+          "updatedAt": "<ts>"
+        }
+      ]
+    },
+    "status": 200
+  },
+  "GET /api/fleets/fleet_fixture_a": {
+    "body": {
+      "blueprintId": null,
+      "decisionPolicy": {
+        "dailyCapPerMember": 10,
+        "expiryHours": 72
+      },
+      "fleet": {
+        "consolePublishedAt": null,
+        "consoleSlug": null,
+        "contextBudget": null,
+        "createdAt": "<ts>",
+        "decisionPolicy": {
+          "dailyCapPerMember": 10,
+          "expiryHours": 72
+        },
+        "defaultModel": null,
+        "delegationPolicy": null,
+        "effort": null,
+        "id": "fleet_fixture_a",
+        "inputPolicy": null,
+        "name": "甲队",
+        "orchestration": {
+          "edges": [
+            {
+              "from": "m_a1",
+              "kind": "handoff",
+              "to": "m_a2"
+            }
+          ]
+        },
+        "ownerEmail": "owner@test",
+        "sourceTemplate": null,
+        "state": "active",
+        "updatedAt": "<ts>"
+      },
+      "members": [
+        {
+          "cadence": null,
+          "carrier": null,
+          "catchUpPending": false,
+          "concurrency": {
+            "ceiling": 1,
+            "declared": 1,
+            "effective": 1,
+            "held": 0,
+            "limitedBy": "worker_pool",
+            "queued": 0,
+            "source": "default",
+            "unreadable": [],
+            "workbench": "off"
+          },
+          "consecutiveFailures": 0,
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "effectiveInputPolicy": null,
+          "effectiveModel": null,
+          "effort": null,
+          "evidence": {
+            "catchUpPending": false,
+            "failingSince": "<ts>",
+            "failureStreak": 0,
+            "fleetPaused": false,
+            "hitWindow": null,
+            "lastErrorKind": null,
+            "lastMissedAt": null,
+            "lastMissedReason": null,
+            "lastRunAt": null,
+            "latestReportAt": null,
+            "memberPaused": false,
+            "missedRounds": 0,
+            "nextRunAt": null,
+            "skippedRounds": 0,
+            "staleWindowMs": null
+          },
+          "failingSince": "<ts>",
+          "failureStreak": 0,
+          "fallbackModel": null,
+          "fleetId": "fleet_fixture_a",
+          "id": "m_a1",
+          "inputPolicy": null,
+          "kpiSlots": [],
+          "lastErrorKind": null,
+          "lastMissedAt": null,
+          "lastTurn": null,
+          "latestReport": null,
+          "latestTurnUsage": null,
+          "memoryCharter": null,
+          "missedRounds": 0,
+          "model": null,
+          "modelNotice": null,
+          "packId": null,
+          "parentId": null,
+          "reportTimeline": [],
+          "role": null,
+          "skippedRounds": 0,
+          "sortKey": "<ts>",
+          "status": "passive",
+          "statusReason": "no cadence — runs only when delegated or replied to",
+          "target": {
+            "id": "policy-brief",
+            "kind": "persona",
+            "label": "policy-brief",
+            "servingPath": null
+          },
+          "taskId": null,
+          "title": "简报岗",
+          "updatedAt": "<ts>",
+          "voice": null
+        },
+        {
+          "cadence": null,
+          "carrier": null,
+          "catchUpPending": false,
+          "concurrency": {
+            "ceiling": 1,
+            "declared": 1,
+            "effective": 1,
+            "held": 0,
+            "limitedBy": "worker_pool",
+            "queued": 0,
+            "source": "default",
+            "unreadable": [],
+            "workbench": "off"
+          },
+          "consecutiveFailures": 0,
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "effectiveInputPolicy": null,
+          "effectiveModel": null,
+          "effort": null,
+          "evidence": {
+            "catchUpPending": false,
+            "failingSince": "<ts>",
+            "failureStreak": 0,
+            "fleetPaused": false,
+            "hitWindow": null,
+            "lastErrorKind": null,
+            "lastMissedAt": null,
+            "lastMissedReason": null,
+            "lastRunAt": null,
+            "latestReportAt": null,
+            "memberPaused": false,
+            "missedRounds": 0,
+            "nextRunAt": null,
+            "skippedRounds": 0,
+            "staleWindowMs": null
+          },
+          "failingSince": "<ts>",
+          "failureStreak": 0,
+          "fallbackModel": null,
+          "fleetId": "fleet_fixture_a",
+          "id": "m_a2",
+          "inputPolicy": null,
+          "kpiSlots": [],
+          "lastErrorKind": null,
+          "lastMissedAt": null,
+          "lastTurn": null,
+          "latestReport": null,
+          "latestTurnUsage": null,
+          "memoryCharter": null,
+          "missedRounds": 0,
+          "model": null,
+          "modelNotice": null,
+          "packId": null,
+          "parentId": null,
+          "reportTimeline": [],
+          "role": null,
+          "skippedRounds": 0,
+          "sortKey": "<ts>",
+          "status": "passive",
+          "statusReason": "no cadence — runs only when delegated or replied to",
+          "target": {
+            "id": "auditor",
+            "kind": "persona",
+            "label": "auditor",
+            "servingPath": null
+          },
+          "taskId": null,
+          "title": "审核岗",
+          "updatedAt": "<ts>",
+          "voice": null
+        }
+      ],
+      "openDecisions": 0,
+      "plugins": [],
+      "roleStates": [],
+      "statusCounts": {
+        "passive": 2
+      }
+    },
+    "status": 200
+  },
+  "GET /api/fleets/fleet_fixture_b": {
+    "body": {
+      "blueprintId": null,
+      "decisionPolicy": {
+        "dailyCapPerMember": 10,
+        "expiryHours": 72
+      },
+      "fleet": {
+        "consolePublishedAt": null,
+        "consoleSlug": null,
+        "contextBudget": null,
+        "createdAt": "<ts>",
+        "decisionPolicy": {
+          "dailyCapPerMember": 10,
+          "expiryHours": 72
+        },
+        "defaultModel": null,
+        "delegationPolicy": null,
+        "effort": null,
+        "id": "fleet_fixture_b",
+        "inputPolicy": null,
+        "name": "乙队",
+        "orchestration": null,
+        "ownerEmail": "owner@test",
+        "sourceTemplate": null,
+        "state": "active",
+        "updatedAt": "<ts>"
+      },
+      "members": [
+        {
+          "cadence": null,
+          "carrier": null,
+          "catchUpPending": false,
+          "concurrency": {
+            "ceiling": 1,
+            "declared": 1,
+            "effective": 1,
+            "held": 0,
+            "limitedBy": "worker_pool",
+            "queued": 0,
+            "source": "default",
+            "unreadable": [],
+            "workbench": "off"
+          },
+          "consecutiveFailures": 0,
+          "contextBudget": null,
+          "createdAt": "<ts>",
+          "effectiveInputPolicy": null,
+          "effectiveModel": null,
+          "effort": null,
+          "evidence": {
+            "catchUpPending": false,
+            "failingSince": "<ts>",
+            "failureStreak": 0,
+            "fleetPaused": false,
+            "hitWindow": null,
+            "lastErrorKind": null,
+            "lastMissedAt": null,
+            "lastMissedReason": null,
+            "lastRunAt": null,
+            "latestReportAt": null,
+            "memberPaused": false,
+            "missedRounds": 0,
+            "nextRunAt": null,
+            "skippedRounds": 0,
+            "staleWindowMs": null
+          },
+          "failingSince": "<ts>",
+          "failureStreak": 0,
+          "fallbackModel": null,
+          "fleetId": "fleet_fixture_b",
+          "id": "m_b1",
+          "inputPolicy": null,
+          "kpiSlots": [],
+          "lastErrorKind": null,
+          "lastMissedAt": null,
+          "lastTurn": null,
+          "latestReport": null,
+          "latestTurnUsage": null,
+          "memoryCharter": null,
+          "missedRounds": 0,
+          "model": null,
+          "modelNotice": null,
+          "packId": null,
+          "parentId": null,
+          "reportTimeline": [],
+          "role": null,
+          "skippedRounds": 0,
+          "sortKey": "<ts>",
+          "status": "vacant",
+          "statusReason": "target object no longer exists",
+          "target": {
+            "id": "gone-preset",
+            "kind": "persona",
+            "label": "gone-preset",
+            "servingPath": null
+          },
+          "taskId": null,
+          "title": "缺岗",
+          "updatedAt": "<ts>",
+          "voice": null
+        }
+      ],
+      "openDecisions": 0,
+      "plugins": [],
+      "roleStates": [],
+      "statusCounts": {
+        "vacant": 1
+      }
+    },
+    "status": 200
+  },
+  "GET /api/fleets/fleet_fixture_c": {
+    "body": {
+      "blueprintId": null,
+      "decisionPolicy": {
+        "dailyCapPerMember": 10,
+        "expiryHours": 72
+      },
+      "fleet": {
+        "consolePublishedAt": null,
+        "consoleSlug": null,
+        "contextBudget": null,
+        "createdAt": "<ts>",
+        "decisionPolicy": {
+          "dailyCapPerMember": 10,
+          "expiryHours": 72
+        },
+        "defaultModel": null,
+        "delegationPolicy": null,
+        "effort": null,
+        "id": "fleet_fixture_c",
+        "inputPolicy": null,
+        "name": "丙队",
+        "orchestration": null,
+        "ownerEmail": "owner@test",
+        "sourceTemplate": null,
+        "state": "active",
+        "updatedAt": "<ts>"
+      },
+      "members": [],
+      "openDecisions": 0,
+      "plugins": [],
+      "roleStates": [],
+      "statusCounts": {}
+    },
+    "status": 200
+  },
+  "PATCH fleet (bad action)": {
+    "body": {
+      "fleet": null,
+      "reconcile": {
+        "created": [],
+        "deduped": [],
+        "paused": [],
+        "removed": [],
+        "respectedPause": [],
+        "resumed": [],
+        "updated": []
+      }
+    },
+    "status": 200
+  },
+  "PATCH fleet (pause)": {
+    "body": {
+      "fleet": null,
+      "reconcile": {
+        "created": [],
+        "deduped": [],
+        "paused": [],
+        "removed": [],
+        "respectedPause": [],
+        "resumed": [],
+        "updated": []
+      }
+    },
+    "status": 200
+  },
+  "PATCH member (invalid title)": {
+    "body": {
+      "error": "Member title must be a non-empty string"
+    },
+    "status": 400
+  },
+  "PATCH member (valid)": {
+    "body": {
+      "error": "cadence must be an object or null"
+    },
+    "status": 400
+  }
+}

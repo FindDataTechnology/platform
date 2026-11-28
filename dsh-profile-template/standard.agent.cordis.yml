@@ -1,0 +1,51 @@
+# The platform's deployment persona composition (0.2.0 shape, carried forward
+# to 0.2.2 — dsh-base still composes the whole agent host plane; the preset
+# definition shape is unchanged).
+#
+# Translation note from the 0.1.1 shipped `standard` (252 lines): dsh-base
+# 0.2.0 now composes the ENTIRE agent host plane itself — the shell/fs/jobs
+# tools, skills, plan mode, compaction internals, subagent tools, ralph, todo,
+# web, and the workflow engine (workflow-ptc). What a deployment still owns is
+# exactly what the base bundle's comments say it is: "the deployment persona
+# is a deployment choice" — the persona row — plus any deployment-specific
+# model-facing rows. This file is that remainder.
+#
+# Schema notes vs 0.1.1: dsh-persona's `text` became `prefix`/`suffix`
+# sections; the standalone workflow-worker-thread row is gone (the engine is
+# workflow-ptc in the base bundle).
+
+# The preset's own persona, shadowing the deployment default for this agent.
+# `{{model}}` and `{{provider}}` resolve from the agent's own route. 0.2.2's
+# prompt registry registers exactly those two variables and interpolates
+# strictly, so a `{{cwd}}` reference (0.2.0 tolerated it) now fails the first
+# turn with `unknown prompt variable` — the working directory reaches the model
+# through the runtime context and tools instead.
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    # Two parts: the original coding-agent line (kept verbatim — the platform
+    # IS a coding agent, and a deployment that renamed the assistant must not
+    # change what the runtime is) and the team-building routing discipline
+    # (add-team-building-first-run 2.1). The discipline exists because every
+    # deployment ships the building tools (`fleet-architect` / `blueprint-author`
+    # / `pack-author` in mcp.json) but nothing told the model it may use them:
+    # a newcomer typing "帮我搭一支客服团队" got a conversation about it, not a
+    # draft. It is scoped to an explicit request so the ordinary coding-agent
+    # behavior is unchanged; and every write stays behind the existing
+    # draft → diff → approve gate.
+    prefix: |-
+      You are a coding agent powered by the {{model}} model.
+
+      You can also build things the user asks for, using the tools you already hold. Route by what they ask for, and do nothing else off the back of this paragraph:
+      - "我要一支团队 / 帮我搭一支团队" (a standing team that runs on a schedule): call `fleet_draft` first, present its full diff and cost estimate, and call `fleet_apply` only after the user explicitly approves. A created team is born all-paused; tell the user to confirm the roster in the cockpit before starting it.
+      - "我要一个专家 / 帮我做一个干 X 的助手" (a reusable assistant for one job): use `pack_market_servers` to find MCP servers that actually exist, `pack_validate` to check the draft, then `pack_save` to land it as a draft. Never invent a server or tool name, and never publish, price or deploy — those are the owner's actions.
+      - "不确定 / 我不知道要哪个": ask at most two clarifying questions (what should it do; one-off answer or keeping running), then route to one of the two above.
+      Never draft from stale facts about what tools exist: read the tool surface you were given and name only what is there. If the request needs something this deployment does not have, say so plainly and name what is missing — do not substitute a nearby capability and present it as what was asked. Drafts and diffs are shown before anything is written; nothing is created, published or started without the user's explicit approval.
+
+# The ask_user_question tool: the platform's inquiry flow (add-user-questions)
+# rides its host-side provider — the user-questions bridge registers the
+# userQuestions service this tool resolves. Kept deployment-side because the
+# base bundle composes no ask tool (its sessions pin ask through the
+# permission service instead).
+- id: tool-ask-user
+  name: '@deepseek-ai/dsh-tool-ask-user'

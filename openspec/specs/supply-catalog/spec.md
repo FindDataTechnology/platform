@@ -1,0 +1,233 @@
+# supply-catalog Specification
+
+## Purpose
+The unified supply catalog: one catalog read path for the five material species (pack, skill, mcp, facade, data-anchor) served by the facet catalog API family, with the annotation layer spanning all species, the facade and data-anchor species fed by their own sources of truth instead of pack-badge derivation, and offline catalog copies demoted to generated artifacts of the export pipeline.
+
+## Requirements
+
+### Requirement: One catalog read path for six species
+
+The facet catalog API family SHALL be the single catalog read path for all six material species — `pack`, `skill`, `mcp`, `facade`, `data-anchor`, `plugin` — whose enumeration is versioned: new species extend the enumeration with a version bump and never overload an existing value. This change is the first exercise of that rule: `plugin` is the sixth species, `SUPPLY_SPECIES` gains it as an appended value, and `SUPPLY_SPECIES_VERSION` moves from 1 to 2, while the five existing species values keep their meaning unchanged. Every presenting surface that lists materials (the facet storefront, the 壹座 market cabinets, the plaza export, the machine faces) SHALL read this projection rather than maintaining its own catalog source. The catalog SHALL NOT restate or reinterpret admission: each species admits through its own source of truth (packs via the market listing rule, skills and MCP servers via registry visibility, facades via the deployments public face, data anchors via the DAAS catalog face, plugins via the dsh plugin catalogue — the operator-curated list of harness plugins, reviewed under the ecosystem curation runbook and ledger).
+
+For the `plugin` species the source of truth SHALL be that curated catalogue, NOT package-manager metadata at runtime: the catalog SHALL NOT enumerate an installed module tree, a lockfile, or any package registry reachable from a running profile, and a catalogued plugin SHALL NOT be reported as supplied or installed merely because it appears in the catalogue. A catalogued plugin's presence in the enumeration SHALL mean "the operator has reviewed and may offer this plugin", never "this deployment runs it".
+
+#### Scenario: Cabinet and plaza agree on the catalog
+
+- **WHEN** the same material is listed through the 壹座 market cabinets and through the plaza export in the same refresh window
+- **THEN** both surfaces render it from the unified catalog projection with the same name, description, and provenance, and neither carries an entry the other cannot trace to the projection
+
+#### Scenario: Species enumeration extension bumps the version
+
+- **WHEN** the species enumeration is extended with `plugin` as the sixth material species
+- **THEN** the catalog species enumeration SHALL report version 2 and the `plugin` value SHALL be present alongside the five existing values
+- **AND** the values `pack`, `skill`, `mcp`, `facade`, and `data-anchor` SHALL keep their meaning unchanged
+
+#### Scenario: v2 enumeration serves six species and a branchable version
+
+- **WHEN** a client reads the species enumeration route `/api/supply-catalog/species`
+- **THEN** the response SHALL list exactly six species and report version 2
+- **AND** a client written against version 1 SHALL be able to branch on the reported version number instead of assuming a five-species enumeration
+
+### Requirement: Annotation shape spans all species
+
+Every catalog entry for every species SHALL carry the production annotation-layer shape — `canonical.brief`, `human` in the five locale slots, `whenToUse`, and `provenance` with `source` and `updatedAt` — using the same field names the platform's own surfaces use, with no new vocabulary. An entry not yet covered by an annotation pass SHALL carry its zh source text in all five locale slots with provenance unchanged, never machine-translated and never omitted.
+
+A `plugin` entry SHALL carry that same shape and, for this species only, an additive field set: the supply state (whether the current deployment supplies the plugin) and the review provenance recorded in the curation ledger (`reviewedAt`, `reviewer`, and the licence identifier). These fields are additive annotations on the plugin entry, not new vocabulary for the other species: consumers that read only the shared shape SHALL still read a valid plugin entry, and the annotation shape of the other five species SHALL NOT change or gain required fields.
+
+#### Scenario: A facade entry carries the annotation shape
+
+- **WHEN** a catalog consumer reads a facade entry from the catalog API family
+- **THEN** the entry has a canonical brief, five locale slots, a whenToUse hint, and provenance naming its source and as-of date
+
+#### Scenario: Un-annotated data anchors are honest
+
+- **WHEN** a data-anchor entry has no annotation coverage
+- **THEN** its entry carries the zh source text in all five locale slots and provenance still names the DAAS catalog and as-of date
+
+#### Scenario: A plugin entry carries the annotation shape plus review provenance
+
+- **WHEN** a catalog consumer reads a plugin entry from the catalog API family
+- **THEN** the entry SHALL have a canonical brief, five locale slots, a whenToUse hint, and provenance naming its source and as-of date, exactly as the other species do
+- **AND** the entry SHALL additionally carry the supply state and the ledger review provenance (`reviewedAt`, `reviewer`, licence identifier)
+- **AND** no entry of the other five species SHALL be required to carry those additive fields
+
+### Requirement: The facade species is fed by instance truth
+
+Facade entries in the catalog SHALL derive from deployment/instance records on the deployments face — not from pack badges or name heuristics. Only publicly shared facades SHALL be visible to anonymous identities. Live instance status reported by the serving plane SHALL be included when present and SHALL be passed through unchanged as the serving plane reported it — the catalog SHALL NOT re-word, re-derive, or collapse the reported values into a coarser vocabulary; a facade whose status is not reported SHALL render an explicit unknown status mark, never an invented value. The catalog's consumption of the serving plane's public face SHALL be shape-checked against the published contract revision: an entry that does not conform (a missing identity field, a status of an unexpected type) SHALL be dropped and counted rather than projected as a malformed row. The badge-derived facade derivation path SHALL be retired.
+
+#### Scenario: A deployed public facade appears
+
+- **WHEN** a pack is deployed as a publicly shared facade and the catalog refreshes
+- **THEN** a facade entry appears with its deployment provenance, and the entry is visible anonymously
+
+#### Scenario: Status missing renders unknown
+
+- **WHEN** a facade entry's live status has not been reported by the serving plane
+- **THEN** the entry carries an explicit unknown status mark rather than a defaulted healthy value
+
+#### Scenario: A reported status is passed through unchanged
+
+- **WHEN** the serving plane reports a facade's status as one of its declared values
+- **THEN** the catalog entry carries exactly that value, and the catalog introduces no value of its own
+
+#### Scenario: Badge-derived facades disappear
+
+- **WHEN** a pack carries a facade or assistant badge but has no deployment record
+- **THEN** no facade entry appears for it in the catalog
+
+#### Scenario: A malformed serving-plane entry is dropped and counted
+
+- **WHEN** the serving plane's public face returns an entry without its identity field, or with a status of an unexpected type
+- **THEN** that entry is absent from the catalog response and a drop count is recorded — no row is projected with a fabricated identity or a coerced status
+
+#### Scenario: The catalog declares which contract revision it expects
+
+- **WHEN** a consumer or an operator asks which contract revision this catalog consumes
+- **THEN** the answer is discoverable from the vendored contract file, and a revision mismatch with the serving plane's copy is reported by the cross-repo drift check
+
+### Requirement: The data-anchor species is fed by the DAAS catalog face
+
+Data-anchor entries SHALL be ingested from the DAAS catalog face, with v1 scope limited to catalog classes (entities and indicators); observation series SHALL be excluded. Each entry's provenance SHALL name the DAAS catalog and its as-of date. The heuristic derivation of official-data entries from pack names, badges, or category strings SHALL be retired.
+
+A species whose entries cannot explain themselves to a reader SHALL NOT be presented as a bare label: every data-anchor entry's reader-facing name SHALL be its annotation's human name when present, and the species itself SHALL carry a one-sentence description explaining what a data anchor is.
+
+The catalog's **presentation** of data-anchor entries SHALL be layered by `kind`, while its **data face** stays complete: the directory SHALL list `source`-kind entries by default and SHALL fold `indicator`-kind entries behind an explicit affordance that states how many there are. The data-anchor read endpoint SHALL continue to return every ingested entry of both kinds — folding is a browsing decision, not a data cut, and the machine surfaces are unaffected.
+
+#### Scenario: Anchor provenance is traceable
+
+- **WHEN** a catalog consumer reads a data-anchor entry
+- **THEN** its provenance names the DAAS catalog and carries the as-of date of the ingestion
+#### Scenario: Heuristic anchors disappear
+
+- **WHEN** a pack whose name matches data-ish patterns has no DAAS catalog backing
+- **THEN** no data-anchor entry is derived from it
+
+#### Scenario: Sources lead, indicators fold
+
+- **WHEN** a reader opens the data-anchor species in the directory
+- **THEN** the `source`-kind entries are listed by default
+- **AND** the `indicator`-kind entries are folded behind an affordance that names their total count, not silently dropped
+
+#### Scenario: The data face is not cut by the presentation
+
+- **WHEN** a consumer reads the data-anchor catalog endpoint directly
+- **THEN** it returns every ingested entry of both kinds, regardless of how the directory chooses to present them
+
+#### Scenario: A species explains itself
+
+- **WHEN** a reader opens any species tab in the directory
+- **THEN** that species carries a readable one-sentence description, never an absent string
+
+### Requirement: Offline catalog copies are generated artifacts
+
+Any catalog copy bundled with 壹座 for offline or self-hosted deployments SHALL be a generated artifact of the export pipeline run against the unified catalog — carrying an as-of stamp and provenance — and SHALL be served only when no catalog URL is configured. Hand-curated catalog entries SHALL NOT exist, and no merge or collision rule SHALL apply to the catalog species: with a catalog URL configured, the online projection is the single truth; without one, the generated snapshot serves alone with its staleness visible. (The app-shipped stdio starter floor is not a catalog copy and rides every served market regardless — openspec: extension-marketplace.)
+
+#### Scenario: Unconfigured deployment serves the generated snapshot
+
+- **WHEN** 壹座 starts with no catalog URL configured
+- **THEN** the market serves the generated offline snapshot and its as-of stamp is visible to the operator
+
+#### Scenario: No hand-edited entries survive
+
+- **WHEN** the export pipeline regenerates the offline snapshot
+- **THEN** the snapshot's entries are exactly the unified catalog's projection at the as-of time, with no locally added, removed, or overridden entries
+
+### Requirement: Catalogued materials expose their curation evidence state
+
+Every catalog entry SHALL expose a curation-evidence state — `已审` / `待复审` / `缺证据` (audited / review-due / evidence-missing) — derived from the entry's `evidence` object (per `curation-evidence`). Presenting surfaces SHALL render this state alongside the entry's provenance marks, and the state SHALL be derived at read time from the entry, never stored as a hand-maintained flag.
+
+An entry whose state is `缺证据` or `待复审` SHALL still be listable (so an operator can see and fix it), but SHALL NOT be presented as available-for-supply, SHALL NOT be writable into a supply list, and SHALL NOT be reported as `available` or `enabled` in the three-state supply view. The catalogue's own admission rules are unchanged: this state is evidence bookkeeping, not a second admission gate.
+
+#### Scenario: Evidence state is derived, not stored
+
+- **WHEN** an entry's `reviewValidUntil` passes while its category and visibility are untouched
+- **THEN** the next read reports `待复审` without any write to the entry
+
+#### Scenario: Missing evidence blocks supply without hiding the entry
+
+- **WHEN** the catalogue contains an entry with no `evidence` object
+- **THEN** the storefront still lists it with state `缺证据`, and the supply list refuses to include it
+
+#### Scenario: Evidence state does not restate admission
+
+- **WHEN** an entry carries complete, unexpired evidence but fails its species' own admission rule (for example a plugin absent from the curated catalogue)
+- **THEN** the catalog does not admit it on evidence alone — evidence state never overrides the species' source of truth
+
+### Requirement: The facade species absorbs registered-but-undeployed agents
+
+An agent that exists as a registry entry (an AgentCard: a name, a description, an identity, and a declared capability) SHALL appear in the catalog as a `facade` entry, never as a seventh species. The species enumeration stays as it is; the difference between a deployed and an undeployed agent SHALL be expressed by two fields on the facade entry:
+
+- `runnable` — exactly one of `installable` (a pack the consumer can obtain and run locally) or `reachable` (a service the consumer calls at an endpoint);
+- `deployment` — an object carrying the deployment `state` and `provenance`, where an undeployed or unknown agent reports an explicit state rather than a fabricated `serving`.
+
+An entry with no deployment record SHALL render as undeployed with provenance naming the registry as its only source. The catalog SHALL NOT invent an endpoint, a live status, or a running instance for an agent that no serving plane reports.
+
+Because a facade is a running stage of a material that may also exist as a pack, the directory SHALL state that relationship in one sentence next to the species, so a reader is never left to infer whether the two species duplicate each other. The directory SHALL NOT merge the two species into one: a facade carries runtime state a pack does not, and measured deployments show the two sets are largely disjoint.
+
+An undeployed facade SHALL remain **present** in the directory (retaining it is required, not optional) and SHALL be **visibly marked** as not yet running on its card, so a reader can tell at a glance which entries are conversational now and which are not. The marking SHALL be a reader-facing label, never a silent difference in styling alone.
+
+#### Scenario: A registered agent with no deployment appears as an undeployed facade
+
+- **WHEN** the registry holds an AgentCard for an agent that no serving plane has deployed
+- **THEN** the catalog carries exactly one `facade` entry for it, with `runnable: "reachable"`, `deployment.state` stating it is not deployed, and provenance naming the registry
+#### Scenario: A deployed agent carries its serving state
+
+- **WHEN** the same agent has also been deployed and the serving plane reports its public status
+- **THEN** its single facade entry carries that reported state and the serving plane as provenance, and no second entry appears for it
+#### Scenario: No seventh species is introduced
+
+- **WHEN** a client reads the species enumeration after this change
+- **THEN** it still reports the same six species with the same version, and registry agents are found under `facade`
+
+#### Scenario: An undeployed facade says so on its card
+
+- **WHEN** a reader browses the directory and encounters a facade whose deployment state is undeployed
+- **THEN** its card carries a reader-facing label stating it is not yet running
+- **AND** the entry is still listed (not hidden)
+
+#### Scenario: The pack-to-facade relationship is stated, not inferred
+
+- **WHEN** a reader opens the directory where both the pack and facade species are present
+- **THEN** the facade species carries a one-sentence statement that it is the running stage of a material, so the two species are not mistaken for duplicates
+
+### Requirement: One catalog presentation across the supply domain
+
+Every surface that lists materials SHALL present them from the unified catalog projection. A second product surface that renders its own list of the same materials — a separate registry console catalogue, a second directory page, or an independently fetched inventory — SHALL NOT exist as a product face: registry-side catalogue screens either read the projection or are retired from the product surface. Operator-only screens (token issuance, user groups, audit, virtual servers, health probes) are outside this rule because they do not present the material inventory.
+
+#### Scenario: Two surfaces report the same material identically
+
+- **WHEN** a material is listed on any two product surfaces in the same refresh window
+- **THEN** both render it from the projection with the same identity, name, description, and provenance
+
+#### Scenario: No product surface keeps its own inventory
+
+- **WHEN** an operator or customer browses the material inventory on any product face
+- **THEN** no surface is serving a list fetched independently from the registry's own catalogue store rather than the projection
+
+### Requirement: Data-anchor entries are self-describing by kind on the catalog projection
+
+The catalog projection SHALL carry each data-anchor entry's `anchorKind` and `anchorSource` through to the exported entry, so any presenting surface can layer by kind without re-deriving it. A field the source supplied SHALL NOT be dropped by the projection's field whitelist. This is the machine-face half of the `supply-catalog` presentation rule ("Sources lead, indicators fold").
+
+#### Scenario: Kind survives to the machine face
+
+- **WHEN** the export projects a data-anchor entry whose source carried a `kind`
+- **THEN** the exported entry carries `anchorKind` equal to that kind and `anchorSource` equal to the source's native source name
+
+#### Scenario: A source-kind entry is distinguishable from an indicator
+
+- **WHEN** a consumer reads `catalog.json`
+- **THEN** it can separate `source`-kind anchors from `indicator`-kind anchors by `anchorKind` alone, without string-matching names or summaries
+
+### Requirement: Catalog provenance names a source face, not an internal address
+
+Every catalog entry's `provenance.source` on the public machine and human surfaces SHALL be a logical label that names the source face (for example `market-listing`, `skills-catalog`, `mcp-catalog`, `daas-catalog`), matching the labels anchors and facades already carry. It SHALL NOT be an internal or loopback URL (a pod address such as `http://127.0.0.1:<port>/api/...`). The provenance `updatedAt` as-of date is unaffected.
+
+#### Scenario: No internal address reaches the public surface
+
+- **WHEN** any consumer reads a generated machine or human surface
+- **THEN** no entry's `provenance.source` contains an internal host, port, or `127.0.0.1`/localhost address
+
+#### Scenario: Labels match across species
+
+- **WHEN** packs, skills, MCP servers, facades and data anchors are compared on provenance
+- **THEN** every `provenance.source` is a logical face label, consistent in form across all species

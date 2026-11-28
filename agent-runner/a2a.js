@@ -1,0 +1,414 @@
+// ── A2A HTTP adapter (add-a2a-agent-serving 4.3/4.5) ────────────────────────
+//
+// The registry's reverse proxy maps /agent/{path}/** onto the registered
+// URL's ORIGIN (upstream #1734 drops the URL's path — one agent per origin),
+// so the runner serves EACH agent on its own port (see agentPortFor) with the
+// A2A-spec flat layout:
+//   GET  /.well-known/agent-card.json  — the card as registered
+//   POST /                             — JSON-RPC message/send | message/stream
+//
+// Everything (card included) sits behind the backend-credential check: the
+// gateway strips the caller's X-Authorization after /validate and forwards
+// the caller's standard Authorization end-to-end (upstream's egress trust
+// model — the gateway is not a credential broker), so the credential is the
+// out-of-band A2A secret this deployment's clients carry. A request without
+// it is rejected, gateway-proxied or not. Unsupported methods answer -32601;
+// v1 emits text parts only.
+
+import express from "express";
+import { sessionKeyFor } from "./child.js";
+import { agentKeyFor } from "./compose.js";
+import { agentPortFor } from "../lib/agent-serving.js";
+import { createTaskRegistry } from "./tasks.js";
+
+function jsonRpcError(id, code, message) {
+  return { jsonrpc: "2.0", id: id ?? null, error: { code, message } };
+}
+
+function textOf(message) {
+  const parts = message?.parts ?? [];
+  return parts
+    .map((p) => (typeof p?.text === "string" ? p.text : ""))
+    .join("")
+    .trim();
+}
+
+// Visitor scope (add-matter-visitor-scope D1b): the AUTHENTICATED caller's
+// opaque scope, supplied by the facade (chat lane) as message metadata. Takes
+// precedence over the session derivation — the same visitor sees their matters
+// across conversations, different visitors never see each other. A2A callers
+// without a facade (direct API) stay on the session/unscoped path.
+function visitorScopeOf(message) {
+  const v = message?.metadata?.visitor_scope ?? message?.metadata?.visitorScope;
+  return typeof v === "string" && /^[0-9a-f]{32}$/.test(v) ? v : null;
+}
+
+function assistantMessage(contextId, text) {
+  return {
+    role: "assistant",
+    message_id: `m-${Date.now().toString(36)}`,
+    context_id: contextId,
+    kind: "message",
+    parts: [{ kind: "text", text }],
+  };
+}
+
+// One express app per hosted agent, bound by the manager to agentPortFor(key).
+// `getEntry` (optional) resolves the agent's CURRENT registry entry per
+// request: the listener outlives in-place upgrades while the manager refreshes
+// entries on every poll, so a captured object would keep serving the stale
+// descriptor (and stale card) after a redeploy — an upgrade, a secret rebind,
+// or a notify-channel change would never reach composition. Falls back to the
+// captured `entry` for direct/test callers.
+export function createAgentApp({ entry, getEntry, manager, config, log = console }) {
+  const app = express();
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "1mb" }));
+  const currentEntry = () => (typeof getEntry === "function" ? getEntry() : entry);
+  // In-flight asks on this agent's streams (add-serving-ask-bridge): askId →
+  // "no longer pending" settler. The answer route (or the deadline backstop)
+  // calls it so the stream's keepalive stops the moment the ask resolves —
+  // comment frames ride only while an ask is pending.
+  const liveAsks = new Map();
+  const keepaliveMs = Number(config.askKeepaliveMs ?? process.env.SERVING_ASK_KEEPALIVE_MS) || 15_000;
+  // Live task registry (a2a-task-handle). In-memory by design — see
+  // agent-runner/tasks.js for why the durable record lives on the platform
+  // side and this is only the "what is happening right now" view.
+  const tasks = config.taskRegistry ?? createTaskRegistry();
+  // The segment a minted task id carries so two agents on one runner never
+  // collide. Derived from the agent's own key, not a counter.
+  const taskPrefix = (() => {
+    const raw = String(agentKeyFor(entry) || "agent").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    return raw.slice(0, 24) || "agent";
+  })();
+  let taskSeq = 0;
+  const mintTaskId = () => `${taskPrefix}-${Date.now().toString(36)}-${(taskSeq++).toString(36)}`;
+
+  let warnedOpen = false;
+  app.use((req, res, next) => {
+    if (!config.backendToken) {
+      if (!warnedOpen) {
+        log.warn("[agent-runner] AGENT_RUNNER_BACKEND_TOKEN unset — accepting unauthenticated requests (dev mode)");
+        warnedOpen = true;
+      }
+      return next();
+    }
+    if (req.headers.authorization === `Bearer ${config.backendToken}`) return next();
+    return res.status(401).json({ error: "missing agent credential" });
+  });
+
+  app.get("/.well-known/agent-card.json", (_req, res) => {
+    const entry = currentEntry();
+    res.json({
+      name: entry.name,
+      description: entry.description,
+      version: entry.version,
+      provider: entry.provider ?? { organization: "paas-pack", url: config.registryUrl },
+      capabilities: entry.capabilities ?? { streaming: true },
+      skills: entry.skills ?? [],
+      tags: entry.tags ?? [],
+      default_input_modes: entry.default_input_modes ?? ["text"],
+      default_output_modes: entry.default_output_modes ?? ["text"],
+      preferred_transport: entry.preferred_transport ?? "jsonrpc",
+      url: `${config.registryUrl}/agent${entry.path}/`,
+    });
+  });
+
+  app.post("/", async (req, res) => {
+    const entry = currentEntry();
+    const { id, method, params } = req.body ?? {};
+    if (req.body?.jsonrpc !== "2.0" || typeof method !== "string") {
+      return res.status(200).json(jsonRpcError(id, -32600, "Invalid Request"));
+    }
+    if (method !== "message/send" && method !== "message/stream" && method !== "tasks/get" && method !== "tasks/cancel" && method !== "tasks/resubscribe") {
+      return res.status(200).json(jsonRpcError(id, -32601, "Method not found"));
+    }
+    // ── tasks/* (a2a-task-handle) ─────────────────────────────────────────────
+    // answer from the LIVE registry. `unknown` is its own state: this process
+    // having no record is not "not found" and not "failed".
+    if (method === "tasks/get" || method === "tasks/cancel" || method === "tasks/resubscribe") {
+      const taskId = params?.task_id ?? params?.taskId ?? params?.id ?? null;
+      if (!taskId) return res.status(200).json(jsonRpcError(id, -32602, "task_id required"));
+      if (method === "tasks/get") {
+        // Enrich the live view with the claim's terminal word when the live
+        // row already settled — one vocabulary on the wire.
+        return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+      }
+      if (method === "tasks/cancel") {
+        const message = params?.message ?? params;
+        const before = tasks.get(taskId);
+        // The session to stop is the one the ATTEMPT started on, recorded at
+        // accept. Re-deriving it from `context_id` looks equivalent and is not:
+        // the facade's cancel relay carries only the task id (no context), so
+        // the derivation fell through to `${entry.path}` — a session that never
+        // existed — the active probe answered false, and the runner replied
+        // `not-running` while the turn kept running. Measured live 2026-11-20:
+        // cancel returned in 1.4 s with `state: running`, turn completed.
+        //
+        // Falling back to the derivation is only for a task this process never
+        // opened (a caller supplying its own id on a fresh runner).
+        const contextId = message?.context_id ?? message?.contextId ?? before?.context_id ?? null;
+        const sessionId = before?.session_id ?? sessionKeyFor(contextId ?? `${entry.path}`);
+        if (before && before.state !== "running") {
+          return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+        }
+        const out = await manager.cancelTurn(entry, sessionId);
+        if (out.stopped === "unsupported") {
+          return res.status(200).json(jsonRpcError(id, -32013, "this harness has no cancel lane; the turn was not stopped"));
+        }
+        if (out.stopped === "not-running") {
+          // Nothing to stop: the honest answer is whatever the registry says
+          // (usually the task already settled), never a fake "cancelled".
+          return res.status(200).json({ jsonrpc: "2.0", id: id ?? null, result: tasks.describe(taskId) });
+        }
+        // A confirmed stop IS the terminal answer, and it has to be recorded
+        // here rather than read back: the abort settles the live collector
+        // asynchronously, so an immediate `describe` still reports `running`.
+        // Returning that made the facade map a confirmed stop to `unknown`,
+        // refuse to settle its ledger, and then record the completing flight as
+        // `done` — the two-sided disagreement this whole lane forbids (measured
+        // live 2026-11-21 through the public facade: runner answered
+        // `state: cancelled`, facade answered `done`).
+        tasks.cancel(taskId, { by: `caller:${params?.cancelled_by ?? "unknown"}` });
+        const settled = tasks.describe(taskId);
+        return res.status(200).json({
+          jsonrpc: "2.0",
+          id: id ?? null,
+          result: settled.state === "running" ? { ...settled, state: "cancelled", cancelled_by: `caller:${params?.cancelled_by ?? "unknown"}` } : settled,
+        });
+      }
+      // tasks/resubscribe: no per-task event buffer is kept (see tasks.js), so
+      // the honest answer is the CURRENT state with an explicit note on why no
+      // delta replay exists, plus the settled result when there is one.
+      const described = tasks.describe(taskId);
+      return res.status(200).json({
+        jsonrpc: "2.0",
+        id: id ?? null,
+        result: {
+          ...described,
+          replay: "terminal-only",
+          ...(described.state === "unknown"
+            ? { note: "this runner keeps no history for tasks from before its last restart" }
+            : { note: "incremental replay is not provided; the settled result is delivered in full" }),
+        },
+      });
+    }
+    const message = params?.message ?? params;
+    const text = textOf(message);
+    if (!text) return res.status(200).json(jsonRpcError(id, -32604, "empty message"));
+    const contextId = message?.context_id ?? message?.contextId ?? null;
+    const sessionId = sessionKeyFor(contextId ?? `${entry.path}`);
+
+    // Paused agents answer explicitly (add-agent-residency: never a timeout,
+    // never a cold start) — the check precedes acquire on purpose.
+    if (manager.isPaused?.(entry)) {
+      return res.status(200).json(jsonRpcError(id, -32010, "agent paused"));
+    }
+    // Delegation bound (add-agent-delegation-a2a): a chained call at or past
+    // the depth cap is refused BEFORE any spawn — the cross-request cycle
+    // breaker (ADR-0013).
+    const depth = Math.max(0, Number(req.headers["x-delegation-depth"]) || 0);
+    if (depth >= (config.delegationDepthMax ?? 3)) {
+      return res.status(200).json(jsonRpcError(id, -32011, `delegation depth bound (${config.delegationDepthMax ?? 3}) reached`));
+    }
+    // ── task handle (a2a-task-handle 4.1) ─────────────────────────────────
+    // A task id is minted at ACCEPT, before execution, and returned on BOTH
+    // send shapes. A caller that supplied one (`params.task_id`) keeps it —
+    // that is what makes a retried call address the same task; otherwise we
+    // mint. Hoisted out of the try so the catch can settle the same task.
+    // The facade forwards the address it minted (a2a-task-handle 4.7) so both
+    // sides name one task; a direct caller may supply it in params instead.
+    const forwardedTaskId = typeof req.headers["x-task-id"] === "string" && req.headers["x-task-id"] ? req.headers["x-task-id"] : null;
+    const suppliedTaskId = forwardedTaskId ?? (typeof params?.task_id === "string" && params.task_id ? params.task_id : null);
+    const taskId = suppliedTaskId ?? mintTaskId();
+    tasks.open({ taskId, agentKey: agentKeyFor(entry), sessionId, contextId: contextId ?? null, text });
+
+    try {
+      if (method === "message/send") {
+        // No answerer on a synchronous turn: the harness declines any ask at
+        // once (caller-cannot-answer), so the reply arrives on its usual path.
+        try {
+          const out = await manager.turn(entry, sessionId, text, { kind: "message", delegationDepth: depth, visitorScope: visitorScopeOf(message) });
+          if (out?.cancelled) {
+            // The turn resolved, but it ended because the caller stopped it.
+            // Same answer shape as the cancel-during-failure branch below: the
+            // caller asked for a stop and got one, so this is neither an error
+            // nor a completed turn.
+            tasks.settle(taskId, { state: "cancelled", cancelledBy: "caller" });
+            const settled = tasks.describe(taskId);
+            return res.json({
+              jsonrpc: "2.0",
+              id,
+              result: { ...assistantMessage(contextId ?? sessionId, ""), state: "cancelled", cancelled_by: settled.cancelled_by, task_id: taskId },
+            });
+          }
+          const reply = assistantMessage(contextId ?? sessionId, out.text);
+          tasks.settle(taskId, { state: "done", result: reply });
+          return res.json({ jsonrpc: "2.0", id, result: { ...reply, task_id: taskId } });
+        } catch (e) {
+          // The task settles by the same terminal vocabulary the claim uses:
+          // a stopped-from-outside turn is `cancelled`, never `error`.
+          //
+          // Which one it is CANNOT be read from the error code. A cancel that
+          // lands mid-turn makes the runtime go idle with no assistant text,
+          // and the harness reports that shape as its own failure (-32005
+          // "model unavailable or refused") — measured live 2026-11-21 across
+          // the registry hop: `tasks/cancel` answered `state: cancelled` while
+          // the same call's `message/send` answered -32005. The FIRST settle
+          // wins (tasks.settle is one-way), so the cancel that landed earlier
+          // is the answer; only a task that was never cancelled falls through
+          // to the error branch.
+          const cancelled = tasks.get(taskId)?.state === "cancelled";
+          if (cancelled) {
+            // Answer the turn the way it ended: the caller asked for a stop
+            // and got one. Returning the harness's empty-turn failure here is
+            // exactly the "两侧各报一种状态" the spec forbids — and it would
+            // bill the caller for a turn they stopped.
+            const settled = tasks.describe(taskId);
+            return res.json({
+              jsonrpc: "2.0",
+              id,
+              result: { ...assistantMessage(contextId ?? sessionId, ""), state: "cancelled", cancelled_by: settled.cancelled_by, task_id: taskId },
+            });
+          }
+          tasks.settle(taskId, { state: "error", error: { code: e?.code ?? -32003, message: e?.message || "agent failure" } });
+          throw e;
+        }
+      }
+      // 流式与披露闸在语义上不兼容 (add-principal-disclosure-gate 1.7)：delta 是
+      // 边生成边发的，出口闸拿到全文时前半句已经到了对端。要么破坏流式（缓冲全
+      // 部 delta 再一次性发），要么破坏闸（放行已发出的半句）。两者都不接受，
+      // 所以对外车道（声明了 mandateDomain）直接不提供流式。
+      //
+      // 这不是降级，是划界：能逐段评估的东西才能流式发。
+      const streamDomain = entry?.mandateDomain ?? null;
+      if (streamDomain) {
+        return res.status(200).json(
+          jsonRpcError(id, -32013, "streaming is unavailable for outbound lanes: a disclosure verdict covers the whole message, and deltas leave before it can be obtained"),
+        );
+      }
+      res.writeHead(200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      });
+      const send = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      let acc = "";
+      // Ask lane (add-serving-ask-bridge D3): only a caller that opted in by
+      // header receives in-flight asks — every other stream leaves the ask
+      // to the harness's immediate decline, so an unaware consumer's timing
+      // never changes. While an ask is pending the stream carries keepalive
+      // comment frames so idle proxies between here and the caller hold on
+      // through a human-paced pause.
+      const askCapable = String(req.headers["x-serving-ask"] ?? "") === "1";
+      let pendingAsk = null; // { askId, stop }
+      const settleAsk = () => {
+        if (!pendingAsk) return;
+        pendingAsk.stop();
+        pendingAsk = null;
+      };
+      const onAsk = (ask) => {
+        settleAsk();
+        send("ask", ask);
+        const ka = setInterval(() => {
+          if (!res.writableEnded) res.write(": keepalive\n\n");
+        }, keepaliveMs);
+        // Backstop: the harness cancels the ask at its deadline; a beat later
+        // it is no longer pending by construction even if no answer route
+        // call ever arrived.
+        const backstop = setTimeout(() => settleAsk(), Math.max(0, (Number(ask.deadlineAt) || Date.now()) - Date.now() + 1_000));
+        backstop.unref?.();
+        const askId = ask.askId;
+        pendingAsk = {
+          askId,
+          stop: () => {
+            clearInterval(ka);
+            clearTimeout(backstop);
+            liveAsks.delete(askId);
+          },
+        };
+        liveAsks.set(askId, () => {
+          if (pendingAsk?.askId === askId) settleAsk();
+        });
+      };
+      let out;
+      try {
+        out = await manager.turn(entry, sessionId, text, {
+          delegationDepth: depth,
+          visitorScope: visitorScopeOf(message),
+          onDelta: (delta, thinking) => {
+            // Thinking heartbeat: no text to accumulate, just a liveness frame
+            // so a caller can tell "reasoning" from "hung". The draft never
+            // rides the wire — guest-facing rooms must not leak it.
+            if (thinking) {
+              send("thinking", { context_id: contextId ?? sessionId });
+              return;
+            }
+            acc += delta;
+            send("delta", { context_id: contextId ?? sessionId, kind: "message", parts: [{ kind: "text", text: acc }] });
+          },
+          ...(askCapable ? { onAsk } : {}),
+        });
+      } finally {
+        settleAsk();
+      }
+      if (out?.cancelled) {
+        // A stopped stream must not emit a `message` frame carrying empty text:
+        // that is the caller-facing shape of a completed turn. It ends with the
+        // same task_id so the caller can query it, and the registry says why.
+        tasks.settle(taskId, { state: "cancelled", cancelledBy: "caller" });
+        res.write(`event: done\ndata: ${JSON.stringify({ task_id: taskId, state: "cancelled" })}\n\n`);
+        return res.end();
+      }
+      send("message", assistantMessage(contextId ?? sessionId, out.text));
+      tasks.settle(taskId, { state: "done", result: assistantMessage(contextId ?? sessionId, out.text) });
+      res.write(`event: done\ndata: ${JSON.stringify({ task_id: taskId })}\n\n`);
+      return res.end();
+    } catch (e) {
+      // Same closed vocabulary as the send path: a caller-initiated stop is a
+      // cancellation, anything else is an error. `taskId` is hoisted, so both
+      // shapes settle the same address.
+      const cancelled = tasks.get(taskId)?.state === "cancelled" || e?.code === -32013;
+      tasks.settle(taskId, cancelled
+        ? { state: "cancelled", cancelledBy: "caller" }
+        : { state: "error", error: { code: e?.code ?? -32003, message: e?.message || "agent failure" } });
+      if (res.headersSent) {
+        res.write(`event: error\ndata: ${JSON.stringify({ code: e.code ?? -32003, message: e.message })}\n\n`);
+        return res.end();
+      }
+      return res.status(200).json(jsonRpcError(id, e.code ?? -32003, e.message || "agent failure"));
+    }
+  });
+
+  // Ask answers (add-serving-ask-bridge D2): the side route for an in-flight
+  // ask — same credential gate as the turn methods (the app-level check above
+  // runs first). The receipt is the runtime's own: `{accepted: true}` for the
+  // first submission that lands, `{accepted: false, reason}` for an unknown or
+  // already-resolved ask — first-wins, relayed as-is. Either way the ask is no
+  // longer pending on its stream, so its keepalive stops here.
+  app.post("/ask-answer", async (req, res) => {
+    const entry = currentEntry();
+    const body = req.body ?? {};
+    const askId = typeof body.askId === "string" ? body.askId : "";
+    const cancelled = body.cancelled === true;
+    if (!askId || (!cancelled && !Array.isArray(body.answers))) {
+      return res.status(400).json({ error: "askId plus answers[] or cancelled:true required" });
+    }
+    const receipt = await manager.answerAsk(entry, askId, cancelled ? { cancelled: true } : { answers: body.answers });
+    liveAsks.get(askId)?.();
+    return res.json(receipt);
+  });
+
+  return app;
+}
+
+// The runner's MAIN listener: ops/registry health surface only (the registry's
+// per-agent health checks hit each agent's own port; this one is the board's).
+export function createOpsApp({ manager }) {
+  const app = express();
+  app.disable("x-powered-by");
+  app.get("/health", (_req, res) => res.json(manager.health()));
+  return app;
+}
+
+export { agentPortFor };

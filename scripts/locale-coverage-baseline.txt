@@ -1,0 +1,96 @@
+# 词表覆盖基线（openspec: fix-zhiyu-pass-mark-and-delivery-failure-surface）
+#
+# 一行一条**已知**的「代码引用但 en 词表里没有」的键，格式：
+#     <key>  # <出处车道 + 日期>
+#
+# 与 scripts/maintenance-roots-baseline.txt、export-baseline.txt 同一纪律：存量缺口不靠
+# 「先关掉闸」处理，靠基线。scripts/check-locales.js 的覆盖门只对基线之外的新增判红——
+# 这样它当天就能上线看守，而存量清理按各自车道的节奏走（这些键大多属于并行会话在途的
+# 界面，替它们补文案会与其改动抢同一批 locale 文件）。
+#
+# 纪律：
+#   · 删基线行必须伴随真实动作（补上文案 / 删掉那处 t() 调用）。
+#   · 基线长期不缩水本身就该被问一次：它是豁免，不是状态。空是目标状态。
+#   · 日期一律绝对值。
+#
+# 2026-11-18 首跑 156 条（本 change 的门上线时的存量）。
+
+botsPage.allowedSenders  # bot 白名单字段（在途车道 BotsPage） · pages/BotsPage.tsx · 2026-11-18 存量
+botsPage.allowedSendersHint  # bot 白名单字段（在途车道 BotsPage） · pages/BotsPage.tsx · 2026-11-18 存量
+botsPage.allowedSendersPlaceholder  # bot 白名单字段（在途车道 BotsPage） · pages/BotsPage.tsx · 2026-11-18 存量
+botsPage.allowedSendersRequiredForTools  # bot 白名单字段（在途车道 BotsPage） · pages/BotsPage.tsx · 2026-11-18 存量
+botsPage.senderBlocked  # bot 白名单字段（在途车道 BotsPage） · pages/BotsPage.tsx · 2026-11-18 存量
+extensions.mcp.advanced  # 扩展市场卡（在途车道 McpMarketCard/McpServerCard） · components/extensions/McpMarketCard.tsx · 2026-11-18 存量
+fleets.credentialPack.connect  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.loadFailed  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.loading  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.missingPacks  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.needFills  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.noCredential  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.ready  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.reasonFallback  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.title  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.unknown  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.credentialPack.unreadable  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · components/fleet/FleetCredentialPack.tsx · 2026-11-18 存量
+fleets.ops.export  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.ops.exportFailed  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.ops.exportOk  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.ops.promote  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.promote.action  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.promote.body  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.promote.forked  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.promote.notForked  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.promote.ok  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+fleets.promote.title  # 舰队页/凭证包（在途车道 FleetsPage/FleetCredentialPack） · pages/FleetsPage.tsx · 2026-11-18 存量
+inputRequest.pending  # 输入请求卡（在途车道 InputRequestCard） · components/InputRequestCard.tsx · 2026-11-18 存量
+memory.declaration.degraded  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
+memory.declaration.hint  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
+memory.declaration.title  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
+memory.declaration.unexecutedList  # 记忆声明抽屉（在途车道 MemoryDrawer） · components/fleet/MemoryDrawer.tsx · 2026-11-18 存量
+packs.editor.mcpDescription  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackDraftsView.tsx · 2026-11-18 存量
+packs.editor.mcpDescriptionEn  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackDraftsView.tsx · 2026-11-18 存量
+packs.editor.pillars.clearConsole  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.dashboardHint  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.distill  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.guidancePlaceholder  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.guidanceTitle  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.headline  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.hint  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.memoryHint  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.previewTitle  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.readBudget  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.readScope  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.storeHome  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.title  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.undeclared  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+packs.editor.pillars.writeAuthority  # pack 编辑器/市场（在途车道 PackPillarsEditor/PackDraftsView/PackMarketView/AgentSpecSheet/PackCard） · components/packs/PackPillarsEditor.tsx · 2026-11-18 存量
+studio.acceptance.add  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
+studio.acceptance.anyPost  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
+studio.acceptance.expect  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
+studio.acceptance.id  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
+studio.acceptance.overCap  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
+studio.acceptance.rubric  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/AcceptanceEditor.tsx · 2026-11-18 存量
+studio.acceptance.title  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · pages/AgentStudioPage.tsx · 2026-11-18 存量
+studio.post.add  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · pages/AgentStudioPage.tsx · 2026-11-18 存量
+studio.post.addSlot  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.cadence  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.cadenceCustom  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.cadenceDaily  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.cadenceHourly  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.cadenceInvalid  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.cadenceNone  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.kpiSlots  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.name  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.noParent  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.parent  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.promptPlaceholder  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.promptRequired  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.remove  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.save  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.slotKey  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.slotLabel  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.slotUnit  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.title  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.titleRequired  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.tzPlaceholder  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · components/studio/PostDrawer.tsx · 2026-11-18 存量
+studio.post.untitled  # agent studio（在途车道 AgentStudioPage/AcceptanceEditor/PostDrawer） · pages/AgentStudioPage.tsx · 2026-11-18 存量

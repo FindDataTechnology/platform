@@ -1,0 +1,1422 @@
+// The facet shell smoke sentinel (fix-facet-packs-crash): the thin shell
+// borrows 壹座 pack components verbatim and mounts NO router (facet-platform:
+// "the shell SHALL add no router dependency"). This spec is the net that
+// catches a host-side change — e.g. a routing hook creeping into a borrowed
+// component (exactly what blanked production #/packs on 2026-10-11) — before
+// it ships. Served by e2e/facet-shell-server.mjs (real facet service,
+// anonymous face, one seeded public pack, src-built shell bundle).
+import { expect, test } from "@playwright/test";
+
+const base = `http://127.0.0.1:${process.env.E2E_FACET_SHELL_PORT || 3209}`;
+
+test("all four shell views render without a routing provider", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+  // Pin zh-CN: the infra views' copy assertions below read Chinese strings
+  // (the shell's locale store, same key the 壹座 suite uses).
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+
+  // intro: the landing carries its CTAs and the footer ladder.
+  await page.goto(`${base}/#/`);
+  await expect(page.getByTestId("facet-tabs")).toBeVisible();
+  await expect(page.getByTestId("intro-cta-packs")).toBeVisible();
+  await expect(page.getByTestId("facet-footer")).toBeVisible();
+
+  // packs: the borrowed 壹座 view must mount cleanly with no Router
+  // ancestor — cards render, search is interactive.
+  await page.goto(`${base}/#/packs`);
+  // Two seeds: the smoke pack (no v2 display — the degradation chain stays
+  // pinned on it) and the v2 passthrough pack (older publishedAt → sorts last,
+  // .first() stays the smoke pack).
+  await expect(page.locator('[data-testid^="pack-card-"]')).toHaveCount(2);
+  await expect(page.getByTestId("pack-search-input")).toBeVisible();
+
+  // Version history on the borrowed detail: the anonymous face reaches the
+  // seeded pack's version list — the route serves public packs without a
+  // credential. Since pack-detail-as-page it is a RESIDENT section (no
+  // disclosure to open), so entering the page is enough.
+  await page.locator('[data-testid^="pack-card-"]').first().click();
+  const detail = page.getByTestId("pack-page");
+  await expect(detail.getByTestId("pack-version-section")).toBeVisible();
+  await expect(detail.getByTestId("pack-version-manifest-1")).toBeVisible();
+
+  // mcp: the catalog must mount with its narrative and both tabs
+  // (add-facet-infra-pages). The shell server now wires the e2e registry stub,
+  // so the servers tab carries real stub entries.
+  // #/mcp 并入素材目录后，旧地址落到目录页的 MCP 页签——验它仍能到、
+  // 且服务页签在（旧的独立 MCP 页及其 infra-narrative 已不存在）。
+  await page.goto(`${base}/#/mcp`);
+  await expect(page.getByTestId("catalog-view")).toBeVisible();
+  await expect(page.getByTestId("catalog-tab-mcp")).toHaveAttribute("aria-selected", "true");
+
+  // 目录页的服务页签列出 stub 服务器（unify-material-catalog-page 之后，
+  // 独立的 MCP 深度视图与 skills-catalog 不再存在——这两段旧断言随功能一起退役）。
+  await expect(page.getByTestId("catalog-grid")).toBeVisible();
+  const mcpCard = page.locator('[data-testid^="catalog-card-mcp:"]').first();
+  await expect(mcpCard).toBeVisible();
+
+  // 技能的来源标注在目录页的技能页签上仍要诚实呈现。
+  await page.getByTestId("catalog-tab-skill").click();
+  const skillCards = page.locator('[data-testid^="catalog-card-skill:"]');
+  await expect(skillCards.first()).toBeVisible();
+
+  // docs (add-facet-docs-view): the three sections render statically, 壹座
+  // leads the install tabs, a target page carries the single-sourced facts,
+  // and the deep-guide links point into the public repository.
+  await page.goto(`${base}/#/docs`);
+  await expect(page.getByTestId("facet-docs-view")).toBeVisible();
+  await expect(page.getByTestId("docs-install")).toBeVisible();
+  await expect(page.getByTestId("docs-mcp")).toBeVisible();
+  await expect(page.getByTestId("docs-create")).toBeVisible();
+  await expect(page.getByTestId("docs-install-yizuo")).toBeVisible(); // default-selected
+  await page.getByTestId("docs-install-tab-cursor").click();
+  const cursorPane = page.getByTestId("docs-install-client-cursor");
+  await expect(cursorPane).toContainText("--target cursor");
+  await expect(cursorPane).toContainText("~/.cursor/skills");
+  await expect(cursorPane).toContainText("~/.cursor/mcp.json");
+  // The honest OAuth statement must render (no universal zero-paste promise).
+  await expect(page.getByTestId("docs-mcp-oauth-honest")).toBeVisible();
+  const guide = page.getByTestId("docs-create-deep-guide");
+  await expect(guide).toHaveAttribute("href", /github\.com\/FindDataTechnology\/platform\/blob\/main\/docs\/creating-packs\.md$/);
+
+  // ── In-site depth (overhaul-facet-shell-ia-and-space D7) ──────────────────
+  // The reader no longer has to leave the host for the two things this page
+  // was worst at: the native configuration shape, and the site's own map.
+  await expect(page.getByTestId("docs-mcp-sample-cursor")).toContainText("mcpServers");
+  await expect(page.getByTestId("docs-pitfalls-cursor")).toBeVisible();
+  await expect(page.getByTestId("docs-site-entries")).toBeVisible();
+  // One concept, one name: the site map reuses the shell's own labels.
+  await expect(page.getByTestId("docs-site-entry-studio")).toContainText("创作台");
+  // The rail marks the section the reader is actually in.
+  await page.getByTestId("docs-nav-docs-site").click();
+  await expect(page.getByTestId("docs-site")).toBeInViewport();
+  await expect(page.getByTestId("docs-nav-docs-site")).toHaveAttribute("aria-current", "true");
+  // Client-side search answers without a request.
+  await page.getByTestId("docs-search").fill("mcpServers");
+  await expect(page.getByTestId("docs-search-results")).toBeVisible();
+  await page.getByTestId("docs-search").fill("zzzz-no-such-copy");
+  await expect(page.getByTestId("docs-search-empty")).toBeVisible();
+  await page.getByTestId("docs-search").fill("");
+
+  expect(pageErrors, `page errors: ${pageErrors.join(" | ")}`).toEqual([]);
+});
+
+// Agent-count bucket filter (optimize-paas-module-audit N-10): the borrowed
+// market view keeps this state in the `agents` URL param because the shell
+// mounts it with NO Router ancestor — the write goes through
+// window.history, so it must land in the real query string (#/packs is the
+// hash route) and a reload must re-read it. Pins the exact regression class
+// behind the 2026-10-11 blank #/packs.
+test("pack agent-count filter rides the URL and survives a reload", async ({ page }) => {
+  await page.goto(`${base}/#/packs`);
+  await expect(page.getByTestId("pack-search-input")).toBeVisible({ timeout: 15000 });
+  const filter = page.getByTestId("pack-agent-size-filter");
+  await expect(filter).toBeVisible();
+
+  await filter.selectOption("2-3");
+  await expect.poll(() => new URL(page.url()).search).toContain("agents=2-3");
+
+  await page.reload();
+  await expect(page.getByTestId("pack-search-input")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("pack-agent-size-filter")).toHaveValue("2-3");
+});
+
+// ── Conditional views + data plane (add-facet-content-management) ────────────
+// The shell layer is exercised with a whoami route-injection (the browser
+// cannot present the proxy identity — that channel is server-to-server by
+// design); the data plane below drives the REAL facet service with real
+// forwarded identities over the internal token.
+
+const INTERNAL_TOKEN = process.env.E2E_FACET_TOKEN || "e2e-facet-token";
+const forwarded = (email, groups) => ({
+  "x-facet-token": INTERNAL_TOKEN,
+  "x-facet-user": Buffer.from(JSON.stringify({ email, groups })).toString("base64url"),
+});
+
+test("conditional tabs and views follow identity", async ({ page }) => {
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({
+      json: { email: "ops@e2e.local", groups: ["creators", "admin"], creator: true, admin: true },
+    }),
+  );
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+
+  await page.goto(`${base}/#/`);
+  // Author/admin surfaces sit behind the account control
+  // (overhaul-facet-shell-ia-and-space): the creator opens it to reach their
+  // publishes, the admin additionally reaches content ops. Neither takes
+  // primary-row width any more.
+  await page.getByTestId("facet-user-chip").click();
+  await expect(page.getByTestId("facet-account-mine")).toBeVisible();
+  await expect(page.getByTestId("facet-account-curate")).toBeVisible();
+
+  // #/mine renders the creator console — the hash keeps resolving for a
+  // viewer whose identity grants it, menu entry or not.
+  await page.goto(`${base}/#/mine`);
+  await expect(page.getByTestId("facet-mine-view")).toBeVisible();
+  // Shared container, same as the board below: this face is behind sign-in,
+  // so the anonymous width sentinel cannot see it. Scoped as a descendant —
+  // the filing footer carries its own container too.
+  await expect(page.locator('[data-testid="facet-container"] [data-testid="facet-mine-view"]')).toBeVisible();
+  // Its title is the page's h1, not an h2 (a11y outline).
+  await expect(page.locator('[data-testid="facet-mine-view"] h1')).toHaveCount(1);
+  await expect(page.getByTestId("facet-mine-publish")).toBeVisible();
+
+  // …and its version history renders through the SHARED presentation
+  // (add-facet-version-history): the mine route-injection stands in for the
+  // identity-gated list; expanding the shared disclosure shows the row with
+  // its note — the same component the public detail mounts.
+  await page.route(/\/api\/packs\?author=me/, (route) =>
+    route.fulfill({
+      json: {
+        total: 1,
+        page: 1,
+        pageSize: 100,
+        packs: [
+          {
+            id: "mine-shared-ver",
+            authorEmail: "ops@e2e.local",
+            createdAt: Date.now(),
+            version: 2,
+            name: "作者面共享版本组件",
+            description: "d",
+            tags: [],
+            publishedAt: Date.now(),
+            visibility: "public",
+            unlisted: false,
+          },
+        ],
+      },
+    }),
+  );
+  await page.route("**/api/packs/mine-shared-ver/versions", (route) =>
+    route.fulfill({
+      json: {
+        versions: [
+          { version: 2, publishedAt: Date.now(), authorEmail: "ops@e2e.local", notes: "v2 说明。" },
+          { version: 1, publishedAt: Date.now() - 1000, authorEmail: "ops@e2e.local" },
+        ],
+      },
+    }),
+  );
+  await page.reload();
+  const shared = page.getByTestId("facet-mine-versions-mine-shared-ver");
+  await expect(shared).toBeVisible();
+  await shared.getByTestId("facet-mine-versions-mine-shared-ver-toggle").click();
+  await expect(page.getByTestId("facet-mine-versions-mine-shared-ver-row-2")).toContainText("v2 说明。");
+
+  // #/curate renders the board with the honest usage degradation (no
+  // usage-source env on the shell server).
+  await page.goto(`${base}/#/curate`);
+  await expect(page.getByTestId("facet-curate-view")).toBeVisible();
+  await expect(page.locator('[data-testid="facet-curate-view"] h1')).toHaveCount(1);
+  await expect(page.getByTestId("facet-curate-usage-degraded")).toBeVisible();
+
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+test("the author console tiles its list instead of one full-width column", async ({ page }) => {
+  // No locale pin: the geometry below is locale-independent, and the per-locale
+  // loop at the end drives the locale from the page. An `addInitScript` pin
+  // would re-run on every navigation and silently clobber those switches —
+  // turning "no overflow in 5 locales" into five measurements of one locale.
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "creator-tiles@e2e.local", groups: ["creators"], creator: true, admin: false } }),
+  );
+  // Three rows: enough that a one-column list and a two-column grid differ.
+  await page.route(/\/api\/packs\?author=me/, (route) =>
+    route.fulfill({
+      json: {
+        total: 3,
+        page: 1,
+        pageSize: 100,
+        packs: ["tile-a", "tile-b", "tile-c"].map((id, i) => ({
+          id,
+          authorEmail: "creator-tiles@e2e.local",
+          createdAt: Date.now() - i * 1000,
+          version: 1,
+          name: `作者列表铺开 ${id}`,
+          description: "d",
+          tags: [],
+          publishedAt: Date.now() - i * 1000,
+          visibility: "public",
+          unlisted: false,
+        })),
+      },
+    }),
+  );
+  // Each row lazy-loads its own version strip; answer it so no row renders an
+  // error state (the assertions below are about geometry, not content).
+  await page.route(/\/api\/packs\/[^/]+\/versions/, (route) =>
+    route.fulfill({ json: { versions: [{ version: 1, publishedAt: Date.now(), authorEmail: "creator-tiles@e2e.local" }] } }),
+  );
+
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto(`${base}/#/mine`);
+  const rows = page.locator('[data-testid^="facet-mine-row-"]');
+  await expect(rows).toHaveCount(3);
+  const xs = await rows.evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      // Bucket x by 8px for the same reason the market sentinel does: entrance
+      // animation shifts a card a few pixels, row membership is the property.
+      return Math.round(r.x / 8) * 8;
+    }),
+  );
+  expect(new Set(xs).size, `rows all started at x=${xs[0]}, so the list is one column`).toBeGreaterThan(1);
+
+  // Narrow: back to a single stack, still on the container.
+  await page.setViewportSize({ width: 390, height: 900 });
+  const narrowXs = await rows.evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().x / 8) * 8));
+  expect(new Set(narrowXs).size).toBe(1);
+  const overflow = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(overflow.scroll).toBeLessThanOrEqual(overflow.client + 1);
+
+  // …and in every locale. The width matrix only covers the anonymous views; a
+  // signed-in header carries the account chip on top of the entry row, and the
+  // translated labels are the longer ones (es "Estudio de creación", fr
+  // "Atelier de création"). This is the only place those two meet at 390px.
+  for (const locale of ["en", "zh-CN", "es", "fr", "ja"]) {
+    await page.evaluate((l) => localStorage.setItem("platform.locale", l), locale);
+    await page.reload();
+    await expect(rows.first()).toBeVisible();
+    // Prove the loop is real: the top-of-test addInitScript re-runs on every
+    // navigation, so a locale set from the page can be clobbered on reload. If
+    // that happened, measuring "no overflow in 5 locales" would really be five
+    // measurements of one locale — a guard that cannot fail.
+    await expect(page.getByTestId("facet-locale-switcher")).toHaveValue(locale);
+    const report = await page.evaluate(() => ({
+      scroll: document.documentElement.scrollWidth,
+      client: document.documentElement.clientWidth,
+    }));
+    expect(
+      { locale, ...report },
+      `${locale}: the signed-in console scrolls horizontally at 390px (${report.scroll} > ${report.client})`,
+    ).toEqual({ locale, scroll: report.client, client: report.client });
+  }
+});
+
+// polish-facet-read-surfaces 3.1 / 3.2: 窄视口的横向滚动与预览块的嵌套。
+//
+// 三条路由都测：实测基线（2026-11-24 线上）是 #/packs 529、#/catalog 1196、
+// #/ 600 —— 视口 390。共因是网格只写了 sm:/md:/lg: 列数、没写基础单列，
+// 隐式列按 min-content 撑开。这条断言在修之前必红。
+test("no view scrolls horizontally at 390px, in every locale", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  await page.setViewportSize({ width: 390, height: 900 });
+  const views = ["#/", "#/packs", "#/catalog", "#/catalog?species=pack", "#/catalog?species=facade"];
+  for (const locale of ["zh-CN", "en", "es", "fr", "ja"]) {
+    for (const view of views) {
+      await page.goto(`${base}/${view}`);
+      await page.evaluate((l) => localStorage.setItem("platform.locale", l), locale);
+      await page.reload();
+      // 列表类视图要等取数落地再量：骨架态的高度与真实列表不同。
+      await page.waitForTimeout(600);
+      const r = await page.evaluate(() => ({
+        scroll: document.documentElement.scrollWidth,
+        client: document.documentElement.clientWidth,
+      }));
+      expect(
+        { view, locale, scroll: r.scroll },
+        `${locale} ${view}: horizontal scroll (${r.scroll} > ${r.client})`,
+      ).toEqual({ view, locale, scroll: r.client });
+    }
+  }
+});
+
+// 预览列表以前嵌在 <button> 里（非法内容模型 + 272 字符的可访问名）。
+// 这条只在「全部」页签有数据时成立，因此要等 preview 块真的出现。
+test("catalog preview rows are not nested inside a button", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  await page.goto(`${base}/#/catalog`);
+  const previews = page.locator('ul[data-testid^="catalog-all-preview-"]');
+  await expect(previews.first()).toBeVisible({ timeout: 20000 });
+  const nested = await page.evaluate(
+    () =>
+      [...document.querySelectorAll('ul[data-testid^="catalog-all-preview-"]')].filter((u) => u.closest("button"))
+        .length,
+  );
+  expect(nested, "preview lists must not live inside a <button>").toBe(0);
+});
+
+test("unauthorized deep links fall back to the intro landing", async ({ page }) => {
+  await page.route("**/api/whoami", (route) => route.fulfill({ json: { email: null, groups: [] } }));
+  await page.goto(`${base}/#/curate`);
+  await expect(page.getByTestId("intro-cta-packs")).toBeVisible();
+  // No identity → no account control at all, so no author/admin door renders.
+  await expect(page.getByTestId("facet-user-chip")).toHaveCount(0);
+  await expect(page.getByTestId("facet-account-menu")).toHaveCount(0);
+});
+
+// ── Sign-in honesty (polish-fusion-details follow-up) ────────────────────────
+// A failed OIDC return lands on /?auth_error=…: the shell must SAY so instead
+// of silently showing the anonymous face (the user reported "logged in but no
+// signed-in indicator" — an invisible failure reads as a missing indicator).
+
+test("a failed sign-in return surfaces a banner and scrubs the param", async ({ page }) => {
+  await page.route("**/api/whoami", (route) => route.fulfill({ json: { email: null, groups: [] } }));
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+
+  await page.goto(`${base}/?auth_error=state#/`);
+  const banner = page.getByTestId("facet-auth-error");
+  await expect(banner).toBeVisible();
+  await expect(banner).toContainText("登录未完成：会话校验失败，请重试。");
+  await expect(banner.getByRole("button", { name: "重试登录" })).toBeVisible();
+  // The param is scrubbed so a refresh does not re-raise the failure.
+  await expect(page).toHaveURL(/\/#\//);
+  expect(page.url()).not.toContain("auth_error");
+
+  // Dismiss drops the banner without touching the view.
+  await banner.getByRole("button", { name: "关闭" }).click();
+  await expect(page.getByTestId("facet-auth-error")).toHaveCount(0);
+
+  // Unknown codes degrade to the generic line, not a raw key.
+  await page.goto(`${base}/?auth_error=weird#/`);
+  await expect(page.getByTestId("facet-auth-error")).toContainText("登录未完成，请重试。");
+
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+test("a signed-in viewer gets an explicit logged-in chip", async ({ page }) => {
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "ops@e2e.local", groups: ["creators"], creator: true } }),
+  );
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  await page.goto(`${base}/#/`);
+  // The control states who is signed in even while closed; the email itself
+  // moved into the menu (overhaul-facet-shell-ia-and-space) so the header row
+  // stops growing with a long address.
+  const chip = page.getByTestId("facet-user-chip");
+  await expect(chip).toBeVisible();
+  await expect(chip).toContainText("账号");
+  await expect(chip).toHaveAttribute("title", "已登录：ops@e2e.local");
+  await expect(chip).toHaveAttribute("aria-expanded", "false");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByTestId("facet-account-menu")).toContainText("ops@e2e.local");
+  // Escape closes it without leaving the view.
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("facet-account-menu")).toHaveCount(0);
+});
+
+test("the account menu stays inside the viewport at every width", async ({ page }) => {
+  // The panel is absolutely positioned and 224px wide. With a fixed `right-0`
+  // anchor it clipped its OWN first characters off the left edge whenever the
+  // header wrapped the chip toward the middle of a narrow screen — measured in
+  // production at 390px: chip 124..207 ⇒ panel left = −17px, so 「已登录: …」、
+  // 「我的发布」、「内容运营」、「退出登录」 each lost their first glyph. scrollWidth
+  // stayed 0 the whole time, so a plain "no horizontal scroll" guard cannot see
+  // it: the text was outside the screen without widening the document. Assert
+  // the panel's own box instead, at every width a phone or a laptop uses.
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "ops@e2e.local", groups: ["creators"], admin: true, creator: true } }),
+  );
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  const widths = [320, 360, 390, 414, 768, 1024, 1440];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`${base}/#/`);
+    await page.getByTestId("facet-user-chip").click();
+    const menu = page.getByTestId("facet-account-menu");
+    await expect(menu).toBeVisible();
+    const box = await menu.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, right: r.right, vw: document.documentElement.clientWidth };
+    });
+    expect(box.left, `${width}px: panel left ${box.left} must be on screen`).toBeGreaterThanOrEqual(-1);
+    expect(box.right, `${width}px: panel right ${box.right} must be on screen`).toBeLessThanOrEqual(box.vw + 1);
+    // And it must not hide behind its own trigger: the label row is readable.
+    await expect(menu).toContainText("ops@e2e.local");
+    await page.keyboard.press("Escape");
+  }
+});
+
+test("data plane: publish, curate, versions, visibility, unpublish with real forwarded identity", async ({ request }) => {
+  const creator = forwarded("creator@e2e.local", ["creators"]);
+  const admin = forwarded("ops@e2e.local", ["admin"]);
+
+  // Publish from manifest (creator identity).
+  const manifest = {
+    name: "策展数据面冒烟",
+    description: "add-facet-content-management sentinel",
+    notes: "初版：数据面冒烟版本说明。",
+    tags: ["shell-smoke"],
+    category: "legal",
+    skills: [{ name: "curate-smoke", description: "d", content: "# x" }],
+    mcpServers: [],
+    agents: [],
+  };
+  const pub = await request.post(`${base}/api/packs`, { headers: creator, data: { manifest } });
+  expect(pub.ok()).toBeTruthy();
+  const { id } = await pub.json();
+
+  // Author-declared category rides the publish; stranger cannot feature.
+  const listed = await request.get(`${base}/api/packs?category=legal`, { headers: creator });
+  const cat = await listed.json();
+  expect(cat.packs.some((p) => p.id === id && p.category === "legal")).toBeTruthy();
+  const denied = await request.put(`${base}/api/packs/${id}/curation`, {
+    headers: creator,
+    data: { featured: true },
+  });
+  expect(denied.status()).toBe(403);
+
+  // Admin curates: category + featured; the market listing reflects both.
+  const cur = await request.put(`${base}/api/packs/${id}/curation`, {
+    headers: admin,
+    data: { category: "daas", featured: true },
+  });
+  expect(cur.ok()).toBeTruthy();
+  const after = await request.get(`${base}/api/packs`, { headers: admin });
+  const row = (await after.json()).packs.find((p) => p.id === id);
+  expect(row.category).toBe("daas");
+  expect(row.featured).toBe(true);
+
+  // Author-only surfaces: version history and visibility flip. The version
+  // note rides the immutable manifest and surfaces inline in the list
+  // (add-facet-version-history, task 1.3's data-plane leg).
+  const versions = await request.get(`${base}/api/packs/${id}/versions`, { headers: creator });
+  expect(versions.ok()).toBeTruthy();
+  const vrows = (await versions.json()).versions;
+  expect(vrows.length).toBe(1);
+  expect(vrows[0].notes).toBe("初版：数据面冒烟版本说明。");
+  const vdoc = await request.get(`${base}/api/packs/${id}/versions/1`, { headers: creator });
+  expect((await vdoc.json()).manifest.notes).toBe("初版：数据面冒烟版本说明。");
+  const vis = await request.put(`${base}/api/packs/${id}/visibility`, {
+    headers: creator,
+    data: { visibility: "private" },
+  });
+  expect(vis.ok()).toBeTruthy();
+
+  // Private: gone for a stranger, present for the author (author=me filter).
+  const stranger = await request.get(`${base}/api/packs?author=me`, { headers: forwarded("x@e2e.local", []) });
+  expect((await stranger.json()).packs.some((p) => p.id === id)).toBeFalsy();
+  const mine = await request.get(`${base}/api/packs?author=me`, { headers: creator });
+  expect((await mine.json()).packs.some((p) => p.id === id)).toBeTruthy();
+
+  // Usage proxy: admin session required; anonymous gets 401.
+  const usage = await request.get(`${base}/api/ops/pack-usage`);
+  expect(usage.status()).toBe(401);
+
+  // Unpublish (author) hides it from the anonymous market.
+  const un = await request.post(`${base}/api/packs/${id}/unpublish`, { headers: creator });
+  expect(un.ok()).toBeTruthy();
+  const anonList = await request.get(`${base}/api/packs`);
+  expect((await anonList.json()).packs.some((p) => p.id === id)).toBeFalsy();
+});
+
+// ── Footer shapes + dialog action bar (polish-facet-interactions) ────────────
+
+test("the intro landing carries the full footer; tool views carry the filing-only footer", async ({ page }) => {
+  await page.goto(`${base}/#/`);
+  await expect(page.getByTestId("facet-footer")).toBeVisible();
+  await expect(page.getByTestId("facet-filing-footer")).toHaveCount(0);
+
+  for (const hash of ["#/packs", "#/mcp", "#/docs"]) {
+    await page.goto(`${base}/${hash}`);
+    await expect(page.getByTestId("facet-filing-footer")).toBeVisible();
+    await expect(page.getByTestId("facet-footer")).toHaveCount(0);
+  }
+});
+
+test("the pack detail page is a real address; anonymous subscribe gets the login guidance, and the page survives a reload", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+
+  await page.goto(`${base}/#/packs`);
+  await page.locator('[data-testid^="pack-card-"]').first().click();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
+
+  // 详情是页面（pack-detail-as-page 1.1）：点卡片后地址变成 `#/packs/<id>`，
+  // 刷新仍在同一详情，而不是回到列表。
+  await expect(page).toHaveURL(/#\/packs\/.+/);
+  await page.reload();
+  await expect(page.getByTestId("pack-page")).toBeVisible();
+
+  // Anonymous：订阅卡是一句说明 + 登录入口，不是置灰按钮（D2）。
+  await expect(page.getByTestId("pack-page-login-required")).toBeVisible();
+  await expect(page.getByTestId("pack-subscribe")).toHaveCount(0);
+  await expect(page.getByTestId("pack-login-go")).toBeVisible();
+
+  // 章节导航没有死链：左栏每一项在内容里都有锚点。
+  const outline = await page.locator('[data-testid^="pack-section-link-"]').evaluateAll((els) =>
+    els.map((e) => e.getAttribute("data-testid").replace("pack-section-link-", "")),
+  );
+  for (const id of outline) {
+    await expect(page.locator(`[data-section="${id}"]`)).toHaveCount(1);
+  }
+
+  // 反向也必须成立（overhaul-pack-detail-presentation D6）：内容里打了锚点的每一段，
+  // 导航都得有一项。只查 A→B 时，「渲染了但导航没有」可以一直绿——实测两个在架包
+  // 就在这个缝里（只有角色级记忆的包，内容渲染了、导航没有该项、内容侧也没有锚点）。
+  const anchored = await page.locator('[data-section]').evaluateAll((els) =>
+    els.map((e) => e.getAttribute("data-section")).filter(Boolean),
+  );
+  for (const id of anchored) {
+    await expect(page.getByTestId(`pack-section-link-${id}`)).toHaveCount(1);
+  }
+
+  // 一页一组徽章、一个锚点一个元素（D7）：此前宿主页头与规格书各渲一遍，
+  // pack-official-badge 在一页命中两个元素。
+  const dupTestIds = await page.evaluate(() => {
+    const counts = new Map();
+    for (const el of document.querySelectorAll("[data-testid]")) {
+      const id = el.getAttribute("data-testid");
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
+    return [...counts].filter(([, n]) => n > 1).map(([id]) => id);
+  });
+  expect(dupTestIds, `重复的 testid：${dupTestIds.join(", ")}`).toEqual([]);
+
+  // 返回列表：按钮把地址带回 #/packs（页面没有 scrim，也没有右上角关闭）。
+  await page.getByTestId("pack-page-back").click();
+  await expect(page.getByTestId("pack-page")).toHaveCount(0);
+  await expect(page).toHaveURL(/#\/packs$/);
+
+  // The facet shell omits the goto-mine affordance (no installed-packs surface).
+  await page.locator('[data-testid^="pack-card-"]').first().click();
+  await expect(page.getByRole("button", { name: /我的智能体|My agents|查看我的智能体|View my agents/ })).toHaveCount(0);
+
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+// Locale-switch refetch (overhaul-market-catalog-presentation P0): switching
+// the shell's locale re-fetches the market in the new language — cards, chip
+// labels, cross-track search, and the open detail dialog — with no manual
+// reload. This is the browser half of the contract; the server halves
+// (lineLabel projection, cross-track search) are pinned by
+// scripts/test-market-locale-refetch.mjs.
+test("market refetches when the locale switches, list and open dialog alike", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+
+  await page.goto(`${base}/#/packs`);
+  const card = page.locator('[data-testid^="pack-card-"]').first();
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("谦面壳冒烟包");
+
+  // 五槽位卡片 (overhaul-market-catalog-presentation P2): identity seal, name,
+  // badges, version, then the PROMISE — the first sentence only, never the
+  // second sentence the seed carries to pin the extraction.
+  await expect(card.getByRole("img")).toHaveCount(1); // the line seal
+  await expect(card).toContainText("壳冒烟哨兵包。");
+  await expect(card).not.toContainText("这是第二句");
+  // explicit zero words (the pack declares no skills/roles/tools)
+  await expect(card).toContainText("无技能");
+  // The canonical zh line word is the chip label under zh (label == word).
+  await expect(page.getByTestId("pack-category-chips")).toContainText("柏讯 · 数据与情报");
+
+  // Switch via the shell's header switcher: the list silently refetches —
+  // the overlay-projected card text and the localized chip label arrive
+  // without any manual reload, and the canonical filter keeps working.
+  await page.getByTestId("facet-locale-switcher").selectOption("en");
+  await expect(card).toContainText("Facet Shell Smoke Pack");
+  await expect(page.getByTestId("pack-category-chips")).toContainText("Wire · Data & Intelligence");
+
+  // Cross-track search: a keyword that exists ONLY in the en overlay block.
+  await page.getByTestId("pack-search-input").fill("English sentinel");
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.locator('[data-testid^="pack-card-"]')).toHaveCount(1);
+  await expect(card).toContainText("Facet Shell Smoke Pack");
+
+  // Clearing the search restores the full list. The refetch is async, so the
+  // assertion has to wait for the settled state first: asserting a count right
+  // after the click reads the PREVIOUS result set (the search's single card)
+  // and passes on stale DOM — then goes red whenever the refetch happens to
+  // land before the first poll (observed 2026-11-11). Both seeds are public and
+  // carry a version, and the listing has no locale-based row filter, so the
+  // full list is both of them.
+  await page.getByTestId("pack-search-input").fill("");
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByTestId("pack-market-skeleton")).toHaveCount(0);
+  await expect(page.locator('[data-testid^="pack-card-"]')).toHaveCount(2);
+
+  // The open detail dialog refetches on locale change without closing: back
+  // to zh-CN while the dialog is open, the title returns to the zh name.
+  await card.click();
+  const detail = page.getByTestId("pack-page");
+  await expect(detail).toBeVisible();
+  await expect(detail).toContainText("Facet Shell Smoke Pack");
+  // ⑥ 边界与诚实声明 sits at its fixed position (the version's note)
+  // The seed's en overlay now covers notes too (P3 4.11 full-coverage seed):
+  // the boundary statement must localize like every other org-surface field.
+  await expect(detail.getByTestId("pack-detail-boundary-notes")).toContainText("English version note of the shell smoke pack.");
+  // ⑦ version history stays at the content tail (resident section)
+  await expect(detail.getByTestId("pack-version-section")).toBeVisible();
+  await page.getByTestId("facet-locale-switcher").selectOption("zh-CN");
+  await expect(detail).toContainText("谦面壳冒烟包");
+  await page.getByTestId("pack-page-back").click();
+
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+// Declared facets (overhaul-market-catalog-presentation P1): the chip strip is
+// the server's DECLARED taxonomy with counts — five line chips always, zero
+// counts included, and a second row for the non-zero domain values. The strip
+// never reshapes as content moves; a zero-count line stays and says so.
+test("facet strip is the declared taxonomy: five lines with counts plus a domain row", async ({ page }) => {
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+
+  await page.goto(`${base}/#/packs`);
+  const strip = page.getByTestId("pack-facets");
+  await expect(strip).toBeVisible();
+
+  // Axis 1: exactly the five declared lines, each carrying its count.
+  const lineChips = strip.locator("[data-line-count]");
+  await expect(lineChips).toHaveCount(5);
+  await expect(strip).toContainText("柏讯 · 数据与情报");
+  // The seeded pack sits on the wire line; every other line is zero-count but
+  // still rendered (spatial memory, not a live projection of the rows).
+  const zeroChips = strip.locator('[data-line-count="0"]');
+  await expect(zeroChips).toHaveCount(4);
+
+  // Clicking an empty line says so in its own words.
+  await zeroChips.first().click();
+  await expect(page.getByTestId("pack-market-empty")).toContainText("该线暂无上架内容");
+
+  // Back to all; axis 2 shows the declared domain with its count.
+  await page.getByRole("button", { name: "全部垂类" }).click();
+  const domains = page.getByTestId("pack-domain-chips");
+  await expect(domains).toBeVisible();
+  await expect(domains).toContainText("投研");
+
+  // Filtering by domain keeps the pack (it declares investing).
+  await domains.getByRole("button", { name: /投研/ }).click();
+  await expect(page.locator('[data-testid^="pack-card-"]')).toHaveCount(1);
+
+  // Labels follow the request locale; the strip's SHAPE does not move.
+  await page.getByTestId("facet-locale-switcher").selectOption("en");
+  await expect(page.getByTestId("pack-facets").locator("[data-line-count]")).toHaveCount(5);
+  await expect(page.getByTestId("pack-domain-chips")).toContainText("Investing");
+
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+// Curation board's domain picker (P1 2.7): vocabulary chips only, and an
+// unclassified pack is the visible backlog until a domain is picked.
+test("curation board picks domains from the vocabulary and clears the unclassified flag", async ({ page, request }) => {
+  const creator = forwarded("creator-domains@e2e.local", ["creators"]);
+  const manifest = {
+    name: "领域策展冒烟",
+    description: "domain picker sentinel",
+    tags: ["shell-smoke"],
+    category: "legal",
+    // A pack must carry at least one capability to be publishable.
+    skills: [{ name: "domain-smoke", description: "d", content: "# x" }],
+    mcpServers: [],
+    agents: [],
+  };
+  const pub = await request.post(`${base}/api/packs`, { headers: creator, data: { manifest } });
+  expect(pub.ok()).toBeTruthy();
+  const { id } = await pub.json();
+
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "creator-domains@e2e.local", groups: ["creators", "admin"], creator: true, admin: true } }),
+  );
+  // The board's list is admin-scoped; publish was forwarded identity, so the
+  // admin view reaches it through the same internal token.
+  await page.route(/\/api\/packs\?/, (route) =>
+    route.continue({ headers: { ...route.request().headers(), ...creator } }),
+  );
+  // The board's WRITE goes to the same identity-gated route: without the
+  // forwarded creator headers the browser (anonymous) would 403 and the badge
+  // would stay — the harness must carry the identity on the PUT too.
+  await page.route(/\/api\/packs\/[^/]+\/curation$/, (route) =>
+    route.continue({ headers: { ...route.request().headers(), ...creator } }),
+  );
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+
+  await page.goto(`${base}/#/curate`);
+  // The board sits on the shell's shared container (facet-platform: "one
+  // shared container grid"). It shipped bare until the MCP view exposed the
+  // same defect, so pin the wrapping here — this face is behind sign-in, which
+  // is exactly why the anonymous width sentinel never saw it.
+  await expect(page.locator('[data-testid="facet-container"] [data-testid="facet-curate-view"]')).toBeVisible();
+  const row = page.getByTestId(`facet-curate-row-${id}`);
+  await expect(row).toBeVisible();
+  await expect(page.getByTestId(`facet-curate-unclassified-${id}`)).toBeVisible();
+
+  // Master–detail (overhaul-facet-shell-ia-and-space D6): the row is a list
+  // entry, not an editor — selecting it opens the panel that carries the
+  // vocabulary pickers and the single Save.
+  await row.click();
+  const detail = page.getByTestId("facet-curate-detail");
+  await expect(detail).toBeVisible();
+  // Neither axis accepts free text: category is a <select>, domains are chips.
+  await expect(row.locator("input")).toHaveCount(0);
+  const categoryPicker = page.getByTestId(`facet-curate-category-${id}`);
+  expect(await categoryPicker.evaluate((el) => el.tagName)).toBe("SELECT");
+  await page.getByTestId(`facet-curate-domain-${id}-legal`).click();
+  await page.getByTestId(`facet-curate-save-${id}`).click();
+  await expect(page.getByTestId(`facet-curate-unclassified-${id}`)).toHaveCount(0);
+  // The write is visible on the read face's facet counts.
+  const facets = await request.get(`${base}/api/packs/facets?locale=zh`, { headers: creator });
+  const body = await facets.json();
+  expect(body.domains.some((d) => d.slug === "legal" && d.count >= 1)).toBeTruthy();
+
+  // Narrow viewport: this is the one face the anonymous width matrix cannot
+  // reach (it needs admin), so its collapse is pinned here — master list and
+  // detail pane stack into one column and the document still does not scroll
+  // sideways (facet-platform: "narrow viewports stay usable").
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.reload();
+  await expect(page.getByTestId("facet-curate-view")).toBeVisible();
+  // Select a row so the detail pane actually exists — measuring only the
+  // master column would make the stacking assertion below a no-op.
+  await page.getByTestId(`facet-curate-row-${id}`).click();
+  await expect(page.getByTestId("facet-curate-detail")).toBeVisible();
+  const panes = await page.evaluate(() => {
+    const at = (sel) => {
+      const r = document.querySelector(sel)?.getBoundingClientRect();
+      return r ? Math.round(r.x / 8) * 8 : null;
+    };
+    return { list: at('[data-testid="facet-curate-list"]'), detail: at('[data-testid="facet-curate-detail"]') };
+  });
+  // Stacked: the detail pane starts where the master column starts.
+  expect(panes.list).not.toBeNull();
+  expect(panes.detail).toBe(panes.list);
+  const narrow = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(narrow.scroll).toBeLessThanOrEqual(narrow.client + 1);
+});
+
+test("example prompts copy to the clipboard on the router-less shell (P2 3.5)", async ({ page, context }) => {
+  // The facet shell wires NO chat session, so an example click falls back to
+  // copy-to-clipboard — the confirmation appears only on a real write.
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  await page.goto(`${base}/#/packs`);
+  // Explicit id, not .first(): by this point in the file the curation test has
+  // published a second, guide-less pack into the shared registry.
+  await page.locator('[data-testid="pack-card-facet-shell-smoke"]').click();
+  const detail = page.getByTestId("pack-page");
+  await expect(detail.getByTestId("pack-guide-card")).toBeVisible();
+  await expect(detail.getByTestId("pack-guide-example-0")).toBeVisible();
+
+  await detail.getByTestId("pack-guide-example-0").click();
+  await expect(detail.getByTestId("pack-guide-example-copied")).toBeVisible();
+  await expect(detail.getByTestId("pack-guide-example-copied")).toContainText("已复制");
+  // The copied text is the prompt BODY, not the card title.
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("示例指令哨兵全文");
+  // No navigation happened — the shell has no /chat to land on.
+  expect(page.url()).toContain("#/packs");
+});
+
+test("v2 display block rides the card and the detail (P3 4.5)", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  await page.goto(`${base}/#/packs`);
+  const card = page.getByTestId("pack-card-facet-shell-v2");
+  await expect(card).toBeVisible();
+
+  // Slot 2: the DECLARED promise wins — the description (and its first
+  // sentence) never competes for the slot when display.promise exists.
+  await expect(card).toContainText("声明承诺：一屏可见的风险清单。");
+  await expect(card).not.toContainText("普通描述");
+  // Slot 4: declared audience renders through the facets vocabulary label.
+  await expect(card.getByTestId("pack-audience-facet-shell-v2")).toContainText("法务");
+
+  await card.click();
+  const detail = page.getByTestId("pack-page");
+  await expect(detail.getByTestId("pack-detail-outcomes")).toContainText("风险清单");
+  await expect(detail.getByTestId("pack-detail-outcomes")).toContainText("逐条定位到条款");
+  // ④ examples ride the v2 channel even WITHOUT a guide — and stay actionable
+  // (facet host: clipboard fallback, the prompt BODY not the title).
+  await detail.getByTestId("pack-guide-example-0").click();
+  await expect(detail.getByTestId("pack-guide-example-copied")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("声明示例提示词全文");
+});
+
+test("coverage meter on the boundary face: 0/m declared gaps and full cover (P3 4.11)", async ({ page }) => {
+  // Coverage is a secondary-track read (the zh main track needs none): switch
+  // to en FIRST, then read both states off the SAME section.
+  await page.goto(`${base}/#/packs`);
+  await page.getByTestId("facet-locale-switcher").selectOption("en");
+
+  // v2 pack: declared org surface, NO en overlay → 0 covered + field paths.
+  await page.getByTestId("pack-card-facet-shell-v2").click();
+  const detail = page.getByTestId("pack-page");
+  await expect(detail.getByTestId("pack-detail-coverage")).toContainText("0/");
+  await expect(detail.getByTestId("pack-detail-coverage-missing")).toContainText("promise");
+  await expect(detail.getByTestId("pack-detail-coverage-missing")).toContainText("outcomes[0].title");
+  // 覆盖度只提示、从不设闸（pack-detail-as-page D2 改写了闸的形态）：这个
+  // 宿主匿名时不给订阅按钮，而是给「登录后可订阅」说明行——覆盖度读数与那条
+  // 说明行同时在场，才说明「读数没有参与决定能不能交易」。
+  await expect(detail.getByTestId("pack-page-login-required")).toBeVisible();
+  await page.getByTestId("pack-page-back").click();
+
+  // smoke pack: full en overlay → the honest all-covered line. Explicit id —
+  // in batch the curation test has by now PUBLISHED a newer pack into the
+  // shared registry, and .first() would land on that one instead.
+  await page.getByTestId("pack-card-facet-shell-smoke").click();
+  await expect(detail.getByTestId("pack-detail-coverage")).toContainText("covered in en");
+  await expect(detail.getByTestId("pack-detail-coverage-missing")).toHaveCount(0);
+});
+
+test("coverage board on the curation face: per-pack n/m badges, gap paths, gap-only filter (P4 5.4)", async ({ page }) => {
+  const creator = forwarded("board@e2e.local", ["creators", "admin"]);
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "board@e2e.local", groups: ["creators", "admin"], creator: true, admin: true } }),
+  );
+  await page.route(/\/api\/packs\?/, (route) => route.continue({ headers: { ...route.request().headers(), ...creator } }));
+  // The coverage board read is auth-gated (it lists private/unlisted names too).
+  await page.route("**/api/packs/curation/coverage**", (route) =>
+    route.continue({ headers: { ...route.request().headers(), ...creator } }),
+  );
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+
+  await page.goto(`${base}/#/curate`);
+
+  // v2 pack: declared org surface, no en overlay → 0-covered badge + gap paths.
+  const v2Row = page.getByTestId("facet-curate-row-facet-shell-v2");
+  await expect(v2Row).toBeVisible();
+  await expect(page.getByTestId("facet-curate-coverage-facet-shell-v2")).toContainText("en 0/");
+  // Gap paths live in the detail panel (the list keeps the badge only).
+  await v2Row.click();
+  await expect(page.getByTestId("facet-curate-gaps-facet-shell-v2")).toContainText("promise");
+
+  // smoke pack: full en overlay → all-covered badge, NO gap list rendered.
+  // 9 = name+description+notes+guide 3×2 (the base manifest declares no
+  // top-level tags — the seed's tags live only in the en overlay).
+  await expect(page.getByTestId("facet-curate-coverage-facet-shell-smoke")).toContainText("en 9/9");
+  // Selecting the covered pack replaces the gap list with the complete state.
+  await page.getByTestId("facet-curate-row-facet-shell-smoke").click();
+  await expect(page.getByTestId("facet-curate-coverage-full-facet-shell-smoke")).toBeVisible();
+  await expect(page.getByTestId("facet-curate-gaps-facet-shell-smoke")).toHaveCount(0);
+
+  // Patrol filter: gaps only hides the covered row, keeps the gapped one.
+  await page.getByTestId("facet-curate-only-gaps").click();
+  await expect(page.getByTestId("facet-curate-row-facet-shell-v2")).toBeVisible();
+  await expect(page.getByTestId("facet-curate-row-facet-shell-smoke")).toHaveCount(0);
+});
+
+// ── MCP 深度视图的两条 e2e 已随功能退役（2026-11-22）────────────────────────
+//
+// `unify-material-catalog-page`（2d5c0f19a）把 `#/mcp` 并进素材目录，独立的
+// 目录外壳当时就没有挂载点。**polish-facet-mcp-surface 已把它整份删除**
+// （`facet/web/src/ServerDepth.tsx` 只剩目录页在用的深度视图），所以「组件还在
+// 源码里但到不了」这个中间态不存在了。
+//
+// 浏览器面覆盖现在由目录页的 MCP 深度入口驱动：本文件里「MCP 卡片在列表上就能
+// 判断」「深度视图提供组级跳转 / 检索落点」「技能卡片就地打开详情」三条用例。
+// 纯函数那一半仍由 scripts/test-mcp-depth-tools.mjs 覆盖。
+
+// ── Viewport usage (overhaul-facet-shell-ia-and-space D1/D2/D5) ──────────────
+// The market used to be one full-width row per pack at every width: a 1600px
+// line of text on a desktop and the same list on a phone. The shell now tiles
+// the cards and moves the filters into a rail; this is the layout sentinel —
+// it fails if either the tile grid or the rail disappears.
+test("the market tiles on a wide viewport and collapses on a narrow one", async ({ page }) => {
+  const cardsX = async () =>
+    page.locator('[data-testid^="pack-card-"]').evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        // Bucket y by 8px: the list rides the `rise-in` entrance (fade + 4px
+        // translate, staggered up to 200ms), so a mid-animation sample reports
+        // a few pixels of difference per card. Layout row/column is what this
+        // sentinel judges, not animation phase.
+        return { x: Math.round(r.x / 8) * 8, y: Math.round(r.y / 8) * 8, w: Math.round(r.width) };
+      }),
+    );
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(`${base}/#/packs`);
+  await expect(page.locator('[data-testid^="pack-card-"]').first()).toBeVisible();
+
+  // Tiled: the cards do not stack in one column — siblings share a row and
+  // differ in x (the exact column count follows the seed size, so assert the
+  // shape, not a magic number).
+  const wide = await cardsX();
+  expect(wide.length).toBeGreaterThan(1);
+  expect(new Set(wide.map((c) => c.x)).size).toBeGreaterThan(1);
+  expect(new Set(wide.map((c) => c.y)).size).toBeLessThan(wide.length);
+
+  // Rail: the filter block sits beside the results, not above them.
+  const filters = await page.getByTestId("pack-filters").boundingBox();
+  const firstCard = await page.locator('[data-testid^="pack-card-"]').first().boundingBox();
+  expect(filters.x + filters.width).toBeLessThanOrEqual(firstCard.x + 1);
+  // The declared taxonomy strip is still the same anchor the domain suite reads.
+  await expect(page.getByTestId("pack-facets")).toBeVisible();
+
+  // Narrow: one column, no page-level horizontal scroll.
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.reload();
+  await expect(page.locator('[data-testid^="pack-card-"]').first()).toBeVisible();
+  const narrow = await cardsX();
+  expect(new Set(narrow.map((c) => c.x)).size).toBe(1);
+  const overflow = await page.evaluate(() => ({
+    scroll: document.documentElement.scrollWidth,
+    client: document.documentElement.clientWidth,
+  }));
+  expect(overflow.scroll).toBeLessThanOrEqual(overflow.client + 1);
+});
+
+// ── Embedded face navigation (overhaul-facet-shell-ia-and-space D4) ──────────
+// The creation face embeds 壹座's studio page inside a scoped route table. Its
+// back control used to link to /agents?tab=build, a route this host does not
+// serve, so the button was a silent no-op (supply-studio: 不存在静默无操作).
+test("the creation face's back control actually moves the host view", async ({ page }) => {
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "ops@e2e.local", groups: ["creators"], creator: true } }),
+  );
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+
+  await page.goto(`${base}/#/studio`);
+  await expect(page.getByTestId("facet-studio-face")).toBeVisible();
+  const back = page.getByTestId("ws-back");
+  await expect(back).toBeVisible();
+
+  await back.click();
+  // The host moved to the market — not a no-op, and not a blank route.
+  await expect(page.getByTestId("pack-market-section")).toBeVisible();
+  await expect(page).toHaveURL(/#\/packs$/);
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+// ── View changes land at the top (overhaul-facet-shell-ia-and-space polish) ──
+// `<main>` is the scroll container, and `key={view}` only remounts the error
+// boundary INSIDE it — so the offset used to carry over. Reading to the bottom
+// of the docs and then opening the market dropped the reader mid-page, which is
+// the "the interactions feel off" half of the original report. No scroll reset
+// existed anywhere in the shell.
+test("switching views lands at the top of the new view", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto(`${base}/#/docs`);
+  await expect(page.getByTestId("docs-install")).toBeVisible();
+
+  // Scroll the shell's own scroller (not the window) to the bottom.
+  const scrolled = await page.evaluate(() => {
+    const main = document.querySelector("main");
+    if (!main) return -1;
+    main.scrollTop = main.scrollHeight;
+    return main.scrollTop;
+  });
+  expect(scrolled, "the docs page must be tall enough to scroll at this viewport").toBeGreaterThan(200);
+
+  await page.getByTestId("facet-tabs").getByText("智能体市场").click();
+  await expect(page.getByTestId("pack-market-section")).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => document.querySelector("main")?.scrollTop ?? -1))
+    .toBeLessThanOrEqual(2);
+
+  // And the docs deep-link still works after the reset (no hash side effects).
+  await page.goto(`${base}/#/docs`);
+  await expect(page.getByTestId("docs-install")).toBeVisible();
+  expect(await page.evaluate(() => document.querySelector("main")?.scrollTop ?? -1)).toBeLessThanOrEqual(2);
+});
+
+// ── One page heading per view (a11y outline) ────────────────────────────────
+// Measured before this: the market rendered NO heading at all and MCP started at
+// h2, so the two busiest public surfaces had no document root; the author and
+// admin faces titled themselves at h2. Every view now opens with exactly one h1
+// carrying its task name, and the sections below nest under it.
+test("every public view carries exactly one page heading", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  const EXPECTED = [
+    // 入口页的 h1 在 2026-11-21 随 hero 迁移改成主标语（entryPlaza.hero.title）；
+    // 「千人千面」是旧站点标题，已不在 facet 入口上。
+    ["#/", "智能体要用的每一种素材"],
+    ["#/packs", "智能体市场"],
+    // #/mcp 已并入素材目录（unify-material-catalog-page）：旧地址仍解析，
+    // 落到目录页并带上它自己的标题与 h1。
+    ["#/mcp", "素材目录"],
+    ["#/docs", "使用指南"],
+  ];
+  for (const [hash, title] of EXPECTED) {
+    await page.goto(`${base}/${hash}`);
+    const h1 = page.locator("main h1");
+    await expect(h1, `${hash} must carry exactly one h1`).toHaveCount(1);
+    await expect(h1).toContainText(title);
+  }
+});
+
+// ── The tab names the view you are on ───────────────────────────────────────
+// Seven views share one document, so the static <title> said 「智能体市场」 on
+// every page (and never followed the locale). Tabs, history entries and
+// bookmarks are user-visible surfaces with no testid, which is why this drifted.
+test("the document title names the current view in the current locale", async ({ browser }) => {
+  const titleFor = (hash, label) => [`${base}/${hash}`, label];
+
+  // One context per locale, not one addInitScript per iteration: init scripts
+  // ACCUMULATE and all re-run on every navigation, so the loop's first locale
+  // kept winning and the "en" assertions were really measuring zh-CN.
+  for (const [locale, expected] of [
+    [
+      "zh-CN",
+      [
+        titleFor("#/packs", "智能体市场"),
+        // #/mcp 已并入素材目录（unify-material-catalog-page）：旧地址仍可
+        // 解析，但落到的视图与标题都是「素材目录」。
+        titleFor("#/mcp", "素材目录"),
+        titleFor("#/catalog", "素材目录"),
+        titleFor("#/docs", "使用指南"),
+        titleFor("#/", "介绍"),
+      ],
+    ],
+    ["en", [titleFor("#/packs", "Agent market"), titleFor("#/docs", "Guide")]],
+  ]) {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.addInitScript((l) => localStorage.setItem("platform.locale", l), locale);
+    try {
+      for (const [url, label] of expected) {
+        await page.goto(url);
+        await expect(page.getByTestId("facet-tabs")).toBeVisible();
+        await expect(page, `${url} in ${locale} should title itself ${label}`).toHaveTitle(
+          new RegExp(`^${label} · 谦面 Facet$`),
+        );
+      }
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+// ── A blank team document is authorable end to end (complete-team-authoring- ──
+// loop, batch 2's acceptance leg).
+//
+// Before this change a team document created blank could NEVER pass
+// validation: `fleet.members` must be non-empty, and the only editor on the
+// canvas was the three-bucket card, which writes {agents, skills, mcpServers}
+// and has no path into `fleet.members`. The only ways forward were pasting
+// JSON into the document track or seeding from a starter — so "make a team
+// from scratch in the GUI" was structurally unreachable.
+//
+// This leg walks exactly that path in a real browser against the real facet
+// service: new team → add two posts on the canvas → validate → green. It is
+// also batch 1's closure leg: every post added here carries a self-referencing
+// target whose presetId must equal an agents[].id, so a document built this way
+// is exactly what `fleet_preset_unresolved` rejects when the pairing breaks.
+//
+// The identity is REAL, through the facet proxy channel — the token + identity
+// pair the service accepts from its gateway. Stubbing only the whoami RESPONSE
+// is not enough: the client store would believe it while the server still
+// judged the caller anonymous, and every document write would 401.
+test("a blank team document reaches a green validation through the canvas", async ({ page }) => {
+  const identity = Buffer.from(JSON.stringify({ email: "ops@e2e.local", groups: ["creators"] })).toString("base64url");
+  await page.setExtraHTTPHeaders({ "x-facet-token": "e2e-facet-token", "x-facet-user": identity });
+  await page.addInitScript(() => localStorage.setItem("platform.locale", "zh-CN"));
+  const pageErrors = [];
+  page.on("pageerror", (e) => pageErrors.push(String(e)));
+
+  await page.goto(`${base}/#/studio`);
+  await expect(page.getByTestId("facet-studio-face")).toBeVisible({ timeout: 20000 });
+
+  // New TEAM document (the agent-kind entry beside it is a different shape).
+  await page.getByTestId("ws-new-team").click();
+  await expect(page.getByTestId("ws-canvas-empty")).toBeHidden({ timeout: 20000 });
+
+  // A fresh team document has zero posts — the empty graph must offer the one
+  // action that makes it satisfiable (fleet_members_empty is a hard gate).
+  await expect(page.getByTestId("ws-graph-add-post-empty")).toBeVisible();
+
+  const drawer = page.getByTestId("ws-post-drawer");
+
+  // Post 1 from the empty state: a title AND a declared cadence, so this covers
+  // cadence reaching the document, not just the member existing.
+  await page.getByTestId("ws-graph-add-post-empty").click();
+  await expect(drawer).toBeVisible();
+  await drawer.getByTestId("ws-post-title").fill("晨报岗");
+  await drawer.getByTestId("ws-post-cadence-mode").selectOption("daily");
+  await expect(drawer.getByTestId("ws-post-cadence-time")).toBeVisible();
+  await drawer.getByTestId("ws-post-cadence-prompt").fill("汇总昨日政策变动，收尾调用 report_status 报数。");
+  await drawer.getByTestId("ws-post-save").click();
+
+  // Post 2 from the canvas toolbar.
+  await page.getByTestId("ws-graph-add-post").click();
+  await expect(drawer).toBeVisible();
+  await drawer.getByTestId("ws-post-title").fill("汇总岗");
+  await drawer.getByTestId("ws-post-save").click();
+  await expect(drawer).toBeHidden();
+
+  // Validation reads the SAVED record, so wait for the debounce PUT to land.
+  await expect(page.getByTestId("ws-save-state")).toContainText("已保存", { timeout: 25000 });
+
+  // The gate this change exists to open: a team assembled ONLY through the
+  // canvas passes. fleet_members_empty is gone (posts exist) and
+  // fleet_preset_unresolved is gone (each post's self-referencing presetId
+  // names the agent the canvas added beside it).
+  await expect(page.getByTestId("ws-validation")).toBeVisible();
+  await expect(page.getByTestId("ws-validation-error")).toHaveCount(0);
+  await expect(page.getByTestId("ws-validation-ok")).toBeVisible({ timeout: 30000 });
+  await expect(page.getByTestId("ws-validation")).not.toContainText("fleet_members_empty");
+  await expect(page.getByTestId("ws-validation")).not.toContainText("fleet_preset_unresolved");
+
+  expect(pageErrors, pageErrors.join(" | ")).toEqual([]);
+});
+
+// ── 显示字段缺失面板（surface-display-field-gaps）────────────────────────────
+//
+// 这一条钉住的是「分母不同」这件事在页面上看得见：覆盖率与缺口是两个问题，
+// 面板自带一句分母说明，且按缺口数降序、可按单字段过滤。
+test("the curation face lists display-field gaps separately from translation coverage", async ({ page }) => {
+  await page.route("**/api/whoami", (route) =>
+    route.fulfill({ json: { email: "ops@e2e.local", groups: ["platform"], creator: true, admin: true } }),
+  );
+  await page.route("**/api/packs/curation/display-gaps", (route) =>
+    route.fulfill({
+      json: {
+        fields: ["identity", "promise", "audience", "outcomes", "examples", "domain"],
+        packs: [
+          { id: "p1", name: "缺承诺的包", present: ["domain"], missing: ["identity", "promise", "audience", "outcomes", "examples"], gapCount: 5 },
+          { id: "p2", name: "只缺示例的包", present: ["identity", "promise", "audience", "outcomes", "domain"], missing: ["examples"], gapCount: 1 },
+          { id: "p3", name: "写全了的包", present: ["identity", "promise", "audience", "outcomes", "examples", "domain"], missing: [], gapCount: 0 },
+        ],
+      },
+    }),
+  );
+  await page.goto(`${base}/#/curate`);
+
+  const panel = page.getByTestId("facet-curate-gaps");
+  await expect(panel).toBeVisible({ timeout: 20000 });
+  // 分母说明必须在
+  await expect(panel).toContainText("declaration, not translation");
+  // 写全的包不列出（gapCount 0），缺得多的排在前面
+  const list = page.getByTestId("facet-curate-gaps-list");
+  await expect(list).toContainText("缺承诺的包");
+  await expect(list).not.toContainText("写全了的包");
+  const first = list.locator("li").first();
+  await expect(first).toContainText("缺承诺的包");
+
+  // 按单字段过滤：只剩缺 promise 的两个
+  await page.getByTestId("facet-curate-gaps-field-promise").click();
+  await expect(list).toContainText("缺承诺的包");
+  await expect(list).not.toContainText("只缺示例的包");
+});
+
+// ── 目录与入口页的材料预览（surface-material-previews 2.1 / 2.2 / 3.1-3.3）───
+//
+// 三条：目录「全部」页签每张物种卡内嵌预览且**不触发物种端点请求**；入口页
+// 有 3 张真实缩略卡；取数失败时入口段退回灰底 chip（不报错、不空转）。
+const PREVIEW_FIXTURE = {
+  generatedAt: "2026-11-24",
+  stale: false,
+  packs: 142, skills: 108, mcpServers: 29, tools: 700,
+  byCategory: [
+    { category: "pack", count: 142 },
+    { category: "skill", count: 108 },
+    { category: "mcp", count: 29 },
+    { category: "facade", count: 61 },
+    { category: "official-data", count: 483 },
+  ],
+  preview: {
+    pack: [{ name: "识律 · 政心", blurb: "把一份政策文件读成结构化的理解", badge: "official" }],
+    skill: [{ name: "policy-impact-read", blurb: "政策文件作用面解读" }],
+    mcp: [{ name: "fd-zhengxin", blurb: "政经谱系的实体读面", badge: "3" }],
+    facade: [{ name: "寻数分身", blurb: "寻数（FindData）的企业 AI 分身" }],
+    "official-data": [{ name: "世界银行", blurb: "全球发展指标开放数据" }],
+  },
+};
+
+test("catalog 全部页签内嵌预览，且不拉任何物种端点", async ({ page }) => {
+  const speciesFetches = [];
+  page.on("request", (r) => {
+    const u = r.url();
+    for (const p of ["skills-catalog", "mcp-catalog", "facades-catalog", "data-anchors-catalog"]) {
+      if (u.includes(p)) speciesFetches.push(u);
+    }
+  });
+  await page.route("**/generated/counts.json", (route) => route.fulfill({ json: PREVIEW_FIXTURE }));
+  await page.goto(`${base}/#/catalog`);
+
+  const packCard = page.getByTestId("catalog-all-pack");
+  await expect(packCard).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("catalog-all-preview-pack")).toBeVisible();
+  await expect(packCard).toContainText("识律 · 政心");
+  await expect(packCard).toContainText("把一份政策文件读成结构化的理解");
+  // 每个铺出的物种都有预览块
+  for (const s of ["skill", "mcp", "facade", "data-anchor"]) {
+    await expect(page.getByTestId(`catalog-all-preview-${s}`)).toBeVisible();
+  }
+  // 「全部」页签绝不拉物种库存
+  expect(speciesFetches, `不应拉物种端点，实际：${speciesFetches.join(", ")}`).toEqual([]);
+});
+
+test("MCP 卡片在列表上就能判断规模与用途（polish-facet-mcp-surface 2.2）", async ({ page }) => {
+  // Deterministic fixture rather than the stub's ordering: what is pinned is the
+  // CARD CONTRACT — two very different tool counts must read differently
+  // without opening either, and an absent field must be omitted, not zeroed.
+  await page.route("**/api/mcp-catalog", (route) =>
+    route.fulfill({
+      json: {
+        servers: [
+          {
+            name: "big",
+            displayName: "big",
+            description: "A big surface",
+            endpoint: "https://mcp.example/big",
+            requiredGroups: [],
+            toolCount: 161,
+            annotation: { name: "大工具面", summary: "多工具。", whenToUse: "不知道该用哪个专用服务时。", source: null },
+          },
+          {
+            name: "small",
+            displayName: "small",
+            description: "A tiny surface",
+            endpoint: "https://mcp.example/small",
+            requiredGroups: [],
+            toolCount: 1,
+            // No annotation ⇒ no whenToUse line. The count still renders.
+          },
+          {
+            name: "unknown",
+            displayName: "unknown",
+            description: "No snapshot captured yet",
+            endpoint: "https://mcp.example/unknown",
+            requiredGroups: [],
+            toolCount: null,
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto(`${base}/#/catalog?species=mcp`);
+  await expect(page.getByTestId("catalog-card-mcp:big")).toBeVisible({ timeout: 20000 });
+
+  // Scale is readable per card, without opening either detail.
+  await expect(page.getByTestId("catalog-card-toolcount-big")).toContainText("161");
+  await expect(page.getByTestId("catalog-card-toolcount-small")).toContainText("1");
+
+  // "When to use" renders only where the source declares it.
+  await expect(page.getByTestId("catalog-card-when-big")).toContainText("不知道该用哪个专用服务时。");
+  await expect(page.getByTestId("catalog-card-when-small")).toHaveCount(0);
+
+  // An unknown count is OMITTED — never rendered as 0.
+  await expect(page.getByTestId("catalog-card-toolcount-unknown")).toHaveCount(0);
+  await expect(page.getByTestId("catalog-card-facts-unknown")).toHaveCount(0);
+});
+
+test("MCP 深度视图提供组级跳转，且能按检索词预填过滤（polish-facet-mcp-surface 3.1/3.2）", async ({ page }) => {
+  // The stub's depth entry carries a grouped surface: alpha_* (2), beta_* (2),
+  // plus loners — so more than one group exists and the jump nav must render.
+  await page.goto(`${base}/#/catalog?species=mcp`);
+  const card = page.getByTestId("catalog-card-mcp:e2e-catalog-depth-mcp");
+  await expect(card).toBeVisible({ timeout: 20000 });
+  await page.getByTestId("catalog-depth-open-e2e-catalog-depth-mcp").click();
+
+  const depth = page.getByTestId("mcp-depth-e2e-catalog-depth-mcp");
+  await expect(depth).toBeVisible({ timeout: 20000 });
+
+  // 3.1 the jump navigation names every group with its member count.
+  const nav = page.getByTestId("mcp-depth-jump");
+  await expect(nav).toBeVisible();
+  await expect(page.getByTestId("mcp-depth-jump-alpha")).toContainText("2");
+  await expect(page.getByTestId("mcp-depth-jump-beta")).toContainText("2");
+
+  // Clicking one lands on that group's block (scrollIntoView runs; assert the
+  // anchor target exists and is the element the link points at).
+  await page.waitForTimeout(200); // the entrance tween moves the block under the cursor
+  await page.getByTestId("mcp-depth-jump-beta").click();
+  const beta = page.getByTestId("mcp-tool-group-beta");
+  await expect(beta).toBeVisible();
+  const betaInView = await beta.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return r.top >= -8 && r.top < window.innerHeight;
+  });
+  expect(betaInView, "the jumped-to group is in the viewport").toBe(true);
+
+  // 3.2 a search hit lands in the depth view with the filter pre-filled: the
+  // tool is on screen without the reader typing anything.
+  //
+  // Back out rather than re-navigate: a hash-only goto from inside the depth
+  // view does not remount CatalogView, and the App routes on hashchange.
+  await page.getByTestId("mcp-depth-back").click();
+  const search = page.getByTestId("catalog-search");
+  await expect(search).toBeVisible({ timeout: 20000 });
+  // "purge" exists ONLY inside a tool (read/search/purge on e2e-registry-mcp);
+  // no server card's own text carries it, so entry-level filtering must miss.
+  await search.fill("purge");
+  const hit = page.getByTestId("catalog-tool-hit-e2e-registry-mcp-purge");
+  await expect(hit).toBeVisible({ timeout: 20000 });
+  await hit.click();
+
+  const entered = page.getByTestId("mcp-depth-e2e-registry-mcp");
+  await expect(entered).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("mcp-depth-tools-filter")).toHaveValue("purge");
+  await expect(page.getByTestId("mcp-tool-purge")).toBeVisible();
+  // The filter really did narrow: the other two tools of that server are gone.
+  await expect(page.getByTestId("mcp-tool-read")).toHaveCount(0);
+});
+
+test("技能卡片在目录内打开自己的详情（polish-facet-mcp-surface 4.1）", async ({ page }) => {
+  await page.goto(`${base}/#/catalog?species=skill`);
+  const card = page.locator('[data-testid^="catalog-card-skill:"]').first();
+  await expect(card).toBeVisible({ timeout: 20000 });
+
+  // Read the title BEFORE clicking: opening the panel replaces the grid, so a
+  // locator captured now would be detached and innerText() would hang.
+  const title = await card.locator("h3").innerText();
+
+  // The button that used to send the reader to another tab now opens the
+  // skill's own panel in place.
+  const openBtn = page.locator('[data-testid^="catalog-depth-open-"]').first();
+  await openBtn.click();
+
+  const panel = page.locator('[data-testid^="catalog-skill-detail-"]');
+  await expect(panel).toBeVisible();
+  // Declared metadata renders; nothing here is invented.
+  await expect(page.getByTestId("catalog-skill-back")).toBeVisible();
+  await expect(panel).toContainText(title);
+
+  // Absent fields say so explicitly — the stub skill declares no author/license.
+  const body = await panel.innerText();
+  expect(body).toMatch(/未标注|not declared|未申告|non déclaré|no declarado/i);
+
+  // Back returns to the same species tab, not to a blank first visit.
+  await page.getByTestId("catalog-skill-back").click();
+  await expect(page.getByTestId("catalog-tab-skill")).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-testid^="catalog-card-skill:"]').first()).toBeVisible();
+});
+
+test("入口页显示 3 张真实缩略卡，取数失败退回灰底 chip", async ({ page }) => {
+  await page.route("**/generated/counts.json", (route) => route.fulfill({ json: PREVIEW_FIXTURE }));
+  await page.goto(`${base}/#/`);
+  const preview = page.getByTestId("entry-catalog-preview");
+  await expect(preview).toBeVisible({ timeout: 20000 });
+  // 跨物种混编取 3 条
+  await expect(preview.locator("li")).toHaveCount(3);
+  await expect(preview).toContainText("识律 · 政心");
+  // 每张卡带物种标签
+  await expect(page.getByTestId("entry-preview-pack")).toBeVisible();
+  // 有预览时不出现灰底 chip
+  await expect(page.getByTestId("entry-catalog-species-chips")).toHaveCount(0);
+
+  // 取数失败 ⇒ 退回灰底 chip，无错误文案。
+  // `goto` 同一个 hash 不会重挂载组件，先跳到别的 hash 再回来，fetch 才会重跑。
+  await page.unroute("**/generated/counts.json");
+  await page.route("**/generated/counts.json", (route) => route.fulfill({ status: 500, body: "boom" }));
+  await page.goto(`${base}/#/docs`);
+  await page.goto(`${base}/#/`);
+  await expect(page.getByTestId("entry-catalog-species-chips")).toBeVisible({ timeout: 20000 });
+  await expect(page.getByTestId("entry-catalog-preview")).toHaveCount(0);
+  const body = await page.locator("body").innerText();
+  expect(body).not.toMatch(/boom|error|失败/i);
+});
+
+test("入口页预览高度与库存规模无关（固定 3 条）", async ({ page }) => {
+  await page.route("**/generated/counts.json", (route) => route.fulfill({ json: PREVIEW_FIXTURE }));
+  await page.goto(`${base}/#/`);
+  await expect(page.getByTestId("entry-catalog-preview")).toBeVisible({ timeout: 20000 });
+  const tall = await page.getByTestId("entry-catalog-preview").boundingBox();
+
+  // 同一个产物只含 1 条/物种（仍是 3 条混编）+ 每物种条数极多，两者高度一致
+  const many = { ...PREVIEW_FIXTURE, preview: Object.fromEntries(Object.entries(PREVIEW_FIXTURE.preview).map(([k, v]) => [k, [...v, ...v, ...v]])) };
+  await page.unroute("**/generated/counts.json");
+  await page.route("**/generated/counts.json", (route) => route.fulfill({ json: many }));
+  await page.goto(`${base}/#/`);
+  await expect(page.getByTestId("entry-catalog-preview")).toBeVisible({ timeout: 20000 });
+  const same = await page.getByTestId("entry-catalog-preview").boundingBox();
+  expect(Math.abs((tall?.height ?? 0) - (same?.height ?? 0)), "库存变大不得改变入口段高度").toBeLessThanOrEqual(2);
+});

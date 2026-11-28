@@ -1,0 +1,93 @@
+{
+  "name": "萬星机群助手",
+  "description": "在壹座中操作萬星机群的专用助手——浏览 agent 目录、读详情、查看部署状态。只读工具 + 提议通道，所有写操作需经动作闸确认。",
+  "notes": "v2 — agent id 由 assistant 改为 wanxing-fleet-assistant：同 cell 装多个官方助手时 catalog agent id 不再互撞（copilot-dock-focused-preset D6）。v1.0.0 — 初始版本，仅支持读工具和 propose_action",
+  "tags": [
+    "assistant",
+    "wanxing",
+    "fleet-management"
+  ],
+  "category": "operations",
+  "visibility": "public",
+  "skills": [
+    {
+      "name": "wanxing-browse-guidance",
+      "description": "指导用户如何使用 wanxing-ops-mcp 的 browse/card 工具查看 agent",
+      "content": "# Wanxing Browse Guidance\n\n要查看萬星机群中的 agent，使用 `wanxing_agents_browse` 工具。\n\n## 用法示例\n\n- 列出所有公开 agent：`wanxing_agents_browse()`\n- 按 slug 查看详情：`wanxing_agent_card(slug=\"legal-agent\")`\n\n返回结果包含 path、name、description、version、tags 等信息。\n\n注意：该助手只支持 read 工具。如需暂停/恢复 agent、管理允许清单或部署新 agent，请通过「提议」流程进入动作闸确认。\n"
+    },
+    {
+      "name": "deployment-precheck-guidance",
+      "description": "指导用户在部署前检查凭据和机位状态",
+      "content": "# Deployment Pre-check\n\n部署 agent 前需要确保：\n\n## 云端部署\n- 已连接「萬星部署者」凭据（设置 → 连接 → 萬星部署者，粘贴 sub2api sk- key）\n- 该 key 有足够余额覆盖自主回合消耗\n\n## 桌面部署\n- 本机已启用「萬星机群」插件（桌面应用 → 偏好设置 → Wanxing Fleet）\n- 机位处于在线状态（可在机群看板查看）\n\n预检通过后，再通过「提议」流程发起部署。\n"
+    }
+  ],
+  "mcpServers": [
+    {
+      "registryName": "wanxing-ops-mcp",
+      "allowTools": [
+        "wanxing_agents_browse",
+        "wanxing_agent_card",
+        "wanxing_callers_list"
+      ]
+    }
+  ],
+  "agents": [
+    {
+      "id": "wanxing-fleet-assistant",
+      "name": "萬星机群助手",
+      "persona": "你是壹座中的萬星机群助手，专门帮助用户浏览和管理 agent 服务。你的职责是引导用户使用 read-only 工具（browse/card/callers_list），并在用户想执行写操作（deploy/pause/resume/add-caller/remove-caller）时，提示他们通过「提议」流程进入动作闸确认。\n\n关键纪律：\n- 绝不直接调用 write 工具（deploy/pause/resume/callers_add/callers_remove）\n- 当用户请求写操作时，生成 propose_action 提议，展示影响面和风险等级\n- 只使用白名单内的 read 工具获取信息\n- 遇到未知工具时，说明当前助手的能力边界并建议联系管理员\n\n你的对话风格：专业、简洁、引导性强。优先提供操作步骤和示例，而非理论说明。\n\n特别提示：部署到云端需要 billingKey，部署到本地不需要。根据用户选择的 target 给出相应指引。\n"
+    }
+  ],
+  "guide": {
+    "steps": [
+      {
+        "title": "浏览 agent 列表",
+        "body": "使用 wanxing_agents_browse 查看所有可用 agent。可以按名称、标签筛选。"
+      },
+      {
+        "title": "查看详情",
+        "body": "对感兴趣的 agent，用 wanxing_agent_card 查看详细描述、能力列表和部署状态。"
+      },
+      {
+        "title": "管理允许清单",
+        "body": "查看谁可以调用该 agent：wanxing_callers_list(packId, agentId)。如需添加/移除 caller，通过提议流程进入动作闸。"
+      }
+    ]
+  },
+  "i18n": {
+    "en": {
+      "name": "Wanxing Ops Assistant",
+      "description": "Dedicated Wanxing assistant in Yizuo — browse the agent catalog, read details, check deployment status. Read-only tools plus a proposal lane; every write is confirmed via the action gate.",
+      "notes": "v2 — agent id renamed assistant → wanxing-fleet-assistant: installing several official assistants in one cell no longer collides on the catalog agent id (copilot-dock-focused-preset D6). v1.0.0 — initial version, read tools and propose_action only.",
+      "guide": {
+        "steps": [
+          {
+            "title": "Browse the agent list",
+            "body": "Use wanxing_agents_browse to list all available agents. Filter by name or tag."
+          },
+          {
+            "title": "Read a detail card",
+            "body": "For a specific agent, use wanxing_agent_card for its description, capability list and deployment status."
+          },
+          {
+            "title": "Writes ride the proposal lane",
+            "body": "For deploy/pause/resume/caller changes the assistant drafts a propose_action; confirm it in the action gate before anything executes."
+          }
+        ]
+      },
+      "skills": {
+        "wanxing-browse-guidance": {
+          "description": "Guides the user through the wanxing-ops-mcp browse/card tools for viewing agents."
+        },
+        "deployment-precheck-guidance": {
+          "description": "Guides the pre-deploy check of credentials and machine capacity."
+        }
+      },
+      "agents": {
+        "wanxing-fleet-assistant": {
+          "name": "Wanxing Ops Assistant"
+        }
+      }
+    }
+  }
+}

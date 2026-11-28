@@ -1,0 +1,6 @@
+{
+  "//": "Operator exceptions to the model-route exclusivity gate (openspec: harden-plugin-supply-gates, task 4.3).",
+  "//shape": "{ name: <bundle package name>, reason, approvedBy, expiresAt: <epoch ms> } — all four required.",
+  "//why": "A gate with no documented escape hatch gets switched off entirely the first time it blocks a legitimate deployment. Every entry therefore expires: an expired entry stops granting immediately and is reported so it gets re-reviewed. Empty is the normal state.",
+  "exceptions": []
+}

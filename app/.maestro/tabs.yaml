@@ -1,0 +1,11 @@
+# Tab navigation: all three tabs render their titles.
+appId: com.finddata.platform
+---
+- launchApp
+- assertVisible: '.*对话|.*Chat'
+- tapOn: '.*定时任务|.*Scheduled'
+- assertVisible: '.*定时任务|.*Scheduled'
+- tapOn: '.*资源库|.*Library'
+- assertVisible: '.*资源库|.*Library'
+- tapOn: '.*对话|.*Chat'
+- assertVisible: '.*对话|.*Chat'

@@ -1,0 +1,75 @@
+{
+  "$comment": [
+    "IM channel DATA layer (externalize-im-platform-adapters).",
+    "",
+    "This file ships INSIDE the image and is the fallback that guarantees the",
+    "channel always runs. A deployment may overlay it with a mounted copy at",
+    "/etc/im-lanes/im-lanes.json (whole-directory mount, never subPath — see",
+    "docs), which is re-read on every turn, so changing copy or a timeout needs",
+    "no image, no restart.",
+    "",
+    "Only DATA lives here. Signature verification and payload parsing are",
+    "protocol code and stay in the adapters.",
+    "",
+    "Templates use {{name}} placeholders; a value of null means 'stay silent'."
+  ],
+  "version": 1,
+  "echo": {
+    "$comment": "Room events a group may see. Anything not listed is internal-only. `commander_receipt` is deliberately ABSENT: a WeCom response_code is single-use (one inbound = one send), so a group gets exactly one message per inbound. The receipt would spend it and the real answer would fail with 60140 'invalid response code' (2026-11-19). The in-app room still shows the receipt — it streams over SSE and has no such limit. Re-add it here only for channels that can send more than one message per inbound (e.g. a group webhook).",
+    "events": [
+      "room_ended",
+      "budget_exhausted",
+      "needs_you",
+      "all_passed",
+      "pass",
+      "reply_cap_hit",
+      "commander_none"
+    ]
+  },
+  "copy": {
+    "$comment": [
+      "What the GROUP reads for an event row that has no content of its own.",
+      "Never an internal event name: a customer group must not learn our",
+      "vocabulary. Missing key → the generic fallback below."
+    ],
+    "default": "（会话事件）",
+    "events": {
+      "all_passed": "本轮无人作答——在座的席位都判断没有需要补充的内容。你可以 @ 某一位点名提问，或把问题说得更具体些。",
+      "pass": null,
+      "reply_cap_hit": "已达本轮应答上限，其余席位保持静默。",
+      "commander_receipt": {
+        "$comment": "Two phases share this event: 'thinking' fires the instant routing starts, the dispatch receipt names who is on it.",
+        "thinking": "已收到，正在确认由谁处理…",
+        "dispatched": "已收到，正在处理{{seats}}…"
+      },
+      "bot_ack": "已收到，正在处理…",
+      "commander_none": "本轮无人作答——在场的席位都判断没有需要补充的内容。你可以 @ 某一位点名提问，或把问题说得更具体些。",
+      "room_ended": "本次会话已结束。",
+      "budget_exhausted": "今日额度已用完。",
+      "needs_you": "已为你呼叫真人。"
+    },
+    "seatsSeparator": "、",
+    "seatsWrapper": "（{{seats}}）"
+  },
+  "dispatch": {
+    "$comment": [
+      "How an outbound recipient is routed to an API. Pure data: adding a",
+      "platform adds an entry here, not a branch in business code.",
+      "'groupPattern' is a JS regex source; a chatKey matching it is a GROUP",
+      "(groupApi + groupField), anything else is a MEMBER (memberApi + memberField)."
+    ],
+    "wecom": {
+      "groupPattern": "^wr[A-Za-z0-9_-]{8,}$",
+      "groupApi": "cgi-bin/appchat/send",
+      "groupField": "chatid",
+      "memberApi": "cgi-bin/message/send",
+      "memberField": "touser"
+    }
+  },
+  "timeouts": {
+    "$comment": "Milliseconds. Overridable per deployment without an image.",
+    "commanderDecisionMs": 45000,
+    "relayPollMs": 2500,
+    "memoryBlockMs": 2500
+  }
+}

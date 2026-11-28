@@ -1,0 +1,86 @@
+# Attach a file in a room, on a real Android runtime (openspec:
+# zhiyu-room-attachments-and-voice).
+#
+# WHAT THIS PROVES that no other gate does: the whole pick→upload→card chain
+# runs on a device — RN's FormData descriptor is accepted by the real server,
+# the chip lands on a terminal state, and the row the file rode is in the
+# stream. The node suites prove the pieces; this proves they are wired to each
+# other in a real app process.
+#
+# HOW the file gets in: Maestro cannot drive Android's system file chooser (it
+# is another process's UI), so the CI app build sets EXPO_PUBLIC_E2E_ATTACHMENT
+# to a bundled fixture. That swaps ONLY the picker — upload, server, card state
+# and the message row are all production's. See app/src/lib/
+# room-attachment-transport.ts for the seam and its unit tests.
+#
+# Runs against e2e/zhiyu-gateway-mock.mjs, which mounts the REAL room kernel.
+#
+# Run with:
+#   (cd app && maestro test -e OUTPUT_INSTANCE=http://10.0.2.2:9411 \
+#                            -e PAIRING_CODE=<code> .maestro/zhiyu-attachment.yaml)
+appId: com.finddata.platform
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      text: '连接你的壹座|Connect to your Yizuo'
+    timeout: 90000
+- tapOn:
+    id: 'server-input'
+- inputText: ${OUTPUT_INSTANCE}
+- hideKeyboard
+- tapOn:
+    id: 'code-input'
+- inputText: ${PAIRING_CODE}
+- hideKeyboard
+- tapOn:
+    id: 'bind-button'
+- extendedWaitUntil:
+    visible:
+      text: '.*智语|.*Zhiyu'
+    timeout: 30000
+
+# ── into the room ─────────────────────────────────────────────────────────
+- tapOn:
+    text: '.*智语|.*Zhiyu'
+- extendedWaitUntil:
+    visible:
+      id: 'app-zy-list'
+    timeout: 30000
+- tapOn: '真机走查房'
+- extendedWaitUntil:
+    visible:
+      id: 'app-zy-stream'
+    timeout: 30000
+
+# ── attach ────────────────────────────────────────────────────────────────
+# The attach control must be present — its absence is the failure mode where
+# the feature compiles but never reaches the screen.
+- assertVisible:
+    id: 'app-zy-attach'
+- tapOn:
+    id: 'app-zy-attach'
+
+# The fixture is text/plain, so the server EXTRACTS it: the terminal state is
+# `ready`, which the chip renders as 可读. `uploading` would mean the request
+# never completed; `opaque` would mean the type was not readable; `failed`
+# would mean the server rejected it. Each is a distinct testID, so this one
+# assertion names which of the four happened.
+- extendedWaitUntil:
+    visible:
+      id: 'app-zy-attachment-ready'
+    timeout: 60000
+
+# ── send, and the attachment rides a row ───────────────────────────────────
+- tapOn:
+    id: 'app-zy-composer'
+- inputText: 'maestro attachment check'
+- hideKeyboard
+- tapOn:
+    id: 'app-zy-send'
+# The sentence we typed must appear in the stream — that is the proof the send
+# went through with the attachment attached to it, not merely that a chip was
+# drawn.
+- extendedWaitUntil:
+    visible: '.*maestro attachment check.*'
+    timeout: 30000
