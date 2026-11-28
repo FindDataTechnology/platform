@@ -68,13 +68,16 @@ const skillDirsOf = () =>
 
 // A switch may race a still-draining turn (the dead-LLM guard probe retries
 // with backoff before its error lands) — retry on the streaming guard until
-// the runtime settles.
+// the runtime settles. It may equally race a child restart that the preceding
+// MCP/skill write just triggered: `ws.js` answers set_preset with "Agent is
+// still initializing" while `ctx.ready.dsh` is false, which is the same
+// transient class (custom-presets.spec.js already retries both).
 async function idleSwitch(page, id, attempts = 15) {
   for (let i = 0; ; i++) {
     try {
       return await switchPreset(page, id);
     } catch (e) {
-      if (i >= attempts || !/responding/i.test(String(e?.message))) throw e;
+      if (i >= attempts || !/responding|initializing/i.test(String(e?.message))) throw e;
       await page.waitForTimeout(3000);
     }
   }

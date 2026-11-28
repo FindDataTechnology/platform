@@ -266,3 +266,75 @@ test("7.2 the form stays submittable when the preset roster cannot be read", () 
   assert.equal(decl.stations[0].target.ref, null, "empty ref is a legal shape");
   assert.equal(decl.stations[0].target.kind, "persona");
 });
+
+// ── completion readout (run-card-bridge) ───────────────────────────────────
+//
+// Three values, each from the card itself. Cost is unknown until the ledger is
+// wired; a token count must never be turned into a price here.
+
+test("8.1 a ruled card reads duration and quality, cost stays unknown", () => {
+  const got = mod.completionReadout({
+    id: "c1",
+    prompt: "p",
+    flow: {
+      flowId: "f",
+      stationId: "s",
+      stakedAt: "2026-01-01T00:00:00.000Z",
+      verdict: { outcome: "pass", at: "2026-01-01T00:00:05.000Z" },
+    },
+  });
+  assert.equal(got.duration_s, 5);
+  assert.equal(got.quality, "pass");
+  assert.equal(got.cost.usd, null);
+  assert.equal(got.cost.tokens, null);
+  assert.ok(got.cost.reason);
+});
+
+test("8.2 an unruled card is unknown, not pass", () => {
+  const got = mod.completionReadout({ id: "c1", prompt: "p", flow: { flowId: "f", stationId: "s" } });
+  assert.equal(got.quality, "unknown");
+  assert.equal(got.duration_s, null);
+  assert.notEqual(got.quality, "pass");
+});
+
+test("8.3 a returned verdict reads as fail", () => {
+  const got = mod.completionReadout({
+    id: "c1",
+    prompt: "p",
+    flow: {
+      flowId: "f",
+      stationId: "s",
+      stakedAt: "2026-01-01T00:00:00.000Z",
+      verdict: { outcome: "returned", at: "2026-01-01T00:01:00.000Z" },
+    },
+  });
+  assert.equal(got.quality, "fail");
+  assert.equal(got.duration_s, 60);
+});
+
+test("8.4 tokens are summed from execution history; USD stays unknown", () => {
+  const got = mod.completionReadout({
+    id: "c1",
+    prompt: "p",
+    history: [
+      { state: "done", tokens: { total: 120 } },
+      { state: "done", tokens: { prompt: 30, completion: 50 } },
+      { state: "failed", tokens: 5 },
+    ],
+    flow: { flowId: "f", stationId: "s" },
+  });
+  assert.equal(got.cost.tokens, 205);
+  assert.equal(got.cost.usd, null);
+});
+
+test("8.5 a server-attributed USD is read as the billing truth", () => {
+  const got = mod.completionReadout({
+    id: "c1",
+    prompt: "p",
+    cost_usd: 0.0421,
+    cost_basis: "sub2api_actual_cost",
+    flow: { flowId: "f", stationId: "s" },
+  });
+  assert.equal(got.cost.usd, 0.0421);
+  assert.equal(got.cost.reason, null);
+});

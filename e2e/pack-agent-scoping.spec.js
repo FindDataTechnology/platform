@@ -118,6 +118,22 @@ async function addExtraServer(page, name = EXTRA_MCP) {
   expect(r.ok(), await r.text()).toBeTruthy();
 }
 
+// The switch right after a patch write races the child restart that write
+// triggered: `ws.js` refuses set_preset with "Agent is still initializing"
+// while `ctx.ready.dsh` is false. Same transient class as a draining turn, so
+// both are retried — the pattern custom-presets.spec.js and focus-overlay
+// already use. Without it the very first switch of a test fails outright.
+async function idleSwitch(page, id, attempts = 15) {
+  for (let i = 0; ; i++) {
+    try {
+      return await switchPreset(page, id);
+    } catch (e) {
+      if (i >= attempts || !/responding|initializing/i.test(String(e?.message))) throw e;
+      await page.waitForTimeout(3000);
+    }
+  }
+}
+
 test.describe.configure({ mode: "serial" });
 
 // goto WITHOUT the en-pinning gotoChat helper: the badge assertion reads the
@@ -210,7 +226,7 @@ test("MCP CRUD and a pack upgrade while focused keep the focus", async ({ page }
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
 
   // CRUD while focused: another non-baseline server is added through the
   // normal route — the rewrite re-derives the scope, so it stays out.
@@ -304,7 +320,7 @@ test("a declared subset narrows the focused MCP set and scopes skills to the per
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
 
   // MCP patch: ONLY the declared ref of the two (plus the seeded baseline
   // "memory"). The other installed pack ref is dropped by the declaration.
@@ -336,7 +352,7 @@ test("an empty declaration focuses both dimensions to the baseline alone", async
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
 
   // The pack's ref is installed, yet the empty declaration keeps it out: the
   // focused MCP surface is the baseline ("memory") alone.
@@ -360,7 +376,7 @@ test("an upgrade that adds a declaration re-derives the focused patches", async 
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
   await expect
     .poll(() => mcpServersOf(), { timeout: 20_000 })
     .toContain("e2e-registry-mcp");
@@ -454,7 +470,7 @@ test("a tool allowlist materializes the filter config; role narrowing clips; ful
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
 
   // The reference is mounted AND narrowed: the filter carries the role's
   // effective set (pack three minus the role's two), and the scope module
@@ -500,7 +516,7 @@ test("a legacy pack without allowlists focuses with an empty filter (7.2)", asyn
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
   await expect.poll(() => mcpServersOf(), { timeout: 20_000 }).toContain("e2e-registry-mcp-2");
   // No declarations anywhere: the filter is the empty mapping, never stale
   // residue from an earlier focused session (self-healing composition).
@@ -525,7 +541,7 @@ test("an awaiting-local-binding reference activates on later install, no reinsta
     .poll(() => catalogDef(AGENT_ID))
     .toBeTruthy();
   await waitPresetInRoster(page, AGENT_ID);
-  await switchPreset(page, AGENT_ID);
+  await idleSwitch(page, AGENT_ID);
   // Same document shape as everywhere else in this file: the active filter is
   // the top-level `mcpTools`; `byPreset` carries the role's own section beside
   // it. Assert the half this test is about.

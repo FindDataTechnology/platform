@@ -293,3 +293,39 @@ MUST NOT 呈现为读取失败，MUST NOT 呈现为空白面板。
 - **WHEN** 存在失败或未执行的卡片
 - **THEN** 泳道视图仍呈现这两个旁路组
 - **AND** 其成员与单轴视图逐条一致
+
+### Requirement: 板面读得出完成时间、质量、成本三项
+
+流转面 SHALL 为一每张卡片提供三项读数：完成时间（从 `flow.stakedAt` 到 `flow.verdict.at` 的耗时）、完成质量（`flow.verdict.outcome`，无裁定为 `unknown`）、完成成本。完成成本 MUST 在可用时给出 USD：来自萬星词元 `GET /api/v1/usage` 的 `actual_cost`，按卡片执行窗口归属；同一 usage 行落在两张以上卡片窗口内时 MUST NOT 归属给任何一张（`unknown`），MUST NOT 重复计。USD 不可用时 SHALL 为 `null` 并给出原因。完成成本 MUST 同时给出 tokens 归属（执行历史 `tokens` 求和，是归因不是估价），MUST NOT 由 tokens 反推 USD。三项 MUST 从客观记录算出，MUST NOT 由展示层估算，MUST NOT 用 `0` 代填算不出的项。
+
+三项读数 MUST NOT 改变五档分栏、四个动词或任务真相；计费读面失败 SHALL 只让 USD 降级，MUST NOT 让板面读取失败。
+
+#### Scenario: 有 usage 行时 USD 可读
+
+- **WHEN** 卡片执行窗口内的 usage 行只落在这一张卡片的窗口内
+- **THEN** 读面给出该行 `actual_cost` 之和作为 USD
+- **AND** tokens 归属同时给出
+
+#### Scenario: 窗口重叠不重复计
+
+- **WHEN** 一条 usage 行同时落在两张卡片的执行窗口内
+- **THEN** 两张卡片的 USD 都不含该行
+- **AND** 原因写明「usage window overlaps multiple cards」
+
+#### Scenario: 计费读面不可用
+
+- **WHEN** usage 接口不可达或未配置
+- **THEN** USD 为 `null` 并带原因
+- **AND** 板面其余内容照常返回
+
+#### Scenario: 有裁定时质量可读
+
+- **WHEN** 卡片已有一次 `pass` 裁定且 `stakedAt` 与 `verdict.at` 都存在
+- **THEN** 读模型给出耗时秒数与质量 `pass`
+- **AND** 成本给出 USD（若窗口归属成功）或 `unknown` 并带原因
+
+#### Scenario: 无裁定不冒充
+
+- **WHEN** 卡片执行结束但尚未签收
+- **THEN** 质量为 `unknown`
+- **AND** 不显示为 `pass`

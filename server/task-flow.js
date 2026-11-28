@@ -16,6 +16,8 @@
 //      scattered equality checks missed it and every miss was a silent
 //      degradation (fleets-db.js:24 records the incident).
 
+import fs from "node:fs";
+import path from "node:path";
 import { SUPPORTED_TARGET_TYPES } from "../task-engine.js";
 import { isPersonaBackedTargetKind } from "./routes/fleets-db.js";
 import { normalizeAcceptance, TRIAL_ASSERTION_KINDS, JUDGE_ASSERTION_CAP } from "./blueprint-validate.js";
@@ -41,12 +43,16 @@ export const CARD_ASSERTION_KINDS = Object.freeze([
   "artifact-exists",
   "command-succeeds",
   "output-contains",
+  // Portable run cards read real files and a real exit code. These two kinds
+  // are the only vocabulary extension; evaluation still lives in this file.
+  "file-contains",
+  "exit-code",
 ]);
 
 // The normalizer rejects anything outside TRIAL_ASSERTION_KINDS, so card-only
 // kinds are validated here and then merged with the shared normalizer's output.
 // Both tiers are checked against the same per-kind cap.
-function normalizeCardAcceptance(acceptance) {
+export function normalizeCardAcceptance(acceptance) {
   const errors = [];
   const list = Array.isArray(acceptance) ? acceptance : [];
   const extension = [];
@@ -69,18 +75,25 @@ function normalizeCardAcceptance(acceptance) {
     if (item.target !== undefined && typeof item.target !== "string") {
       errors.push({ error: `acceptance '${id}' target must be a string when present` });
     }
-    // Each card kind has its own required field: a command needs the command to
-    // run (target), an output check needs the needle (expect). Requiring the
-    // wrong one would reject a correct declaration — which is what the first
-    // version of this helper did.
-    if (item.kind === "command-succeeds" && (typeof item.target !== "string" || !item.target.trim())) {
-      errors.push({ error: `acceptance '${id}' (command-succeeds) needs a target naming the command` });
-    }
+    // Each card kind has its own required field. A command may have no named
+    // target on a portable card (the harness invocation IS the command), an
+    // output check needs the needle, and the file kinds need both a path and
+    // the value to look for. Requiring the wrong field rejects correct
+    // declarations — which is what the first version of this helper did.
     if (item.kind === "output-contains" && (typeof item.expect !== "string" || !item.expect.trim())) {
       errors.push({ error: `acceptance '${id}' (output-contains) needs an expect string` });
     }
+    if (item.kind === "file-contains" && (typeof item.target !== "string" || !item.target.trim())) {
+      errors.push({ error: `acceptance '${id}' (file-contains) needs a target path` });
+    }
+    if (item.kind === "file-contains" && (typeof item.expect !== "string" || !item.expect.trim())) {
+      errors.push({ error: `acceptance '${id}' (file-contains) needs an expect string` });
+    }
     if (item.kind === "artifact-exists" && (typeof item.target !== "string" || !item.target.trim())) {
       errors.push({ error: `acceptance '${id}' (artifact-exists) needs a target path` });
+    }
+    if (item.kind === "exit-code" && !Number.isFinite(Number(item.expect))) {
+      errors.push({ error: `acceptance '${id}' (exit-code) needs a numeric expect` });
     }
     asserted.push({ id, kind: item.kind, target: item.target ?? null, expect: item.expect ?? null });
   }
@@ -351,20 +364,21 @@ export function evidenceFromExecution({ history = [], artifacts = [], facts = {}
 export function evaluateAcceptance(acceptance, evidence, { judge = null } = {}) {
   const declared = Array.isArray(acceptance) ? acceptance : [];
   if (declared.length === 0) {
-    return { outcome: "no-criteria", machine: [], judged: [], failed: [] };
+    return { outcome: "no-criteria", machine: [], judged: [], failed: [], unknown: [] };
   }
 
   const machine = [];
   const judged = [];
   const failed = [];
+  const unknown = [];
 
   for (const a of declared) {
     const id = a?.id ?? "(unnamed)";
     if (a?.kind === "llm-judged") {
       if (typeof judge !== "function") {
-        const item = { id, kind: "llm-judged", outcome: "unevaluated", reason: "no judge supplied" };
+        const item = { id, kind: "llm-judged", outcome: "unknown", reason: "no judge supplied" };
         judged.push(item);
-        failed.push(item);
+        unknown.push(item);
         continue;
       }
       const passed = judge(a.rubric, evidence) === true;
@@ -374,14 +388,23 @@ export function evaluateAcceptance(acceptance, evidence, { judge = null } = {}) 
       continue;
     }
     // Machine assertions read evidence directly — an executor's prose can
-    // never satisfy one.
-    const passed = machineAssertionPasses(a, evidence);
-    const item = { id, kind: a?.kind ?? "unknown", outcome: passed ? "pass" : "fail" };
+    // never satisfy one. `null` means the check could not be evaluated; it is
+    // unknown, never a pass and never a fabricated failure.
+    const verdict = machineAssertionPasses(a, evidence);
+    const outcome = verdict === null ? "unknown" : verdict ? "pass" : "fail";
+    const item = { id, kind: a?.kind ?? "unknown", outcome };
     machine.push(item);
-    if (!passed) failed.push(item);
+    if (outcome === "fail") failed.push(item);
+    if (outcome === "unknown") unknown.push(item);
   }
 
-  return { outcome: failed.length === 0 ? "pass" : "fail", machine, judged, failed };
+  return {
+    outcome: failed.length > 0 ? "fail" : unknown.length > 0 ? "unknown" : "pass",
+    machine,
+    judged,
+    failed,
+    unknown,
+  };
 }
 
 // Machine assertion kinds come from the ONE normalizer that defines them
@@ -408,7 +431,20 @@ function machineAssertionPasses(assertion, evidence) {
       return ev.success === true;
     case "output-contains": {
       const needle = assertion.expect;
-      return typeof needle === "string" && typeof ev.output === "string" && ev.output.includes(needle);
+      if (typeof needle !== "string" || typeof ev.output !== "string") return null;
+      return ev.output.includes(needle);
+    }
+    // Portable kinds: read a real file / a real exit code. A path outside the
+    // declared workspace or an unreadable file is unknown, not a failure.
+    case "file-contains": {
+      const root = typeof facts.workspace === "string" && facts.workspace ? facts.workspace : process.cwd();
+      const text = readInside(root, assertion.target);
+      if (text === null) return null;
+      return typeof assertion.expect === "string" && text.includes(assertion.expect);
+    }
+    case "exit-code": {
+      if (!Number.isFinite(Number(facts.exitCode))) return null;
+      return Number(facts.exitCode) === Number(assertion.expect);
     }
     case "post-materialized":
       return facts.postMaterialized === true;
@@ -419,6 +455,20 @@ function machineAssertionPasses(assertion, evidence) {
     case "escalate-bounded":
       return Number.isFinite(facts.escalations) && facts.escalations <= Number(assertion.expect);
     default:
-      return false;
+      return null;
+  }
+}
+
+// Read a card artifact inside its workspace. Any escape or read failure is
+// `null` — the check could not run, which is unknown rather than a pass.
+function readInside(root, rel) {
+  if (typeof rel !== "string" || !rel) return null;
+  const base = path.resolve(root);
+  const absolute = path.resolve(base, rel);
+  if (absolute !== base && !absolute.startsWith(base + path.sep)) return null;
+  try {
+    return fs.readFileSync(absolute, "utf8");
+  } catch {
+    return null;
   }
 }

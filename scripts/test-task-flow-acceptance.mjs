@@ -92,17 +92,17 @@ test("eval: an empty artifact is not evidence", () => {
   assert.equal(r.outcome, "fail");
 });
 
-test("eval: a judge assertion without a judge fails closed", () => {
+test("eval: a judge assertion without a judge is unknown, never a pass", () => {
   const r = flow.evaluateAcceptance([{ id: "j1", kind: "llm-judged", rubric: "x" }], {});
-  assert.equal(r.outcome, "fail");
-  // "Unevaluated" must be distinguishable from "evaluated and failed" — an
-  // unrun check reported as a failure is honest; reported as a pass is not.
-  assert.equal(r.judged[0].outcome, "unevaluated");
+  assert.equal(r.outcome, "unknown");
+  // "Unevaluated" must be distinguishable from "evaluated and failed" and from
+  // a pass. An unrun check is not agreement.
+  assert.equal(r.judged[0].outcome, "unknown");
 });
 
-test("eval: an unknown machine assertion kind fails closed", () => {
+test("eval: an unknown machine assertion kind is unknown, never a pass", () => {
   const r = flow.evaluateAcceptance([{ id: "x", kind: "vibes-are-good" }], {});
-  assert.equal(r.outcome, "fail");
+  assert.equal(r.outcome, "unknown");
 });
 
 test("eval: one failing assertion fails the station even when others pass", () => {

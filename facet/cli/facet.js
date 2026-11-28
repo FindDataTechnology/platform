@@ -23,6 +23,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { LANE, LANE_LABEL, findCapability, selectLane } from "./mcp-auth-capability.js";
+import { validateListing } from "@finddatatechnology/run-card";
 
 // Version lives in package.json only — a hardcoded copy shipped 0.1.0 for
 // three releases (caught by `npx @finddatatechnology/facet@0.1.2 --version`).
@@ -69,7 +70,7 @@ const USAGE = `facet v${VERSION} — 谦面智能体安装器 / 萬星调用者�
   facet key provision [--target <t>] [--key sk-…] [--router <url>]
                           [--email <e> --password <p>] [--group <id>] [--name <n>]
   facet key status [--key sk-…] [--router <url>]
-  facet publish <manifest.json | packRef> [--from <自部署实例>]
+  facet publish <manifest.json | packRef> [--from <自部署实例>] [--listing <挂牌.json>] [--dry-run]
                           [--market <url>] [--pack-id <官方id>] [--new] [--no-open]
   facet self-test [--target <t>]    # 凭据自检：三种状态各断言一次（离线，不碰真 ~/.facet）
   facet help | --version
@@ -153,6 +154,8 @@ function parseArgs(argv) {
     else if (a === "--from") out.from = rest.shift();
     else if (a === "--market") out.market = rest.shift();
     else if (a === "--pack-id") out.packId = rest.shift();
+    else if (a === "--listing") out.listingFile = rest.shift();
+    else if (a === "--dry-run") out.dryRun = true;
     else if (a === "--limit") out.limit = rest.shift();
     else if (a === "--line") out.line = rest.shift();
     else if (a === "--species") out.species = rest.shift();
@@ -1648,7 +1651,7 @@ async function keyRun(opts) {
 }
 
 
-export { parseArgs, extractPackId, targetDir, SKILLS_SUBDIR, MCP_TARGETS };
+export { parseArgs, extractPackId, targetDir, SKILLS_SUBDIR, MCP_TARGETS, publishRun };
 
 // Both sides go through realpath: npm/npx run the bin through a symlink in
 // node_modules/.bin, so argv[1] is the link while import.meta.url is already
@@ -2222,6 +2225,23 @@ async function publishToken(market, opts, device) {
   return { token: pd.token, email: pd.email };
 }
 
+/**
+ * Attach a `capability-listing/1` segment to a manifest. The envelope is
+ * validated by @finddatatechnology/run-card — the one implementation — never
+ * by a second copy here. v1 is deliberately not rentable: a listing that
+ * claims present/price/settlement is refused rather than silently downgraded.
+ */
+export function attachListing(manifest, listing) {
+  const errors = validateListing(listing);
+  if (errors.length) throw new Error(`挂牌段不合法：${errors.join("；")}`);
+  if (listing.fitness?.status !== "unverified") {
+    throw new Error("v1 挂牌必须为 unverified（核证尚未接线，标 present 等于冒充已核证）");
+  }
+  if (listing.price !== null) throw new Error("v1 挂牌不可出租：price 必须为 null");
+  if (listing.settlement_subject !== null) throw new Error("v1 挂牌不可结算：settlement_subject 必须为 null");
+  return { ...manifest, listing };
+}
+
 async function publishRun(opts) {
   const market = String(opts.market || DEFAULT_BASE).replace(/\/+$/, "");
   const ref = String(opts.packRef || "").trim();
@@ -2256,6 +2276,24 @@ async function publishRun(opts) {
   }
   if (!manifest || typeof manifest !== "object" || Array.isArray(manifest)) {
     throw new Error("载荷不是 manifest 对象——官方侧校验是唯一权威，但基本形状须成立");
+  }
+
+  if (opts.listingFile) {
+    const listingPath = path.resolve(String(opts.listingFile));
+    let listing;
+    try {
+      listing = JSON.parse(await readFile(listingPath, "utf8"));
+    } catch (e) {
+      throw new Error(`挂牌文件不是合法 JSON：${e.message}`);
+    }
+    manifest = attachListing(manifest, listing);
+    console.log(`挂牌：${listing.asset.kind} ${listing.asset.id}@${listing.asset.version}（unverified，不可出租）`);
+  }
+
+  if (opts.dryRun) {
+    console.log("dry-run：未发起网络请求、未配对、未发布");
+    console.log(JSON.stringify({ packId: opts.packId ?? null, manifest }, null, 2));
+    return;
   }
 
   const device = await ensurePublishDevice();

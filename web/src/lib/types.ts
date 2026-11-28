@@ -61,5 +61,15 @@ export interface FlowCard {
   paused?: boolean;
   flow?: FlowAttribution | null;
   blockedBy?: string[];
-  history?: { state?: string; success?: boolean | null; error?: string | null; time?: string }[];
+  /** Server-attributed billing truth (sub2api actual_cost) for this card's window. */
+  cost_usd?: number | null;
+  cost_basis?: string | null;
+  cost_unknown_reason?: string | null;
+  history?: {
+    state?: string;
+    success?: boolean | null;
+    error?: string | null;
+    time?: string;
+    tokens?: number | { total?: number; prompt?: number; completion?: number } | null;
+  }[];
 }

@@ -27,6 +27,7 @@ import {
   evidenceFromExecution,
 } from "../task-flow.js";
 import { getTaskFlowDatabase } from "../task-flow-db.js";
+import { readUsageWindow, attributeUsage, cardWindow } from "../sub2api-usage.js";
 
 const ACTOR_OF = (req) => req.user?.email ?? null;
 
@@ -143,7 +144,7 @@ export function registerFlowRoutes(ctx, deps = {}) {
   // from the dep table. No column is decided here — `columnOf` on the client is
   // the single mapping, so three clients cannot disagree about what "review"
   // means.
-  router.get("/board", (req, res) => {
+  router.get("/board", async (req, res) => {
     const viewer = boardViewerOf(req, ctx);
     const all = engine
       .listTasks()
@@ -159,7 +160,38 @@ export function registerFlowRoutes(ctx, deps = {}) {
     // leak their content — only how many exist.
     const visible = all.filter((t) => viewer.includeAll || (t.flow.owner ?? null) === viewer.email);
     const unscoped = all.length - visible.length;
-    const cards = visible.map((t) => ({ ...t, blockedBy: flowDb().blockersOf(t.id) }));
+
+    // Completion cost: read the billing truth once for the board's time span
+    // and attribute each usage row to the one card whose execution window
+    // contains it. Overlapping windows stay unknown rather than double count.
+    // Any failure leaves the map empty; the readout then says unknown.
+    let costById = new Map();
+    try {
+      const windows = visible.map(cardWindow).filter(Boolean);
+      if (windows.length > 0 && process.env.LLM_API_KEY && process.env.LLM_BASE_URL) {
+        const start = Math.min(...windows.map((w) => w.start));
+        const end = Math.max(...windows.map((w) => w.end));
+        const rows = await readUsageWindow({ start, end });
+        costById = attributeUsage(rows, visible);
+      }
+    } catch {
+      costById = new Map();
+    }
+
+    const cards = visible.map((t) => {
+      const cost = costById.get(t.id);
+      return {
+        ...t,
+        blockedBy: flowDb().blockersOf(t.id),
+        ...(cost
+          ? {
+              cost_usd: cost.ambiguous ? null : cost.usd,
+              cost_basis: cost.ambiguous ? null : "sub2api_actual_cost",
+              cost_unknown_reason: cost.ambiguous ? "usage window overlaps multiple cards" : null,
+            }
+          : {}),
+      };
+    });
 
     // Queue depth as the ENGINE reports it, never counted here: a client-side
     // count would be a second opinion about the same number.

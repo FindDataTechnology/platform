@@ -178,3 +178,23 @@ MUST NOT 用它参与调度决策、MUST NOT 校验其内部形状。流程语�
 - **WHEN** 读取一张卡片
 - **THEN** 它的流程归属只有一个站点
 - **AND** 不存在「同时在两站」的表示
+
+### Requirement: 卡片判据词表接纳便携判据
+
+卡片级判据的 kind 闭集 MUST 在既有 `artifact-exists` / `command-succeeds` / `output-contains` / `llm-judged` 之上增加 `file-contains` 与 `exit-code`，使一张便携卡片能读真实文件与真实退出码。新增 kind MUST 走既有校验函数，未知 kind MUST fail closed。
+
+`file-contains` MUST 要求 `target`（文件路径）与 `expect`（子串）；文件读不到时求值 MUST 为 `unknown`，MUST NOT 为 `pass` 或 `fail`。`exit-code` MUST 要求 `expect`；未捕获退出码时求值 MUST 为 `unknown`。
+
+`command-succeeds` 的 `target` MUST 变为可选：便携卡片没有具名 shell 命令时，执行本身就是命令；缺 target 不得被拒绝，也不得改变求值语义（仍读执行成功标志）。
+
+#### Scenario: 文件读不到是 unknown
+
+- **WHEN** 一条 `file-contains` 判据指向不存在的文件
+- **THEN** 该判据结果为 `unknown`
+- **AND** 不被折算成通过
+
+#### Scenario: 便携卡片不带 target 也能通过校验
+
+- **WHEN** 一张卡片的 `command-succeeds` 没有 `target`
+- **THEN** 校验通过
+- **AND** 求值仍以执行成功标志为准

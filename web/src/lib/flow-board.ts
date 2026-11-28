@@ -284,3 +284,62 @@ export function buildFlowDeclaration(draft: DeclarationDraft) {
     ],
   };
 }
+
+/**
+ * Completion economics for one card (run-card-bridge).
+ *
+ * Three values, each read from the card itself; nothing is estimated here.
+ * `cost` stays `null` until the unified ledger read surface is wired — a token
+ * count is not a price, so it must not be turned into one.
+ */
+export interface CompletionReadout {
+  duration_s: number | null;
+  quality: "pass" | "fail" | "unknown";
+  cost: { usd: number | null; tokens: number | null; reason: string | null };
+}
+
+function totalTokens(history: FlowCard["history"] = []): number | null {
+  let sum = 0;
+  let seen = false;
+  for (const entry of history ?? []) {
+    const tokens = entry?.tokens;
+    const value =
+      typeof tokens === "number"
+        ? tokens
+        : typeof tokens?.total === "number"
+          ? tokens.total
+          : typeof tokens?.prompt === "number" || typeof tokens?.completion === "number"
+            ? (tokens.prompt ?? 0) + (tokens.completion ?? 0)
+            : null;
+    if (value !== null && Number.isFinite(value)) {
+      sum += value;
+      seen = true;
+    }
+  }
+  return seen ? sum : null;
+}
+
+export function completionReadout(card: FlowCard): CompletionReadout {
+  const flow = card.flow ?? null;
+  const staked = flow?.stakedAt ? Date.parse(flow.stakedAt) : Number.NaN;
+  const ruled = flow?.verdict?.at ? Date.parse(flow.verdict.at) : Number.NaN;
+  const duration_s =
+    Number.isFinite(staked) && Number.isFinite(ruled) && ruled >= staked ? (ruled - staked) / 1000 : null;
+
+  const outcome = flow?.verdict?.outcome;
+  const quality = outcome === "pass" ? "pass" : outcome === "returned" ? "fail" : "unknown";
+
+  // USD is the billing truth when the server attributed this card's execution
+  // window to sub2api usage rows. Otherwise it stays null with the server's
+  // reason; tokens remain the objective fallback.
+  const usd = Number.isFinite(card.cost_usd) ? (card.cost_usd as number) : null;
+  return {
+    duration_s,
+    quality,
+    cost: {
+      usd,
+      tokens: totalTokens(card.history),
+      reason: usd !== null ? null : card.cost_unknown_reason ?? "usd not attributed",
+    },
+  };
+}
