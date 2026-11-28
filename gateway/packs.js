@@ -34,7 +34,7 @@ import { resolveLocale, projectManifestForLocale, applyLocaleToSummary } from ".
 import { safePackagePath } from "../lib/skill-files.js";
 import { deriveTeam } from "../lib/team-derivation.js";
 import { derivePillars } from "../lib/pack-pillars.js";
-import { deriveCapabilities } from "../lib/capability-layer.js";
+import { deriveCapabilities, projectForAudience } from "../lib/capability-layer.js";
 import { deriveBadge, badgeFromFlags } from "../lib/pack-badge.js";
 import { describeProvenance, PROVENANCE_SOURCE } from "../lib/pack-provenance.js";
 import { localeCoverage } from "../lib/pack-locale-coverage.js";
@@ -1904,7 +1904,19 @@ export function registerPackRoutes(app, {
     // （capability-layer）：三作用域同形状、带三轴与 skills 面。
     // 生产比对 120/120 样本：pillars 与 capabilities.pillars 逐字段一致。
     pack.pillars = derivePillars(pack.manifest);
-    pack.capabilities = deriveCapabilities(pack.manifest, { scope: "pack" }).capabilities;
+    // 能力层按受众投影（capability-layer 5.x）。三个受众取最小必要：
+    //   owner  属主（作者 / 管理员）看全部
+    //   tenant 已登录的订阅者看 public + tenant
+    //   public 匿名看 public
+    //
+    // 一条重要的边界：**pack 内联的 skill 不参与可见性过滤**——它随 pack 分发，
+    // 买家装上就有，registry 里的 visibility 描述的是"注册表货架"而不是"包内内容"。
+    // 把它按 registry 可见性藏掉，会让一个已付费的包突然少能力。
+    const audiences = isAdmin(user) || isAuthor ? "owner" : user ? "tenant" : "public";
+    const derived = deriveCapabilities(pack.manifest, { scope: "pack" });
+    const inlineSkillNames = new Set((pack.manifest?.skills ?? []).map((x) => x?.name).filter(Boolean));
+    pack.capabilities = derived.capabilities.filter((c) => c.kind === "skill" && inlineSkillNames.has(c.name))
+      .concat(projectForAudience(derived, { audience: audiences }).filter((c) => !(c.kind === "skill" && inlineSkillNames.has(c.name))));
     // Adopted provenance (add-official-adopted-agents D1): the SOURCE axis,
     // synthesized through the one projection so no surface can invent
     // "official-adopted" independently. `official` comes from the roster

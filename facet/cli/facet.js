@@ -54,7 +54,7 @@ const DEFAULT_OAUTH_SCOPE = "openid gateway:access offline_access";
 const USAGE = `facet v${VERSION} — 谦面智能体安装器 / 萬星调用者偏好
 
 用法：
-  facet install <packRef> [--target CC|cursor|zcode|codex|gemini-cli|qwen|opencode|qoder|pi|openclaw|hermes|workbuddy]
+  facet install <packRef> [--target CC|cursor|zcode|codex|gemini-cli|qwen|opencode|qoder|pi|openclaw|hermes|trae|workbuddy]
                           [--project <dir>] [--base <url>] [--registry <url>]
                           [--write-mcp|--no-write-mcp] [--oauth [--oauth-client <id>]]
   facet update [packRef] [--target <t>] [--base <url>]   # 重取最新版快照（无订阅副作用）
@@ -1563,13 +1563,28 @@ async function verifyHarnessRound(target, key, router, files) {
   } else if (target === "codex") {
     cmd = "codex"; args = ["exec", "--skip-git-repo-check", probe];
     env.OPENAI_API_KEY = key; env.OPENAI_BASE_URL = `${router}/v1`;
+  } else if (target === "pi") {
+    // models.json + mcp.json are written by writeLlmConfig/install; the round
+    // proves the file is what pi reads, with a pinned provider/model.
+    cmd = "pi"; args = ["--print", "--model", `facet/${model}`, probe];
+  } else if (target === "openclaw") {
+    // --cwd must sit inside OPENCLAW_HOME or its workspace skills fall out of
+    // scope; facet install wrote them under the same HOME() root.
+    cmd = "openclaw"; args = ["agent", "exec", "--cwd", HOME(), "--model", `facet/${model}`, probe];
+    env.OPENCLAW_HOME = HOME();
+  } else if (target === "hermes") {
+    cmd = "hermes"; args = ["-z", probe];
+    env.HERMES_HOME = HOME();
   } else {
     await rm(work, { recursive: true, force: true });
     return { ok: false, reason: `没有 ${target} 的回合探针（未支持），配置已写但未验证` };
   }
   const run = await new Promise((resolve) => {
     let out = "", err = "", done = false;
-    const child = spawn(cmd, args, { env, cwd: work, stdio: ["ignore", "pipe", "pipe"], detached: process.platform !== "win32" });
+    // shell on Windows: npm-installed CLIs are .cmd shims, which spawn cannot
+    // execute directly (ENOENT with empty output — reads as "model returned
+    // nothing"). The probe has no user input, so nothing needs escaping.
+    const child = spawn(cmd, args, { env, cwd: work, stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32", detached: process.platform !== "win32" });
     const finish = (code, reason) => { if (done) return; done = true; clearTimeout(t); resolve({ code, out, err, reason }); };
     const t = setTimeout(() => {
       try { process.platform === "win32" ? child.kill() : process.kill(-child.pid, "SIGKILL"); } catch { child.kill("SIGKILL"); }

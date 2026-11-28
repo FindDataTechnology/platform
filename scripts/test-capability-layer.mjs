@@ -209,3 +209,19 @@ test("生产样本：capabilities.pillars 与 derivePillars 逐字段一致", as
   assert.ok(Array.isArray(c.capabilities), "capabilities 是数组");
   assert.ok(c.capabilities.length > 0, "样例包应有能力条目");
 });
+
+// 读面接入（capability-layer 5.x）：内联 skill 不参与可见性过滤。
+test("pack 内联的 skill 不因 registry 可见性而被藏掉", () => {
+  // 场景：某个 skill 在 registry 里是 private，但它是被这个 pack 内联分发的。
+  // 买家装上就有了——按 registry 可见性藏它会让已付费的包突然少能力。
+  const manifest = { name: "t", visibility: "private", skills: [{ name: "inlined", description: "I" }], agents: [] };
+  const r = deriveCapabilities(manifest, { scope: "pack" });
+  const inline = new Set((manifest.skills ?? []).map((s) => s.name));
+  // 模拟详情端点的组合逻辑
+  const combined = r.capabilities
+    .filter((c) => c.kind === "skill" && inline.has(c.name))
+    .concat(projectForAudience(r, { audience: "public" }).filter((c) => !(c.kind === "skill" && inline.has(c.name))));
+  const inlined = combined.find((c) => c.name === "inlined");
+  assert.ok(inlined, "内联 skill 必须在结果里");
+  assert.notEqual(inlined.opaque, true, "内联 skill 不得被投影成占位");
+});
