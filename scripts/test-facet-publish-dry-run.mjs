@@ -52,8 +52,12 @@ test("dry-run attaches the listing and stops before the network", async () => {
 
 test("a rentable listing is refused before any network call", async () => {
   const { manifest, listing } = fixture({ price: 9 });
+  // 这条也必须走 capture：publishRun 在校验 price 之前就打了「载荷：本地清单」，
+  // 不兜住它会直接落到 stdout。node 25 的 test runner 把子进程 stdout 当 IPC
+  // 数据反序列化，混进一行中文就整个文件报
+  // "Unable to deserialize cloned data due to invalid or unsupported version"。
   await assert.rejects(
-    () => publishRun({ packRef: manifest, listingFile: listing, dryRun: true, market: "http://127.0.0.1:1" }),
+    () => capture(() => publishRun({ packRef: manifest, listingFile: listing, dryRun: true, market: "http://127.0.0.1:1" })),
     /price/,
   );
 });
