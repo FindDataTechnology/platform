@@ -109,6 +109,17 @@ jobs:
       - name: Install web dependencies
         run: npm run web:install
 
+      # facet/cli is its own npm package with its own lockfile, and since
+      # 6b7a7b6cd it imports @finddatatechnology/run-card at module load. The
+      # root npm ci does NOT cover it (no workspaces entry), so every unit
+      # shard died the same way: `Cannot find package
+      # '@finddatatechnology/run-card' imported from facet/cli/facet.js` —
+      # 9 facet suites red at once, including the ones that only spawn the CLI.
+      # Local machines hid this because facet/cli/node_modules was installed by
+      # hand once.
+      - name: Install facet CLI dependencies
+        run: npm --prefix facet/cli ci
+
       # One unit file needs the app's OWN expo-router: it asserts the RESOLVED
       # route tree (not files on disk — see scripts/test-app-zhiyu-routes.mjs),
       # so it calls `getRoutes()` from app/node_modules. `--ignore-scripts`
