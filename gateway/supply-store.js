@@ -391,6 +391,9 @@ export function createSupplyStore({ file, gatewayBase = "", now = () => Date.now
       });
     }
     const merged = { ...existing, ...(fields ?? {}) };
+    if (fields && Object.hasOwn(fields, "metadata")) {
+      merged.metadata = mergeMetadataPatch(existing.metadata ?? null, fields.metadata);
+    }
     merged.name = name;
     return upsertSkill({ actor, source, entry: merged });
   };

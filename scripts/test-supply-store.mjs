@@ -315,6 +315,42 @@ test("skills: upsert/patch/visibility/delete with the same gate discipline", () 
   );
 });
 
+test("skills: patch merges metadata instead of replacing it", () => {
+  // The registry writes skill_md_url and resource_manifest in separate patches.
+  // A shallow metadata merge makes each one silently erase the other, so a URL
+  // repoint followed by a resource refresh left the row with a manifest and no
+  // URL (or the reverse). Both must survive.
+  const store = freshStore({});
+  store.upsertSkill({
+    actor: "op@x",
+    source: "migration",
+    entry: { name: "merge-skill", metadata: { skill_md_url: "https://gitee.com/a/b/SKILL.md" } },
+  });
+  store.patchSkill("merge-skill", {
+    actor: "op@x",
+    source: "facade",
+    fields: { metadata: { skill_md_url: "https://raw.githubusercontent.com/a/b/main/SKILL.md" } },
+  });
+  store.patchSkill("merge-skill", {
+    actor: "op@x",
+    source: "facade",
+    fields: { metadata: { resource_manifest: { references: [{ path: "references/x.md" }] } } },
+  });
+  const row = store.getSkill("merge-skill");
+  assert.equal(row.metadata.skill_md_url, "https://raw.githubusercontent.com/a/b/main/SKILL.md");
+  assert.deepEqual(row.metadata.resource_manifest.references, [{ path: "references/x.md" }]);
+
+  // A null value deletes just that key, leaving its siblings.
+  store.patchSkill("merge-skill", {
+    actor: "op@x",
+    source: "facade",
+    fields: { metadata: { resource_manifest: null } },
+  });
+  const after = store.getSkill("merge-skill");
+  assert.equal(after.metadata.resource_manifest, undefined);
+  assert.equal(after.metadata.skill_md_url, "https://raw.githubusercontent.com/a/b/main/SKILL.md");
+});
+
 test("HTTP: projection token timing-safe, write gate errors map to status+code", async () => {
   const store = freshStore({});
   const app = express();
