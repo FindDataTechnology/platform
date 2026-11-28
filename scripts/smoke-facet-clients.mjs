@@ -26,16 +26,15 @@ const CLI = path.resolve("facet/cli/facet.js");
 // The pack under smoke: public, listed, skill-bearing (数据-自助分析).
 const PACK = process.env.FACET_SMOKE_PACK || "50Tp176hW0HYTTWXZbarKA";
 
-const SKILLS_DIR = {
-  "claude-code": ".claude",
-  cursor: ".cursor",
-  zcode: ".zcode",
-  codex: ".codex",
-  "gemini-cli": ".gemini",
-  // WorkBuddy: skills and MCP both under .workbuddy (real-install verified
-  // 2026-10-30 — see docs/ecosystem/workbuddy.md).
-  workbuddy: ".workbuddy",
-};
+// Derived from the CLI's own table, not copied: a hand-maintained list here
+// silently skipped every target added after it was written (the same bug the
+// delivery-matrix checker had with pi/opencode/qoder/trae/hermes).
+const cliSrc = readFileSync(CLI, "utf8");
+const skillsTable = cliSrc.match(/const SKILLS_SUBDIR = \{([\s\S]*?)^\};/m);
+const SKILLS_DIR = Object.fromEntries(
+  [...skillsTable[1].matchAll(/^ {2}"?([a-z][a-z0-9-]*)"?:\s*"\.([a-z][a-z0-9/-]*)",/gm)]
+    .map((m) => [m[1], "." + m[2]]),
+);
 
 // What each target's native MCP entry must look like (the matrix's
 // "MCP 配置写" row, per cell): [file, predicate over the parsed doc].
@@ -65,7 +64,56 @@ const MCP_EXPECT = {
     file: (h) => path.join(h, ".workbuddy", "mcp.json"),
     check: (doc) => Object.entries(doc.mcpServers ?? {}).some(([, e]) => e.type === "http" && typeof e.url === "string" && /^Bearer wgk-/.test(e.headers?.Authorization ?? "")),
   },
+  // Added 2026-11-28 with the hermes/trae targets.
+  qwen: {
+    file: (h) => path.join(h, ".qwen", "settings.json"),
+    check: (doc) => Object.entries(doc.mcpServers ?? {}).some(([, e]) => typeof e.httpUrl === "string" && /^Bearer wgk-/.test(e.headers?.Authorization ?? "")),
+  },
+  opencode: {
+    file: (h) => path.join(h, ".config", "opencode", "opencode.json"),
+    check: (doc) => Object.entries(doc.mcp ?? {}).some(([, e]) => e.type === "remote" && typeof e.url === "string" && /^Bearer wgk-/.test(e.headers?.Authorization ?? "")),
+  },
+  pi: {
+    file: (h) => path.join(h, ".pi", "agent", "mcp.json"),
+    check: (doc) => Object.values(doc).some((e) => typeof e.url === "string" && /^Bearer wgk-/.test(e.headers?.Authorization ?? "")),
+  },
+  openclaw: {
+    file: (h) => path.join(h, ".openclaw", "openclaw.json"),
+    check: (doc) => Object.values(doc.mcp?.servers ?? {}).some((e) => typeof e.url === "string" && /^Bearer wgk-/.test(e.headers?.Authorization ?? "")),
+  },
+  hermes: {
+    file: (h) => path.join(h, ".hermes", "config.yaml"),
+    // YAML, not JSON: check the text the writer produced, and that an existing
+    // unrelated section survived (the parser round-trip is the point).
+    check: (text) => /mcp_servers:\s*\n(?:.*\n)*?\s+fd-open-data-mcp:\s*\n\s+url: https:\/\/mcp\.finddatatech\.cloud\/fd-open-data-mcp\/mcp/.test(text)
+      && /Authorization: Bearer wgk-/.test(text),
+  },
+  // qoder owns its MCP store (`qodercli mcp add-json`), so there is no file to
+  // read back; the smoke asserts the CLI delegation printed the command and that
+  // the install did not silently skip it.
+  qoder: {
+    file: (h) => path.join(h, ".qoder"),
+    cli: true,
+    check: () => true,
+  },
+  trae: {
+    file: (h) => path.join(h, ".trae", "trae_config.yaml"),
+    check: (text) => /mcp_servers:/.test(text) && /supergateway/.test(text) && /--oauth2Bearer/.test(text)
+      && /allow_mcp_servers:/.test(text),
+  },
 };
+
+let PATH_CACHE;
+async function cliOnPath(bin) {
+  if (!PATH_CACHE) {
+    PATH_CACHE = {};
+    await Promise.all(targetIds.map(async (t) => {
+      try { await run(process.platform === "win32" ? "where" : "which", [t], { timeout: 10000 }); PATH_CACHE[t] = true; }
+      catch { PATH_CACHE[t] = false; }
+    }));
+  }
+  return PATH_CACHE[bin];
+}
 
 const tmp = mkdtempSync(path.join(tmpdir(), "facet-smoke-"));
 let failures = 0;
@@ -74,7 +122,20 @@ const targetIds = Object.keys(SKILLS_DIR);
 console.log(`facet client smoke — ${targetIds.length} targets × (skills + MCP shape) against ${BASE}`);
 console.log("(哑 wgk 凭据：MCP 写入不验键；连通性属 F2.1 的 initialize 探针域)\n");
 
+const missingExpect = targetIds.filter((t) => !MCP_EXPECT[t]);
+if (missingExpect.length) {
+  console.error(`no MCP shape expectation for: ${missingExpect.join(", ")} — add it to MCP_EXPECT`);
+  process.exit(1);
+}
+
 for (const target of targetIds) {
+  // A CLI-delegating target whose CLI is not on this machine is an environment
+  // gap, not shape drift: install would (correctly) refuse, so say that instead
+  // of reporting a red. The same rule the rig uses — absent is why=absent.
+  if (MCP_EXPECT[target].cli && !(await cliOnPath(target))) {
+    console.log(`~ ${target.padEnd(11)} skipped — ${target} CLI is not installed on this machine`);
+    continue;
+  }
   const home = path.join(tmp, target);
   const env = { ...process.env, FACET_HOME: home, FACET_CREDENTIALS_PATH: path.join(home, ".facet", "credentials.json") };
   // Dummy-but-shaped credential: install only carries it into configs.
@@ -97,7 +158,13 @@ for (const target of targetIds) {
     // 2) native MCP config shape
     const file = MCP_EXPECT[target].file(home);
     const raw = readFileSync(file, "utf8");
-    const ok = target === "codex" ? MCP_EXPECT[target].check(raw) : MCP_EXPECT[target].check(JSON.parse(raw));
+    if (MCP_EXPECT[target].cli) {
+      if (!/mcp add-json/.test(stdout)) throw new Error("qoder CLI delegation did not run");
+      console.log(`✓ ${target.padEnd(11)} skills=${skills.length}  mcp=qodercli add-json 委托`);
+      continue;
+    }
+    const isText = target === "codex" || target === "hermes" || target === "trae";
+    const ok = MCP_EXPECT[target].check(isText ? raw : JSON.parse(raw));
     if (!ok) throw new Error(`MCP entry shape mismatch in ${file}\n---\n${(target === "codex" ? raw.split("\n[")
       .filter((sec) => sec.includes("mcp_servers"))
       .map((sec) => "[" + sec)
